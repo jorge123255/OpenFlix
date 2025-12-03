@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:dio/dio.dart';
 
 import '../config/plex_config.dart';
+import '../models/dvr.dart';
 import '../models/livetv_channel.dart';
 import '../models/plex_file_info.dart';
 import '../models/plex_filter.dart';
@@ -2106,5 +2107,164 @@ class PlexClient {
       return channel.streamUrl;
     }
     return '${config.baseUrl}${channel.streamUrl}?X-Plex-Token=${config.token}';
+  }
+
+  // ========== DVR Methods ==========
+
+  /// Get all DVR recordings for the current user
+  Future<List<DVRRecording>> getDVRRecordings({String? status}) async {
+    try {
+      final queryParams = <String, dynamic>{};
+      if (status != null) queryParams['status'] = status;
+
+      final response = await _dio.get(
+        '/dvr/recordings',
+        queryParameters: queryParams.isNotEmpty ? queryParams : null,
+      );
+
+      final data = response.data as Map<String, dynamic>;
+      final recordings = data['recordings'] as List<dynamic>? ?? [];
+      return recordings
+          .map((json) => DVRRecording.fromJson(json as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      appLogger.e('Failed to get DVR recordings', error: e);
+      return [];
+    }
+  }
+
+  /// Get a specific DVR recording
+  Future<DVRRecording?> getDVRRecording(int recordingId) async {
+    try {
+      final response = await _dio.get('/dvr/recordings/$recordingId');
+      return DVRRecording.fromJson(response.data as Map<String, dynamic>);
+    } catch (e) {
+      appLogger.e('Failed to get DVR recording', error: e);
+      return null;
+    }
+  }
+
+  /// Schedule a new DVR recording
+  Future<DVRRecording?> scheduleRecording({
+    required int channelId,
+    required String title,
+    required DateTime startTime,
+    required DateTime endTime,
+    int? programId,
+    String? description,
+  }) async {
+    try {
+      final response = await _dio.post('/dvr/recordings', data: {
+        'channelId': channelId,
+        'title': title,
+        'startTime': startTime.toUtc().toIso8601String(),
+        'endTime': endTime.toUtc().toIso8601String(),
+        if (programId != null) 'programId': programId,
+        if (description != null) 'description': description,
+      });
+      return DVRRecording.fromJson(response.data as Map<String, dynamic>);
+    } catch (e) {
+      appLogger.e('Failed to schedule recording', error: e);
+      return null;
+    }
+  }
+
+  /// Delete a DVR recording
+  Future<bool> deleteDVRRecording(int recordingId) async {
+    try {
+      await _dio.delete('/dvr/recordings/$recordingId');
+      return true;
+    } catch (e) {
+      appLogger.e('Failed to delete DVR recording', error: e);
+      return false;
+    }
+  }
+
+  /// Get all series recording rules
+  Future<List<DVRSeriesRule>> getSeriesRules() async {
+    try {
+      final response = await _dio.get('/dvr/rules');
+      final data = response.data as Map<String, dynamic>;
+      final rules = data['rules'] as List<dynamic>? ?? [];
+      return rules
+          .map((json) => DVRSeriesRule.fromJson(json as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      appLogger.e('Failed to get series rules', error: e);
+      return [];
+    }
+  }
+
+  /// Create a new series recording rule
+  Future<DVRSeriesRule?> createSeriesRule({
+    required String title,
+    int? channelId,
+    String? keywords,
+    String? timeSlot,
+    String? daysOfWeek,
+    int keepCount = 0,
+    int prePadding = 0,
+    int postPadding = 0,
+  }) async {
+    try {
+      final response = await _dio.post('/dvr/rules', data: {
+        'title': title,
+        if (channelId != null) 'channelId': channelId,
+        if (keywords != null) 'keywords': keywords,
+        if (timeSlot != null) 'timeSlot': timeSlot,
+        if (daysOfWeek != null) 'daysOfWeek': daysOfWeek,
+        'keepCount': keepCount,
+        'prePadding': prePadding,
+        'postPadding': postPadding,
+      });
+      return DVRSeriesRule.fromJson(response.data as Map<String, dynamic>);
+    } catch (e) {
+      appLogger.e('Failed to create series rule', error: e);
+      return null;
+    }
+  }
+
+  /// Update a series recording rule
+  Future<DVRSeriesRule?> updateSeriesRule(
+    int ruleId, {
+    String? title,
+    int? channelId,
+    String? keywords,
+    String? timeSlot,
+    String? daysOfWeek,
+    int? keepCount,
+    int? prePadding,
+    int? postPadding,
+    bool? enabled,
+  }) async {
+    try {
+      final data = <String, dynamic>{};
+      if (title != null) data['title'] = title;
+      if (channelId != null) data['channelId'] = channelId;
+      if (keywords != null) data['keywords'] = keywords;
+      if (timeSlot != null) data['timeSlot'] = timeSlot;
+      if (daysOfWeek != null) data['daysOfWeek'] = daysOfWeek;
+      if (keepCount != null) data['keepCount'] = keepCount;
+      if (prePadding != null) data['prePadding'] = prePadding;
+      if (postPadding != null) data['postPadding'] = postPadding;
+      if (enabled != null) data['enabled'] = enabled;
+
+      final response = await _dio.put('/dvr/rules/$ruleId', data: data);
+      return DVRSeriesRule.fromJson(response.data as Map<String, dynamic>);
+    } catch (e) {
+      appLogger.e('Failed to update series rule', error: e);
+      return null;
+    }
+  }
+
+  /// Delete a series recording rule
+  Future<bool> deleteSeriesRule(int ruleId) async {
+    try {
+      await _dio.delete('/dvr/rules/$ruleId');
+      return true;
+    } catch (e) {
+      appLogger.e('Failed to delete series rule', error: e);
+      return false;
+    }
   }
 }

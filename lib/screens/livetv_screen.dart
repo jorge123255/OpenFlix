@@ -4,11 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
-import '../client/plex_client.dart';
 import '../models/livetv_channel.dart';
 import '../providers/plex_client_provider.dart';
 import '../utils/app_logger.dart';
-import '../widgets/cached_server_image.dart';
+import 'dvr_screen.dart';
 import 'livetv_player_screen.dart';
 
 /// Live TV screen showing channel list and EPG guide
@@ -138,6 +137,15 @@ class _LiveTVScreenState extends State<LiveTVScreen> {
                   .toList(),
             ),
           IconButton(
+            icon: const Icon(Icons.fiber_manual_record),
+            tooltip: 'DVR',
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (context) => const DVRScreen()),
+              );
+            },
+          ),
+          IconButton(
             icon: const Icon(Icons.refresh),
             tooltip: 'Refresh',
             onPressed: () => _loadChannels(),
@@ -146,6 +154,25 @@ class _LiveTVScreenState extends State<LiveTVScreen> {
       ),
       body: _buildBody(),
     );
+  }
+
+  Future<void> _scheduleRecording(LiveTVChannel channel) async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => ScheduleRecordingDialog(
+        channel: channel,
+        program: channel.nowPlaying,
+      ),
+    );
+
+    if (result == true && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Recording scheduled'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    }
   }
 
   Widget _buildBody() {
@@ -207,6 +234,7 @@ class _LiveTVScreenState extends State<LiveTVScreen> {
         return _ChannelListTile(
           channel: channel,
           onTap: () => _playChannel(channel),
+          onRecord: () => _scheduleRecording(channel),
         );
       },
     );
@@ -216,10 +244,12 @@ class _LiveTVScreenState extends State<LiveTVScreen> {
 class _ChannelListTile extends StatelessWidget {
   final LiveTVChannel channel;
   final VoidCallback onTap;
+  final VoidCallback onRecord;
 
   const _ChannelListTile({
     required this.channel,
     required this.onTap,
+    required this.onRecord,
   });
 
   @override
@@ -317,12 +347,24 @@ class _ChannelListTile extends StatelessWidget {
                   ],
                 ),
               ),
-              // Play button
-              IconButton(
-                icon: const Icon(Icons.play_circle_filled),
-                iconSize: 40,
-                color: theme.colorScheme.primary,
-                onPressed: onTap,
+              // Record and Play buttons
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.fiber_manual_record),
+                    iconSize: 28,
+                    color: Colors.red,
+                    tooltip: 'Record',
+                    onPressed: onRecord,
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.play_circle_filled),
+                    iconSize: 40,
+                    color: theme.colorScheme.primary,
+                    onPressed: onTap,
+                  ),
+                ],
               ),
             ],
           ),
