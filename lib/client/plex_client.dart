@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:dio/dio.dart';
 
 import '../config/plex_config.dart';
+import '../models/livetv_channel.dart';
 import '../models/plex_file_info.dart';
 import '../models/plex_filter.dart';
 import '../models/plex_hub.dart';
@@ -1960,5 +1961,150 @@ class PlexClient {
     if (_onEndpointChanged != null) {
       await _onEndpointChanged(newBaseUrl);
     }
+  }
+
+  // ============================================================================
+  // Live TV Methods
+  // ============================================================================
+
+  /// Get all Live TV channels
+  Future<List<LiveTVChannel>> getLiveTVChannels() async {
+    try {
+      final response = await _dio.get('/livetv/channels');
+      if (response.data is List) {
+        return (response.data as List)
+            .map((json) => LiveTVChannel.fromJson(json as Map<String, dynamic>))
+            .toList();
+      }
+      return [];
+    } catch (e) {
+      appLogger.e('Failed to get Live TV channels', error: e);
+      return [];
+    }
+  }
+
+  /// Get a specific Live TV channel by ID
+  Future<LiveTVChannel?> getLiveTVChannel(int channelId) async {
+    try {
+      final response = await _dio.get('/livetv/channels/$channelId');
+      return LiveTVChannel.fromJson(response.data as Map<String, dynamic>);
+    } catch (e) {
+      appLogger.e('Failed to get Live TV channel', error: e);
+      return null;
+    }
+  }
+
+  /// Get EPG guide data for a time range
+  /// [start] and [end] are ISO 8601 datetime strings
+  /// [channelIds] is an optional list of channel IDs to filter by
+  Future<LiveTVGuideData?> getLiveTVGuide({
+    DateTime? start,
+    DateTime? end,
+    List<String>? channelIds,
+  }) async {
+    try {
+      final queryParams = <String, dynamic>{};
+      if (start != null) queryParams['start'] = start.toIso8601String();
+      if (end != null) queryParams['end'] = end.toIso8601String();
+      if (channelIds != null && channelIds.isNotEmpty) {
+        queryParams['channelIds'] = channelIds.join(',');
+      }
+
+      final response = await _dio.get(
+        '/livetv/guide',
+        queryParameters: queryParams,
+      );
+      return LiveTVGuideData.fromJson(response.data as Map<String, dynamic>);
+    } catch (e) {
+      appLogger.e('Failed to get Live TV guide', error: e);
+      return null;
+    }
+  }
+
+  /// Get what's currently playing on all channels
+  Future<List<LiveTVChannel>> getLiveTVWhatsOnNow() async {
+    try {
+      final response = await _dio.get('/livetv/now');
+      if (response.data is List) {
+        return (response.data as List)
+            .map((json) => LiveTVChannel.fromJson(json as Map<String, dynamic>))
+            .toList();
+      }
+      return [];
+    } catch (e) {
+      appLogger.e('Failed to get what\'s on now', error: e);
+      return [];
+    }
+  }
+
+  /// Get Live TV sources (M3U playlists)
+  Future<List<LiveTVSource>> getLiveTVSources() async {
+    try {
+      final response = await _dio.get('/livetv/sources');
+      if (response.data is List) {
+        return (response.data as List)
+            .map((json) => LiveTVSource.fromJson(json as Map<String, dynamic>))
+            .toList();
+      }
+      return [];
+    } catch (e) {
+      appLogger.e('Failed to get Live TV sources', error: e);
+      return [];
+    }
+  }
+
+  /// Add a new Live TV source (M3U playlist)
+  Future<LiveTVSource?> addLiveTVSource({
+    required String name,
+    required String url,
+    String? epgUrl,
+  }) async {
+    try {
+      final response = await _dio.post(
+        '/livetv/sources',
+        data: {
+          'name': name,
+          'url': url,
+          if (epgUrl != null) 'epgUrl': epgUrl,
+        },
+      );
+      return LiveTVSource.fromJson(response.data as Map<String, dynamic>);
+    } catch (e) {
+      appLogger.e('Failed to add Live TV source', error: e);
+      return null;
+    }
+  }
+
+  /// Refresh a Live TV source (re-fetch M3U playlist)
+  Future<bool> refreshLiveTVSource(int sourceId) async {
+    try {
+      await _dio.post('/livetv/sources/$sourceId/refresh');
+      return true;
+    } catch (e) {
+      appLogger.e('Failed to refresh Live TV source', error: e);
+      return false;
+    }
+  }
+
+  /// Delete a Live TV source
+  Future<bool> deleteLiveTVSource(int sourceId) async {
+    try {
+      await _dio.delete('/livetv/sources/$sourceId');
+      return true;
+    } catch (e) {
+      appLogger.e('Failed to delete Live TV source', error: e);
+      return false;
+    }
+  }
+
+  /// Get the stream URL for a Live TV channel
+  /// This builds a URL that can be used directly for playback
+  String getLiveTVStreamUrl(LiveTVChannel channel) {
+    // The server proxies the stream, so we use the channel's streamUrl
+    // If it's a relative URL, prefix with base URL and token
+    if (channel.streamUrl.startsWith('http')) {
+      return channel.streamUrl;
+    }
+    return '${config.baseUrl}${channel.streamUrl}?X-Plex-Token=${config.token}';
   }
 }

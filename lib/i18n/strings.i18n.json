@@ -1,19 +1,19 @@
 {
   "app": {
-    "title": "Plezy",
+    "title": "OpenFlix",
     "loading": "Loading..."
   },
   "auth": {
-    "signInWithPlex": "Sign in with Plex",
+    "signInWithPlex": "Sign in to OpenFlix",
     "showQRCode": "Show QR Code",
     "cancel": "Cancel",
     "authenticate": "Authenticate",
     "retry": "Retry",
-    "debugEnterToken": "Debug: Enter Plex Token",
-    "plexTokenLabel": "Plex Auth Token",
-    "plexTokenHint": "Enter your Plex.tv token",
+    "debugEnterToken": "Debug: Enter Auth Token",
+    "plexTokenLabel": "Auth Token",
+    "plexTokenHint": "Enter your auth token",
     "authenticationTimeout": "Authentication timed out. Please try again.",
-    "scanQRCodeInstruction": "Scan this QR code with a device logged into Plex to authenticate.",
+    "scanQRCodeInstruction": "Scan this QR code to authenticate.",
     "waitingForAuth": "Waiting for authentication...\nPlease complete sign-in in your browser."
   },
   "common": {
@@ -447,6 +447,7 @@
     "home": "Home",
     "search": "Search",
     "libraries": "Libraries",
+    "livetv": "Live TV",
     "settings": "Settings"
   },
   "collections": {

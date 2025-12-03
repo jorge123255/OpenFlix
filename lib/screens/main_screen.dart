@@ -16,6 +16,7 @@ import '../services/plex_auth_service.dart';
 import '../services/storage_service.dart';
 import 'discover_screen.dart';
 import 'libraries_screen.dart';
+import 'livetv_screen.dart';
 import 'search_screen.dart';
 import 'settings_screen.dart';
 
@@ -58,6 +59,7 @@ class _MainScreenState extends State<MainScreen> with RouteAware {
   late final List<Widget> _screens;
   final GlobalKey<State<DiscoverScreen>> _discoverKey = GlobalKey();
   final GlobalKey<State<LibrariesScreen>> _librariesKey = GlobalKey();
+  final GlobalKey<State<LiveTVScreen>> _liveTVKey = GlobalKey();
   final GlobalKey<State<SearchScreen>> _searchKey = GlobalKey();
   final GlobalKey<State<SettingsScreen>> _settingsKey = GlobalKey();
 
@@ -80,6 +82,7 @@ class _MainScreenState extends State<MainScreen> with RouteAware {
         onBecameVisible: _onDiscoverBecameVisible,
       ),
       LibrariesScreen(key: _librariesKey),
+      LiveTVScreen(key: _liveTVKey),
       SearchScreen(key: _searchKey),
       SettingsScreen(key: _settingsKey),
     ];
@@ -240,7 +243,7 @@ class _MainScreenState extends State<MainScreen> with RouteAware {
       }
     }
     // Focus search input when selecting Search tab (for both click/tap and keyboard)
-    if (index == 2) {
+    if (index == 3) {
       final searchState = _searchKey.currentState;
       if (searchState != null) {
         (searchState as dynamic).focusSearchInput();
@@ -256,11 +259,12 @@ class _MainScreenState extends State<MainScreen> with RouteAware {
   Widget build(BuildContext context) {
     return Shortcuts(
       shortcuts: {
-        // Number keys 1-4 for quick tab switching
+        // Number keys 1-5 for quick tab switching
         const SingleActivator(LogicalKeyboardKey.digit1): _TabIntent(0),
         const SingleActivator(LogicalKeyboardKey.digit2): _TabIntent(1),
         const SingleActivator(LogicalKeyboardKey.digit3): _TabIntent(2),
         const SingleActivator(LogicalKeyboardKey.digit4): _TabIntent(3),
+        const SingleActivator(LogicalKeyboardKey.digit5): _TabIntent(4),
       },
       child: Actions(
         actions: {
@@ -297,6 +301,11 @@ class _MainScreenState extends State<MainScreen> with RouteAware {
                   icon: const Icon(Icons.video_library_outlined),
                   selectedIcon: const Icon(Icons.video_library),
                   label: t.navigation.libraries,
+                ),
+                NavigationDestination(
+                  icon: const Icon(Icons.live_tv_outlined),
+                  selectedIcon: const Icon(Icons.live_tv),
+                  label: t.navigation.livetv,
                 ),
                 NavigationDestination(
                   icon: const Icon(Icons.search),

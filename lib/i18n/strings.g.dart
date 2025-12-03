@@ -945,6 +945,7 @@ class _StringsNavigationEn {
   String get home => 'Home';
   String get search => 'Search';
   String get libraries => 'Libraries';
+  String get livetv => 'Live TV';
   String get settings => 'Settings';
 }
 
@@ -2283,6 +2284,8 @@ class _StringsNavigationDe implements _StringsNavigationEn {
   String get search => 'Suche';
   @override
   String get libraries => 'Mediatheken';
+  @override
+  String get livetv => 'Live TV';
   @override
   String get settings => 'Einstellungen';
 }
@@ -3711,6 +3714,8 @@ class _StringsNavigationIt implements _StringsNavigationEn {
   @override
   String get libraries => 'Librerie';
   @override
+  String get livetv => 'TV in Diretta';
+  @override
   String get settings => 'Impostazioni';
 }
 
@@ -5126,6 +5131,8 @@ class _StringsNavigationNl implements _StringsNavigationEn {
   @override
   String get libraries => 'Bibliotheken';
   @override
+  String get livetv => 'Live TV';
+  @override
   String get settings => 'Instellingen';
 }
 
@@ -6538,6 +6545,8 @@ class _StringsNavigationSv implements _StringsNavigationEn {
   @override
   String get libraries => 'Bibliotek';
   @override
+  String get livetv => 'Live-TV';
+  @override
   String get settings => 'Inställningar';
 }
 
@@ -7904,6 +7913,8 @@ class _StringsNavigationZh implements _StringsNavigationEn {
   String get search => '搜索';
   @override
   String get libraries => '媒体库';
+  @override
+  String get livetv => '直播电视';
   @override
   String get settings => '设置';
 }
