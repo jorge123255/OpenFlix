@@ -54,3 +54,42 @@ duplication-report/
 **/fastlane/**/
 **/fastlane/report.xml
 maestro/**/*.png
+
+# ============ Go Server ============
+# Binary
+server/server
+server/openflix-server
+
+# Go build artifacts
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Go test artifacts
+*.test
+*.out
+coverage.html
+
+# Go vendor (if using vendoring)
+server/vendor/
+
+# Go workspace
+go.work
+
+# Server config (keep example)
+server/config.yaml
+!server/config.yaml.example
+
+# Database files
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+
+# DVR recordings (local storage)
+recordings/
+
+# Transcoding temp files
+transcode/

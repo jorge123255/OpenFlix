@@ -1,0 +1,40 @@
+# OpenFlix Server Configuration
+
+server:
+  host: "0.0.0.0"
+  port: 32400
+
+database:
+  driver: "sqlite"  # sqlite or postgres
+  dsn: "~/.openflix/openflix.db"
+  # For PostgreSQL:
+  # driver: "postgres"
+  # dsn: "host=localhost user=openflix password=openflix dbname=openflix port=5432 sslmode=disable"
+
+auth:
+  jwt_secret: "change-me-in-production"
+  token_expiry: 720  # hours (30 days)
+  allow_signup: true
+
+library:
+  scan_interval: 60  # minutes
+  metadata_lang: "en"
+  tmdb_api_key: ""   # Get from https://www.themoviedb.org/settings/api
+  tvdb_api_key: ""   # Get from https://thetvdb.com/api-information
+
+livetv:
+  enabled: true
+  epg_interval: 12  # hours between EPG refreshes
+
+dvr:
+  enabled: true
+  recording_dir: "~/.openflix/recordings"
+  pre_padding: 2   # minutes before show
+  post_padding: 5  # minutes after show
+
+transcode:
+  enabled: true
+  ffmpeg_path: "ffmpeg"
+  hardware_accel: "auto"  # none, nvenc, qsv, vaapi, videotoolbox
+  temp_dir: "~/.openflix/transcode"
+  max_sessions: 3

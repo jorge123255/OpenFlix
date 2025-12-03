@@ -2267,4 +2267,40 @@ class PlexClient {
       return false;
     }
   }
+
+  // ========== Commercial Detection Methods ==========
+
+  /// Get commercial detection status
+  Future<bool> isCommercialDetectionEnabled() async {
+    try {
+      final response = await _dio.get('/dvr/commercials/status');
+      final data = response.data as Map<String, dynamic>;
+      return data['enabled'] as bool? ?? false;
+    } catch (e) {
+      appLogger.e('Failed to get commercial detection status', error: e);
+      return false;
+    }
+  }
+
+  /// Get commercial segments for a recording
+  Future<CommercialSegmentsResponse?> getCommercialSegments(int recordingId) async {
+    try {
+      final response = await _dio.get('/dvr/recordings/$recordingId/commercials');
+      return CommercialSegmentsResponse.fromJson(response.data as Map<String, dynamic>);
+    } catch (e) {
+      appLogger.e('Failed to get commercial segments', error: e);
+      return null;
+    }
+  }
+
+  /// Trigger commercial detection on a recording
+  Future<bool> rerunCommercialDetection(int recordingId) async {
+    try {
+      await _dio.post('/dvr/recordings/$recordingId/commercials/detect');
+      return true;
+    } catch (e) {
+      appLogger.e('Failed to rerun commercial detection', error: e);
+      return false;
+    }
+  }
 }
