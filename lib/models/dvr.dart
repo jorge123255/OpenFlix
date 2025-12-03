@@ -107,6 +107,115 @@ class DVRRecording {
   }
 }
 
+/// Commercial segment detected in a recording
+class CommercialSegment {
+  final int id;
+  final int recordingId;
+  final double startTime; // seconds from beginning
+  final double endTime; // seconds from beginning
+  final double duration; // seconds
+
+  CommercialSegment({
+    required this.id,
+    required this.recordingId,
+    required this.startTime,
+    required this.endTime,
+    required this.duration,
+  });
+
+  factory CommercialSegment.fromJson(Map<String, dynamic> json) {
+    return CommercialSegment(
+      id: json['id'] as int,
+      recordingId: json['recordingId'] as int,
+      startTime: (json['startTime'] as num).toDouble(),
+      endTime: (json['endTime'] as num).toDouble(),
+      duration: (json['duration'] as num).toDouble(),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'recordingId': recordingId,
+      'startTime': startTime,
+      'endTime': endTime,
+      'duration': duration,
+    };
+  }
+
+  /// Check if a given position (in seconds) is within this commercial
+  bool containsPosition(double positionSeconds) {
+    return positionSeconds >= startTime && positionSeconds < endTime;
+  }
+
+  /// Duration as a formatted string
+  String get durationText {
+    final minutes = (duration / 60).floor();
+    final seconds = (duration % 60).round();
+    if (minutes > 0) {
+      return '${minutes}m ${seconds}s';
+    }
+    return '${seconds}s';
+  }
+}
+
+/// Commercial segments response with metadata
+class CommercialSegmentsResponse {
+  final int recordingId;
+  final List<CommercialSegment> segments;
+  final int totalCommercials;
+  final double commercialSeconds;
+
+  CommercialSegmentsResponse({
+    required this.recordingId,
+    required this.segments,
+    required this.totalCommercials,
+    required this.commercialSeconds,
+  });
+
+  factory CommercialSegmentsResponse.fromJson(Map<String, dynamic> json) {
+    final segmentsList = json['segments'] as List<dynamic>? ?? [];
+    return CommercialSegmentsResponse(
+      recordingId: json['recordingId'] as int,
+      segments: segmentsList
+          .map((s) => CommercialSegment.fromJson(s as Map<String, dynamic>))
+          .toList(),
+      totalCommercials: json['totalCommercials'] as int? ?? 0,
+      commercialSeconds: (json['commercialSeconds'] as num?)?.toDouble() ?? 0.0,
+    );
+  }
+
+  /// Total commercial time as formatted string
+  String get commercialTimeText {
+    final minutes = (commercialSeconds / 60).floor();
+    final seconds = (commercialSeconds % 60).round();
+    if (minutes > 0) {
+      return '${minutes}m ${seconds}s';
+    }
+    return '${seconds}s';
+  }
+
+  /// Check if a given position is within any commercial segment
+  CommercialSegment? getCommercialAtPosition(double positionSeconds) {
+    for (final segment in segments) {
+      if (segment.containsPosition(positionSeconds)) {
+        return segment;
+      }
+    }
+    return null;
+  }
+
+  /// Get the next commercial segment after a given position
+  CommercialSegment? getNextCommercial(double positionSeconds) {
+    for (final segment in segments) {
+      if (segment.startTime > positionSeconds) {
+        return segment;
+      }
+    }
+    return null;
+  }
+}
+
 /// DVR Series Recording Rule model
 class DVRSeriesRule {
   final int id;

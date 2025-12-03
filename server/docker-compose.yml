@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  openflix-server:
+    build: .
+    container_name: openflix-server
+    ports:
+      - "32400:32400"
+    volumes:
+      - ./data:/data
+      - /path/to/your/media:/media:ro  # Mount your media folder here
+    environment:
+      - OPENFLIX_HOST=0.0.0.0
+      - OPENFLIX_PORT=32400
+      - OPENFLIX_DB_DRIVER=sqlite
+      - OPENFLIX_DB_DSN=/data/openflix.db
+      - OPENFLIX_JWT_SECRET=change-this-in-production
+      - OPENFLIX_TMDB_API_KEY=${TMDB_API_KEY:-}
+      - OPENFLIX_TVDB_API_KEY=${TVDB_API_KEY:-}
+    restart: unless-stopped
+
+  # Optional: PostgreSQL for production
+  # postgres:
+  #   image: postgres:16-alpine
+  #   container_name: openflix-db
+  #   environment:
+  #     - POSTGRES_USER=openflix
+  #     - POSTGRES_PASSWORD=openflix
+  #     - POSTGRES_DB=openflix
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+  #   restart: unless-stopped
+
+volumes:
+  postgres_data:

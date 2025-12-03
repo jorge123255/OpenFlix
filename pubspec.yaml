@@ -1,7 +1,7 @@
-name: plezy
-description: "A beautiful Plex client for Flutter"
+name: openflix
+description: "OpenFlix - Open Source Media Server Client"
 publish_to: "none"
-version: 1.8.1+21
+version: 1.0.0+1
 
 environment:
   sdk: ^3.8.1
@@ -47,16 +47,16 @@ flutter:
   uses-material-design: true
   assets:
     - lib/data/iso_639_codes.json
-    - assets/plezy.png
+    - assets/openflix.png
     - assets/go-noto-current-regular.ttf
 
 flutter_launcher_icons:
   android: true
   ios: false
-  image_path: "assets/plezy.png"
-  adaptive_icon_background: "#ffffff"
-  adaptive_icon_foreground: "assets/plezy_android_foreground.png"
-  adaptive_icon_monochrome: "assets/plezy_monochrome.png"
+  image_path: "assets/openflix.png"
+  adaptive_icon_background: "#1a1a2e"
+  adaptive_icon_foreground: "assets/openflix_android_foreground.png"
+  adaptive_icon_monochrome: "assets/openflix_monochrome.png"
   macos:
     generate: false
   windows:

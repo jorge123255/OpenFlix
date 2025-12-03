@@ -6,6 +6,7 @@ import '../models/dvr.dart';
 import '../models/livetv_channel.dart';
 import '../providers/plex_client_provider.dart';
 import '../utils/app_logger.dart';
+import 'dvr_player_screen.dart';
 
 /// DVR management screen showing recordings and series rules
 class DVRScreen extends StatefulWidget {
@@ -254,6 +255,17 @@ class _DVRScreenState extends State<DVRScreen> with SingleTickerProviderStateMix
     );
   }
 
+  void _playRecording(DVRRecording recording) {
+    if (!recording.isCompleted || recording.filePath == null) return;
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => DVRPlayerScreen(recording: recording),
+      ),
+    );
+  }
+
   Widget _buildRecordingTile(DVRRecording recording) {
     final theme = Theme.of(context);
     final dateFormat = DateFormat.yMMMd();
@@ -284,15 +296,27 @@ class _DVRScreenState extends State<DVRScreen> with SingleTickerProviderStateMix
               ),
           ],
         ),
+        onTap: recording.isCompleted ? () => _playRecording(recording) : null,
         trailing: recording.isRecording
             ? const SizedBox(
                 width: 24,
                 height: 24,
                 child: CircularProgressIndicator(strokeWidth: 2),
               )
-            : IconButton(
-                icon: const Icon(Icons.delete_outline),
-                onPressed: () => _deleteRecording(recording),
+            : Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (recording.isCompleted)
+                    IconButton(
+                      icon: const Icon(Icons.play_arrow),
+                      onPressed: () => _playRecording(recording),
+                      tooltip: 'Play recording',
+                    ),
+                  IconButton(
+                    icon: const Icon(Icons.delete_outline),
+                    onPressed: () => _deleteRecording(recording),
+                  ),
+                ],
               ),
       ),
     );
