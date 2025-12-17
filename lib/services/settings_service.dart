@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/services.dart';
 import 'package:hotkey_manager/hotkey_manager.dart';
-import 'package:plezy/utils/app_logger.dart';
+import 'package:openflix/utils/app_logger.dart';
 import '../i18n/strings.g.dart';
 
 enum ThemeMode { system, light, dark }
@@ -44,6 +44,8 @@ class SettingsService {
   static const String _keyAutoSkipIntro = 'auto_skip_intro';
   static const String _keyAutoSkipCredits = 'auto_skip_credits';
   static const String _keyAutoSkipDelay = 'auto_skip_delay';
+  static const String _keyTmdbApiKey = 'tmdb_api_key';
+  static const String _keyStatsOverlayEnabled = 'stats_overlay_enabled';
 
   static SettingsService? _instance;
   late SharedPreferences _prefs;
@@ -232,6 +234,15 @@ class SettingsService {
   bool getRotationLocked() {
     return _prefs.getBool(_keyRotationLocked) ??
         true; // Default: locked (landscape only)
+  }
+
+  // Stats Overlay Settings
+  Future<void> setStatsOverlayEnabled(bool enabled) async {
+    await _prefs.setBool(_keyStatsOverlayEnabled, enabled);
+  }
+
+  bool getStatsOverlayEnabled() {
+    return _prefs.getBool(_keyStatsOverlayEnabled) ?? false; // Default: disabled
   }
 
   // Subtitle Styling Settings
@@ -843,6 +854,19 @@ class SettingsService {
     return _prefs.getInt(_keyAutoSkipDelay) ?? 5; // Default: 5 seconds
   }
 
+  // TMDB API Key
+  Future<void> setTmdbApiKey(String? apiKey) async {
+    if (apiKey == null || apiKey.isEmpty) {
+      await _prefs.remove(_keyTmdbApiKey);
+    } else {
+      await _prefs.setString(_keyTmdbApiKey, apiKey);
+    }
+  }
+
+  String? getTmdbApiKey() {
+    return _prefs.getString(_keyTmdbApiKey);
+  }
+
   // Reset all settings to defaults
   Future<void> resetAllSettings() async {
     await Future.wait([
@@ -873,6 +897,7 @@ class SettingsService {
       _prefs.remove(_keySubtitleBackgroundOpacity),
       _prefs.remove(_keyAppLocale),
       _prefs.remove(_keyRememberTrackSelections),
+      _prefs.remove(_keyTmdbApiKey),
     ]);
   }
 

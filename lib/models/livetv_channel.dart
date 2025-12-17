@@ -8,6 +8,7 @@ class LiveTVChannel {
   final int? number;
   final String? group;
   final bool enabled;
+  final bool isFavorite;
   final LiveTVProgram? nowPlaying;
   final LiveTVProgram? nextProgram;
 
@@ -20,6 +21,7 @@ class LiveTVChannel {
     this.number,
     this.group,
     this.enabled = true,
+    this.isFavorite = false,
     this.nowPlaying,
     this.nextProgram,
   });
@@ -34,6 +36,7 @@ class LiveTVChannel {
       number: json['number'] as int?,
       group: json['group'] as String?,
       enabled: json['enabled'] as bool? ?? true,
+      isFavorite: json['isFavorite'] as bool? ?? false,
       nowPlaying: json['nowPlaying'] != null
           ? LiveTVProgram.fromJson(json['nowPlaying'] as Map<String, dynamic>)
           : null,
@@ -53,6 +56,7 @@ class LiveTVChannel {
       'number': number,
       'group': group,
       'enabled': enabled,
+      'isFavorite': isFavorite,
       'nowPlaying': nowPlaying?.toJson(),
       'nextProgram': nextProgram?.toJson(),
     };
@@ -67,6 +71,7 @@ class LiveTVChannel {
     int? number,
     String? group,
     bool? enabled,
+    bool? isFavorite,
     LiveTVProgram? nowPlaying,
     LiveTVProgram? nextProgram,
   }) {
@@ -79,6 +84,7 @@ class LiveTVChannel {
       number: number ?? this.number,
       group: group ?? this.group,
       enabled: enabled ?? this.enabled,
+      isFavorite: isFavorite ?? this.isFavorite,
       nowPlaying: nowPlaying ?? this.nowPlaying,
       nextProgram: nextProgram ?? this.nextProgram,
     );
@@ -186,11 +192,14 @@ class LiveTVGuideData {
       }
     }
 
+    final startValue = json['startTime'] ?? json['start'];
+    final endValue = json['endTime'] ?? json['end'];
+
     return LiveTVGuideData(
       channels: channelsList,
       programs: programsMap,
-      startTime: DateTime.parse(json['startTime'] as String),
-      endTime: DateTime.parse(json['endTime'] as String),
+      startTime: DateTime.parse(startValue as String),
+      endTime: DateTime.parse(endValue as String),
     );
   }
 }
