@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -7,9 +8,27 @@ import 'package:provider/provider.dart';
 
 import '../models/livetv_channel.dart';
 import '../mpv/mpv.dart';
-import '../providers/plex_client_provider.dart';
+import '../providers/media_client_provider.dart';
+import '../services/channel_history_service.dart';
+import '../services/livetv_aspect_ratio_manager.dart';
+import '../services/pip_service.dart';
 import '../services/settings_service.dart';
+import '../services/sleep_timer_service.dart';
 import '../utils/app_logger.dart';
+import 'dvr_screen.dart';
+import '../widgets/channel_history_panel.dart';
+import '../widgets/livetv_aspect_ratio_button.dart';
+import '../widgets/livetv_volume_overlay.dart';
+import '../widgets/livetv/channel_preview_overlay.dart';
+import '../widgets/livetv/livetv_player_controls.dart';
+import '../widgets/livetv/mini_channel_guide_overlay.dart';
+import '../widgets/livetv/program_details_sheet.dart';
+import '../widgets/livetv/quick_record_button.dart';
+import '../widgets/stats_for_nerds_overlay.dart';
+import '../widgets/video_controls/sheets/audio_track_sheet.dart';
+import '../widgets/video_controls/sheets/base_video_control_sheet.dart';
+import '../widgets/video_controls/sheets/subtitle_track_sheet.dart';
+import '../widgets/video_controls/widgets/sleep_timer_content.dart';
 
 /// Live TV player screen with channel surfing support
 class LiveTVPlayerScreen extends StatefulWidget {
@@ -26,7 +45,7 @@ class LiveTVPlayerScreen extends StatefulWidget {
   State<LiveTVPlayerScreen> createState() => _LiveTVPlayerScreenState();
 }
 
-class _LiveTVPlayerScreenState extends State<LiveTVPlayerScreen> {
+class _LiveTVPlayerScreenState extends State<LiveTVPlayerScreen> with WidgetsBindingObserver {
   Player? _player;
   bool _isPlayerInitialized = false;
   late LiveTVChannel _currentChannel;
@@ -42,6 +61,49 @@ class _LiveTVPlayerScreenState extends State<LiveTVPlayerScreen> {
   String _channelNumberInput = '';
   Timer? _channelInputTimer;
 
+  // Channel preview overlay
+  bool _showChannelPreview = false;
+  LiveTVChannel? _previewChannel;
+  int _previewCountdown = 2;
+  Timer? _previewCountdownTimer;
+
+  // Sleep timer service
+  final SleepTimerService _sleepTimer = SleepTimerService();
+
+  // Channel history service
+  final ChannelHistoryService _channelHistory = ChannelHistoryService();
+
+  // Channel history panel visibility
+  bool _showHistoryPanel = false;
+
+  // Volume control
+  bool _showVolumeOverlay = false;
+  Timer? _volumeOverlayTimer;
+  double _currentVolume = 100.0;
+  bool _isMuted = false;
+  StreamSubscription<double>? _volumeSubscription;
+
+  // Aspect ratio control
+  LiveTVAspectRatioManager? _aspectRatioManager;
+  AspectRatioMode _currentAspectMode = AspectRatioMode.auto;
+
+  // Mini channel guide
+  bool _showMiniGuide = false;
+
+  // Quick record
+  bool _isRecordingScheduled = false;
+  bool _isSchedulingRecording = false;
+
+  // Stats overlay
+  bool _showStatsOverlay = false;
+
+  // Favorites filter
+  bool _favoritesFilterActive = false;
+
+  // Picture-in-Picture
+  final PipService _pipService = PipService();
+  bool _isPipMode = false;
+
   @override
   void initState() {
     super.initState();
@@ -54,6 +116,12 @@ class _LiveTVPlayerScreenState extends State<LiveTVPlayerScreen> {
     _initializePlayer();
     _startOverlayTimer();
 
+    // Initialize channel history
+    _channelHistory.initialize();
+
+    // Load stats overlay preference
+    _loadStatsOverlayPreference();
+
     // Refresh current program info every minute
     _programRefreshTimer = Timer.periodic(const Duration(minutes: 1), (_) {
       _refreshCurrentProgram();
@@ -65,8 +133,11 @@ class _LiveTVPlayerScreenState extends State<LiveTVPlayerScreen> {
     _overlayTimer?.cancel();
     _programRefreshTimer?.cancel();
     _channelInputTimer?.cancel();
+    _previewCountdownTimer?.cancel();
+    _volumeOverlayTimer?.cancel();
     _bufferingSubscription?.cancel();
     _errorSubscription?.cancel();
+    _volumeSubscription?.cancel();
     _player?.dispose();
     _isBuffering.dispose();
     super.dispose();
@@ -86,7 +157,16 @@ class _LiveTVPlayerScreenState extends State<LiveTVPlayerScreen> {
       await _player!.setProperty('demuxer-max-bytes', bufferSizeBytes.toString());
       await _player!.setProperty('hwdec', enableHardwareDecoding ? 'auto-safe' : 'no');
       await _player!.setProperty('cache', 'yes');
-      await _player!.setProperty('cache-secs', '10');
+      await _player!.setProperty('cache-secs', '20');
+      await _player!.setProperty('demuxer-readahead-secs', '20');
+      await _player!.setProperty(
+        'stream-lavf-o',
+        'reconnect=1,reconnect_streamed=1,reconnect_delay_max=2',
+      );
+
+      // Ensure audio is enabled by default
+      await _player!.setProperty('aid', 'auto');
+      await _player!.setProperty('audio-channels', 'auto');
 
       _bufferingSubscription = _player!.streams.buffering.listen((buffering) {
         _isBuffering.value = buffering;
@@ -104,6 +184,21 @@ class _LiveTVPlayerScreenState extends State<LiveTVPlayerScreen> {
         }
       });
 
+      _volumeSubscription = _player!.streams.volume.listen((volume) {
+        if (mounted) {
+          setState(() {
+            _currentVolume = volume;
+          });
+        }
+      });
+
+      // Load saved volume from settings
+      final savedVolume = settingsService.getVolume();
+      await _player!.setVolume(savedVolume);
+
+      // Initialize aspect ratio manager
+      _aspectRatioManager = LiveTVAspectRatioManager(_player!);
+
       setState(() {
         _isPlayerInitialized = true;
       });
@@ -115,24 +210,79 @@ class _LiveTVPlayerScreenState extends State<LiveTVPlayerScreen> {
     }
   }
 
+  bool _hasHeader(Map<String, String> headers, String headerNameLower) {
+    for (final key in headers.keys) {
+      if (key.toLowerCase() == headerNameLower) return true;
+    }
+    return false;
+  }
+
+  ({String url, Map<String, String> headers}) _parseM3uPipeHeaders(
+    String input,
+  ) {
+    final pipeIndex = input.indexOf('|');
+    if (pipeIndex < 0) {
+      return (url: input, headers: <String, String>{});
+    }
+
+    final url = input.substring(0, pipeIndex);
+    final headerPart = input.substring(pipeIndex + 1);
+    final headers = <String, String>{};
+
+    for (final segment in headerPart.split('&')) {
+      if (segment.trim().isEmpty) continue;
+      final eqIndex = segment.indexOf('=');
+      if (eqIndex <= 0) continue;
+      final rawKey = segment.substring(0, eqIndex);
+      final rawValue = segment.substring(eqIndex + 1);
+      final key = Uri.decodeComponent(rawKey).trim();
+      final value = Uri.decodeComponent(rawValue).trim();
+      if (key.isEmpty || value.isEmpty) continue;
+      headers[key] = value;
+    }
+
+    return (url: url, headers: headers);
+  }
+
   Future<void> _playChannel(LiveTVChannel channel) async {
     if (_player == null) return;
 
     _isBuffering.value = true;
 
     try {
-      final client = context.read<PlexClientProvider>().client;
+      final client = context.read<MediaClientProvider>().client;
       if (client == null) return;
 
       final streamUrl = client.getLiveTVStreamUrl(channel);
       appLogger.d('Playing Live TV: ${channel.name} - $streamUrl');
 
-      await _player!.open(Media(streamUrl));
+      final parsed = _parseM3uPipeHeaders(streamUrl);
+
+      // Many IPTV providers require a specific User-Agent (VLC works by default).
+      // Also include auth headers only for server-hosted URLs.
+      final headers = <String, String>{
+        ...parsed.headers,
+      };
+      if (!_hasHeader(headers, 'user-agent')) {
+        headers['User-Agent'] = 'VLC/3.0.20 LibVLC/3.0.20';
+      }
+      if (parsed.url.startsWith(client.config.baseUrl)) {
+        headers.addAll(client.config.headers);
+      }
+
+      await _player!.open(Media(parsed.url, headers: headers));
+
+      // Explicitly enable audio track (fixes issue where audio doesn't play)
+      await _player!.setProperty('aid', 'auto');
+
       await _player!.play();
 
       setState(() {
         _currentChannel = channel;
       });
+
+      // Add to channel history
+      _channelHistory.addChannel(channel.id);
 
       // Show overlay when changing channels
       _showOverlayTemporarily();
@@ -143,27 +293,108 @@ class _LiveTVPlayerScreenState extends State<LiveTVPlayerScreen> {
 
   void _channelUp() {
     if (widget.channels.isEmpty) return;
-    _currentChannelIndex = (_currentChannelIndex - 1 + widget.channels.length) %
-        widget.channels.length;
-    _playChannel(widget.channels[_currentChannelIndex]);
+
+    if (_favoritesFilterActive) {
+      // Find previous favorite channel
+      final nextIndex = _findPreviousFavoriteChannel(_currentChannelIndex);
+      if (nextIndex != -1) {
+        _currentChannelIndex = nextIndex;
+        _playChannel(widget.channels[_currentChannelIndex]);
+      }
+    } else {
+      _currentChannelIndex = (_currentChannelIndex - 1 + widget.channels.length) %
+          widget.channels.length;
+      _playChannel(widget.channels[_currentChannelIndex]);
+    }
   }
 
   void _channelDown() {
     if (widget.channels.isEmpty) return;
-    _currentChannelIndex = (_currentChannelIndex + 1) % widget.channels.length;
-    _playChannel(widget.channels[_currentChannelIndex]);
+
+    if (_favoritesFilterActive) {
+      // Find next favorite channel
+      final nextIndex = _findNextFavoriteChannel(_currentChannelIndex);
+      if (nextIndex != -1) {
+        _currentChannelIndex = nextIndex;
+        _playChannel(widget.channels[_currentChannelIndex]);
+      }
+    } else {
+      _currentChannelIndex = (_currentChannelIndex + 1) % widget.channels.length;
+      _playChannel(widget.channels[_currentChannelIndex]);
+    }
+  }
+
+  int _findNextFavoriteChannel(int currentIndex) {
+    final count = widget.channels.length;
+    for (int i = 1; i < count; i++) {
+      final index = (currentIndex + i) % count;
+      if (widget.channels[index].isFavorite) {
+        return index;
+      }
+    }
+    return -1; // No favorite channels found
+  }
+
+  int _findPreviousFavoriteChannel(int currentIndex) {
+    final count = widget.channels.length;
+    for (int i = 1; i < count; i++) {
+      final index = (currentIndex - i + count) % count;
+      if (widget.channels[index].isFavorite) {
+        return index;
+      }
+    }
+    return -1; // No favorite channels found
   }
 
   void _onNumberPressed(int number) {
     _channelNumberInput += number.toString();
     _channelInputTimer?.cancel();
+    _previewCountdownTimer?.cancel();
 
-    // Auto-select after 2 seconds of no input
-    _channelInputTimer = Timer(const Duration(seconds: 2), () {
-      _selectChannelByNumber();
+    // Try to find channel with the current input
+    final inputNumber = int.tryParse(_channelNumberInput);
+    if (inputNumber != null) {
+      final channelIndex = widget.channels.indexWhere(
+        (c) => c.number == inputNumber,
+      );
+
+      if (channelIndex >= 0) {
+        // Found a matching channel - show preview and start countdown
+        setState(() {
+          _previewChannel = widget.channels[channelIndex];
+          _showChannelPreview = true;
+          _previewCountdown = 2;
+        });
+
+        // Start countdown timer
+        _startPreviewCountdown();
+      } else {
+        // No matching channel yet - hide preview
+        setState(() {
+          _showChannelPreview = false;
+          _previewChannel = null;
+        });
+      }
+    }
+  }
+
+  void _startPreviewCountdown() {
+    _previewCountdownTimer?.cancel();
+    _previewCountdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (_previewCountdown > 0) {
+        setState(() {
+          _previewCountdown--;
+        });
+      } else {
+        timer.cancel();
+        _selectChannelByNumber();
+      }
     });
+  }
 
-    setState(() {});
+  void _tuneToPreviewChannel() {
+    _previewCountdownTimer?.cancel();
+    _selectChannelByNumber();
   }
 
   void _selectChannelByNumber() {
@@ -182,7 +413,46 @@ class _LiveTVPlayerScreenState extends State<LiveTVPlayerScreen> {
     }
 
     _channelNumberInput = '';
-    setState(() {});
+    _previewCountdownTimer?.cancel();
+    setState(() {
+      _showChannelPreview = false;
+      _previewChannel = null;
+    });
+  }
+
+  void _switchToPreviousChannel() {
+    final previousChannelId = _channelHistory.getPreviousChannel(_currentChannel.id);
+    if (previousChannelId == null) {
+      // No previous channel available
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No previous channel'),
+          duration: Duration(seconds: 1),
+          backgroundColor: Colors.grey,
+        ),
+      );
+      return;
+    }
+
+    // Find the channel by ID
+    final channelIndex = widget.channels.indexWhere(
+      (c) => c.id == previousChannelId,
+    );
+
+    if (channelIndex >= 0) {
+      _currentChannelIndex = channelIndex;
+      final previousChannel = widget.channels[channelIndex];
+      _playChannel(previousChannel);
+
+      // Show notification
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Switched to: ${previousChannel.name}'),
+          duration: const Duration(seconds: 2),
+          backgroundColor: Colors.blue,
+        ),
+      );
+    }
   }
 
   void _startOverlayTimer() {
@@ -214,7 +484,7 @@ class _LiveTVPlayerScreenState extends State<LiveTVPlayerScreen> {
 
   Future<void> _refreshCurrentProgram() async {
     try {
-      final client = context.read<PlexClientProvider>().client;
+      final client = context.read<MediaClientProvider>().client;
       if (client == null) return;
 
       final channels = await client.getLiveTVWhatsOnNow();
@@ -269,17 +539,151 @@ class _LiveTVPlayerScreenState extends State<LiveTVPlayerScreen> {
       return KeyEventResult.handled;
     }
 
-    // Toggle overlay
-    if (key == LogicalKeyboardKey.space ||
-        key == LogicalKeyboardKey.enter ||
-        key == LogicalKeyboardKey.select) {
+    // Enter key - tune to preview channel if showing, otherwise toggle overlay
+    if (key == LogicalKeyboardKey.enter || key == LogicalKeyboardKey.select) {
+      if (_showChannelPreview) {
+        _tuneToPreviewChannel();
+      } else {
+        _toggleOverlay();
+      }
+      return KeyEventResult.handled;
+    }
+
+    // Toggle overlay (space only)
+    if (key == LogicalKeyboardKey.space) {
+      _toggleOverlay();
+      return KeyEventResult.handled;
+    }
+
+    // Volume control
+    if (key == LogicalKeyboardKey.arrowUp && !_showOverlay) {
+      _adjustVolume(5);
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.arrowDown && !_showOverlay) {
+      _adjustVolume(-5);
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.equal || key == LogicalKeyboardKey.add) {
+      _adjustVolume(5);
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.minus) {
+      _adjustVolume(-5);
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.keyM) {
+      _toggleMute();
+      return KeyEventResult.handled;
+    }
+
+    // Audio track selection
+    if (key == LogicalKeyboardKey.keyA) {
+      _showAudioTrackSheet();
+      return KeyEventResult.handled;
+    }
+
+    // Subtitle selection
+    if (key == LogicalKeyboardKey.keyS) {
+      _showSubtitleTrackSheet();
+      return KeyEventResult.handled;
+    }
+
+    // Aspect ratio
+    if (key == LogicalKeyboardKey.keyZ) {
+      _cycleAspectRatio();
+      return KeyEventResult.handled;
+    }
+
+    // Stats overlay (Shift+I) - check before regular I
+    if (key == LogicalKeyboardKey.keyI && HardwareKeyboard.instance.isShiftPressed) {
+      _toggleStatsOverlay();
+      return KeyEventResult.handled;
+    }
+
+    // Program details
+    if (key == LogicalKeyboardKey.keyI) {
+      _showProgramDetails();
+      return KeyEventResult.handled;
+    }
+
+    // Quick record
+    if (key == LogicalKeyboardKey.keyR) {
+      _quickRecord();
+      return KeyEventResult.handled;
+    }
+
+    // Sleep timer
+    if (key == LogicalKeyboardKey.keyT) {
+      _showSleepTimer();
+      return KeyEventResult.handled;
+    }
+
+    // Mini channel guide
+    if (key == LogicalKeyboardKey.keyG) {
+      _toggleMiniGuide();
+      return KeyEventResult.handled;
+    }
+
+    // Channel history
+    if (key == LogicalKeyboardKey.keyH) {
+      _toggleHistoryPanel();
+      return KeyEventResult.handled;
+    }
+
+    // Favorites filter
+    if (key == LogicalKeyboardKey.keyF) {
+      _toggleFavoritesFilter();
+      return KeyEventResult.handled;
+    }
+
+    // Picture-in-Picture
+    if (key == LogicalKeyboardKey.keyP) {
+      _togglePip();
+      return KeyEventResult.handled;
+    }
+
+    // Previous channel
+    if (key == LogicalKeyboardKey.backspace) {
+      _switchToPreviousChannel();
+      return KeyEventResult.handled;
+    }
+
+    // Android TV: D-pad left/right when overlay is visible
+    if (_showOverlay && key == LogicalKeyboardKey.arrowLeft) {
+      _switchToPreviousChannel();
+      return KeyEventResult.handled;
+    }
+
+    if (_showOverlay && key == LogicalKeyboardKey.arrowRight) {
+      _showProgramDetails();
+      return KeyEventResult.handled;
+    }
+
+    // Android TV: Menu button = Mini guide
+    if (key == LogicalKeyboardKey.contextMenu) {
+      _toggleMiniGuide();
+      return KeyEventResult.handled;
+    }
+
+    // Android TV: Media buttons
+    if (key == LogicalKeyboardKey.mediaPlayPause) {
       _toggleOverlay();
       return KeyEventResult.handled;
     }
 
     // Exit
     if (key == LogicalKeyboardKey.escape ||
-        key == LogicalKeyboardKey.backspace) {
+        key == LogicalKeyboardKey.goBack) {
+      // Close overlays if open, otherwise exit
+      if (_showMiniGuide) {
+        _toggleMiniGuide();
+        return KeyEventResult.handled;
+      }
+      if (_showHistoryPanel) {
+        _toggleHistoryPanel();
+        return KeyEventResult.handled;
+      }
       Navigator.of(context).pop();
       return KeyEventResult.handled;
     }
@@ -287,21 +691,310 @@ class _LiveTVPlayerScreenState extends State<LiveTVPlayerScreen> {
     return KeyEventResult.ignored;
   }
 
+  void _toggleHistoryPanel() {
+    setState(() {
+      _showHistoryPanel = !_showHistoryPanel;
+    });
+  }
+
+  void _toggleMiniGuide() {
+    setState(() {
+      _showMiniGuide = !_showMiniGuide;
+    });
+  }
+
+  Future<void> _loadStatsOverlayPreference() async {
+    final settingsService = await SettingsService.getInstance();
+    setState(() {
+      _showStatsOverlay = settingsService.getStatsOverlayEnabled();
+    });
+  }
+
+  Future<void> _toggleStatsOverlay() async {
+    final settingsService = await SettingsService.getInstance();
+    setState(() {
+      _showStatsOverlay = !_showStatsOverlay;
+    });
+    await settingsService.setStatsOverlayEnabled(_showStatsOverlay);
+  }
+
+  void _toggleFavoritesFilter() {
+    setState(() {
+      _favoritesFilterActive = !_favoritesFilterActive;
+    });
+
+    // Show feedback
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          _favoritesFilterActive
+              ? 'Showing favorites only'
+              : 'Showing all channels',
+        ),
+        duration: const Duration(seconds: 1),
+      ),
+    );
+  }
+
+  Future<void> _togglePip() async {
+    if (!_pipService.isSupported) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Picture-in-Picture not supported on this platform'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
+    final success = await _pipService.togglePip();
+    if (success && mounted) {
+      setState(() {
+        _isPipMode = _pipService.isPipMode;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            _isPipMode
+                ? 'Entered Picture-in-Picture mode'
+                : 'Exited Picture-in-Picture mode',
+          ),
+          duration: const Duration(seconds: 1),
+        ),
+      );
+    }
+  }
+
+  Future<void> _adjustVolume(double delta) async {
+    if (_player == null) return;
+
+    final newVolume = (_currentVolume + delta).clamp(0.0, 100.0);
+    await _player!.setVolume(newVolume);
+
+    // If adjusting volume while muted, unmute
+    if (_isMuted && delta != 0) {
+      await _toggleMute();
+    }
+
+    // Save volume to settings
+    final settingsService = await SettingsService.getInstance();
+    await settingsService.setVolume(newVolume);
+
+    // Show volume overlay
+    _showVolumeOverlayTemporarily();
+  }
+
+  Future<void> _toggleMute() async {
+    if (_player == null) return;
+
+    final newMuteState = !_isMuted;
+    await _player!.setProperty('mute', newMuteState ? 'yes' : 'no');
+
+    setState(() {
+      _isMuted = newMuteState;
+    });
+
+    // Show volume overlay
+    _showVolumeOverlayTemporarily();
+  }
+
+  void _showVolumeOverlayTemporarily() {
+    setState(() {
+      _showVolumeOverlay = true;
+    });
+
+    _volumeOverlayTimer?.cancel();
+    _volumeOverlayTimer = Timer(const Duration(seconds: 2), () {
+      if (mounted) {
+        setState(() {
+          _showVolumeOverlay = false;
+        });
+      }
+    });
+  }
+
+  Future<void> _cycleAspectRatio() async {
+    if (_aspectRatioManager == null) return;
+
+    final newMode = await _aspectRatioManager!.cycleMode();
+    setState(() {
+      _currentAspectMode = newMode;
+    });
+
+    // Show toast notification
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Aspect Ratio: ${newMode.displayName}'),
+          duration: const Duration(seconds: 2),
+          backgroundColor: Colors.blue,
+        ),
+      );
+    }
+  }
+
+  void _showAudioTrackSheet() {
+    if (_player == null) return;
+
+    AudioTrackSheet.show(
+      context,
+      _player!,
+      onOpen: () {
+        // Pause overlay auto-hide while sheet is open
+        _overlayTimer?.cancel();
+      },
+      onClose: () {
+        // Resume overlay auto-hide when sheet closes
+        if (_showOverlay) {
+          _startOverlayTimer();
+        }
+      },
+    );
+  }
+
+  void _showSubtitleTrackSheet() {
+    if (_player == null) return;
+
+    SubtitleTrackSheet.show(
+      context,
+      _player!,
+      onOpen: () {
+        // Pause overlay auto-hide while sheet is open
+        _overlayTimer?.cancel();
+      },
+      onClose: () {
+        // Resume overlay auto-hide when sheet closes
+        if (_showOverlay) {
+          _startOverlayTimer();
+        }
+      },
+    );
+  }
+
+  void _showProgramDetails() {
+    ProgramDetailsSheet.show(
+      context,
+      channel: _currentChannel,
+      onRecord: () {
+        Navigator.of(context).pop(); // Close details sheet
+        _scheduleRecording();
+      },
+      onOpen: () {
+        // Pause overlay auto-hide while sheet is open
+        _overlayTimer?.cancel();
+      },
+      onClose: () {
+        // Resume overlay auto-hide when sheet closes
+        if (_showOverlay) {
+          _startOverlayTimer();
+        }
+      },
+    );
+  }
+
+  Future<void> _quickRecord() async {
+    setState(() => _isSchedulingRecording = true);
+
+    try {
+      final result = await showDialog<bool>(
+        context: context,
+        builder: (context) => ScheduleRecordingDialog(
+          channel: _currentChannel,
+          program: _currentChannel.nowPlaying,
+        ),
+      );
+
+      if (mounted) {
+        setState(() {
+          _isSchedulingRecording = false;
+          _isRecordingScheduled = result == true;
+        });
+
+        if (result == true) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Recording scheduled'),
+              backgroundColor: Colors.green,
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isSchedulingRecording = false);
+      }
+    }
+  }
+
+  Future<void> _scheduleRecording() async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => ScheduleRecordingDialog(
+        channel: _currentChannel,
+        program: _currentChannel.nowPlaying,
+      ),
+    );
+
+    if (result == true && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Recording scheduled'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    }
+  }
+
+  void _showSleepTimer() {
+    BaseVideoControlSheet.showSheet(
+      context: context,
+      builder: (context) => BaseVideoControlSheet(
+        title: 'Sleep Timer',
+        icon: Icons.bedtime,
+        child: SleepTimerContent(
+          player: _player!,
+          sleepTimer: _sleepTimer,
+          onCancel: () => Navigator.of(context).pop(),
+        ),
+      ),
+      onOpen: () {
+        // Pause overlay auto-hide while sheet is open
+        _overlayTimer?.cancel();
+      },
+      onClose: () {
+        // Resume overlay auto-hide when sheet closes
+        if (_showOverlay) {
+          _startOverlayTimer();
+        }
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: Platform.isMacOS ? Colors.transparent : Colors.black,
       body: Focus(
         autofocus: true,
         onKeyEvent: _handleKeyEvent,
         child: GestureDetector(
           onTap: _toggleOverlay,
+          onLongPress: _showProgramDetails,
           onVerticalDragEnd: (details) {
             if (details.primaryVelocity != null) {
-              if (details.primaryVelocity! < -200) {
-                _channelDown();
-              } else if (details.primaryVelocity! > 200) {
+              // Swipe up to open mini guide
+              if (details.primaryVelocity! < -500 && !_showMiniGuide) {
+                _toggleMiniGuide();
+              }
+              // Swipe down for channel navigation (when guide not showing)
+              else if (details.primaryVelocity! > 200 && !_showMiniGuide) {
                 _channelUp();
+              }
+              // Swipe up for channel navigation (when guide not showing)
+              else if (details.primaryVelocity! < -200 && !_showMiniGuide) {
+                _channelDown();
               }
             }
           },
@@ -332,7 +1025,25 @@ class _LiveTVPlayerScreenState extends State<LiveTVPlayerScreen> {
               ),
 
               // Channel info overlay
-              if (_showOverlay) _buildOverlay(),
+              if (_showOverlay)
+                LiveTVPlayerControls(
+                  channel: _currentChannel,
+                  sleepTimer: _sleepTimer,
+                  isRecordingScheduled: _isRecordingScheduled,
+                  isSchedulingRecording: _isSchedulingRecording,
+                  currentAspectMode: _currentAspectMode,
+                  pipService: _pipService,
+                  isPipMode: _isPipMode,
+                  onShowProgramDetails: _showProgramDetails,
+                  onQuickRecord: _quickRecord,
+                  onShowAudioTrackSheet: _showAudioTrackSheet,
+                  onShowSubtitleTrackSheet: _showSubtitleTrackSheet,
+                  onCycleAspectRatio: _cycleAspectRatio,
+                  onSwitchToPreviousChannel: _switchToPreviousChannel,
+                  onToggleHistoryPanel: _toggleHistoryPanel,
+                  onShowSleepTimer: _showSleepTimer,
+                  onTogglePip: _togglePip,
+                ),
 
               // Channel number input display
               if (_channelNumberInput.isNotEmpty)
@@ -358,6 +1069,62 @@ class _LiveTVPlayerScreenState extends State<LiveTVPlayerScreen> {
                     ),
                   ),
                 ),
+
+              // Volume overlay
+              if (_showVolumeOverlay)
+                LiveTVVolumeOverlay(
+                  volume: _currentVolume,
+                  isMuted: _isMuted,
+                ),
+
+              // Channel history panel
+              if (_showHistoryPanel)
+                ChannelHistoryPanel(
+                  channels: widget.channels,
+                  channelHistory: _channelHistory,
+                  onChannelSelected: (channel) {
+                    final channelIndex = widget.channels.indexWhere(
+                      (c) => c.id == channel.id,
+                    );
+                    if (channelIndex >= 0) {
+                      _currentChannelIndex = channelIndex;
+                      _playChannel(channel);
+                    }
+                  },
+                  onClose: _toggleHistoryPanel,
+                ),
+
+              // Mini channel guide
+              if (_showMiniGuide)
+                MiniChannelGuideOverlay(
+                  channels: widget.channels,
+                  currentChannel: _currentChannel,
+                  favoritesFilterActive: _favoritesFilterActive,
+                  onChannelSelected: (channel) {
+                    final channelIndex = widget.channels.indexWhere(
+                      (c) => c.id == channel.id,
+                    );
+                    if (channelIndex >= 0) {
+                      _currentChannelIndex = channelIndex;
+                      _playChannel(channel);
+                    }
+                  },
+                  onClose: _toggleMiniGuide,
+                  onToggleFavoritesFilter: _toggleFavoritesFilter,
+                ),
+              // Stats for nerds overlay
+              if (_showStatsOverlay && _player != null)
+                StatsForNerdsOverlay(
+                  player: _player!,
+                  streamUrl: _currentChannel.streamUrl,
+                ),
+              // Channel preview overlay
+              if (_showChannelPreview && _previewChannel != null)
+                ChannelPreviewOverlay(
+                  channel: _previewChannel!,
+                  countdown: _previewCountdown,
+                  onTuneNow: _tuneToPreviewChannel,
+                ),
             ],
           ),
         ),
@@ -365,211 +1132,4 @@ class _LiveTVPlayerScreenState extends State<LiveTVPlayerScreen> {
     );
   }
 
-  Widget _buildOverlay() {
-    final theme = Theme.of(context);
-    final now = _currentChannel.nowPlaying;
-    final next = _currentChannel.nextProgram;
-
-    return Positioned(
-      left: 0,
-      right: 0,
-      bottom: 0,
-      child: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.bottomCenter,
-            end: Alignment.topCenter,
-            colors: [
-              Colors.black.withAlpha(230),
-              Colors.black.withAlpha(150),
-              Colors.transparent,
-            ],
-            stops: const [0.0, 0.7, 1.0],
-          ),
-        ),
-        padding: const EdgeInsets.all(24),
-        child: SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Channel info row
-              Row(
-                children: [
-                  // Channel logo/number
-                  if (_currentChannel.logo != null &&
-                      _currentChannel.logo!.isNotEmpty)
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: Image.network(
-                        _currentChannel.logo!,
-                        width: 64,
-                        height: 64,
-                        fit: BoxFit.contain,
-                        errorBuilder: (context, error, stackTrace) {
-                          return _buildChannelNumber();
-                        },
-                      ),
-                    )
-                  else
-                    _buildChannelNumber(),
-                  const SizedBox(width: 16),
-                  // Channel name and program info
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            if (_currentChannel.number != null)
-                              Text(
-                                '${_currentChannel.number}  ',
-                                style: const TextStyle(
-                                  color: Colors.white70,
-                                  fontSize: 18,
-                                ),
-                              ),
-                            Expanded(
-                              child: Text(
-                                _currentChannel.name,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
-                        ),
-                        if (now != null) ...[
-                          const SizedBox(height: 8),
-                          Text(
-                            now.title,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 18,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          const SizedBox(height: 4),
-                          Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 2,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.red,
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: const Text(
-                                  'LIVE',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Text(
-                                '${_formatTime(now.start)} - ${_formatTime(now.end)}',
-                                style: const TextStyle(
-                                  color: Colors.white70,
-                                  fontSize: 14,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          // Progress bar
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(2),
-                            child: LinearProgressIndicator(
-                              value: now.progress,
-                              backgroundColor: Colors.white24,
-                              valueColor: const AlwaysStoppedAnimation<Color>(
-                                Colors.red,
-                              ),
-                              minHeight: 4,
-                            ),
-                          ),
-                        ],
-                        if (next != null) ...[
-                          const SizedBox(height: 8),
-                          Text(
-                            'Next: ${next.title} (${_formatTime(next.start)})',
-                            style: const TextStyle(
-                              color: Colors.white54,
-                              fontSize: 14,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              // Navigation hint
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  _buildHintButton(Icons.keyboard_arrow_up, 'Channel Up'),
-                  const SizedBox(width: 24),
-                  _buildHintButton(Icons.keyboard_arrow_down, 'Channel Down'),
-                  const SizedBox(width: 24),
-                  _buildHintButton(Icons.dialpad, 'Enter Number'),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildChannelNumber() {
-    return Container(
-      width: 64,
-      height: 64,
-      decoration: BoxDecoration(
-        color: Colors.white24,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Center(
-        child: Text(
-          _currentChannel.number?.toString() ?? '#',
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-            fontSize: 24,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHintButton(IconData icon, String label) {
-    return Row(
-      children: [
-        Icon(icon, color: Colors.white54, size: 20),
-        const SizedBox(width: 4),
-        Text(
-          label,
-          style: const TextStyle(color: Colors.white54, fontSize: 12),
-        ),
-      ],
-    );
-  }
-
-  String _formatTime(DateTime time) {
-    return DateFormat.jm().format(time.toLocal());
-  }
 }
