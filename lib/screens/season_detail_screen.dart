@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import '../client/plex_client.dart';
+import '../client/media_client.dart';
 import '../widgets/focus/focus_indicator.dart';
-import '../models/plex_metadata.dart';
+import '../models/media_item.dart';
 import '../utils/keyboard_utils.dart';
 import '../utils/provider_extensions.dart';
 import '../utils/video_player_navigation.dart';
@@ -15,7 +15,7 @@ import '../theme/theme_helper.dart';
 import '../i18n/strings.g.dart';
 
 class SeasonDetailScreen extends StatefulWidget {
-  final PlexMetadata season;
+  final MediaItem season;
 
   const SeasonDetailScreen({super.key, required this.season});
 
@@ -25,20 +25,20 @@ class SeasonDetailScreen extends StatefulWidget {
 
 class _SeasonDetailScreenState extends State<SeasonDetailScreen>
     with ItemUpdatable {
-  late final PlexClient _client;
+  late final MediaClient _client;
 
   @override
-  PlexClient get client => _client;
+  MediaClient get client => _client;
 
-  List<PlexMetadata> _episodes = [];
+  List<MediaItem> _episodes = [];
   bool _isLoadingEpisodes = false;
   bool _watchStateChanged = false;
   final FocusNode _firstEpisodeFocusNode = FocusNode(
     debugLabel: 'FirstEpisode',
   );
 
-  /// Get the correct PlexClient for this season's server
-  PlexClient _getClientForSeason(BuildContext context) {
+  /// Get the correct MediaClient for this season's server
+  MediaClient _getClientForSeason(BuildContext context) {
     return context.getClientForServer(widget.season.serverId!);
   }
 
@@ -64,7 +64,7 @@ class _SeasonDetailScreenState extends State<SeasonDetailScreen>
     });
 
     try {
-      // Episodes are automatically tagged with server info by PlexClient
+      // Episodes are automatically tagged with server info by MediaClient
       final episodes = await _client.getChildren(widget.season.ratingKey);
 
       setState(() {
@@ -92,7 +92,7 @@ class _SeasonDetailScreenState extends State<SeasonDetailScreen>
   }
 
   @override
-  void updateItemInLists(String ratingKey, PlexMetadata updatedMetadata) {
+  void updateItemInLists(String ratingKey, MediaItem updatedMetadata) {
     final index = _episodes.indexWhere((item) => item.ratingKey == ratingKey);
     if (index != -1) {
       _episodes[index] = updatedMetadata;
@@ -170,8 +170,8 @@ class _SeasonDetailScreenState extends State<SeasonDetailScreen>
 
 /// Focusable episode card widget
 class _EpisodeCard extends StatefulWidget {
-  final PlexMetadata episode;
-  final PlexClient client;
+  final MediaItem episode;
+  final MediaClient client;
   final VoidCallback onTap;
   final Future<void> Function(String) onRefresh;
   final FocusNode? focusNode;

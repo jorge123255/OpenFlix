@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import '../../../models/plex_media_version.dart';
+import '../../../models/media_version.dart';
 import 'base_video_control_sheet.dart';
 
 /// Bottom sheet for selecting video version
 class VersionSheet extends StatelessWidget {
-  final List<PlexMediaVersion> availableVersions;
+  final List<MediaVersion> availableVersions;
   final int selectedMediaIndex;
   final Function(int) onVersionSelected;
 
@@ -17,7 +17,7 @@ class VersionSheet extends StatelessWidget {
 
   static void show(
     BuildContext context,
-    List<PlexMediaVersion> availableVersions,
+    List<MediaVersion> availableVersions,
     int selectedMediaIndex,
     Function(int) onVersionSelected, {
     VoidCallback? onOpen,

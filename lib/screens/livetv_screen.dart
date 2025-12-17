@@ -1,13 +1,16 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../models/livetv_channel.dart';
-import '../providers/plex_client_provider.dart';
+import '../providers/media_client_provider.dart';
 import '../utils/app_logger.dart';
+import '../widgets/focus/focus_indicator.dart';
 import 'dvr_screen.dart';
+import 'epg_guide_screen.dart';
 import 'livetv_player_screen.dart';
 
 /// Live TV screen showing channel list and EPG guide
@@ -23,6 +26,7 @@ class _LiveTVScreenState extends State<LiveTVScreen> {
   bool _isLoading = true;
   String? _error;
   String _selectedGroup = 'All';
+  bool _showFavoritesOnly = false;
   List<String> _groups = ['All'];
   Timer? _refreshTimer;
 
@@ -51,7 +55,7 @@ class _LiveTVScreenState extends State<LiveTVScreen> {
     }
 
     try {
-      final client = context.read<PlexClientProvider>().client;
+      final client = context.read<MediaClientProvider>().client;
       if (client == null) {
         setState(() {
           _error = 'Not connected to server';
@@ -88,10 +92,19 @@ class _LiveTVScreenState extends State<LiveTVScreen> {
   }
 
   List<LiveTVChannel> get _filteredChannels {
-    if (_selectedGroup == 'All') {
-      return _channels;
+    var filtered = _channels;
+
+    // Filter by group
+    if (_selectedGroup != 'All') {
+      filtered = filtered.where((c) => c.group == _selectedGroup).toList();
     }
-    return _channels.where((c) => c.group == _selectedGroup).toList();
+
+    // Filter by favorites
+    if (_showFavoritesOnly) {
+      filtered = filtered.where((c) => c.isFavorite).toList();
+    }
+
+    return filtered;
   }
 
   void _playChannel(LiveTVChannel channel) {
@@ -105,12 +118,43 @@ class _LiveTVScreenState extends State<LiveTVScreen> {
     );
   }
 
+  Future<void> _toggleFavorite(LiveTVChannel channel) async {
+    try {
+      final client = context.read<MediaClientProvider>().client;
+      if (client == null) return;
+
+      final updatedChannel = await client.toggleChannelFavorite(channel.id);
+      if (updatedChannel != null && mounted) {
+        setState(() {
+          // Update the channel in the list
+          final index = _channels.indexWhere((c) => c.id == channel.id);
+          if (index >= 0) {
+            _channels[index] = updatedChannel;
+          }
+        });
+      }
+    } catch (e) {
+      appLogger.e('Failed to toggle favorite', error: e);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Live TV'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.view_agenda),
+            tooltip: 'TV Guide',
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => const EPGGuideScreen(),
+                ),
+              );
+            },
+          ),
           if (_groups.length > 1)
             PopupMenuButton<String>(
               icon: const Icon(Icons.filter_list),
@@ -136,6 +180,16 @@ class _LiveTVScreenState extends State<LiveTVScreen> {
                       ))
                   .toList(),
             ),
+          IconButton(
+            icon: Icon(_showFavoritesOnly ? Icons.star : Icons.star_border),
+            tooltip: 'Favorites',
+            color: _showFavoritesOnly ? Colors.amber : null,
+            onPressed: () {
+              setState(() {
+                _showFavoritesOnly = !_showFavoritesOnly;
+              });
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.fiber_manual_record),
             tooltip: 'DVR',
@@ -235,6 +289,7 @@ class _LiveTVScreenState extends State<LiveTVScreen> {
           channel: channel,
           onTap: () => _playChannel(channel),
           onRecord: () => _scheduleRecording(channel),
+          onFavorite: () => _toggleFavorite(channel),
         );
       },
     );
@@ -245,11 +300,13 @@ class _ChannelListTile extends StatelessWidget {
   final LiveTVChannel channel;
   final VoidCallback onTap;
   final VoidCallback onRecord;
+  final VoidCallback onFavorite;
 
   const _ChannelListTile({
     required this.channel,
     required this.onTap,
     required this.onRecord,
+    required this.onFavorite,
   });
 
   @override
@@ -258,115 +315,156 @@ class _ChannelListTile extends StatelessWidget {
     final now = channel.nowPlaying;
     final next = channel.nextProgram;
 
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Row(
-            children: [
-              // Channel logo or number
-              _buildChannelLogo(context),
-              const SizedBox(width: 12),
-              // Channel info
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Channel name
-                    Text(
-                      channel.name,
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    if (now != null) ...[
-                      const SizedBox(height: 4),
-                      // Current program
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 6,
-                              vertical: 2,
-                            ),
-                            decoration: BoxDecoration(
-                              color: theme.colorScheme.primary,
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: Text(
-                              'LIVE',
-                              style: TextStyle(
-                                color: theme.colorScheme.onPrimary,
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
+    return FocusableWrapper(
+      debugLabel: 'LiveTVChannel_${channel.id}',
+      onKeyEvent: (node, event) {
+        if (event is KeyDownEvent) {
+          final key = event.logicalKey;
+          if (key == LogicalKeyboardKey.enter ||
+              key == LogicalKeyboardKey.select ||
+              key == LogicalKeyboardKey.space ||
+              key == LogicalKeyboardKey.gameButtonA) {
+            onTap();
+            return KeyEventResult.handled;
+          }
+          if (key == LogicalKeyboardKey.gameButtonX) {
+            onRecord();
+            return KeyEventResult.handled;
+          }
+        }
+        return KeyEventResult.ignored;
+      },
+      builder: (context, isFocused) => FocusIndicator(
+        isFocused: isFocused,
+        borderRadius: 12,
+        child: Card(
+          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(12),
+            focusColor: Colors.transparent,
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Row(
+                children: [
+                  // Channel logo or number
+                  _buildChannelLogo(context),
+                  const SizedBox(width: 12),
+                  // Channel info
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Channel name
+                        Text(
+                          channel.name,
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
                           ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              now.title,
-                              style: theme.textTheme.bodyMedium,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        if (now != null) ...[
+                          const SizedBox(height: 4),
+                          // Current program
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: theme.colorScheme.primary,
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  'LIVE',
+                                  style: TextStyle(
+                                    color: theme.colorScheme.onPrimary,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  now.title,
+                                  style: theme.textTheme.bodyMedium,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          // Progress bar
+                          LinearProgressIndicator(
+                            value: now.progress,
+                            backgroundColor:
+                                theme.colorScheme.surfaceContainerHighest,
+                          ),
+                          const SizedBox(height: 4),
+                          // Time info
+                          Text(
+                            '${_formatTime(now.start)} - ${_formatTime(now.end)}',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
                             ),
                           ),
                         ],
-                      ),
-                      const SizedBox(height: 4),
-                      // Progress bar
-                      LinearProgressIndicator(
-                        value: now.progress,
-                        backgroundColor: theme.colorScheme.surfaceContainerHighest,
-                      ),
-                      const SizedBox(height: 4),
-                      // Time info
-                      Text(
-                        '${_formatTime(now.start)} - ${_formatTime(now.end)}',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
-                    if (next != null) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        'Next: ${next.title}',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-              // Record and Play buttons
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.fiber_manual_record),
-                    iconSize: 28,
-                    color: Colors.red,
-                    tooltip: 'Record',
-                    onPressed: onRecord,
+                        if (next != null) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            'Next: ${next.title}',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ],
+                    ),
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.play_circle_filled),
-                    iconSize: 40,
-                    color: theme.colorScheme.primary,
-                    onPressed: onTap,
+                  // Favorite, Record and Play buttons
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      ExcludeFocus(
+                        child: IconButton(
+                          icon: Icon(
+                            channel.isFavorite ? Icons.star : Icons.star_border,
+                          ),
+                          iconSize: 28,
+                          color: channel.isFavorite ? Colors.amber : Colors.grey,
+                          tooltip: 'Favorite',
+                          onPressed: onFavorite,
+                        ),
+                      ),
+                      ExcludeFocus(
+                        child: IconButton(
+                          icon: const Icon(Icons.fiber_manual_record),
+                          iconSize: 28,
+                          color: Colors.red,
+                          tooltip: 'Record',
+                          onPressed: onRecord,
+                        ),
+                      ),
+                      ExcludeFocus(
+                        child: IconButton(
+                          icon: const Icon(Icons.play_circle_filled),
+                          iconSize: 40,
+                          color: theme.colorScheme.primary,
+                          onPressed: onTap,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
-            ],
+            ),
           ),
         ),
       ),

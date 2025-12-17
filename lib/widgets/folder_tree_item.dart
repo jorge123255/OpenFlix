@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import '../models/plex_metadata.dart';
+import '../models/media_item.dart';
 
 /// Individual item in the folder tree
 /// Can be either a folder (expandable) or a file (tappable)
 class FolderTreeItem extends StatelessWidget {
-  final PlexMetadata item;
+  final MediaItem item;
   final int depth;
   final bool isExpanded;
   final bool isFolder;

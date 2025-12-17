@@ -47,7 +47,7 @@ class _AboutScreenState extends State<AboutScreen> {
                   child: Column(
                     children: [
                       const SizedBox(height: 24),
-                      Image.asset('assets/plezy.png', width: 80, height: 80),
+                      Image.asset('assets/openflix.png', width: 80, height: 80),
                       const SizedBox(height: 16),
                       Text(
                         appName,

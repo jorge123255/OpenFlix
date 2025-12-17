@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../client/plex_client.dart';
-import '../models/plex_metadata.dart';
+import '../client/media_client.dart';
+import '../models/media_item.dart';
 
 /// Mixin for screens that need to update individual items after watch state changes
 ///
@@ -10,7 +10,7 @@ import '../models/plex_metadata.dart';
 mixin ItemUpdatable<T extends StatefulWidget> on State<T> {
   /// The Plex client to use for fetching updated metadata
   /// Each screen must provide access to their client
-  PlexClient get client;
+  MediaClient get client;
 
   /// Updates a single item in the screen's list(s) after watch state changes
   ///
@@ -40,12 +40,12 @@ mixin ItemUpdatable<T extends StatefulWidget> on State<T> {
   /// Example:
   /// ```dart
   /// @override
-  /// void updateItemInLists(String ratingKey, PlexMetadata updatedMetadata) {
+  /// void updateItemInLists(String ratingKey, MediaItem updatedMetadata) {
   ///   final index = _items.indexWhere((item) => item.ratingKey == ratingKey);
   ///   if (index != -1) {
   ///     _items[index] = updatedMetadata;
   ///   }
   /// }
   /// ```
-  void updateItemInLists(String ratingKey, PlexMetadata updatedMetadata);
+  void updateItemInLists(String ratingKey, MediaItem updatedMetadata);
 }

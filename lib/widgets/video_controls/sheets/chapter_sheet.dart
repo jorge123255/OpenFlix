@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../../mpv/mpv.dart';
-import '../../../client/plex_client.dart';
-import '../../../models/plex_media_info.dart';
+import '../../../client/media_client.dart';
+import '../../../models/media_info.dart';
 import '../../../utils/duration_formatter.dart';
 import '../../../utils/provider_extensions.dart';
 import 'base_video_control_sheet.dart';
@@ -10,7 +10,7 @@ import 'base_video_control_sheet.dart';
 /// Bottom sheet for selecting chapters
 class ChapterSheet extends StatelessWidget {
   final Player player;
-  final List<PlexChapter> chapters;
+  final List<Chapter> chapters;
   final bool chaptersLoaded;
   final String? serverId; // Server ID for the metadata these chapters belong to
 
@@ -25,7 +25,7 @@ class ChapterSheet extends StatelessWidget {
   static void show(
     BuildContext context,
     Player player,
-    List<PlexChapter> chapters,
+    List<Chapter> chapters,
     bool chaptersLoaded, {
     String? serverId,
     VoidCallback? onOpen,
@@ -44,8 +44,8 @@ class ChapterSheet extends StatelessWidget {
     );
   }
 
-  /// Get the correct PlexClient for the metadata's server
-  PlexClient _getClientForChapters(BuildContext context) {
+  /// Get the correct MediaClient for the metadata's server
+  MediaClient _getClientForChapters(BuildContext context) {
     return context.getClientForServer(serverId!);
   }
 

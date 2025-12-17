@@ -1,4 +1,4 @@
-import 'plex_user_profile.dart';
+import 'user_profile.dart';
 
 class UserSwitchResponse {
   final int id;
@@ -25,7 +25,7 @@ class UserSwitchResponse {
   final int homeSize;
   final bool homeAdmin;
   final int maxHomeSize;
-  final PlexUserProfile profile;
+  final UserProfile profile;
   final bool twoFactorEnabled;
   final bool backupCodesCreated;
   final String? attributionPartner;
@@ -87,7 +87,7 @@ class UserSwitchResponse {
       homeSize: json['homeSize'] as int,
       homeAdmin: json['homeAdmin'] as bool,
       maxHomeSize: json['maxHomeSize'] as int,
-      profile: PlexUserProfile.fromJson(json),
+      profile: UserProfile.fromJson(json),
       twoFactorEnabled: json['twoFactorEnabled'] as bool,
       backupCodesCreated: json['backupCodesCreated'] as bool,
       attributionPartner: json['attributionPartner'] as String?,

@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -41,6 +43,7 @@ func (p *M3UParser) ParseM3U(content string) ([]ParsedChannel, error) {
 
 	scanner := bufio.NewScanner(strings.NewReader(content))
 	var currentChannel *ParsedChannel
+	currentHeaders := make(map[string]string)
 
 	// Regex patterns for parsing EXTINF line
 	tvgIdPattern := regexp.MustCompile(`tvg-id="([^"]*)"`)
@@ -54,6 +57,7 @@ func (p *M3UParser) ParseM3U(content string) ([]ParsedChannel, error) {
 
 		if strings.HasPrefix(line, "#EXTINF:") {
 			currentChannel = &ParsedChannel{}
+			currentHeaders = make(map[string]string)
 
 			// Extract TVG-ID
 			if matches := tvgIdPattern.FindStringSubmatch(line); len(matches) > 1 {
@@ -85,15 +89,135 @@ func (p *M3UParser) ParseM3U(content string) ([]ParsedChannel, error) {
 				currentChannel.Name = strings.TrimSpace(line[idx+1:])
 			}
 
+		} else if currentChannel != nil && strings.HasPrefix(line, "#EXTVLCOPT:") {
+			// VLC-specific per-channel options that often include required HTTP headers.
+			// Common forms:
+			//   #EXTVLCOPT:http-user-agent=...
+			//   #EXTVLCOPT:http-referrer=...
+			//   #EXTVLCOPT:http-origin=...
+			//   #EXTVLCOPT:http-cookie=...
+			//   #EXTVLCOPT:http-header=Header: Value
+			opt := strings.TrimPrefix(line, "#EXTVLCOPT:")
+			eq := strings.Index(opt, "=")
+			if eq > 0 {
+				key := strings.TrimSpace(opt[:eq])
+				value := strings.TrimSpace(opt[eq+1:])
+				switch strings.ToLower(key) {
+				case "http-user-agent":
+					if value != "" {
+						currentHeaders["User-Agent"] = value
+					}
+				case "http-referrer":
+					if value != "" {
+						currentHeaders["Referer"] = value
+					}
+				case "http-origin":
+					if value != "" {
+						currentHeaders["Origin"] = value
+					}
+				case "http-cookie":
+					if value != "" {
+						currentHeaders["Cookie"] = value
+					}
+				case "http-header":
+					// Expect "Header-Name: value"
+					if idx := strings.Index(value, ":"); idx > 0 {
+						h := strings.TrimSpace(value[:idx])
+						hv := strings.TrimSpace(value[idx+1:])
+						if h != "" && hv != "" {
+							currentHeaders[h] = hv
+						}
+					}
+				}
+			}
 		} else if currentChannel != nil && !strings.HasPrefix(line, "#") && line != "" {
 			// This is the stream URL
-			currentChannel.StreamURL = line
+			streamURL := line
+			if len(currentHeaders) > 0 {
+				// Append as VLC-style pipe header syntax so clients can forward headers:
+				//   url|Header=Value&Header2=Value2
+				keys := make([]string, 0, len(currentHeaders))
+				for k := range currentHeaders {
+					keys = append(keys, k)
+				}
+				sort.Strings(keys)
+				pairs := make([]string, 0, len(currentHeaders))
+				for _, k := range keys {
+					pairs = append(pairs, url.QueryEscape(k)+"="+url.QueryEscape(currentHeaders[k]))
+				}
+				if strings.Contains(streamURL, "|") {
+					streamURL = streamURL + "&" + strings.Join(pairs, "&")
+				} else {
+					streamURL = streamURL + "|" + strings.Join(pairs, "&")
+				}
+			}
+			currentChannel.StreamURL = normalizeStreamURL(streamURL)
 			channels = append(channels, *currentChannel)
 			currentChannel = nil
 		}
 	}
 
 	return channels, scanner.Err()
+}
+
+func normalizeStreamURL(streamURL string) string {
+	pipeIndex := strings.Index(streamURL, "|")
+	if pipeIndex < 0 {
+		return streamURL
+	}
+
+	base := streamURL[:pipeIndex]
+	headerPart := streamURL[pipeIndex+1:]
+	if strings.TrimSpace(headerPart) == "" {
+		return base
+	}
+
+	// Parse header key/value pairs separated by '&'
+	parsed := make([][2]string, 0)
+	for _, seg := range strings.Split(headerPart, "&") {
+		seg = strings.TrimSpace(seg)
+		if seg == "" {
+			continue
+		}
+		eq := strings.Index(seg, "=")
+		if eq <= 0 {
+			continue
+		}
+		rawKey := seg[:eq]
+		rawVal := seg[eq+1:]
+		key, err := url.QueryUnescape(rawKey)
+		if err != nil {
+			key = rawKey
+		}
+		val, err := url.QueryUnescape(rawVal)
+		if err != nil {
+			val = rawVal
+		}
+		key = strings.TrimSpace(key)
+		val = strings.TrimSpace(val)
+		if key == "" || val == "" {
+			continue
+		}
+		parsed = append(parsed, [2]string{key, val})
+	}
+
+	if len(parsed) == 0 {
+		return base
+	}
+
+	sort.Slice(parsed, func(i, j int) bool {
+		if parsed[i][0] == parsed[j][0] {
+			return parsed[i][1] < parsed[j][1]
+		}
+		return parsed[i][0] < parsed[j][0]
+	})
+
+	parts := make([]string, 0, len(parsed))
+	for _, kv := range parsed {
+		parts = append(parts, url.QueryEscape(kv[0])+"="+url.QueryEscape(kv[1]))
+	}
+
+	return base + "|" + strings.Join(parts, "&")
 }
 
 // FetchAndParseM3U fetches an M3U from URL and parses it
@@ -117,15 +241,54 @@ func (p *M3UParser) FetchAndParseM3U(url string) ([]ParsedChannel, error) {
 	return p.ParseM3U(string(content))
 }
 
+func (p *M3UParser) cleanupDuplicateChannels(sourceID uint) {
+	type dupRow struct {
+		KeepID    uint   `gorm:"column:keep_id"`
+		StreamURL string `gorm:"column:stream_url"`
+		Name      string `gorm:"column:name"`
+	}
+
+	var dups []dupRow
+	// If older versions created duplicates (e.g., non-deterministic header ordering),
+	// remove duplicates on refresh and keep the oldest row.
+	p.db.
+		Raw(
+			`SELECT MIN(id) AS keep_id, stream_url, name
+			 FROM channels
+			 WHERE m3_u_source_id = ?
+			 GROUP BY stream_url, name
+			 HAVING COUNT(*) > 1`,
+			sourceID,
+		).
+		Scan(&dups)
+
+	for _, d := range dups {
+		p.db.
+			Where(
+				"m3_u_source_id = ? AND stream_url = ? AND name = ? AND id <> ?",
+				sourceID,
+				d.StreamURL,
+				d.Name,
+				d.KeepID,
+			).
+			Delete(&models.Channel{})
+	}
+}
+
 // ImportChannels imports parsed channels into the database
 func (p *M3UParser) ImportChannels(sourceID uint, channels []ParsedChannel) (int, int, error) {
 	added := 0
 	updated := 0
 
+	p.cleanupDuplicateChannels(sourceID)
+
 	// Track seen channels in this import to handle duplicates within the M3U
 	seen := make(map[string]bool)
 
 	for i, ch := range channels {
+		normalizedStreamURL := normalizeStreamURL(ch.StreamURL)
+		ch.StreamURL = normalizedStreamURL
+
 		// Generate channel number if not provided
 		number := ch.Number
 		if number == 0 {

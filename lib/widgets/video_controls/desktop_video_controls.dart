@@ -3,8 +3,8 @@ import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
 
 import '../../mpv/mpv.dart';
-import '../../models/plex_media_info.dart';
-import '../../models/plex_metadata.dart';
+import '../../models/media_info.dart';
+import '../../models/media_item.dart';
 import '../../services/fullscreen_state_manager.dart';
 import '../../utils/desktop_window_padding.dart';
 import '../../utils/duration_formatter.dart';
@@ -15,10 +15,10 @@ import 'widgets/timeline_slider.dart';
 /// Desktop-specific video controls layout with top bar and bottom controls
 class DesktopVideoControls extends StatelessWidget {
   final Player player;
-  final PlexMetadata metadata;
+  final MediaItem metadata;
   final VoidCallback? onNext;
   final VoidCallback? onPrevious;
-  final List<PlexChapter> chapters;
+  final List<Chapter> chapters;
   final bool chaptersLoaded;
   final int seekTimeSmall;
   final VoidCallback onSeekToPreviousChapter;

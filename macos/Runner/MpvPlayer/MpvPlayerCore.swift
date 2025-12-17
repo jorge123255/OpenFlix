@@ -40,6 +40,7 @@ class MpvPlayerCore: NSObject {
     // MARK: - Properties
 
     private var metalLayer: MetalLayer?
+    private var videoView: NSView?
     private var mpv: OpaquePointer?
     private weak var window: NSWindow?
     private lazy var queue = DispatchQueue(label: "mpv", qos: .userInitiated)
@@ -64,26 +65,37 @@ class MpvPlayerCore: NSObject {
         self.window = window
 
         // Create Metal layer for video rendering
+        let view = NSView(frame: contentView.bounds)
+        view.wantsLayer = true
+        view.layer?.backgroundColor = NSColor.black.cgColor
+        view.autoresizingMask = [.width, .height]
+        videoView = view
+
         let layer = MetalLayer()
-        layer.frame = contentView.bounds
+        layer.frame = view.bounds
         if let screen = window.screen ?? NSScreen.main {
             layer.contentsScale = screen.backingScaleFactor
         }
         layer.framebufferOnly = true
+        layer.backgroundColor = NSColor.black.cgColor
         layer.autoresizingMask = [.layerWidthSizable, .layerHeightSizable]
 
         metalLayer = layer
 
-        // Ensure contentView has a layer and add our Metal layer
-        contentView.wantsLayer = true
-        contentView.layer?.addSublayer(layer)
+        // Attach our Metal layer to the container view.
+        view.layer?.addSublayer(layer)
 
-        print("[MpvPlayerCore] Metal layer added, frame: \(layer.frame)")
+        // Insert behind Flutter's view layer
+        contentView.addSubview(view, positioned: .below, relativeTo: nil)
+
+        print("[MpvPlayerCore] Video view added, frame: \(view.frame)")
 
         // Initialize MPV with this Metal layer
         guard setupMpv() else {
             print("[MpvPlayerCore] Failed to setup MPV")
-            layer.removeFromSuperlayer()
+            view.removeFromSuperview()
+            videoView = nil
+            metalLayer?.removeFromSuperlayer()
             metalLayer = nil
             return false
         }
@@ -175,28 +187,31 @@ class MpvPlayerCore: NSObject {
     // MARK: - Visibility
 
     func setVisible(_ visible: Bool) {
-        guard let layer = metalLayer else { return }
+        guard let view = videoView else { return }
 
         if visible {
-            // Re-insert after background layer but before Flutter control views
-            layer.removeFromSuperlayer()
-            if let superlayer = window?.contentView?.layer {
-                superlayer.insertSublayer(layer, at: 1)
+            // Ensure it's behind Flutter content
+            if let contentView = window?.contentView {
+                if view.superview == nil {
+                    contentView.addSubview(view, positioned: .below, relativeTo: nil)
+                }
             }
         }
 
-        layer.isHidden = !visible
+        view.isHidden = !visible
         print("[MpvPlayerCore] setVisible(\(visible))")
     }
 
     func updateFrame(_ frame: CGRect? = nil) {
-        guard let metalLayer = metalLayer else { return }
+        guard let videoView = videoView, let metalLayer = metalLayer else { return }
 
         if let frame = frame {
-            metalLayer.frame = frame
+            videoView.frame = frame
         } else if let contentView = window?.contentView {
-            metalLayer.frame = contentView.bounds
+            videoView.frame = contentView.bounds
         }
+
+        metalLayer.frame = videoView.bounds
 
         // Update drawable size for proper scaling
         if let screen = window?.screen ?? NSScreen.main {
@@ -207,7 +222,7 @@ class MpvPlayerCore: NSObject {
             )
         }
 
-        print("[MpvPlayerCore] updateFrame: \(metalLayer.frame)")
+        print("[MpvPlayerCore] updateFrame: \(videoView.frame)")
     }
 
     // MARK: - Private Helpers
@@ -370,6 +385,8 @@ class MpvPlayerCore: NSObject {
             mpv_terminate_destroy(mpv)
             self.mpv = nil
         }
+        videoView?.removeFromSuperview()
+        videoView = nil
         metalLayer?.removeFromSuperlayer()
         metalLayer = nil
         isInitialized = false

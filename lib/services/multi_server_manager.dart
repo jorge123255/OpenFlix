@@ -2,16 +2,16 @@ import 'dart:async';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
 
-import '../client/plex_client.dart';
-import '../config/plex_config.dart';
+import '../client/media_client.dart';
+import '../config/client_config.dart';
 import '../utils/app_logger.dart';
 import 'plex_auth_service.dart';
 import 'storage_service.dart';
 
 /// Manages multiple Plex server connections simultaneously
 class MultiServerManager {
-  /// Map of serverId (clientIdentifier) to PlexClient instances
-  final Map<String, PlexClient> _clients = {};
+  /// Map of serverId (clientIdentifier) to MediaClient instances
+  final Map<String, MediaClient> _clients = {};
 
   /// Map of serverId to server info
   final Map<String, PlexServer> _servers = {};
@@ -43,14 +43,14 @@ class MultiServerManager {
       _serverStatus.entries.where((e) => !e.value).map((e) => e.key).toList();
 
   /// Get client for specific server
-  PlexClient? getClient(String serverId) => _clients[serverId];
+  MediaClient? getClient(String serverId) => _clients[serverId];
 
   /// Get server info for specific server
   PlexServer? getServer(String serverId) => _servers[serverId];
 
   /// Get all online clients
-  Map<String, PlexClient> get onlineClients {
-    final result = <String, PlexClient>{};
+  Map<String, MediaClient> get onlineClients {
+    final result = <String, MediaClient>{};
     for (final serverId in onlineServerIds) {
       final client = _clients[serverId];
       if (client != null) {
@@ -72,7 +72,7 @@ class MultiServerManager {
     List<PlexServer> servers, {
     String? clientIdentifier,
     Duration timeout = const Duration(seconds: 10),
-    Function(String serverId, PlexClient client)? onServerConnected,
+    Function(String serverId, MediaClient client)? onServerConnected,
     Function(String serverId, Object error)? onServerFailed,
   }) async {
     if (servers.isEmpty) {
@@ -113,17 +113,17 @@ class MultiServerManager {
         final storage = await StorageService.getInstance();
         final cachedEndpoint = storage.getServerEndpoint(serverId);
 
-        // Create PlexClient with the working connection and failover support
+        // Create MediaClient with the working connection and failover support
         final prioritizedEndpoints = server.prioritizedEndpointUrls(
           preferredFirst: cachedEndpoint ?? baseUrl,
         );
-        final config = await PlexConfig.create(
+        final config = await ClientConfig.create(
           baseUrl: baseUrl,
           token: server.accessToken,
           clientIdentifier: effectiveClientId,
         );
 
-        final client = PlexClient(
+        final client = MediaClient(
           config,
           serverId: serverId,
           serverName: server.name,
@@ -222,17 +222,17 @@ class MultiServerManager {
       final storage = await StorageService.getInstance();
       final cachedEndpoint = storage.getServerEndpoint(serverId);
 
-      // Create PlexClient with failover support
+      // Create MediaClient with failover support
       final prioritizedEndpoints = server.prioritizedEndpointUrls(
         preferredFirst: cachedEndpoint ?? baseUrl,
       );
-      final config = await PlexConfig.create(
+      final config = await ClientConfig.create(
         baseUrl: baseUrl,
         token: server.accessToken,
         clientIdentifier: effectiveClientId,
       );
 
-      final client = PlexClient(
+      final client = MediaClient(
         config,
         serverId: serverId,
         serverName: server.name,
@@ -271,6 +271,16 @@ class MultiServerManager {
 
       return false;
     }
+  }
+
+  /// Add a direct client connection (for OpenFlix auth without PlexServer discovery)
+  void addDirectClient(String serverUrl, MediaClient client) {
+    // Use server URL as the identifier for direct connections
+    final serverId = serverUrl;
+    _clients[serverId] = client;
+    _serverStatus[serverId] = true;
+    _statusController.add(Map.from(_serverStatus));
+    appLogger.i('Added direct client connection: $serverUrl');
   }
 
   /// Remove a server connection

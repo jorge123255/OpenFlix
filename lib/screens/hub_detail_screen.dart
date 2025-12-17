@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../client/plex_client.dart';
-import '../models/plex_hub.dart';
-import '../models/plex_metadata.dart';
-import '../models/plex_sort.dart';
+import '../client/media_client.dart';
+import '../models/hub.dart';
+import '../models/media_item.dart';
+import '../models/sort.dart';
 import '../providers/settings_provider.dart';
 import '../utils/provider_extensions.dart';
 import '../utils/app_logger.dart';
@@ -16,7 +16,7 @@ import '../i18n/strings.g.dart';
 
 /// Screen to display full content of a recommendation hub
 class HubDetailScreen extends StatefulWidget {
-  final PlexHub hub;
+  final Hub hub;
 
   const HubDetailScreen({super.key, required this.hub});
 
@@ -25,18 +25,18 @@ class HubDetailScreen extends StatefulWidget {
 }
 
 class _HubDetailScreenState extends State<HubDetailScreen> with Refreshable {
-  PlexClient get client => _getClientForHub();
+  MediaClient get client => _getClientForHub();
 
-  List<PlexMetadata> _items = [];
-  List<PlexMetadata> _filteredItems = [];
-  List<PlexSort> _sortOptions = [];
-  PlexSort? _selectedSort;
+  List<MediaItem> _items = [];
+  List<MediaItem> _filteredItems = [];
+  List<Sort> _sortOptions = [];
+  Sort? _selectedSort;
   bool _isSortDescending = false;
   bool _isLoading = false;
   String? _errorMessage;
 
-  /// Get the correct PlexClient for this hub's server
-  PlexClient _getClientForHub() {
+  /// Get the correct MediaClient for this hub's server
+  MediaClient _getClientForHub() {
     return context.getClientForServer(widget.hub.serverId!);
   }
 
@@ -101,26 +101,26 @@ class _HubDetailScreenState extends State<HubDetailScreen> with Refreshable {
     }
   }
 
-  List<PlexSort> _getDefaultSortOptions() {
+  List<Sort> _getDefaultSortOptions() {
     return [
-      PlexSort(
+      Sort(
         key: 'titleSort',
         title: t.hubDetail.title,
         defaultDirection: 'asc',
       ),
-      PlexSort(
+      Sort(
         key: 'year',
         descKey: 'year:desc',
         title: t.hubDetail.releaseYear,
         defaultDirection: 'desc',
       ),
-      PlexSort(
+      Sort(
         key: 'addedAt',
         descKey: 'addedAt:desc',
         title: t.hubDetail.dateAdded,
         defaultDirection: 'desc',
       ),
-      PlexSort(
+      Sort(
         key: 'rating',
         descKey: 'rating:desc',
         title: t.hubDetail.rating,

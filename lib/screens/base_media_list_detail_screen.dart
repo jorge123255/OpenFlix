@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../client/plex_client.dart';
-import '../models/plex_metadata.dart';
+import '../client/media_client.dart';
+import '../models/media_item.dart';
 import '../providers/multi_server_provider.dart';
 import '../utils/provider_extensions.dart';
 import '../utils/collection_playlist_play_helper.dart';
@@ -16,12 +16,12 @@ abstract class BaseMediaListDetailScreen<T extends StatefulWidget>
     extends State<T>
     with Refreshable, ItemUpdatable {
   // State properties - concrete implementations to avoid duplication
-  List<PlexMetadata> items = [];
+  List<MediaItem> items = [];
   bool isLoading = false;
   String? errorMessage;
 
   @override
-  PlexClient get client => _getClientForMediaItem();
+  MediaClient get client => _getClientForMediaItem();
 
   /// The media item being displayed (collection or playlist)
   dynamic get mediaItem;
@@ -35,14 +35,14 @@ abstract class BaseMediaListDetailScreen<T extends StatefulWidget>
   /// Optional icon to show when list is empty
   IconData? get emptyIcon => null;
 
-  /// Get the correct PlexClient for this media item's server
-  PlexClient _getClientForMediaItem() {
+  /// Get the correct MediaClient for this media item's server
+  MediaClient _getClientForMediaItem() {
     // Try to get serverId from the media item
     String? serverId;
 
     // Check if mediaItem has serverId property
-    if (mediaItem is PlexMetadata) {
-      serverId = (mediaItem as PlexMetadata).serverId;
+    if (mediaItem is MediaItem) {
+      serverId = (mediaItem as MediaItem).serverId;
     } else if (mediaItem != null) {
       // For playlists or other types, use dynamic access
       try {
@@ -105,7 +105,7 @@ abstract class BaseMediaListDetailScreen<T extends StatefulWidget>
   }
 
   @override
-  void updateItemInLists(String ratingKey, PlexMetadata updatedMetadata) {
+  void updateItemInLists(String ratingKey, MediaItem updatedMetadata) {
     if (mounted) {
       setState(() {
         final index = items.indexWhere((item) => item.ratingKey == ratingKey);
@@ -223,7 +223,7 @@ abstract class BaseMediaListDetailScreen<T extends StatefulWidget>
 mixin StandardItemLoader<T extends StatefulWidget>
     on BaseMediaListDetailScreen<T> {
   /// Fetch items from the API (must be implemented by subclass)
-  Future<List<PlexMetadata>> fetchItems();
+  Future<List<MediaItem>> fetchItems();
 
   /// Get error message for failed load (can be overridden)
   String getLoadErrorMessage(Object error) {
@@ -245,7 +245,7 @@ mixin StandardItemLoader<T extends StatefulWidget>
     }
 
     try {
-      // Items are automatically tagged with server info by PlexClient
+      // Items are automatically tagged with server info by MediaClient
       final newItems = await fetchItems();
 
       if (mounted) {

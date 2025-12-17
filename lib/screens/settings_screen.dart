@@ -8,8 +8,11 @@ import 'main_screen.dart';
 import '../providers/settings_provider.dart';
 import '../providers/theme_provider.dart';
 import '../services/keyboard_shortcuts_service.dart';
+import '../services/openflix_auth_service.dart';
 import '../services/settings_service.dart' as settings;
+import '../services/storage_service.dart';
 import '../services/update_service.dart';
+import '../utils/app_logger.dart';
 import '../utils/keyboard_utils.dart';
 import '../widgets/desktop_app_bar.dart';
 import '../widgets/hotkey_recorder_widget.dart';
@@ -39,6 +42,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _autoSkipIntro = true;
   bool _autoSkipCredits = true;
   int _autoSkipDelay = 5;
+  String? _tmdbApiKey;
 
   // Update checking state
   bool _isCheckingForUpdate = false;
@@ -65,6 +69,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _autoSkipIntro = _settingsService.getAutoSkipIntro();
       _autoSkipCredits = _settingsService.getAutoSkipCredits();
       _autoSkipDelay = _settingsService.getAutoSkipDelay();
+      _tmdbApiKey = _settingsService.getTmdbApiKey();
       _isLoading = false;
     });
   }
@@ -424,6 +429,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
             subtitle: Text(t.settings.resetSettingsDescription),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => _showResetSettingsDialog(),
+          ),
+          const Divider(),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+            child: Text(
+              t.settings.metadataSection,
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w600,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+            ),
+          ),
+          ListTile(
+            leading: const Icon(Icons.movie),
+            title: Text(t.settings.tmdbApiKey),
+            subtitle: Text(
+              _tmdbApiKey != null && _tmdbApiKey!.isNotEmpty
+                  ? t.settings.tmdbApiKeyConfigured
+                  : t.settings.tmdbApiKeyDescription,
+            ),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => _showTmdbApiKeyDialog(),
           ),
         ],
       ),
@@ -945,6 +972,107 @@ class _SettingsScreenState extends State<SettingsScreen> {
         );
       },
     );
+  }
+
+  void _showTmdbApiKeyDialog() {
+    final controller = TextEditingController(text: _tmdbApiKey ?? '');
+
+    showDialog(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: Text(t.settings.tmdbApiKey),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                t.settings.tmdbApiKeyHint,
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: controller,
+                decoration: InputDecoration(
+                  labelText: t.settings.apiKey,
+                  hintText: t.settings.tmdbApiKeyPlaceholder,
+                  border: const OutlineInputBorder(),
+                ),
+                autofocus: true,
+                obscureText: true,
+              ),
+            ],
+          ),
+          actions: [
+            if (_tmdbApiKey != null && _tmdbApiKey!.isNotEmpty)
+              TextButton(
+                onPressed: () async {
+                  final navigator = Navigator.of(dialogContext);
+                  final messenger = ScaffoldMessenger.of(dialogContext);
+                  await _settingsService.setTmdbApiKey(null);
+                  await _updateServerTmdbApiKey('');
+                  setState(() {
+                    _tmdbApiKey = null;
+                  });
+                  navigator.pop();
+                  messenger.showSnackBar(
+                    SnackBar(content: Text(t.settings.tmdbApiKeyCleared)),
+                  );
+                },
+                child: Text(t.common.clear),
+              ),
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: Text(t.common.cancel),
+            ),
+            TextButton(
+              onPressed: () async {
+                final navigator = Navigator.of(dialogContext);
+                final messenger = ScaffoldMessenger.of(dialogContext);
+                final apiKey = controller.text.trim();
+                await _settingsService.setTmdbApiKey(
+                  apiKey.isEmpty ? null : apiKey,
+                );
+                if (apiKey.isNotEmpty) {
+                  await _updateServerTmdbApiKey(apiKey);
+                }
+                setState(() {
+                  _tmdbApiKey = apiKey.isEmpty ? null : apiKey;
+                });
+                navigator.pop();
+                messenger.showSnackBar(
+                  SnackBar(content: Text(t.settings.tmdbApiKeySaved)),
+                );
+              },
+              child: Text(t.common.save),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  /// Sends the TMDB API key to the server for metadata fetching
+  Future<void> _updateServerTmdbApiKey(String apiKey) async {
+    try {
+      final storageService = await StorageService.getInstance();
+      final serverUrl = storageService.getServerUrl();
+      final token = storageService.getToken();
+
+      if (serverUrl == null || token == null) {
+        appLogger.w('Cannot update server TMDB key: no server connection');
+        return;
+      }
+
+      final adminService = OpenFlixAdminService.create(serverUrl, token);
+      await adminService.updateSettings(
+        ServerSettings(tmdbApiKey: apiKey.isEmpty ? '' : apiKey),
+      );
+      appLogger.i('TMDB API key updated on server');
+    } catch (e) {
+      appLogger.w('Failed to update TMDB API key on server', error: e);
+      // Don't throw - the local save still succeeded
+    }
   }
 
   String _getLanguageDisplayName(AppLocale locale) {

@@ -671,8 +671,36 @@ func (s *Server) getLibrarySorts(c *gin.Context) {
 }
 
 func (s *Server) getLibraryCollections(c *gin.Context) {
-	// TODO: Return collections from database
-	s.respondWithMediaContainer(c, []gin.H{}, 0, 0, 0)
+	libraryID, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid library ID"})
+		return
+	}
+
+	// Get user collections from database
+	var collections []models.Collection
+	s.db.Where("library_id = ?", libraryID).Find(&collections)
+
+	// Convert to response format
+	result := make([]gin.H, len(collections))
+	for i, col := range collections {
+		result[i] = gin.H{
+			"ratingKey":        col.ID,
+			"key":              fmt.Sprintf("/library/collections/%d/children", col.ID),
+			"guid":             col.UUID,
+			"type":             "collection",
+			"title":            col.Title,
+			"summary":          col.Summary,
+			"thumb":            col.Thumb,
+			"art":              col.Art,
+			"childCount":       col.ChildCount,
+			"librarySectionID": col.LibraryID,
+			"addedAt":          col.AddedAt.Unix(),
+			"updatedAt":        col.UpdatedAt.Unix(),
+		}
+	}
+
+	s.respondWithMediaContainer(c, result, len(result), len(result), 0)
 }
 
 func (s *Server) refreshLibrary(c *gin.Context) {
@@ -702,13 +730,333 @@ func (s *Server) getLibraryFolders(c *gin.Context) {
 }
 
 func (s *Server) getLibraryHubs(c *gin.Context) {
-	// TODO: Return recommendation hubs
+	libraryID, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid library ID"})
+		return
+	}
+
+	// Get library info
+	var lib models.Library
+	if err := s.db.First(&lib, libraryID).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Library not found"})
+		return
+	}
+
+	// Get user ID for personalized content
+	userID, _ := c.Get("userID")
+	profileID := c.GetUint("profileID")
+
+	hubs := []gin.H{}
+
+	// Limit items per hub
+	hubLimit := 20
+
+	// 1. Continue Watching Hub (for movies and episodes)
+	continueWatchingItems := s.getContinueWatchingItems(uint(libraryID), userID, profileID, hubLimit)
+	if len(continueWatchingItems) > 0 {
+		hubs = append(hubs, gin.H{
+			"key":           fmt.Sprintf("/hubs/sections/%d/continueWatching", libraryID),
+			"hubIdentifier": "continueWatching",
+			"type":          lib.Type,
+			"title":         "Continue Watching",
+			"size":          len(continueWatchingItems),
+			"more":          len(continueWatchingItems) >= hubLimit,
+			"style":         "shelf",
+			"promoted":      true,
+			"Metadata":      continueWatchingItems,
+		})
+	}
+
+	// 2. Recently Added Hub
+	recentlyAddedItems := s.getRecentlyAddedItems(uint(libraryID), lib.Type, hubLimit)
+	if len(recentlyAddedItems) > 0 {
+		hubs = append(hubs, gin.H{
+			"key":           fmt.Sprintf("/hubs/sections/%d/recentlyAdded", libraryID),
+			"hubIdentifier": "recentlyAdded",
+			"type":          lib.Type,
+			"title":         "Recently Added",
+			"size":          len(recentlyAddedItems),
+			"more":          len(recentlyAddedItems) >= hubLimit,
+			"style":         "shelf",
+			"Metadata":      recentlyAddedItems,
+		})
+	}
+
+	// 3. Unwatched Hub (only for movie libraries and shows)
+	unwatchedItems := s.getUnwatchedItems(uint(libraryID), lib.Type, userID, profileID, hubLimit)
+	if len(unwatchedItems) > 0 {
+		hubTitle := "Unwatched"
+		if lib.Type == "show" {
+			hubTitle = "Unwatched Shows"
+		}
+		hubs = append(hubs, gin.H{
+			"key":           fmt.Sprintf("/hubs/sections/%d/unwatched", libraryID),
+			"hubIdentifier": "unwatched",
+			"type":          lib.Type,
+			"title":         hubTitle,
+			"size":          len(unwatchedItems),
+			"more":          len(unwatchedItems) >= hubLimit,
+			"style":         "shelf",
+			"Metadata":      unwatchedItems,
+		})
+	}
+
+	// 4. Recently Released (based on release date, not added date)
+	if lib.Type == "movie" || lib.Type == "show" {
+		recentlyReleasedItems := s.getRecentlyReleasedItems(uint(libraryID), lib.Type, hubLimit)
+		if len(recentlyReleasedItems) > 0 {
+			hubs = append(hubs, gin.H{
+				"key":           fmt.Sprintf("/hubs/sections/%d/recentlyReleased", libraryID),
+				"hubIdentifier": "recentlyReleased",
+				"type":          lib.Type,
+				"title":         "Recently Released",
+				"size":          len(recentlyReleasedItems),
+				"more":          len(recentlyReleasedItems) >= hubLimit,
+				"style":         "shelf",
+				"Metadata":      recentlyReleasedItems,
+			})
+		}
+	}
+
+	// 5. Top Rated Hub
+	topRatedItems := s.getTopRatedItems(uint(libraryID), lib.Type, hubLimit)
+	if len(topRatedItems) > 0 {
+		hubs = append(hubs, gin.H{
+			"key":           fmt.Sprintf("/hubs/sections/%d/topRated", libraryID),
+			"hubIdentifier": "topRated",
+			"type":          lib.Type,
+			"title":         "Top Rated",
+			"size":          len(topRatedItems),
+			"more":          len(topRatedItems) >= hubLimit,
+			"style":         "shelf",
+			"Metadata":      topRatedItems,
+		})
+	}
+
+	// 6. By Genre Hubs (get top 3 genres)
+	genreHubs := s.getGenreHubs(uint(libraryID), lib.Type, hubLimit, 3)
+	hubs = append(hubs, genreHubs...)
+
 	c.JSON(http.StatusOK, gin.H{
 		"MediaContainer": gin.H{
-			"size": 0,
-			"Hub":  []gin.H{},
+			"size":             len(hubs),
+			"librarySectionID": libraryID,
+			"Hub":              hubs,
 		},
 	})
+}
+
+// Smart Collection Helper Functions
+
+func (s *Server) getContinueWatchingItems(libraryID uint, userID interface{}, profileID uint, limit int) []gin.H {
+	if userID == nil {
+		return []gin.H{}
+	}
+
+	var items []models.MediaItem
+	// Get items that have been partially watched (viewOffset > 0 and not completed)
+	query := s.db.Model(&models.MediaItem{}).
+		Select("media_items.*").
+		Joins("JOIN watch_histories ON watch_histories.media_item_id = media_items.id").
+		Where("media_items.library_id = ?", libraryID).
+		Where("watch_histories.user_id = ?", userID).
+		Where("watch_histories.completed = ?", false).
+		Where("watch_histories.view_offset > ?", 0).
+		Where("media_items.type IN (?)", []string{"movie", "episode"}).
+		Order("watch_histories.last_viewed_at DESC").
+		Limit(limit)
+
+	if profileID > 0 {
+		query = query.Where("watch_histories.profile_id = ?", profileID)
+	}
+
+	query.Find(&items)
+
+	// Get library for metadata
+	var lib models.Library
+	s.db.First(&lib, libraryID)
+
+	result := make([]gin.H, len(items))
+	for i, item := range items {
+		result[i] = s.mediaItemToMetadata(&item, &lib)
+		// Add view offset
+		var history models.WatchHistory
+		s.db.Where("media_item_id = ? AND user_id = ?", item.ID, userID).First(&history)
+		result[i]["viewOffset"] = history.ViewOffset
+	}
+	return result
+}
+
+func (s *Server) getRecentlyAddedItems(libraryID uint, libType string, limit int) []gin.H {
+	var items []models.MediaItem
+
+	// For TV shows, get recently added shows (not episodes)
+	itemType := libType
+	if libType == "show" {
+		itemType = "show"
+	}
+
+	s.db.Preload("Genres").
+		Where("library_id = ? AND type = ?", libraryID, itemType).
+		Order("added_at DESC").
+		Limit(limit).
+		Find(&items)
+
+	var lib models.Library
+	s.db.First(&lib, libraryID)
+
+	result := make([]gin.H, len(items))
+	for i, item := range items {
+		result[i] = s.mediaItemToMetadata(&item, &lib)
+	}
+	return result
+}
+
+func (s *Server) getUnwatchedItems(libraryID uint, libType string, userID interface{}, profileID uint, limit int) []gin.H {
+	var items []models.MediaItem
+
+	itemType := libType
+	if libType == "show" {
+		itemType = "show"
+	}
+
+	query := s.db.Preload("Genres").
+		Where("library_id = ? AND type = ?", libraryID, itemType)
+
+	// Filter out watched items if user is logged in
+	if userID != nil {
+		subQuery := s.db.Model(&models.WatchHistory{}).
+			Select("media_item_id").
+			Where("user_id = ? AND completed = ?", userID, true)
+		if profileID > 0 {
+			subQuery = subQuery.Where("profile_id = ?", profileID)
+		}
+		query = query.Where("id NOT IN (?)", subQuery)
+	}
+
+	query.Order("added_at DESC").Limit(limit).Find(&items)
+
+	var lib models.Library
+	s.db.First(&lib, libraryID)
+
+	result := make([]gin.H, len(items))
+	for i, item := range items {
+		result[i] = s.mediaItemToMetadata(&item, &lib)
+	}
+	return result
+}
+
+func (s *Server) getRecentlyReleasedItems(libraryID uint, libType string, limit int) []gin.H {
+	var items []models.MediaItem
+
+	itemType := libType
+	if libType == "show" {
+		itemType = "show"
+	}
+
+	// Get items released in the last 6 months
+	sixMonthsAgo := time.Now().AddDate(0, -6, 0)
+
+	s.db.Preload("Genres").
+		Where("library_id = ? AND type = ? AND originally_available_at > ?", libraryID, itemType, sixMonthsAgo).
+		Order("originally_available_at DESC").
+		Limit(limit).
+		Find(&items)
+
+	var lib models.Library
+	s.db.First(&lib, libraryID)
+
+	result := make([]gin.H, len(items))
+	for i, item := range items {
+		result[i] = s.mediaItemToMetadata(&item, &lib)
+	}
+	return result
+}
+
+func (s *Server) getTopRatedItems(libraryID uint, libType string, limit int) []gin.H {
+	var items []models.MediaItem
+
+	itemType := libType
+	if libType == "show" {
+		itemType = "show"
+	}
+
+	s.db.Preload("Genres").
+		Where("library_id = ? AND type = ? AND rating > ?", libraryID, itemType, 7.0).
+		Order("rating DESC").
+		Limit(limit).
+		Find(&items)
+
+	var lib models.Library
+	s.db.First(&lib, libraryID)
+
+	result := make([]gin.H, len(items))
+	for i, item := range items {
+		result[i] = s.mediaItemToMetadata(&item, &lib)
+	}
+	return result
+}
+
+func (s *Server) getGenreHubs(libraryID uint, libType string, itemLimit int, genreLimit int) []gin.H {
+	itemType := libType
+	if libType == "show" {
+		itemType = "show"
+	}
+
+	// Get the most popular genres in this library
+	var genreStats []struct {
+		GenreID uint
+		Tag     string
+		Count   int64
+	}
+
+	s.db.Model(&models.Genre{}).
+		Select("genres.id as genre_id, genres.tag, COUNT(*) as count").
+		Joins("JOIN media_genres ON media_genres.genre_id = genres.id").
+		Joins("JOIN media_items ON media_items.id = media_genres.media_item_id").
+		Where("media_items.library_id = ? AND media_items.type = ?", libraryID, itemType).
+		Group("genres.id, genres.tag").
+		Order("count DESC").
+		Limit(genreLimit).
+		Scan(&genreStats)
+
+	var lib models.Library
+	s.db.First(&lib, libraryID)
+
+	hubs := []gin.H{}
+
+	for _, gs := range genreStats {
+		var items []models.MediaItem
+		s.db.Preload("Genres").
+			Joins("JOIN media_genres ON media_genres.media_item_id = media_items.id").
+			Where("media_items.library_id = ? AND media_items.type = ? AND media_genres.genre_id = ?",
+				libraryID, itemType, gs.GenreID).
+			Order("rating DESC, added_at DESC").
+			Limit(itemLimit).
+			Find(&items)
+
+		if len(items) > 0 {
+			metadata := make([]gin.H, len(items))
+			for i, item := range items {
+				metadata[i] = s.mediaItemToMetadata(&item, &lib)
+			}
+
+			hubs = append(hubs, gin.H{
+				"key":           fmt.Sprintf("/hubs/sections/%d/genre/%d", libraryID, gs.GenreID),
+				"hubIdentifier": fmt.Sprintf("genre.%d", gs.GenreID),
+				"type":          libType,
+				"title":         gs.Tag,
+				"context":       "hub.genre",
+				"size":          len(items),
+				"more":          len(items) >= itemLimit,
+				"style":         "shelf",
+				"Metadata":      metadata,
+			})
+		}
+	}
+
+	return hubs
 }
 
 // ============ Helper Functions ============
@@ -1013,12 +1361,84 @@ func (s *Server) getOnDeck(c *gin.Context) {
 
 func (s *Server) search(c *gin.Context) {
 	query := c.Query("query")
-	_ = query
-	// TODO: Implement search
+	if query == "" {
+		c.JSON(http.StatusOK, gin.H{
+			"MediaContainer": gin.H{
+				"size": 0,
+				"Hub":  []gin.H{},
+			},
+		})
+		return
+	}
+
+	// Get limit parameter (default 10)
+	limit := 10
+	if limitStr := c.Query("limit"); limitStr != "" {
+		if l, err := strconv.Atoi(limitStr); err == nil && l > 0 {
+			limit = l
+		}
+	}
+
+	// Search pattern for LIKE queries
+	searchPattern := "%" + strings.ToLower(query) + "%"
+
+	// Search for movies
+	var movies []models.MediaItem
+	s.db.Preload("Genres").
+		Where("type = ? AND (LOWER(title) LIKE ? OR LOWER(original_title) LIKE ? OR LOWER(summary) LIKE ?)",
+			"movie", searchPattern, searchPattern, searchPattern).
+		Limit(limit).
+		Find(&movies)
+
+	// Search for TV shows
+	var shows []models.MediaItem
+	s.db.Preload("Genres").
+		Where("type = ? AND (LOWER(title) LIKE ? OR LOWER(original_title) LIKE ? OR LOWER(summary) LIKE ?)",
+			"show", searchPattern, searchPattern, searchPattern).
+		Limit(limit).
+		Find(&shows)
+
+	// Build hubs (grouped results by type)
+	hubs := []gin.H{}
+
+	// Movie hub
+	if len(movies) > 0 {
+		movieMetadata := make([]gin.H, len(movies))
+		for i, movie := range movies {
+			var lib models.Library
+			s.db.First(&lib, movie.LibraryID)
+			movieMetadata[i] = s.mediaItemToMetadata(&movie, &lib)
+		}
+		hubs = append(hubs, gin.H{
+			"type":          "movie",
+			"hubIdentifier": "movie",
+			"title":         "Movies",
+			"size":          len(movies),
+			"Metadata":      movieMetadata,
+		})
+	}
+
+	// TV Shows hub
+	if len(shows) > 0 {
+		showMetadata := make([]gin.H, len(shows))
+		for i, show := range shows {
+			var lib models.Library
+			s.db.First(&lib, show.LibraryID)
+			showMetadata[i] = s.mediaItemToMetadata(&show, &lib)
+		}
+		hubs = append(hubs, gin.H{
+			"type":          "show",
+			"hubIdentifier": "show",
+			"title":         "TV Shows",
+			"size":          len(shows),
+			"Metadata":      showMetadata,
+		})
+	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"MediaContainer": gin.H{
-			"size": 0,
-			"Hub":  []gin.H{},
+			"size": len(movies) + len(shows),
+			"Hub":  hubs,
 		},
 	})
 }
@@ -2057,4 +2477,290 @@ func (s *Server) adminScanLibrary(c *gin.Context) {
 		"filesRemoved": result.FilesRemoved,
 		"errors":       result.Errors,
 	})
+}
+
+// adminGetLibraryStats returns statistics for a library
+func (s *Server) adminGetLibraryStats(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid library ID"})
+		return
+	}
+
+	lib, err := s.libraryService.GetLibrary(uint(id))
+	if err != nil {
+		if errors.Is(err, library.ErrLibraryNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Library not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Count items by type
+	var movieCount, showCount, seasonCount, episodeCount int64
+	s.db.Model(&models.MediaItem{}).Where("library_id = ? AND type = ?", lib.ID, "movie").Count(&movieCount)
+	s.db.Model(&models.MediaItem{}).Where("library_id = ? AND type = ?", lib.ID, "show").Count(&showCount)
+	s.db.Model(&models.MediaItem{}).Where("library_id = ? AND type = ?", lib.ID, "season").Count(&seasonCount)
+	s.db.Model(&models.MediaItem{}).Where("library_id = ? AND type = ?", lib.ID, "episode").Count(&episodeCount)
+
+	// Calculate total file size
+	var totalSize int64
+	s.db.Model(&models.MediaFile{}).
+		Joins("JOIN media_items ON media_items.id = media_files.media_item_id").
+		Where("media_items.library_id = ?", lib.ID).
+		Select("COALESCE(SUM(media_files.file_size), 0)").
+		Scan(&totalSize)
+
+	// Count total files
+	var fileCount int64
+	s.db.Model(&models.MediaFile{}).
+		Joins("JOIN media_items ON media_items.id = media_files.media_item_id").
+		Where("media_items.library_id = ?", lib.ID).
+		Count(&fileCount)
+
+	// Calculate total duration
+	var totalDuration int64
+	s.db.Model(&models.MediaItem{}).
+		Where("library_id = ? AND duration > 0", lib.ID).
+		Select("COALESCE(SUM(duration), 0)").
+		Scan(&totalDuration)
+
+	c.JSON(http.StatusOK, gin.H{
+		"libraryId":    lib.ID,
+		"movieCount":   movieCount,
+		"showCount":    showCount,
+		"seasonCount":  seasonCount,
+		"episodeCount": episodeCount,
+		"fileCount":    fileCount,
+		"totalSize":    totalSize,
+		"totalDuration": totalDuration,
+	})
+}
+
+// FileSystemEntry represents a file or directory in the filesystem
+type FileSystemEntry struct {
+	Name    string `json:"name"`
+	Path    string `json:"path"`
+	IsDir   bool   `json:"isDir"`
+	Size    int64  `json:"size,omitempty"`
+	ModTime int64  `json:"modTime,omitempty"`
+}
+
+// adminBrowseFilesystem lists directories for path selection
+func (s *Server) adminBrowseFilesystem(c *gin.Context) {
+	path := c.DefaultQuery("path", "")
+
+	// If no path specified, return common root paths
+	if path == "" {
+		roots := getSystemRoots()
+		c.JSON(http.StatusOK, gin.H{
+			"path":    "/",
+			"entries": roots,
+		})
+		return
+	}
+
+	// Clean and validate the path
+	cleanPath := filepath.Clean(path)
+
+	// Check if path exists
+	info, err := os.Stat(cleanPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Path not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// If it's a file, return its parent directory
+	if !info.IsDir() {
+		cleanPath = filepath.Dir(cleanPath)
+	}
+
+	// Read directory contents
+	entries, err := os.ReadDir(cleanPath)
+	if err != nil {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Cannot access directory"})
+		return
+	}
+
+	// Filter and format entries (directories only for path selection, but show files for context)
+	result := make([]FileSystemEntry, 0, len(entries))
+	for _, entry := range entries {
+		// Skip hidden files/directories (starting with .)
+		if strings.HasPrefix(entry.Name(), ".") {
+			continue
+		}
+
+		entryPath := filepath.Join(cleanPath, entry.Name())
+		fsEntry := FileSystemEntry{
+			Name:  entry.Name(),
+			Path:  entryPath,
+			IsDir: entry.IsDir(),
+		}
+
+		// Get additional info for files
+		if info, err := entry.Info(); err == nil {
+			fsEntry.Size = info.Size()
+			fsEntry.ModTime = info.ModTime().Unix()
+		}
+
+		result = append(result, fsEntry)
+	}
+
+	// Sort: directories first, then alphabetically
+	sortFileEntries(result)
+
+	// Get parent path
+	parentPath := filepath.Dir(cleanPath)
+	if parentPath == cleanPath {
+		parentPath = "" // At root
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"path":       cleanPath,
+		"parentPath": parentPath,
+		"entries":    result,
+	})
+}
+
+// getSystemRoots returns common root paths based on OS
+func getSystemRoots() []FileSystemEntry {
+	roots := []FileSystemEntry{}
+
+	switch runtime.GOOS {
+	case "darwin":
+		// macOS
+		homeDir, _ := os.UserHomeDir()
+		roots = append(roots,
+			FileSystemEntry{Name: "Root", Path: "/", IsDir: true},
+			FileSystemEntry{Name: "Home", Path: homeDir, IsDir: true},
+			FileSystemEntry{Name: "Volumes", Path: "/Volumes", IsDir: true},
+		)
+		// Check for common media locations
+		if info, err := os.Stat("/Volumes"); err == nil && info.IsDir() {
+			if entries, err := os.ReadDir("/Volumes"); err == nil {
+				for _, e := range entries {
+					if e.IsDir() && e.Name() != "Macintosh HD" {
+						roots = append(roots, FileSystemEntry{
+							Name:  e.Name(),
+							Path:  filepath.Join("/Volumes", e.Name()),
+							IsDir: true,
+						})
+					}
+				}
+			}
+		}
+	case "linux":
+		homeDir, _ := os.UserHomeDir()
+		roots = append(roots,
+			FileSystemEntry{Name: "Root", Path: "/", IsDir: true},
+			FileSystemEntry{Name: "Home", Path: homeDir, IsDir: true},
+			FileSystemEntry{Name: "Media", Path: "/media", IsDir: true},
+			FileSystemEntry{Name: "Mnt", Path: "/mnt", IsDir: true},
+		)
+	case "windows":
+		// List available drives
+		for _, drive := range "CDEFGHIJKLMNOPQRSTUVWXYZ" {
+			drivePath := string(drive) + ":\\"
+			if _, err := os.Stat(drivePath); err == nil {
+				roots = append(roots, FileSystemEntry{
+					Name:  string(drive) + ":",
+					Path:  drivePath,
+					IsDir: true,
+				})
+			}
+		}
+	}
+
+	return roots
+}
+
+// sortFileEntries sorts entries: directories first, then by name
+func sortFileEntries(entries []FileSystemEntry) {
+	for i := 0; i < len(entries)-1; i++ {
+		for j := i + 1; j < len(entries); j++ {
+			// Directories come first
+			if entries[j].IsDir && !entries[i].IsDir {
+				entries[i], entries[j] = entries[j], entries[i]
+			} else if entries[i].IsDir == entries[j].IsDir {
+				// Same type, sort alphabetically (case-insensitive)
+				if strings.ToLower(entries[j].Name) < strings.ToLower(entries[i].Name) {
+					entries[i], entries[j] = entries[j], entries[i]
+				}
+			}
+		}
+	}
+}
+
+// ============ Admin Settings Handlers ============
+
+// ServerSettings represents configurable server settings
+type ServerSettings struct {
+	TMDBApiKey   string `json:"tmdb_api_key,omitempty"`
+	TVDBApiKey   string `json:"tvdb_api_key,omitempty"`
+	MetadataLang string `json:"metadata_lang,omitempty"`
+	ScanInterval int    `json:"scan_interval,omitempty"`
+}
+
+func (s *Server) adminGetSettings(c *gin.Context) {
+	// Return current settings (mask API keys partially for security)
+	settings := ServerSettings{
+		TMDBApiKey:   maskAPIKey(s.config.Library.TMDBApiKey),
+		TVDBApiKey:   maskAPIKey(s.config.Library.TVDBApiKey),
+		MetadataLang: s.config.Library.MetadataLang,
+		ScanInterval: s.config.Library.ScanInterval,
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"settings": settings,
+	})
+}
+
+func (s *Server) adminUpdateSettings(c *gin.Context) {
+	var input ServerSettings
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Update config in memory
+	if input.TMDBApiKey != "" && !strings.HasPrefix(input.TMDBApiKey, "****") {
+		s.config.Library.TMDBApiKey = input.TMDBApiKey
+		// Re-initialize TMDB agent with new key
+		s.reinitializeTMDBAgent()
+	}
+	if input.TVDBApiKey != "" && !strings.HasPrefix(input.TVDBApiKey, "****") {
+		s.config.Library.TVDBApiKey = input.TVDBApiKey
+	}
+	if input.MetadataLang != "" {
+		s.config.Library.MetadataLang = input.MetadataLang
+	}
+	if input.ScanInterval > 0 {
+		s.config.Library.ScanInterval = input.ScanInterval
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Settings updated successfully",
+		"settings": ServerSettings{
+			TMDBApiKey:   maskAPIKey(s.config.Library.TMDBApiKey),
+			TVDBApiKey:   maskAPIKey(s.config.Library.TVDBApiKey),
+			MetadataLang: s.config.Library.MetadataLang,
+			ScanInterval: s.config.Library.ScanInterval,
+		},
+	})
+}
+
+// maskAPIKey partially hides an API key for display
+func maskAPIKey(key string) string {
+	if key == "" {
+		return ""
+	}
+	if len(key) <= 8 {
+		return "****"
+	}
+	return key[:4] + "****" + key[len(key)-4:]
 }

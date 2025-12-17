@@ -4,10 +4,10 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:provider/provider.dart';
 import 'focus/focus_indicator.dart';
 import 'hub_navigation_controller.dart';
-import '../client/plex_client.dart';
+import '../client/media_client.dart';
 import '../mixins/keyboard_long_press_mixin.dart';
-import '../models/plex_metadata.dart';
-import '../models/plex_playlist.dart';
+import '../models/media_item.dart';
+import '../models/playlist.dart';
 import '../providers/multi_server_provider.dart';
 import '../providers/settings_provider.dart';
 import '../services/settings_service.dart';
@@ -24,7 +24,7 @@ import '../i18n/strings.g.dart';
 import 'media_context_menu.dart';
 
 class MediaCard extends StatefulWidget {
-  final dynamic item; // Can be PlexMetadata or PlexPlaylist
+  final dynamic item; // Can be MediaItem or Playlist
   final double? width;
   final double? height;
   final void Function(String ratingKey)? onRefresh;
@@ -118,12 +118,12 @@ class _MediaCardState extends State<MediaCard> {
 
   void _handleTap(BuildContext context) async {
     // Handle playlists
-    if (widget.item is PlexPlaylist) {
+    if (widget.item is Playlist) {
       await Navigator.push(
         context,
         MaterialPageRoute(
           builder: (context) =>
-              PlaylistDetailScreen(playlist: widget.item as PlexPlaylist),
+              PlaylistDetailScreen(playlist: widget.item as Playlist),
         ),
       );
       return;
@@ -224,7 +224,7 @@ class _MediaCardState extends State<MediaCard> {
             density: settingsProvider.libraryDensity,
           );
 
-    // Use context menu for both PlexMetadata and PlexPlaylist items
+    // Use context menu for both MediaItem and Playlist items
     return MediaContextMenu(
       key: _contextMenuKey,
       item: widget.item,
@@ -241,7 +241,7 @@ class _MediaCardState extends State<MediaCard> {
 
 /// Grid layout for media cards
 class _MediaCardGrid extends StatefulWidget {
-  final dynamic item; // Can be PlexMetadata or PlexPlaylist
+  final dynamic item; // Can be MediaItem or Playlist
   final double? width;
   final double? height;
   final String semanticLabel;
@@ -462,9 +462,9 @@ class _MediaCardGridState extends State<_MediaCardGrid>
                       mainAxisAlignment: MainAxisAlignment.start,
                       children: [
                         Text(
-                          widget.item is PlexPlaylist
-                              ? (widget.item as PlexPlaylist).title
-                              : (widget.item as PlexMetadata).displayTitle,
+                          widget.item is Playlist
+                              ? (widget.item as Playlist).title
+                              : (widget.item as MediaItem).displayTitle,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
@@ -473,10 +473,10 @@ class _MediaCardGridState extends State<_MediaCardGrid>
                             height: 1.1,
                           ),
                         ),
-                        if (widget.item is PlexPlaylist)
+                        if (widget.item is Playlist)
                           Builder(
                             builder: (context) {
-                              final playlist = widget.item as PlexPlaylist;
+                              final playlist = widget.item as Playlist;
                               if (playlist.leafCount != null &&
                                   playlist.leafCount! > 0) {
                                 return Text(
@@ -496,10 +496,10 @@ class _MediaCardGridState extends State<_MediaCardGrid>
                               return const SizedBox.shrink();
                             },
                           )
-                        else if (widget.item is PlexMetadata) ...[
+                        else if (widget.item is MediaItem) ...[
                           Builder(
                             builder: (context) {
-                              final metadata = widget.item as PlexMetadata;
+                              final metadata = widget.item as MediaItem;
 
                               // For collections, show item count
                               if (metadata.type.toLowerCase() == 'collection') {
@@ -588,7 +588,7 @@ class _MediaCardGridState extends State<_MediaCardGrid>
 
 /// List layout for media cards
 class _MediaCardList extends StatefulWidget {
-  final dynamic item; // Can be PlexMetadata or PlexPlaylist
+  final dynamic item; // Can be MediaItem or Playlist
   final String semanticLabel;
   final VoidCallback onTap;
   final VoidCallback onLongPress;
@@ -732,8 +732,8 @@ class _MediaCardListState extends State<_MediaCardList>
   String _buildMetadataLine() {
     final parts = <String>[];
 
-    if (widget.item is PlexPlaylist) {
-      final playlist = widget.item as PlexPlaylist;
+    if (widget.item is Playlist) {
+      final playlist = widget.item as Playlist;
       // Add item count
       if (playlist.leafCount != null && playlist.leafCount! > 0) {
         parts.add(t.playlists.itemCount(count: playlist.leafCount!));
@@ -748,8 +748,8 @@ class _MediaCardListState extends State<_MediaCardList>
       if (playlist.smart) {
         parts.add(t.playlists.smartPlaylist);
       }
-    } else if (widget.item is PlexMetadata) {
-      final metadata = widget.item as PlexMetadata;
+    } else if (widget.item is MediaItem) {
+      final metadata = widget.item as MediaItem;
 
       // For collections, show item count
       if (metadata.type.toLowerCase() == 'collection') {
@@ -794,11 +794,11 @@ class _MediaCardListState extends State<_MediaCardList>
   }
 
   String? _buildSubtitleText() {
-    if (widget.item is PlexPlaylist) {
+    if (widget.item is Playlist) {
       // Playlists don't have subtitles
       return null;
-    } else if (widget.item is PlexMetadata) {
-      final metadata = widget.item as PlexMetadata;
+    } else if (widget.item is MediaItem) {
+      final metadata = widget.item as MediaItem;
 
       // For TV episodes, show S#E# format
       if (metadata.parentIndex != null && metadata.index != null) {
@@ -935,13 +935,13 @@ class _MediaCardListState extends State<_MediaCardList>
   }
 }
 
-/// Helper to get the correct PlexClient for an item's server
-PlexClient _getClientForItem(BuildContext context, dynamic item) {
+/// Helper to get the correct MediaClient for an item's server
+MediaClient _getClientForItem(BuildContext context, dynamic item) {
   String? serverId;
 
-  if (item is PlexMetadata) {
+  if (item is MediaItem) {
     serverId = item.serverId;
-  } else if (item is PlexPlaylist) {
+  } else if (item is Playlist) {
     serverId = item.serverId;
   }
 
@@ -964,10 +964,10 @@ Widget _buildPosterImage(BuildContext context, dynamic item) {
   String? posterUrl;
   IconData fallbackIcon = Icons.movie;
 
-  if (item is PlexPlaylist) {
+  if (item is Playlist) {
     posterUrl = item.displayImage;
     fallbackIcon = Icons.playlist_play;
-  } else if (item is PlexMetadata) {
+  } else if (item is MediaItem) {
     final useSeasonPoster = context.watch<SettingsProvider>().useSeasonPoster;
     posterUrl = item.posterThumb(useSeasonPoster: useSeasonPoster);
   }
@@ -1001,18 +1001,18 @@ Widget _buildPosterImage(BuildContext context, dynamic item) {
 
 /// Overlay widget for poster showing watched indicator and progress bar
 class _PosterOverlay extends StatelessWidget {
-  final dynamic item; // Can be PlexMetadata or PlexPlaylist
+  final dynamic item; // Can be MediaItem or Playlist
 
   const _PosterOverlay({required this.item});
 
   @override
   Widget build(BuildContext context) {
-    // Only show overlays for PlexMetadata items
-    if (item is! PlexMetadata) {
+    // Only show overlays for MediaItem items
+    if (item is! MediaItem) {
       return const SizedBox.shrink();
     }
 
-    final metadata = item as PlexMetadata;
+    final metadata = item as MediaItem;
 
     return Stack(
       children: [

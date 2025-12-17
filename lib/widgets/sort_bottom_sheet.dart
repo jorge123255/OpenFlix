@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../models/plex_sort.dart';
+import '../models/sort.dart';
 import '../widgets/bottom_sheet_header.dart';
 import '../utils/keyboard_utils.dart';
 import '../i18n/strings.g.dart';
 
 class SortBottomSheet extends StatefulWidget {
-  final List<PlexSort> sortOptions;
-  final PlexSort? selectedSort;
+  final List<Sort> sortOptions;
+  final Sort? selectedSort;
   final bool isSortDescending;
-  final Function(PlexSort, bool) onSortChanged;
+  final Function(Sort, bool) onSortChanged;
   final VoidCallback? onClear;
 
   const SortBottomSheet({
@@ -26,7 +26,7 @@ class SortBottomSheet extends StatefulWidget {
 }
 
 class _SortBottomSheetState extends State<SortBottomSheet> {
-  late PlexSort? _currentSort;
+  late Sort? _currentSort;
   late bool _currentDescending;
   final FocusNode _firstItemFocusNode = FocusNode(debugLabel: 'SortFirstItem');
 
@@ -47,7 +47,7 @@ class _SortBottomSheetState extends State<SortBottomSheet> {
     super.dispose();
   }
 
-  void _handleSortChange(PlexSort sort, bool descending) {
+  void _handleSortChange(Sort sort, bool descending) {
     setState(() {
       _currentSort = sort;
       _currentDescending = descending;
@@ -116,7 +116,7 @@ class _SortBottomSheetState extends State<SortBottomSheet> {
                       final sort = widget.sortOptions[index];
                       final isSelected = _currentSort?.key == sort.key;
 
-                      return RadioListTile<PlexSort>(
+                      return RadioListTile<Sort>(
                         focusNode: index == 0 ? _firstItemFocusNode : null,
                         title: Text(sort.title),
                         value: sort,

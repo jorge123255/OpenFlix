@@ -11,7 +11,7 @@ import 'services/fullscreen_state_manager.dart';
 import 'services/update_service.dart';
 import 'services/settings_service.dart';
 import 'providers/user_profile_provider.dart';
-import 'providers/plex_client_provider.dart';
+import 'providers/media_client_provider.dart';
 import 'providers/multi_server_provider.dart';
 import 'providers/server_state_provider.dart';
 import 'providers/theme_provider.dart';
@@ -82,7 +82,7 @@ class MainApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         // Legacy provider for backward compatibility
-        ChangeNotifierProvider(create: (context) => PlexClientProvider()),
+        ChangeNotifierProvider(create: (context) => MediaClientProvider()),
         // New multi-server providers
         ChangeNotifierProvider(
           create: (context) =>
@@ -269,7 +269,7 @@ class _SetupScreenState extends State<SetupScreen> {
             timeout: const Duration(seconds: 10),
             onServerConnected: (serverId, client) {
               // Set first connected client in legacy provider for backward compatibility
-              final legacyProvider = Provider.of<PlexClientProvider>(
+              final legacyProvider = Provider.of<MediaClientProvider>(
                 context,
                 listen: false,
               );

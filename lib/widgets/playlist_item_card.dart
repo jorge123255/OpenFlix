@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import '../client/plex_client.dart';
+import '../client/media_client.dart';
 import '../mixins/keyboard_long_press_mixin.dart';
-import '../models/plex_metadata.dart';
+import '../models/media_item.dart';
 import '../utils/duration_formatter.dart';
 import '../utils/provider_extensions.dart';
 import '../i18n/strings.g.dart';
@@ -12,7 +12,7 @@ import 'media_context_menu.dart';
 /// Custom list item widget for playlist items
 /// Shows drag handle, poster, title/metadata, duration, and remove button
 class PlaylistItemCard extends StatefulWidget {
-  final PlexMetadata item;
+  final MediaItem item;
   final int index;
   final VoidCallback onRemove;
   final VoidCallback? onTap;
@@ -157,8 +157,8 @@ class _PlaylistItemCardState extends State<PlaylistItemCard>
     );
   }
 
-  /// Get the correct PlexClient for this item's server
-  PlexClient _getClientForItem(BuildContext context) {
+  /// Get the correct MediaClient for this item's server
+  MediaClient _getClientForItem(BuildContext context) {
     return context.getClientForServer(widget.item.serverId!);
   }
 

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../client/plex_client.dart';
-import '../models/plex_metadata.dart';
-import '../models/plex_playlist.dart';
+import '../client/media_client.dart';
+import '../models/media_item.dart';
+import '../models/playlist.dart';
 import '../models/play_queue_response.dart';
 import '../providers/playback_state_provider.dart';
 import '../utils/app_logger.dart';
@@ -12,13 +12,13 @@ import '../i18n/strings.g.dart';
 /// Helper function to play a collection or playlist
 Future<void> playCollectionOrPlaylist({
   required BuildContext context,
-  required PlexClient client,
-  required dynamic item, // PlexMetadata (collection) or PlexPlaylist
+  required MediaClient client,
+  required dynamic item, // MediaItem (collection) or Playlist
   required bool shuffle,
 }) async {
   try {
-    final isCollection = item is PlexMetadata;
-    final isPlaylist = item is PlexPlaylist;
+    final isCollection = item is MediaItem;
+    final isPlaylist = item is Playlist;
 
     if (!isCollection && !isPlaylist) {
       throw Exception('Item must be either a collection or playlist');
@@ -65,7 +65,7 @@ Future<void> playCollectionOrPlaylist({
           fetchedQueue.items!.isNotEmpty) {
         if (!context.mounted) return;
 
-        // Items are automatically tagged with server info by PlexClient
+        // Items are automatically tagged with server info by MediaClient
         // Set play queue in provider
         final playbackState = context.read<PlaybackStateProvider>();
         playbackState.setClient(client);
@@ -100,7 +100,7 @@ Future<void> playCollectionOrPlaylist({
 
     if (!context.mounted) return;
 
-    // Items are automatically tagged with server info by PlexClient
+    // Items are automatically tagged with server info by MediaClient
     // Set play queue in provider
     final playbackState = context.read<PlaybackStateProvider>();
     playbackState.setClient(client);

@@ -2,9 +2,9 @@ import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:uuid/uuid.dart';
 import 'storage_service.dart';
-import '../client/plex_client.dart';
-import '../models/plex_user_profile.dart';
-import '../models/plex_home.dart';
+import '../client/media_client.dart';
+import '../models/user_profile.dart';
+import '../models/home.dart';
 import '../models/user_switch_response.dart';
 import '../utils/app_logger.dart';
 
@@ -178,23 +178,23 @@ class PlexAuthService {
   }
 
   /// Get user profile with preferences (audio/subtitle settings)
-  Future<PlexUserProfile> getUserProfile(String authToken) async {
+  Future<UserProfile> getUserProfile(String authToken) async {
     final response = await _dio.get(
       '$_clientsApi/user',
       options: _getCommonOptions(authToken: authToken),
     );
 
-    return PlexUserProfile.fromJson(response.data as Map<String, dynamic>);
+    return UserProfile.fromJson(response.data as Map<String, dynamic>);
   }
 
   /// Get home users for the authenticated user
-  Future<PlexHome> getHomeUsers(String authToken) async {
+  Future<Home> getHomeUsers(String authToken) async {
     final response = await _dio.get(
       '$_clientsApi/home/users',
       options: _getCommonOptions(authToken: authToken),
     );
 
-    return PlexHome.fromJson(response.data as Map<String, dynamic>);
+    return Home.fromJson(response.data as Map<String, dynamic>);
   }
 
   /// Switch to a different user in the home
@@ -431,7 +431,7 @@ class PlexServer {
           'Testing cached endpoint before running full race',
           error: {'uri': preferredUri},
         );
-        final result = await PlexClient.testConnectionWithLatency(
+        final result = await MediaClient.testConnectionWithLatency(
           cachedCandidate.url,
           accessToken,
           timeout: preferredTimeout,
@@ -463,7 +463,7 @@ class PlexServer {
       );
 
       for (final candidate in candidates) {
-        PlexClient.testConnectionWithLatency(
+        MediaClient.testConnectionWithLatency(
           candidate.url,
           accessToken,
           timeout: raceTimeout,
@@ -510,7 +510,7 @@ class PlexServer {
 
     await Future.wait(
       candidates.map((candidate) async {
-        final result = await PlexClient.testConnectionWithAverageLatency(
+        final result = await MediaClient.testConnectionWithAverageLatency(
           candidate.url,
           accessToken,
           attempts: 2,
@@ -733,7 +733,7 @@ class PlexServer {
       error: {'from': currentUrl, 'to': httpsUrl},
     );
 
-    final result = await PlexClient.testConnectionWithLatency(
+    final result = await MediaClient.testConnectionWithLatency(
       httpsUrl,
       accessToken,
       timeout: const Duration(seconds: 4),

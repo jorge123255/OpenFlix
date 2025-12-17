@@ -44,6 +44,11 @@ func (s *Scanner) SetTMDBAgent(agent *metadata.TMDBAgent) {
 	s.tmdb = agent
 }
 
+// GetTMDBAgent returns the TMDB agent for metadata operations
+func (s *Scanner) GetTMDBAgent() *metadata.TMDBAgent {
+	return s.tmdb
+}
+
 // Video file extensions
 var videoExtensions = map[string]bool{
 	".mp4": true, ".mkv": true, ".avi": true, ".mov": true,

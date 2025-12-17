@@ -1,11 +1,11 @@
-import '../client/plex_client.dart';
-import '../models/plex_media_info.dart';
-import '../models/plex_metadata.dart';
+import '../client/media_client.dart';
+import '../models/media_info.dart';
+import '../models/media_item.dart';
 import '../i18n/strings.g.dart';
 
 /// Service responsible for fetching video playback data from the Plex server
 class PlaybackInitializationService {
-  final PlexClient client;
+  final MediaClient client;
 
   PlaybackInitializationService({required this.client});
 
@@ -13,7 +13,7 @@ class PlaybackInitializationService {
   ///
   /// Returns a PlaybackInitializationResult with video URL and available versions
   Future<PlaybackInitializationResult> getPlaybackData({
-    required PlexMetadata metadata,
+    required MediaItem metadata,
     required int selectedMediaIndex,
   }) async {
     try {
@@ -46,7 +46,7 @@ class PlaybackInitializationService {
 class PlaybackInitializationResult {
   final List<dynamic> availableVersions;
   final String? videoUrl;
-  final PlexMediaInfo? mediaInfo;
+  final MediaInfo? mediaInfo;
 
   PlaybackInitializationResult({
     required this.availableVersions,

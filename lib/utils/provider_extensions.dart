@@ -1,24 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../client/plex_client.dart';
+import '../client/media_client.dart';
 import '../i18n/strings.g.dart';
-import '../models/plex_library.dart';
-import '../models/plex_user_profile.dart';
+import '../models/library.dart';
+import '../models/user_profile.dart';
 import '../providers/hidden_libraries_provider.dart';
 import '../providers/multi_server_provider.dart';
-import '../providers/plex_client_provider.dart';
+import '../providers/media_client_provider.dart';
 import '../providers/user_profile_provider.dart';
 import 'app_logger.dart';
 
 extension ProviderExtensions on BuildContext {
-  PlexClientProvider get plexClient =>
-      Provider.of<PlexClientProvider>(this, listen: false);
+  MediaClientProvider get plexClient =>
+      Provider.of<MediaClientProvider>(this, listen: false);
 
   UserProfileProvider get userProfile =>
       Provider.of<UserProfileProvider>(this, listen: false);
 
-  PlexClientProvider watchPlexClient() =>
-      Provider.of<PlexClientProvider>(this, listen: true);
+  MediaClientProvider watchMediaClient() =>
+      Provider.of<MediaClientProvider>(this, listen: true);
 
   UserProfileProvider watchUserProfile() =>
       Provider.of<UserProfileProvider>(this, listen: true);
@@ -30,11 +30,11 @@ extension ProviderExtensions on BuildContext {
       Provider.of<HiddenLibrariesProvider>(this, listen: true);
 
   // Direct profile settings access (nullable)
-  PlexUserProfile? get profileSettings => userProfile.profileSettings;
+  UserProfile? get profileSettings => userProfile.profileSettings;
 
-  /// Get PlexClient for a specific server ID
+  /// Get MediaClient for a specific server ID
   /// Throws an exception if no client is available for the given serverId
-  PlexClient getClientForServer(String serverId) {
+  MediaClient getClientForServer(String serverId) {
     final multiServerProvider = Provider.of<MultiServerProvider>(
       this,
       listen: false,
@@ -50,9 +50,9 @@ extension ProviderExtensions on BuildContext {
     return serverClient;
   }
 
-  /// Get PlexClient for a library
+  /// Get MediaClient for a library
   /// Throws an exception if no client is available
-  PlexClient getClientForLibrary(PlexLibrary library) {
+  MediaClient getClientForLibrary(Library library) {
     // If library doesn't have a serverId, fall back to first available server
     if (library.serverId == null) {
       final multiServerProvider = Provider.of<MultiServerProvider>(

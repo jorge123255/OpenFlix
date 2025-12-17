@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../models/plex_playlist.dart';
+import '../../models/playlist.dart';
 import '../../providers/settings_provider.dart';
 import '../../utils/library_refresh_notifier.dart';
 import '../../services/settings_service.dart' show ViewMode;
@@ -11,7 +11,7 @@ import 'base_library_tab.dart';
 
 /// Playlists tab for library screen
 /// Shows playlists that contain items from the current library
-class LibraryPlaylistsTab extends BaseLibraryTab<PlexPlaylist> {
+class LibraryPlaylistsTab extends BaseLibraryTab<Playlist> {
   const LibraryPlaylistsTab({
     super.key,
     required super.library,
@@ -24,7 +24,7 @@ class LibraryPlaylistsTab extends BaseLibraryTab<PlexPlaylist> {
 }
 
 class _LibraryPlaylistsTabState
-    extends BaseLibraryTabState<PlexPlaylist, LibraryPlaylistsTab> {
+    extends BaseLibraryTabState<Playlist, LibraryPlaylistsTab> {
   /// Focus node for the first item in the grid
   final FocusNode _firstItemFocusNode = FocusNode(
     debugLabel: 'PlaylistsFirstItem',
@@ -49,11 +49,11 @@ class _LibraryPlaylistsTabState
   Stream<void>? getRefreshStream() => LibraryRefreshNotifier().playlistsStream;
 
   @override
-  Future<List<PlexPlaylist>> loadData() async {
+  Future<List<Playlist>> loadData() async {
     // Use server-specific client for this library
     final client = getClientForLibrary();
 
-    // Playlists are automatically tagged with server info by PlexClient
+    // Playlists are automatically tagged with server info by MediaClient
     return await client.getLibraryPlaylists(
       sectionId: widget.library.key,
       playlistType: 'video',
@@ -68,7 +68,7 @@ class _LibraryPlaylistsTabState
   }
 
   @override
-  Widget buildContent(List<PlexPlaylist> items) {
+  Widget buildContent(List<Playlist> items) {
     return Consumer<SettingsProvider>(
       builder: (context, settingsProvider, child) {
         if (settingsProvider.viewMode == ViewMode.list) {
@@ -99,7 +99,7 @@ class _LibraryPlaylistsTabState
     );
   }
 
-  Widget _buildPlaylistItem(PlexPlaylist playlist, int index) {
+  Widget _buildPlaylistItem(Playlist playlist, int index) {
     return MediaCard(
       key: Key(playlist.ratingKey),
       item: playlist,

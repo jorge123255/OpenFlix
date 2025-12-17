@@ -6,8 +6,7 @@ import '../utils/log_redaction_manager.dart';
 
 class StorageService {
   static const String _keyServerUrl = 'server_url';
-  static const String _keyToken = 'token';
-  static const String _keyPlexToken = 'plex_token';
+  static const String _keyToken = 'auth_token';
   static const String _keyServerData = 'server_data';
   static const String _keyClientId = 'client_identifier';
   static const String _keySelectedLibraryIndex = 'selected_library_index';
@@ -41,7 +40,6 @@ class StorageService {
     // Seed known values so logs can redact immediately on startup.
     LogRedactionManager.registerServerUrl(getServerUrl());
     LogRedactionManager.registerToken(getToken());
-    LogRedactionManager.registerToken(getPlexToken());
   }
 
   // Server URL
@@ -87,16 +85,6 @@ class StorageService {
     return getToken();
   }
 
-  // Plex.tv Token (for API access)
-  Future<void> savePlexToken(String token) async {
-    await _prefs.setString(_keyPlexToken, token);
-    LogRedactionManager.registerToken(token);
-  }
-
-  String? getPlexToken() {
-    return _prefs.getString(_keyPlexToken);
-  }
-
   // Server Data (full PlexServer object as JSON)
   Future<void> saveServerData(Map<String, dynamic> serverJson) async {
     final jsonString = json.encode(serverJson);
@@ -139,7 +127,6 @@ class StorageService {
     await Future.wait([
       _prefs.remove(_keyServerUrl),
       _prefs.remove(_keyToken),
-      _prefs.remove(_keyPlexToken),
       _prefs.remove(_keyServerData),
       _prefs.remove(_keyClientId),
       _prefs.remove(_keyUserProfile),

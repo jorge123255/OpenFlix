@@ -5,7 +5,7 @@ import 'package:rate_limiter/rate_limiter.dart';
 import '../i18n/strings.g.dart';
 import 'main_screen.dart';
 import '../mixins/refreshable.dart';
-import '../models/plex_metadata.dart';
+import '../models/media_item.dart';
 import '../providers/multi_server_provider.dart';
 import '../providers/settings_provider.dart';
 import '../services/settings_service.dart';
@@ -25,7 +25,7 @@ class SearchScreen extends StatefulWidget {
 class _SearchScreenState extends State<SearchScreen> with Refreshable {
   final _searchController = TextEditingController();
   final _searchFocusNode = FocusNode(debugLabel: 'SearchInput');
-  List<PlexMetadata> _searchResults = [];
+  List<MediaItem> _searchResults = [];
   bool _isSearching = false;
   bool _hasSearched = false;
   late final Debounce _searchDebounce;

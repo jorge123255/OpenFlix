@@ -1,16 +1,19 @@
 import '../mpv/mpv.dart';
 
-import '../models/plex_metadata.dart';
-import '../models/plex_user_profile.dart';
+import '../models/media_item.dart';
+import '../models/user_profile.dart';
 import '../utils/app_logger.dart';
 import '../utils/language_codes.dart';
 
 /// Service for selecting and applying audio and subtitle tracks based on
 /// preferences, user profiles, and per-media settings.
+///
+/// Note: This service works with mpv's AudioTrack and SubtitleTrack types
+/// since it directly interacts with the Player.
 class TrackSelectionService {
   final Player player;
-  final PlexUserProfile? profileSettings;
-  final PlexMetadata metadata;
+  final UserProfile? profileSettings;
+  final MediaItem metadata;
 
   TrackSelectionService({
     required this.player,
@@ -84,7 +87,7 @@ class TrackSelectionService {
 
   AudioTrack? findAudioTrackByProfile(
     List<AudioTrack> availableTracks,
-    PlexUserProfile profile,
+    UserProfile profile,
   ) {
     appLogger.d('Audio track selection using user profile');
     appLogger.d(
@@ -160,7 +163,7 @@ class TrackSelectionService {
 
   SubtitleTrack? findSubtitleTrackByProfile(
     List<SubtitleTrack> availableTracks,
-    PlexUserProfile profile, {
+    UserProfile profile, {
     AudioTrack? selectedAudioTrack,
   }) {
     appLogger.d('Subtitle track selection using user profile');

@@ -151,12 +151,13 @@ class KeyboardShortcutsService {
     Player player,
     VoidCallback? onToggleFullscreen,
     VoidCallback? onToggleSubtitles,
-    VoidCallback? onNextAudioTrack,
-    VoidCallback? onNextSubtitleTrack,
+    VoidCallback? onNextMediaAudioTrack,
+    VoidCallback? onNextMediaSubtitleTrack,
     VoidCallback? onNextChapter,
     VoidCallback? onPreviousChapter, {
     VoidCallback? onBack,
   }) {
+    if (event is KeyRepeatEvent) return KeyEventResult.handled;
     if (event is! KeyDownEvent) return KeyEventResult.ignored;
 
     // Handle back navigation keys first
@@ -227,8 +228,8 @@ class KeyboardShortcutsService {
           player,
           onToggleFullscreen,
           onToggleSubtitles,
-          onNextAudioTrack,
-          onNextSubtitleTrack,
+          onNextMediaAudioTrack,
+          onNextMediaSubtitleTrack,
           onNextChapter,
           onPreviousChapter,
         );
@@ -244,8 +245,8 @@ class KeyboardShortcutsService {
     Player player,
     VoidCallback? onToggleFullscreen,
     VoidCallback? onToggleSubtitles,
-    VoidCallback? onNextAudioTrack,
-    VoidCallback? onNextSubtitleTrack,
+    VoidCallback? onNextMediaAudioTrack,
+    VoidCallback? onNextMediaSubtitleTrack,
     VoidCallback? onNextChapter,
     VoidCallback? onPreviousChapter,
   ) {
@@ -287,10 +288,10 @@ class KeyboardShortcutsService {
         onToggleSubtitles?.call();
         break;
       case 'audio_track_next':
-        onNextAudioTrack?.call();
+        onNextMediaAudioTrack?.call();
         break;
       case 'subtitle_track_next':
-        onNextSubtitleTrack?.call();
+        onNextMediaSubtitleTrack?.call();
         break;
       case 'chapter_next':
         onNextChapter?.call();
