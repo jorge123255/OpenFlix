@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../models/plex_metadata.dart';
+import '../../models/media_item.dart';
 import '../../utils/library_refresh_notifier.dart';
 import '../../i18n/strings.g.dart';
 import '../../widgets/adaptive_media_grid.dart';
@@ -7,7 +7,7 @@ import 'base_library_tab.dart';
 
 /// Collections tab for library screen
 /// Shows collections for the current library
-class LibraryCollectionsTab extends BaseLibraryTab<PlexMetadata> {
+class LibraryCollectionsTab extends BaseLibraryTab<MediaItem> {
   const LibraryCollectionsTab({
     super.key,
     required super.library,
@@ -20,7 +20,7 @@ class LibraryCollectionsTab extends BaseLibraryTab<PlexMetadata> {
 }
 
 class _LibraryCollectionsTabState
-    extends BaseLibraryTabState<PlexMetadata, LibraryCollectionsTab> {
+    extends BaseLibraryTabState<MediaItem, LibraryCollectionsTab> {
   /// Focus node for the first item in the grid
   final FocusNode _firstItemFocusNode = FocusNode(
     debugLabel: 'CollectionsFirstItem',
@@ -46,11 +46,11 @@ class _LibraryCollectionsTabState
       LibraryRefreshNotifier().collectionsStream;
 
   @override
-  Future<List<PlexMetadata>> loadData() async {
+  Future<List<MediaItem>> loadData() async {
     // Use server-specific client for this library
     final client = getClientForLibrary();
 
-    // Collections are automatically tagged with server info by PlexClient
+    // Collections are automatically tagged with server info by MediaClient
     return await client.getLibraryCollections(widget.library.key);
   }
 
@@ -62,7 +62,7 @@ class _LibraryCollectionsTabState
   }
 
   @override
-  Widget buildContent(List<PlexMetadata> items) {
+  Widget buildContent(List<MediaItem> items) {
     return AdaptiveMediaGrid(
       items: items,
       onRefresh: loadItems,

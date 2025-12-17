@@ -5,8 +5,8 @@ import 'package:provider/provider.dart';
 import '../i18n/strings.g.dart';
 import '../mixins/keyboard_long_press_mixin.dart';
 import '../widgets/focus/focus_indicator.dart';
-import '../client/plex_client.dart';
-import '../models/plex_metadata.dart';
+import '../client/media_client.dart';
+import '../models/media_item.dart';
 import '../providers/playback_state_provider.dart';
 import '../theme/theme_helper.dart';
 import '../utils/app_logger.dart';
@@ -22,7 +22,7 @@ import '../widgets/media_context_menu.dart';
 import 'season_detail_screen.dart';
 
 class MediaDetailScreen extends StatefulWidget {
-  final PlexMetadata metadata;
+  final MediaItem metadata;
 
   const MediaDetailScreen({super.key, required this.metadata});
 
@@ -31,10 +31,10 @@ class MediaDetailScreen extends StatefulWidget {
 }
 
 class _MediaDetailScreenState extends State<MediaDetailScreen> {
-  List<PlexMetadata> _seasons = [];
+  List<MediaItem> _seasons = [];
   bool _isLoadingSeasons = false;
-  PlexMetadata? _fullMetadata;
-  PlexMetadata? _onDeckEpisode;
+  MediaItem? _fullMetadata;
+  MediaItem? _onDeckEpisode;
   bool _isLoadingMetadata = true;
   late final ScrollController _scrollController;
   bool _watchStateChanged = false;
@@ -54,8 +54,8 @@ class _MediaDetailScreenState extends State<MediaDetailScreen> {
     super.dispose();
   }
 
-  /// Get the correct PlexClient for this metadata's server
-  PlexClient _getClientForMetadata(BuildContext context) {
+  /// Get the correct MediaClient for this metadata's server
+  MediaClient _getClientForMetadata(BuildContext context) {
     return context.getClientForServer(widget.metadata.serverId!);
   }
 
@@ -72,8 +72,8 @@ class _MediaDetailScreenState extends State<MediaDetailScreen> {
       final result = await client.getMetadataWithImagesAndOnDeck(
         widget.metadata.ratingKey,
       );
-      final metadata = result['metadata'] as PlexMetadata?;
-      final onDeckEpisode = result['onDeckEpisode'] as PlexMetadata?;
+      final metadata = result['metadata'] as MediaItem?;
+      final onDeckEpisode = result['onDeckEpisode'] as MediaItem?;
 
       if (metadata != null) {
         // Preserve serverId from original metadata
@@ -185,7 +185,7 @@ class _MediaDetailScreenState extends State<MediaDetailScreen> {
         );
 
         // For shows, also refetch seasons to update their watch counts
-        List<PlexMetadata>? updatedSeasons;
+        List<MediaItem>? updatedSeasons;
         if (metadata.type.toLowerCase() == 'show') {
           final seasons = await client.getChildren(widget.metadata.ratingKey);
           // Preserve serverId for each season
@@ -279,7 +279,7 @@ class _MediaDetailScreenState extends State<MediaDetailScreen> {
   /// Handle shuffle play using play queues
   Future<void> _handleShufflePlayWithQueue(
     BuildContext context,
-    PlexMetadata metadata,
+    MediaItem metadata,
   ) async {
     final client = _getClientForMetadata(context);
 
@@ -1127,7 +1127,7 @@ class _MediaDetailScreenState extends State<MediaDetailScreen> {
     );
   }
 
-  String _getPlayButtonLabel(PlexMetadata metadata) {
+  String _getPlayButtonLabel(MediaItem metadata) {
     // For TV shows
     if (metadata.type.toLowerCase() == 'show') {
       if (_onDeckEpisode != null) {
@@ -1164,8 +1164,8 @@ class _MediaDetailScreenState extends State<MediaDetailScreen> {
 
 /// Focusable season card widget
 class _FocusableSeasonCard extends StatefulWidget {
-  final PlexMetadata season;
-  final PlexClient client;
+  final MediaItem season;
+  final MediaClient client;
   final VoidCallback onTap;
   final VoidCallback onRefresh;
 

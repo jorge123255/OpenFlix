@@ -2,8 +2,8 @@ import 'dart:async';
 
 import '../mpv/mpv.dart';
 
-import '../client/plex_client.dart';
-import '../models/plex_metadata.dart';
+import '../client/media_client.dart';
+import '../models/media_item.dart';
 import '../utils/app_logger.dart';
 
 /// Tracks playback progress and reports it to the Plex server.
@@ -13,8 +13,8 @@ import '../utils/app_logger.dart';
 /// - Resume position tracking
 /// - State change reporting (playing, paused, stopped)
 class PlaybackProgressTracker {
-  final PlexClient client;
-  final PlexMetadata metadata;
+  final MediaClient client;
+  final MediaItem metadata;
   final Player player;
 
   /// Timer for periodic progress updates

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../models/plex_metadata.dart';
+import '../models/media_item.dart';
 import '../providers/settings_provider.dart';
 import '../services/settings_service.dart' show ViewMode;
 import '../utils/grid_size_calculator.dart';
@@ -11,7 +11,7 @@ import 'media_card.dart';
 /// across all library screens
 class AdaptiveMediaGrid extends StatelessWidget {
   /// The list of media items to display
-  final List<PlexMetadata> items;
+  final List<MediaItem> items;
 
   /// Callback when the list needs to be refreshed
   final VoidCallback? onRefresh;

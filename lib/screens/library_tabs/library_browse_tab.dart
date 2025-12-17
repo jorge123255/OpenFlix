@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:dio/dio.dart';
-import '../../client/plex_client.dart';
-import '../../models/plex_library.dart';
-import '../../models/plex_metadata.dart';
-import '../../models/plex_filter.dart';
-import '../../models/plex_sort.dart';
+import '../../client/media_client.dart';
+import '../../models/library.dart';
+import '../../models/media_item.dart';
+import '../../models/filter.dart';
+import '../../models/sort.dart';
 import '../../providers/settings_provider.dart';
 import '../../utils/error_message_utils.dart';
 import '../../utils/grid_size_calculator.dart';
@@ -27,7 +27,7 @@ import '../../i18n/strings.g.dart';
 /// Browse tab for library screen
 /// Shows library items with grouping, filtering, and sorting
 class LibraryBrowseTab extends StatefulWidget {
-  final PlexLibrary library;
+  final Library library;
   final String? viewMode;
   final String? density;
 
@@ -52,10 +52,10 @@ class _LibraryBrowseTabState extends State<LibraryBrowseTab>
   bool get wantKeepAlive => true;
 
   @override
-  PlexLibrary get library => widget.library;
+  Library get library => widget.library;
 
   @override
-  PlexClient get client => getClientForLibrary();
+  MediaClient get client => getClientForLibrary();
 
   @override
   void refresh() {
@@ -63,7 +63,7 @@ class _LibraryBrowseTabState extends State<LibraryBrowseTab>
   }
 
   @override
-  void updateItemInLists(String ratingKey, PlexMetadata updatedMetadata) {
+  void updateItemInLists(String ratingKey, MediaItem updatedMetadata) {
     setState(() {
       final index = _items.indexWhere((item) => item.ratingKey == ratingKey);
       if (index != -1) {
@@ -72,13 +72,13 @@ class _LibraryBrowseTabState extends State<LibraryBrowseTab>
     });
   }
 
-  List<PlexMetadata> _items = [];
-  List<PlexFilter> _filters = [];
-  List<PlexSort> _sortOptions = [];
+  List<MediaItem> _items = [];
+  List<Filter> _filters = [];
+  List<Sort> _sortOptions = [];
   bool _isLoading = false;
   String? _errorMessage;
   Map<String, String> _selectedFilters = {};
-  PlexSort? _selectedSort;
+  Sort? _selectedSort;
   bool _isSortDescending = false;
   String _selectedGrouping = 'all'; // all, seasons, episodes, folders
 
@@ -228,7 +228,7 @@ class _LibraryBrowseTabState extends State<LibraryBrowseTab>
         );
       }
 
-      // Items are automatically tagged with server info by PlexClient
+      // Items are automatically tagged with server info by MediaClient
       final items = await client.getLibraryContent(
         widget.library.key,
         start: _currentPage * _pageSize,

@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import '../models/plex_home_user.dart';
+import '../models/home_user.dart';
 import '../i18n/strings.g.dart';
 
 class UserAvatarWidget extends StatelessWidget {
-  final PlexHomeUser user;
+  final HomeUser user;
   final double size;
   final bool showIndicators;
   final bool useTextLabels;

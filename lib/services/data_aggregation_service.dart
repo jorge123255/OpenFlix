@@ -1,9 +1,9 @@
 import 'dart:async';
 
-import '../client/plex_client.dart';
-import '../models/plex_hub.dart';
-import '../models/plex_library.dart';
-import '../models/plex_metadata.dart';
+import '../client/media_client.dart';
+import '../models/hub.dart';
+import '../models/library.dart';
+import '../models/media_item.dart';
 import '../utils/app_logger.dart';
 import 'multi_server_manager.dart';
 import 'plex_auth_service.dart';
@@ -15,9 +15,9 @@ class DataAggregationService {
   DataAggregationService(this._serverManager);
 
   /// Fetch libraries from all online servers
-  /// Libraries are automatically tagged with server info by PlexClient
-  Future<List<PlexLibrary>> getLibrariesFromAllServers() async {
-    return _perServer<PlexLibrary>(
+  /// Libraries are automatically tagged with server info by MediaClient
+  Future<List<Library>> getLibrariesFromAllServers() async {
+    return _perServer<Library>(
       operationName: 'fetching libraries',
       operation: (serverId, client, server) async {
         return await client.getLibraries();
@@ -26,9 +26,9 @@ class DataAggregationService {
   }
 
   /// Fetch "On Deck" (Continue Watching) from all servers and merge by recency
-  /// Items are automatically tagged with server info by PlexClient
-  Future<List<PlexMetadata>> getOnDeckFromAllServers({int? limit}) async {
-    final allOnDeck = await _perServer<PlexMetadata>(
+  /// Items are automatically tagged with server info by MediaClient
+  Future<List<MediaItem>> getOnDeckFromAllServers({int? limit}) async {
+    final allOnDeck = await _perServer<MediaItem>(
       operationName: 'fetching on deck',
       operation: (serverId, client, server) async {
         return await client.getOnDeck();
@@ -54,7 +54,7 @@ class DataAggregationService {
   }
 
   /// Fetch recommendation hubs from all servers
-  Future<List<PlexHub>> getHubsFromAllServers({int? limit}) async {
+  Future<List<Hub>> getHubsFromAllServers({int? limit}) async {
     final clients = _serverManager.onlineClients;
 
     if (clients.isEmpty) {
@@ -64,7 +64,7 @@ class DataAggregationService {
 
     appLogger.d('Fetching hubs from ${clients.length} servers');
 
-    final allHubs = <PlexHub>[];
+    final allHubs = <Hub>[];
 
     // Fetch from all servers in parallel
     final hubFutures = clients.entries.map((entry) async {
@@ -95,14 +95,14 @@ class DataAggregationService {
             appLogger.w(
               'Failed to fetch hubs for library ${library.title}: $e',
             );
-            return <PlexHub>[];
+            return <Hub>[];
           }
         });
 
         final libraryHubResults = await Future.wait(libraryHubFutures);
 
         // Flatten all library hubs
-        final serverHubs = <PlexHub>[];
+        final serverHubs = <Hub>[];
         for (final hubs in libraryHubResults) {
           serverHubs.addAll(hubs);
         }
@@ -115,7 +115,7 @@ class DataAggregationService {
           stackTrace: stackTrace,
         );
         _serverManager.updateServerStatus(serverId, false);
-        return <PlexHub>[];
+        return <Hub>[];
       }
     });
 
@@ -137,8 +137,8 @@ class DataAggregationService {
   }
 
   /// Search across all online servers
-  /// Results are automatically tagged with server info by PlexClient
-  Future<List<PlexMetadata>> searchAcrossServers(
+  /// Results are automatically tagged with server info by MediaClient
+  Future<List<MediaItem>> searchAcrossServers(
     String query, {
     int? limit,
   }) async {
@@ -146,7 +146,7 @@ class DataAggregationService {
       return [];
     }
 
-    final allResults = await _perServer<PlexMetadata>(
+    final allResults = await _perServer<MediaItem>(
       operationName: 'searching for "$query"',
       operation: (serverId, client, server) async {
         return await client.search(query);
@@ -164,7 +164,7 @@ class DataAggregationService {
   }
 
   /// Get libraries for a specific server
-  Future<List<PlexLibrary>> getLibrariesForServer(String serverId) async {
+  Future<List<Library>> getLibrariesForServer(String serverId) async {
     final client = _serverManager.getClient(serverId);
 
     if (client == null) {
@@ -173,7 +173,7 @@ class DataAggregationService {
     }
 
     try {
-      // Libraries are automatically tagged with server info by PlexClient
+      // Libraries are automatically tagged with server info by MediaClient
       return await client.getLibraries();
     } catch (e, stackTrace) {
       appLogger.e(
@@ -187,10 +187,10 @@ class DataAggregationService {
   }
 
   /// Group libraries by server
-  Map<String, List<PlexLibrary>> groupLibrariesByServer(
-    List<PlexLibrary> libraries,
+  Map<String, List<Library>> groupLibrariesByServer(
+    List<Library> libraries,
   ) {
-    final grouped = <String, List<PlexLibrary>>{};
+    final grouped = <String, List<Library>>{};
 
     for (final library in libraries) {
       final serverId = library.serverId;
@@ -216,7 +216,7 @@ class DataAggregationService {
     required String operationName,
     required Future<List<T>> Function(
       String serverId,
-      PlexClient client,
+      MediaClient client,
       PlexServer? server,
     )
     operation,

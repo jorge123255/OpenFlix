@@ -300,6 +300,31 @@ func (s *Server) updateChannel(c *gin.Context) {
 	c.JSON(http.StatusOK, channel)
 }
 
+// toggleChannelFavorite toggles the favorite status of a channel
+func (s *Server) toggleChannelFavorite(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid channel ID"})
+		return
+	}
+
+	var channel models.Channel
+	if err := s.db.First(&channel, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Channel not found"})
+		return
+	}
+
+	// Toggle favorite status
+	channel.IsFavorite = !channel.IsFavorite
+
+	if err := s.db.Save(&channel).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update channel"})
+		return
+	}
+
+	c.JSON(http.StatusOK, channel)
+}
+
 // ============ EPG Guide ============
 
 // getGuide returns EPG data for a time range
@@ -413,17 +438,38 @@ func (s *Server) getWhatsOnNow(c *gin.Context) {
 		return
 	}
 
-	type NowPlaying struct {
-		Channel     models.Channel  `json:"channel"`
+	// Flat structure that Flutter expects
+	type ChannelWithPrograms struct {
+		ID          uint            `json:"id"`
+		SourceID    uint            `json:"sourceId"`
+		ChannelID   string          `json:"channelId"`
+		Number      int             `json:"number"`
+		Name        string          `json:"name"`
+		Logo        string          `json:"logo,omitempty"`
+		Group       string          `json:"group,omitempty"`
+		StreamURL   string          `json:"streamUrl"`
+		Enabled     bool            `json:"enabled"`
+		IsFavorite  bool            `json:"isFavorite"`
 		NowPlaying  *models.Program `json:"nowPlaying,omitempty"`
 		NextProgram *models.Program `json:"nextProgram,omitempty"`
 	}
 
 	epgParser := livetv.NewEPGParser(s.db)
-	results := make([]NowPlaying, 0, len(channels))
+	results := make([]ChannelWithPrograms, 0, len(channels))
 
 	for _, ch := range channels {
-		item := NowPlaying{Channel: ch}
+		item := ChannelWithPrograms{
+			ID:         ch.ID,
+			SourceID:   ch.M3USourceID,
+			ChannelID:  ch.ChannelID,
+			Number:     ch.Number,
+			Name:       ch.Name,
+			Logo:       ch.Logo,
+			Group:      ch.Group,
+			StreamURL:  ch.StreamURL,
+			Enabled:    ch.Enabled,
+			IsFavorite: ch.IsFavorite,
+		}
 		if ch.ChannelID != "" {
 			if program, err := epgParser.GetCurrentProgram(ch.ChannelID); err == nil {
 				item.NowPlaying = program

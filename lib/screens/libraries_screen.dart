@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:dio/dio.dart';
-import '../client/plex_client.dart';
-import '../models/plex_library.dart';
-import '../models/plex_metadata.dart';
-import '../models/plex_sort.dart';
+import '../client/media_client.dart';
+import '../models/library.dart';
+import '../models/media_item.dart';
+import '../models/sort.dart';
 import '../providers/hidden_libraries_provider.dart';
 import '../providers/multi_server_provider.dart';
 import '../utils/app_logger.dart';
@@ -36,7 +36,7 @@ class LibrariesScreen extends StatefulWidget {
 class _LibrariesScreenState extends State<LibrariesScreen>
     with Refreshable, ItemUpdatable, SingleTickerProviderStateMixin {
   @override
-  PlexClient get client {
+  MediaClient get client {
     final multiServerProvider = Provider.of<MultiServerProvider>(
       context,
       listen: false,
@@ -57,7 +57,7 @@ class _LibrariesScreenState extends State<LibrariesScreen>
   final _collectionsTabKey = GlobalKey<State<LibraryCollectionsTab>>();
   final _playlistsTabKey = GlobalKey<State<LibraryPlaylistsTab>>();
 
-  List<PlexLibrary> _allLibraries = []; // All libraries from API (unfiltered)
+  List<Library> _allLibraries = []; // All libraries from API (unfiltered)
   bool _isLoadingLibraries = true;
   String? _errorMessage;
   String? _selectedLibraryGlobalKey;
@@ -65,9 +65,9 @@ class _LibrariesScreenState extends State<LibrariesScreen>
   List<String>? _serverOrder; // Cached server order from storage
 
   Map<String, String> _selectedFilters = {};
-  PlexSort? _selectedSort;
+  Sort? _selectedSort;
   bool _isSortDescending = false;
-  List<PlexMetadata> _items = [];
+  List<MediaItem> _items = [];
   int _currentPage = 0;
   bool _hasMoreItems = true;
   CancelToken? _cancelToken;
@@ -216,7 +216,7 @@ class _LibrariesScreenState extends State<LibrariesScreen>
   }
 
   /// Get ordered list of server IDs from libraries
-  List<String> _getOrderedServerIds(List<PlexLibrary> libraries) {
+  List<String> _getOrderedServerIds(List<Library> libraries) {
     // Get unique server IDs from libraries
     final serverIds = libraries
         .where((lib) => lib.serverId != null)
@@ -342,8 +342,8 @@ class _LibrariesScreenState extends State<LibrariesScreen>
     }
   }
 
-  List<PlexLibrary> _applyLibraryOrder(
-    List<PlexLibrary> libraries,
+  List<Library> _applyLibraryOrder(
+    List<Library> libraries,
     List<String>? savedOrder,
   ) {
     if (savedOrder == null || savedOrder.isEmpty) {
@@ -354,7 +354,7 @@ class _LibrariesScreenState extends State<LibrariesScreen>
     final libraryMap = {for (var lib in libraries) lib.globalKey: lib};
 
     // Build ordered list based on saved order
-    final orderedLibraries = <PlexLibrary>[];
+    final orderedLibraries = <Library>[];
     final addedKeys = <String>{};
 
     // Add libraries in saved order
@@ -476,10 +476,10 @@ class _LibrariesScreenState extends State<LibrariesScreen>
 
   /// Load all pages sequentially until all items are fetched
   Future<void> _loadAllPagesSequentially(
-    PlexLibrary library,
+    Library library,
     Map<String, String> filtersWithSort,
     int requestId,
-    PlexClient client,
+    MediaClient client,
   ) async {
     while (_hasMoreItems && requestId == _requestId) {
       try {
@@ -526,7 +526,7 @@ class _LibrariesScreenState extends State<LibrariesScreen>
     }
   }
 
-  Future<void> _loadSortOptions(PlexLibrary library) async {
+  Future<void> _loadSortOptions(Library library) async {
     try {
       final client = context.getClientForLibrary(library);
 
@@ -537,7 +537,7 @@ class _LibrariesScreenState extends State<LibrariesScreen>
       final savedSortData = storage.getLibrarySort(library.globalKey);
 
       // Find the saved sort in the options
-      PlexSort? savedSort;
+      Sort? savedSort;
       bool descending = false;
 
       if (savedSortData != null) {
@@ -578,7 +578,7 @@ class _LibrariesScreenState extends State<LibrariesScreen>
   }
 
   @override
-  void updateItemInLists(String ratingKey, PlexMetadata updatedMetadata) {
+  void updateItemInLists(String ratingKey, MediaItem updatedMetadata) {
     final index = _items.indexWhere((item) => item.ratingKey == ratingKey);
     if (index != -1) {
       _items[index] = updatedMetadata;
@@ -631,7 +631,7 @@ class _LibrariesScreenState extends State<LibrariesScreen>
     _loadLibraries();
   }
 
-  Future<void> _toggleLibraryVisibility(PlexLibrary library) async {
+  Future<void> _toggleLibraryVisibility(Library library) async {
     final hiddenLibrariesProvider = Provider.of<HiddenLibrariesProvider>(
       context,
       listen: false,
@@ -667,7 +667,7 @@ class _LibrariesScreenState extends State<LibrariesScreen>
     }
   }
 
-  List<ContextMenuItem> _getLibraryMenuItems(PlexLibrary library) {
+  List<ContextMenuItem> _getLibraryMenuItems(Library library) {
     return [
       ContextMenuItem(
         value: 'scan',
@@ -714,7 +714,7 @@ class _LibrariesScreenState extends State<LibrariesScreen>
     ];
   }
 
-  void _handleLibraryMenuAction(String action, PlexLibrary library) {
+  void _handleLibraryMenuAction(String action, Library library) {
     switch (action) {
       case 'scan':
         _scanLibrary(library);
@@ -761,8 +761,8 @@ class _LibrariesScreenState extends State<LibrariesScreen>
   }
 
   Future<void> _performLibraryAction({
-    required PlexLibrary library,
-    required Future<void> Function(PlexClient client) action,
+    required Library library,
+    required Future<void> Function(MediaClient client) action,
     required String progressMessage,
     required String successMessage,
     required String Function(Object error) failureMessage,
@@ -803,7 +803,7 @@ class _LibrariesScreenState extends State<LibrariesScreen>
     }
   }
 
-  Future<void> _scanLibrary(PlexLibrary library) async {
+  Future<void> _scanLibrary(Library library) async {
     return _performLibraryAction(
       library: library,
       action: (client) => client.scanLibrary(library.key),
@@ -814,7 +814,7 @@ class _LibrariesScreenState extends State<LibrariesScreen>
     );
   }
 
-  Future<void> _refreshLibraryMetadata(PlexLibrary library) async {
+  Future<void> _refreshLibraryMetadata(Library library) async {
     return _performLibraryAction(
       library: library,
       action: (client) => client.refreshLibraryMetadata(library.key),
@@ -825,7 +825,7 @@ class _LibrariesScreenState extends State<LibrariesScreen>
     );
   }
 
-  Future<void> _emptyLibraryTrash(PlexLibrary library) async {
+  Future<void> _emptyLibraryTrash(Library library) async {
     return _performLibraryAction(
       library: library,
       action: (client) => client.emptyLibraryTrash(library.key),
@@ -835,7 +835,7 @@ class _LibrariesScreenState extends State<LibrariesScreen>
     );
   }
 
-  Future<void> _analyzeLibrary(PlexLibrary library) async {
+  Future<void> _analyzeLibrary(Library library) async {
     return _performLibraryAction(
       library: library,
       action: (client) => client.analyzeLibrary(library.key),
@@ -847,7 +847,7 @@ class _LibrariesScreenState extends State<LibrariesScreen>
 
   /// Build grouped dropdown menu items with server sections
   List<PopupMenuEntry<String>> _buildGroupedLibraryMenuItems(
-    List<PlexLibrary> visibleLibraries,
+    List<Library> visibleLibraries,
   ) {
     final List<PopupMenuEntry<String>> menuItems = [];
 
@@ -883,7 +883,7 @@ class _LibrariesScreenState extends State<LibrariesScreen>
     }
 
     // Multiple servers: group by server
-    final Map<String, List<PlexLibrary>> groupedLibraries = {};
+    final Map<String, List<Library>> groupedLibraries = {};
     for (final library in visibleLibraries) {
       final serverKey = library.serverId ?? 'unknown';
       groupedLibraries.putIfAbsent(serverKey, () => []).add(library);
@@ -1018,7 +1018,7 @@ class _LibrariesScreenState extends State<LibrariesScreen>
     );
   }
 
-  Widget _buildLibraryDropdownTitle(List<PlexLibrary> visibleLibraries) {
+  Widget _buildLibraryDropdownTitle(List<Library> visibleLibraries) {
     final selectedLibrary = visibleLibraries.firstWhere(
       (lib) => lib.globalKey == _selectedLibraryGlobalKey,
       orElse: () => visibleLibraries.first,
@@ -1366,12 +1366,12 @@ class _LibrariesScreenState extends State<LibrariesScreen>
 }
 
 class _LibraryManagementSheet extends StatefulWidget {
-  final List<PlexLibrary> allLibraries;
+  final List<Library> allLibraries;
   final Set<String> hiddenLibraryKeys;
-  final Function(List<PlexLibrary>) onReorder;
-  final Function(PlexLibrary) onToggleVisibility;
-  final List<ContextMenuItem> Function(PlexLibrary) getLibraryMenuItems;
-  final void Function(String action, PlexLibrary library) onLibraryMenuAction;
+  final Function(List<Library>) onReorder;
+  final Function(Library) onToggleVisibility;
+  final List<ContextMenuItem> Function(Library) getLibraryMenuItems;
+  final void Function(String action, Library library) onLibraryMenuAction;
   final bool autoFocusFirstHandle;
 
   const _LibraryManagementSheet({
@@ -1390,7 +1390,7 @@ class _LibraryManagementSheet extends StatefulWidget {
 }
 
 class _LibraryManagementSheetState extends State<_LibraryManagementSheet> {
-  late List<PlexLibrary> _tempLibraries;
+  late List<Library> _tempLibraries;
   List<String>? _serverOrder;
 
   /// Index of library currently being moved via keyboard (null if not moving)
@@ -1812,7 +1812,7 @@ class _LibraryManagementSheetState extends State<_LibraryManagementSheet> {
 
   Future<void> _showLibraryMenuBottomSheet(
     BuildContext outerContext,
-    PlexLibrary library,
+    Library library,
   ) async {
     final menuItems = widget.getLibraryMenuItems(library);
     final selected = await showModalBottomSheet<String>(
@@ -1998,7 +1998,7 @@ class _LibraryManagementSheetState extends State<_LibraryManagementSheet> {
     Set<String> hiddenLibraryKeys,
   ) {
     // Group libraries by server
-    final Map<String, List<PlexLibrary>> groupedLibraries = {};
+    final Map<String, List<Library>> groupedLibraries = {};
     for (final library in _tempLibraries) {
       final serverKey = library.serverId ?? 'unknown';
       groupedLibraries.putIfAbsent(serverKey, () => []).add(library);
@@ -2085,7 +2085,7 @@ class _LibraryManagementSheetState extends State<_LibraryManagementSheet> {
 
   /// Build a single library tile
   Widget _buildLibraryTile(
-    PlexLibrary library,
+    Library library,
     int index,
     Set<String> hiddenLibraryKeys, {
     bool showServerBadge = true,

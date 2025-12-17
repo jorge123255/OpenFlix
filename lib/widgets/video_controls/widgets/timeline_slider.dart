@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../models/plex_media_info.dart';
+import '../../../models/media_info.dart';
 import '../../../i18n/strings.g.dart';
 import '../painters/chapter_marker_painter.dart';
 
@@ -11,7 +11,7 @@ import '../painters/chapter_marker_painter.dart';
 class TimelineSlider extends StatelessWidget {
   final Duration position;
   final Duration duration;
-  final List<PlexChapter> chapters;
+  final List<Chapter> chapters;
   final bool chaptersLoaded;
   final ValueChanged<Duration> onSeek;
   final ValueChanged<Duration> onSeekEnd;

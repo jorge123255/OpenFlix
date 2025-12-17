@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../models/plex_metadata.dart';
+import '../models/media_item.dart';
 import '../screens/media_detail_screen.dart';
 import '../screens/season_detail_screen.dart';
 import '../utils/app_logger.dart';
@@ -29,8 +29,8 @@ class FolderTreeView extends StatefulWidget {
 }
 
 class _FolderTreeViewState extends State<FolderTreeView> {
-  List<PlexMetadata> _rootFolders = [];
-  final Map<String, List<PlexMetadata>> _childrenCache = {};
+  List<MediaItem> _rootFolders = [];
+  final Map<String, List<MediaItem>> _childrenCache = {};
   final Set<String> _expandedFolders = {};
   final Set<String> _loadingFolders = {};
   bool _isLoadingRoot = false;
@@ -84,7 +84,7 @@ class _FolderTreeViewState extends State<FolderTreeView> {
     }
   }
 
-  Future<void> _loadFolderChildren(PlexMetadata folder) async {
+  Future<void> _loadFolderChildren(MediaItem folder) async {
     // Already loading this folder
     if (_loadingFolders.contains(folder.key)) return;
 
@@ -103,7 +103,7 @@ class _FolderTreeViewState extends State<FolderTreeView> {
     try {
       final client = context.getClientForServer(widget.serverId!);
 
-      // Items are automatically tagged with server info by PlexClient
+      // Items are automatically tagged with server info by MediaClient
       final children = await client.getFolderChildren(folder.key);
 
       if (!mounted) return;
@@ -140,7 +140,7 @@ class _FolderTreeViewState extends State<FolderTreeView> {
     }
   }
 
-  void _toggleFolder(PlexMetadata folder) {
+  void _toggleFolder(MediaItem folder) {
     if (_expandedFolders.contains(folder.key)) {
       setState(() {
         _expandedFolders.remove(folder.key);
@@ -150,7 +150,7 @@ class _FolderTreeViewState extends State<FolderTreeView> {
     }
   }
 
-  Future<void> _handleItemTap(PlexMetadata item) async {
+  Future<void> _handleItemTap(MediaItem item) async {
     final itemType = item.type.toLowerCase();
 
     // For episodes, start playback directly
@@ -181,7 +181,7 @@ class _FolderTreeViewState extends State<FolderTreeView> {
     }
   }
 
-  bool _isFolder(PlexMetadata item) {
+  bool _isFolder(MediaItem item) {
     // Folders typically don't have a specific type or might have special indicators
     // Check for common folder indicators
     return item.key.contains('/folder') ||
@@ -190,7 +190,7 @@ class _FolderTreeViewState extends State<FolderTreeView> {
   }
 
   List<Widget> _buildTreeItems(
-    List<PlexMetadata> items,
+    List<MediaItem> items,
     int depth, [
     String parentPath = '',
   ]) {

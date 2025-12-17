@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../models/plex_home_user.dart';
+import '../models/home_user.dart';
 import '../providers/user_profile_provider.dart';
 import '../utils/provider_extensions.dart';
 import '../widgets/profile_list_tile.dart';
@@ -107,7 +107,7 @@ class ProfileSwitchScreen extends StatelessWidget {
     );
   }
 
-  void _switchToUser(BuildContext context, PlexHomeUser user) async {
+  void _switchToUser(BuildContext context, HomeUser user) async {
     final userProvider = context.userProfile;
     final success = await userProvider.switchToUser(user, context);
 

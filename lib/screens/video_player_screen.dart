@@ -9,10 +9,10 @@ import 'package:provider/provider.dart';
 
 import '../mpv/mpv.dart';
 
-import '../client/plex_client.dart';
-import '../models/plex_media_version.dart';
-import '../models/plex_metadata.dart';
-import '../models/plex_media_info.dart';
+import '../client/media_client.dart';
+import '../models/media_version.dart';
+import '../models/media_item.dart';
+import '../models/media_info.dart';
 import '../providers/playback_state_provider.dart';
 import '../services/episode_navigation_service.dart';
 import '../services/media_controls_manager.dart';
@@ -39,7 +39,7 @@ Future<void> loadIsoTable() async {
 }
 
 class VideoPlayerScreen extends StatefulWidget {
-  final PlexMetadata metadata;
+  final MediaItem metadata;
   final AudioTrack? preferredAudioTrack;
   final SubtitleTrack? preferredSubtitleTrack;
   final double? preferredPlaybackRate;
@@ -62,13 +62,13 @@ class VideoPlayerScreenState extends State<VideoPlayerScreen>
     with WidgetsBindingObserver {
   Player? player;
   bool _isPlayerInitialized = false;
-  PlexMetadata? _nextEpisode;
-  PlexMetadata? _previousEpisode;
+  MediaItem? _nextEpisode;
+  MediaItem? _previousEpisode;
   bool _isLoadingNext = false;
   bool _showPlayNextDialog = false;
   bool _isPhone = false;
-  List<PlexMediaVersion> _availableVersions = [];
-  PlexMediaInfo? _currentMediaInfo;
+  List<MediaVersion> _availableVersions = [];
+  MediaInfo? _currentMediaInfo;
   StreamSubscription<PlayerLog>? _logSubscription;
   StreamSubscription<String>? _errorSubscription;
   StreamSubscription<bool>? _playingSubscription;
@@ -76,6 +76,39 @@ class VideoPlayerScreenState extends State<VideoPlayerScreen>
   StreamSubscription<dynamic>? _mediaControlSubscription;
   StreamSubscription<bool>? _bufferingSubscription;
   StreamSubscription<Tracks>? _trackLoadingSubscription;
+
+  bool _hasHeader(Map<String, String> headers, String headerNameLower) {
+    for (final key in headers.keys) {
+      if (key.toLowerCase() == headerNameLower) return true;
+    }
+    return false;
+  }
+
+  ({String url, Map<String, String> headers}) _parseM3uPipeHeaders(String input) {
+    final pipeIndex = input.indexOf('|');
+    if (pipeIndex < 0) {
+      return (url: input, headers: <String, String>{});
+    }
+
+    final url = input.substring(0, pipeIndex);
+    final headerPart = input.substring(pipeIndex + 1);
+    final headers = <String, String>{};
+
+    for (final segment in headerPart.split('&')) {
+      if (segment.trim().isEmpty) continue;
+      final eqIndex = segment.indexOf('=');
+      if (eqIndex <= 0) continue;
+      final rawKey = segment.substring(0, eqIndex);
+      final rawValue = segment.substring(eqIndex + 1);
+      final key = Uri.decodeComponent(rawKey).trim();
+      final value = Uri.decodeComponent(rawValue).trim();
+      if (key.isEmpty || value.isEmpty) continue;
+      headers[key] = value;
+    }
+
+    return (url: url, headers: headers);
+  }
+
   bool _isReplacingWithVideo =
       false; // Flag to skip orientation restoration during video-to-video navigation
 
@@ -89,8 +122,8 @@ class VideoPlayerScreenState extends State<VideoPlayerScreen>
   final EpisodeNavigationService _episodeNavigation =
       EpisodeNavigationService();
 
-  /// Get the correct PlexClient for this metadata's server
-  PlexClient _getClientForMetadata(BuildContext context) {
+  /// Get the correct MediaClient for this metadata's server
+  MediaClient _getClientForMetadata(BuildContext context) {
     return context.getClientForServer(widget.metadata.serverId!);
   }
 
@@ -269,6 +302,14 @@ class VideoPlayerScreenState extends State<VideoPlayerScreen>
         _getHwdecValue(enableHardwareDecoding),
       );
 
+      await player!.setProperty('cache', 'yes');
+      await player!.setProperty('cache-secs', '20');
+      await player!.setProperty('demuxer-readahead-secs', '20');
+      await player!.setProperty(
+        'stream-lavf-o',
+        'reconnect=1,reconnect_streamed=1,reconnect_delay_max=2',
+      );
+
       // Subtitle styling
       await player!.setProperty(
         'sub-font-size',
@@ -370,6 +411,10 @@ class VideoPlayerScreenState extends State<VideoPlayerScreen>
       // Listen to buffering state
       _bufferingSubscription = player!.streams.buffering.listen((isBuffering) {
         _isBuffering.value = isBuffering;
+
+        appLogger.d(
+          'MPV buffering=$isBuffering cache=${player!.state.buffer.inMilliseconds}ms pos=${player!.state.position.inMilliseconds}ms',
+        );
       });
 
       // Initialize services
@@ -599,7 +644,27 @@ class VideoPlayerScreenState extends State<VideoPlayerScreen>
         final resumePosition = widget.metadata.viewOffset != null
             ? Duration(milliseconds: widget.metadata.viewOffset!)
             : null;
-        await player!.open(Media(result.videoUrl!, start: resumePosition));
+
+        final parsed = _parseM3uPipeHeaders(result.videoUrl!);
+
+        final headers = <String, String>{
+          ...parsed.headers,
+        };
+
+        if (!_hasHeader(headers, 'user-agent')) {
+          headers['User-Agent'] = 'VLC/3.0.20 LibVLC/3.0.20';
+        }
+
+        if (parsed.url.startsWith(client.config.baseUrl)) {
+          headers.addAll(client.config.headers);
+        }
+        await player!.open(
+          Media(
+            parsed.url,
+            headers: headers,
+            start: resumePosition,
+          ),
+        );
       }
 
       // Update available versions from the playback data
@@ -636,14 +701,44 @@ class VideoPlayerScreenState extends State<VideoPlayerScreen>
       });
     } on PlaybackException catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(e.message)));
+        // Show error dialog instead of just snackbar for playback issues
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Playback Error'),
+            content: Text(e.message == t.messages.fileInfoNotAvailable
+                ? 'This media file is not available. The library may need to be scanned to index media files.\n\nGo to Settings > Libraries in the web admin and click "Scan" on each library.'
+                : e.message),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop(); // Close dialog
+                  Navigator.of(context).pop(); // Go back to previous screen
+                },
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(t.messages.errorLoading(error: e.toString()))),
+        // Show error dialog for unexpected errors
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Error'),
+            content: Text('Failed to start playback:\n${e.toString()}'),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop(); // Close dialog
+                  Navigator.of(context).pop(); // Go back to previous screen
+                },
+                child: const Text('OK'),
+              ),
+            ],
+          ),
         );
       }
     }
@@ -849,7 +944,7 @@ class VideoPlayerScreenState extends State<VideoPlayerScreen>
     int? streamID;
 
     // === Matching by attributes ===
-    PlexAudioTrack? matched;
+    MediaAudioTrack? matched;
     final normalizedTrackLang = _iso6391ToPlex6392(track.language);
 
     appLogger.d(
@@ -960,7 +1055,7 @@ class VideoPlayerScreenState extends State<VideoPlayerScreen>
       languageCode = track.language;
 
       // === Matching by attributes ===
-      PlexSubtitleTrack? matched;
+      MediaSubtitleTrack? matched;
       final normalizedTrackLang = _iso6391ToPlex6392(track.language);
 
       appLogger.d(
@@ -997,7 +1092,7 @@ class VideoPlayerScreenState extends State<VideoPlayerScreen>
           final trackIndex = int.parse(track.id);
 
           // media kit has a "no" (off) at index 0, so real subtitles start at 1
-          // We need to subtract 1 to get the actual index in PlexMediaInfo
+          // We need to subtract 1 to get the actual index in MediaInfo
           final plexIndex = trackIndex > 0 ? trackIndex - 1 : 0;
 
           if (plexIndex >= 0 &&
@@ -1068,7 +1163,7 @@ class VideoPlayerScreenState extends State<VideoPlayerScreen>
   }
 
   /// Navigates to a new episode, preserving playback state and track selections
-  Future<void> _navigateToEpisode(PlexMetadata episodeMetadata) async {
+  Future<void> _navigateToEpisode(MediaItem episodeMetadata) async {
     // Set flag to skip orientation restoration in dispose()
     _isReplacingWithVideo = true;
 
@@ -1124,9 +1219,11 @@ class VideoPlayerScreenState extends State<VideoPlayerScreen>
   Widget build(BuildContext context) {
     // Show loading indicator while player initializes
     if (!_isPlayerInitialized || player == null) {
-      return const Scaffold(
-        backgroundColor: Colors.black,
-        body: Center(child: CircularProgressIndicator(color: Colors.white)),
+      return Scaffold(
+        backgroundColor: Platform.isMacOS ? Colors.transparent : Colors.black,
+        body: const Center(
+          child: CircularProgressIndicator(color: Colors.white),
+        ),
       );
     }
 
@@ -1195,7 +1292,7 @@ class VideoPlayerScreenState extends State<VideoPlayerScreen>
                     return Video(
                       player: player!,
                       fit: _videoFilterManager?.currentBoxFit ?? BoxFit.contain,
-                      controls: (context) => plexVideoControlsBuilder(
+                      controls: (context) => videoControlsBuilder(
                         player!,
                         widget.metadata,
                         onNext: _nextEpisode != null ? _playNext : null,
@@ -1359,7 +1456,7 @@ String _getHwdecValue(bool enabled) {
   if (!enabled) return 'no';
 
   if (Platform.isMacOS || Platform.isIOS) {
-    return 'videotoolbox';
+    return 'auto-safe';
   } else if (Platform.isAndroid) {
     return 'mediacodec-copy';
   } else {

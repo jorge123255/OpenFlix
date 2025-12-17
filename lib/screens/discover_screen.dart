@@ -3,9 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:provider/provider.dart';
-import '../client/plex_client.dart';
-import '../models/plex_metadata.dart';
-import '../models/plex_hub.dart';
+import '../client/media_client.dart';
+import '../models/media_item.dart';
+import '../models/hub.dart';
 import '../providers/multi_server_provider.dart';
 import '../providers/server_state_provider.dart';
 import '../providers/hidden_libraries_provider.dart';
@@ -42,7 +42,7 @@ class _DiscoverScreenState extends State<DiscoverScreen>
   static const Duration _heroAutoScrollDuration = Duration(seconds: 8);
 
   @override
-  PlexClient get client {
+  MediaClient get client {
     final multiServerProvider = Provider.of<MultiServerProvider>(
       context,
       listen: false,
@@ -55,8 +55,8 @@ class _DiscoverScreenState extends State<DiscoverScreen>
     );
   }
 
-  List<PlexMetadata> _onDeck = [];
-  List<PlexHub> _hubs = [];
+  List<MediaItem> _onDeck = [];
+  List<Hub> _hubs = [];
   bool _isLoading = true;
   bool _isInitialLoad = true;
   String? _errorMessage;
@@ -71,8 +71,8 @@ class _DiscoverScreenState extends State<DiscoverScreen>
   late final FocusNode _heroFocusNode;
   bool _heroIsFocused = false;
 
-  /// Get the correct PlexClient for an item's server
-  PlexClient _getClientForItem(PlexMetadata? item) {
+  /// Get the correct MediaClient for an item's server
+  MediaClient _getClientForItem(MediaItem? item) {
     // Items should always have a serverId, but if not, fall back to first available server
     final serverId = item?.serverId;
     if (serverId == null) {
@@ -298,8 +298,8 @@ class _DiscoverScreenState extends State<DiscoverScreen>
         multiServerProvider.aggregationService.getHubsFromAllServers(),
       ]);
 
-      final onDeck = results[0] as List<PlexMetadata>;
-      final allHubs = results[1] as List<PlexHub>;
+      final onDeck = results[0] as List<MediaItem>;
+      final allHubs = results[1] as List<Hub>;
 
       // Filter out duplicate hubs that we already fetch separately
       final filteredHubs = allHubs.where((hub) {
@@ -506,7 +506,7 @@ class _DiscoverScreenState extends State<DiscoverScreen>
   }
 
   @override
-  void updateItemInLists(String ratingKey, PlexMetadata updatedMetadata) {
+  void updateItemInLists(String ratingKey, MediaItem updatedMetadata) {
     // Check and update in _onDeck list
     final onDeckIndex = _onDeck.indexWhere(
       (item) => item.ratingKey == ratingKey,
@@ -693,7 +693,7 @@ class _DiscoverScreenState extends State<DiscoverScreen>
                   if (_onDeck.isNotEmpty)
                     SliverToBoxAdapter(
                       child: HubSection(
-                        hub: PlexHub(
+                        hub: Hub(
                           hubKey: 'continue_watching',
                           title: t.discover.continueWatching,
                           type: 'mixed',
@@ -898,7 +898,7 @@ class _DiscoverScreenState extends State<DiscoverScreen>
     );
   }
 
-  Widget _buildHeroItem(PlexMetadata heroItem) {
+  Widget _buildHeroItem(MediaItem heroItem) {
     final isEpisode = heroItem.type.toLowerCase() == 'episode';
     final showName = heroItem.grandparentTitle ?? heroItem.title;
     final screenWidth = MediaQuery.of(context).size.width;
@@ -1214,7 +1214,7 @@ class _DiscoverScreenState extends State<DiscoverScreen>
     );
   }
 
-  Widget _buildSmartPlayButton(PlexMetadata heroItem) {
+  Widget _buildSmartPlayButton(MediaItem heroItem) {
     final hasProgress =
         heroItem.viewOffset != null &&
         heroItem.duration != null &&

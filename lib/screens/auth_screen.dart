@@ -1,14 +1,12 @@
-import 'dart:async';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:url_launcher/url_launcher.dart';
-import 'package:qr_flutter/qr_flutter.dart';
-import '../services/plex_auth_service.dart';
+import 'package:uuid/uuid.dart';
+import '../services/openflix_auth_service.dart';
 import '../services/storage_service.dart';
-import '../services/server_registry.dart';
+import '../client/media_client.dart';
+import '../config/client_config.dart';
 import '../providers/multi_server_provider.dart';
-import '../providers/plex_client_provider.dart';
+import '../providers/media_client_provider.dart';
 import '../i18n/strings.g.dart';
 import '../utils/app_logger.dart';
 import 'main_screen.dart';
@@ -21,172 +19,151 @@ class AuthScreen extends StatefulWidget {
 }
 
 class _AuthScreenState extends State<AuthScreen> {
+  // Server connection state
+  String? _connectedServerUrl;
+  String? _serverName;
+  bool _isConnectingToServer = false;
+
+  // Auth mode
+  bool _isLoginMode = true;
   bool _isAuthenticating = false;
   String? _errorMessage;
-  late PlexAuthService _authService;
-  bool _shouldCancelPolling = false;
-  bool _useQrFlow = false; // whether current auth attempt is QR based
-  String? _qrAuthUrl; // auth URL rendered as QR
+
+  // Form controllers
+  final _serverUrlController = TextEditingController();
+  final _usernameController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
+  final _displayNameController = TextEditingController();
+
+  // Form keys
+  final _serverFormKey = GlobalKey<FormState>();
+  final _authFormKey = GlobalKey<FormState>();
+
+  // Password visibility
+  bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
 
   @override
   void initState() {
     super.initState();
-    _initializeAuthService();
+    _loadSavedServerUrl();
   }
 
-  Future<void> _initializeAuthService() async {
-    _authService = await PlexAuthService.create();
+  @override
+  void dispose() {
+    _serverUrlController.dispose();
+    _usernameController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
+    _displayNameController.dispose();
+    super.dispose();
   }
 
-  /// Connect to all available servers and navigate to main screen
-  Future<void> _connectToAllServersAndNavigate(String plexToken) async {
-    if (!mounted) return;
+  Future<void> _loadSavedServerUrl() async {
+    final storage = await StorageService.getInstance();
+    final savedUrl = storage.getServerUrl();
+    if (savedUrl != null && savedUrl.isNotEmpty) {
+      _serverUrlController.text = savedUrl;
+      // Try to reconnect to saved server
+      _connectToServer();
+    }
+  }
+
+  Future<void> _connectToServer() async {
+    if (!_serverFormKey.currentState!.validate()) return;
+
+    final serverUrl = _serverUrlController.text.trim();
 
     setState(() {
-      _isAuthenticating = true;
+      _isConnectingToServer = true;
       _errorMessage = null;
     });
 
     try {
-      // Fetch all servers for this user
-      final servers = await _authService.fetchServers(plexToken);
+      final authService = OpenFlixAuthService.create(serverUrl);
+      final isValid = await authService.testConnection();
+
+      if (!isValid) {
+        setState(() {
+          _isConnectingToServer = false;
+          _errorMessage = t.auth.serverConnectionFailed;
+        });
+        return;
+      }
+
+      // Save the server URL
       final storage = await StorageService.getInstance();
+      await storage.saveServerUrl(serverUrl);
 
-      if (servers.isEmpty) {
-        await storage.clearCredentials();
-        setState(() {
-          _isAuthenticating = false;
-          _errorMessage = t.serverSelection.noServersFound;
-        });
-        return;
-      }
-
-      // Save all servers to registry and enable them
-      final registry = ServerRegistry(storage);
-      await registry.saveServers(servers);
-
-      // Enable all servers
-      final serverIds = servers.map((s) => s.clientIdentifier).toSet();
-      await registry.saveEnabledServerIds(serverIds);
-
-      // Connect to all servers
-      if (!mounted) return;
-      final multiServerProvider = context.read<MultiServerProvider>();
-      final connectedCount = await multiServerProvider.serverManager
-          .connectToAllServers(servers);
-
-      if (connectedCount == 0) {
-        setState(() {
-          _isAuthenticating = false;
-          _errorMessage = t.serverSelection.allServerConnectionsFailed;
-        });
-        return;
-      }
-
-      // Get the first connected client for backward compatibility
-      if (!mounted) return;
-      final firstClient =
-          multiServerProvider.serverManager.onlineClients.values.first;
-
-      // Set it as the legacy client
-      final plexClientProvider = context.read<PlexClientProvider>();
-      plexClientProvider.setClient(firstClient);
-
-      // Navigate to main screen
-      if (!mounted) return;
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) => MainScreen(client: firstClient),
-        ),
-      );
-    } catch (e) {
-      appLogger.e('Failed to connect to servers', error: e);
       setState(() {
-        _isAuthenticating = false;
-        _errorMessage = t.serverSelection.failedToLoadServers(error: e);
+        _isConnectingToServer = false;
+        _connectedServerUrl = serverUrl;
+        _serverName = Uri.parse(serverUrl).host;
+      });
+    } catch (e) {
+      appLogger.e('Failed to connect to server', error: e);
+      setState(() {
+        _isConnectingToServer = false;
+        _errorMessage = t.auth.serverConnectionFailed;
       });
     }
   }
 
-  Future<void> _startAuthentication() async {
+  void _disconnectServer() {
+    setState(() {
+      _connectedServerUrl = null;
+      _serverName = null;
+      _errorMessage = null;
+    });
+  }
+
+  Future<void> _authenticate() async {
+    if (!_authFormKey.currentState!.validate()) return;
+
     setState(() {
       _isAuthenticating = true;
       _errorMessage = null;
-      _shouldCancelPolling = false;
-      // preserve _useQrFlow as chosen prior to calling
-      if (!_useQrFlow) {
-        _qrAuthUrl = null; // ensure stale QR cleared for browser flow
-      }
     });
 
     try {
-      // Create a PIN
-      final pinData = await _authService.createPin();
-      final pinId = pinData['id'] as int;
-      final pinCode = pinData['code'] as String;
+      final authService = OpenFlixAuthService.create(_connectedServerUrl!);
+      AuthResponse response;
 
-      // Construct auth URL
-      final authUrl = _authService.getAuthUrl(pinCode);
-
-      if (_useQrFlow) {
-        // Display QR instead of launching browser
-        setState(() {
-          _qrAuthUrl = authUrl;
-        });
+      if (_isLoginMode) {
+        response = await authService.login(
+          username: _usernameController.text.trim(),
+          password: _passwordController.text,
+        );
       } else {
-        // Open browser (in-app for mobile, external for desktop)
-        final uri = Uri.parse(authUrl);
-        if (await canLaunchUrl(uri)) {
-          await launchUrl(uri, mode: LaunchMode.inAppBrowserView);
-        } else {
-          throw Exception(t.errors.couldNotLaunchUrl);
-        }
+        response = await authService.register(
+          username: _usernameController.text.trim(),
+          email: _emailController.text.trim(),
+          password: _passwordController.text,
+          displayName: _displayNameController.text.trim().isNotEmpty
+              ? _displayNameController.text.trim()
+              : null,
+        );
       }
 
-      // Poll for authentication with cancellation support
-      final token = await _authService.pollPinUntilClaimed(
-        pinId,
-        shouldCancel: () => _shouldCancelPolling,
-      );
-
-      // If polling was cancelled, don't show error
-      if (_shouldCancelPolling) {
-        return;
-      }
-
-      if (token == null) {
-        setState(() {
-          _isAuthenticating = false;
-          _errorMessage = t.auth.authenticationTimeout;
-        });
-        return;
-      }
-
-      // Auto-close the in-app browser on mobile (no-op on desktop)
-      if (!_useQrFlow) {
-        try {
-          await closeInAppWebView();
-        } catch (e) {
-          // Ignore errors - browser might already be closed or on desktop
-        }
-      }
-
-      // Store the token
+      // Save token and user info
       final storage = await StorageService.getInstance();
-      await storage.savePlexToken(token);
+      await storage.saveToken(response.token);
+      await storage.saveUserProfile(response.user.toJson());
 
-      // Clear QR URL after successful auth
-      setState(() {
-        _qrAuthUrl = null;
-        _useQrFlow = false;
-      });
-
-      // Connect to all servers and navigate to main screen
+      // Create client and navigate
       if (mounted) {
-        await _connectToAllServersAndNavigate(token);
+        await _connectAndNavigate(response.token);
       }
+    } on AuthException catch (e) {
+      setState(() {
+        _isAuthenticating = false;
+        _errorMessage = e.message;
+      });
     } catch (e) {
+      appLogger.e('Authentication failed', error: e);
       setState(() {
         _isAuthenticating = false;
         _errorMessage = t.errors.authenticationFailed(error: e);
@@ -194,337 +171,487 @@ class _AuthScreenState extends State<AuthScreen> {
     }
   }
 
-  void _retryAuthentication() {
-    setState(() {
-      _shouldCancelPolling = true;
-      _isAuthenticating = false;
-      _qrAuthUrl = null;
-    });
-    // Start new authentication after a brief delay to ensure cleanup
-    Future.delayed(const Duration(milliseconds: 100), _startAuthentication);
+  Future<void> _connectAndNavigate(String token) async {
+    if (!mounted) return;
+
+    try {
+      // Get or create a client identifier
+      final storage = await StorageService.getInstance();
+      String? clientId = storage.getClientIdentifier();
+      if (clientId == null) {
+        clientId = const Uuid().v4();
+        await storage.saveClientIdentifier(clientId);
+      }
+
+      // Create ClientConfig for the OpenFlix server
+      final config = await ClientConfig.create(
+        baseUrl: _connectedServerUrl!,
+        token: token,
+        clientIdentifier: clientId,
+      );
+
+      // Create Plex client with the OpenFlix server
+      final client = MediaClient(
+        config,
+        serverId: _connectedServerUrl!,
+        serverName: _serverName,
+      );
+
+      // Test the connection
+      await client.getLibraries();
+
+      // Set up providers
+      if (!mounted) return;
+      final plexClientProvider = context.read<MediaClientProvider>();
+      plexClientProvider.setClient(client);
+
+      // Also update multi-server provider
+      final multiServerProvider = context.read<MultiServerProvider>();
+      multiServerProvider.serverManager.addDirectClient(
+        _connectedServerUrl!,
+        client,
+      );
+
+      // Navigate to main screen
+      if (!mounted) return;
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => MainScreen(client: client),
+        ),
+      );
+    } catch (e) {
+      appLogger.e('Failed to connect to server after auth', error: e);
+      setState(() {
+        _isAuthenticating = false;
+        _errorMessage = t.errors.connectionFailedGeneric;
+      });
+    }
   }
 
-  void _handleDebugTap() {
-    if (!kDebugMode) return;
-    _showDebugTokenDialog();
+  String? _validateServerUrl(String? value) {
+    if (value == null || value.isEmpty) {
+      return t.auth.invalidServerUrl;
+    }
+    final uri = Uri.tryParse(value);
+    if (uri == null || !uri.hasScheme || !uri.hasAuthority) {
+      return t.auth.invalidServerUrl;
+    }
+    return null;
   }
 
-  void _showDebugTokenDialog() {
-    final tokenController = TextEditingController();
-    String? errorMessage;
+  String? _validateUsername(String? value) {
+    if (value == null || value.isEmpty) {
+      return t.auth.usernameRequired;
+    }
+    return null;
+  }
 
-    showDialog<void>(
-      context: context,
-      builder: (BuildContext context) {
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            return AlertDialog(
-              title: Text(t.auth.debugEnterToken),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextFormField(
-                    controller: tokenController,
-                    decoration: InputDecoration(
-                      labelText: t.auth.plexTokenLabel,
-                      hintText: t.auth.plexTokenHint,
-                      errorText: errorMessage,
-                      border: const OutlineInputBorder(),
-                    ),
-                    obscureText: true,
-                    maxLines: 1,
-                  ),
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: Text(t.auth.cancel),
-                ),
-                ElevatedButton(
-                  onPressed: () async {
-                    final token = tokenController.text.trim();
-                    if (token.isEmpty) {
-                      setDialogState(() {
-                        errorMessage = t.errors.pleaseEnterToken;
-                      });
-                      return;
-                    }
+  String? _validateEmail(String? value) {
+    if (value == null || value.isEmpty) {
+      return t.auth.emailRequired;
+    }
+    // Basic email validation
+    final emailRegex = RegExp(r'^[^@]+@[^@]+\.[^@]+$');
+    if (!emailRegex.hasMatch(value)) {
+      return t.auth.invalidEmail;
+    }
+    return null;
+  }
 
-                    final navigator = Navigator.of(context);
+  String? _validatePassword(String? value) {
+    if (value == null || value.isEmpty) {
+      return t.auth.passwordRequired;
+    }
+    if (value.length < 6) {
+      return t.auth.passwordTooShort;
+    }
+    return null;
+  }
 
-                    try {
-                      final isValid = await _authService.verifyToken(token);
-                      if (!isValid) {
-                        setDialogState(() {
-                          errorMessage = t.errors.invalidToken;
-                        });
-                        return;
-                      }
-
-                      // Store the token
-                      final storage = await StorageService.getInstance();
-                      await storage.savePlexToken(token);
-
-                      // Close dialog and connect to all servers
-                      if (mounted) {
-                        navigator.pop();
-                        await _connectToAllServersAndNavigate(token);
-                      }
-                    } catch (e) {
-                      setDialogState(() {
-                        errorMessage = t.errors.failedToVerifyToken(error: e);
-                      });
-                    }
-                  },
-                  child: Text(t.auth.authenticate),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
+  String? _validateConfirmPassword(String? value) {
+    if (value != _passwordController.text) {
+      return t.auth.passwordMismatch;
+    }
+    return null;
   }
 
   @override
   Widget build(BuildContext context) {
-    // Use two-column layout on desktop, single column on mobile
     final isDesktop = MediaQuery.of(context).size.width > 700;
 
     return Scaffold(
       body: Center(
-        child: Container(
-          constraints: BoxConstraints(maxWidth: isDesktop ? 800 : 400),
-          padding: const EdgeInsets.all(24),
-          child: isDesktop
-              ? Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    // First column - Logo and title (always visible)
-                    Expanded(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Image.asset(
-                            'assets/plezy.png',
-                            width: 120,
-                            height: 120,
-                          ),
-                          const SizedBox(height: 24),
-                          Text(
-                            t.app.title,
-                            style: Theme.of(context).textTheme.headlineMedium
-                                ?.copyWith(fontWeight: FontWeight.bold),
-                            textAlign: TextAlign.center,
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 48),
-                    // Second column - All authentication content
-                    Expanded(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          if (_isAuthenticating) ...[
-                            if (_useQrFlow && _qrAuthUrl != null) ...[
-                              // QR code flow - hint text above QR code
-                              Text(
-                                t.auth.scanQRCodeInstruction,
-                                textAlign: TextAlign.center,
-                                style: const TextStyle(color: Colors.grey),
-                              ),
-                              const SizedBox(height: 24),
-                              Center(
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(12),
-                                  child: QrImageView(
-                                    data: _qrAuthUrl!,
-                                    size: 300,
-                                    version: QrVersions.auto,
-                                    backgroundColor: Colors.white,
-                                  ),
-                                ),
-                              ),
-                              _buildRetryButton(),
-                            ] else ...[
-                              // Browser auth flow - show spinner and waiting message
-                              const Center(child: CircularProgressIndicator()),
-                              const SizedBox(height: 16),
-                              Text(
-                                t.auth.waitingForAuth,
-                                textAlign: TextAlign.center,
-                                style: const TextStyle(color: Colors.grey),
-                              ),
-                              _buildRetryButton(),
-                            ],
-                          ] else ...[
-                            // Initial state buttons
-                            ElevatedButton(
-                              onPressed: _startAuthentication,
-                              style: ElevatedButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 16,
-                                ),
-                              ),
-                              child: Text(t.auth.signInWithPlex),
-                            ),
-                            const SizedBox(height: 12),
-                            OutlinedButton(
-                              onPressed: () {
-                                setState(() {
-                                  _useQrFlow = true;
-                                });
-                                _startAuthentication();
-                              },
-                              style: OutlinedButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 16,
-                                ),
-                              ),
-                              child: Text(t.auth.showQRCode),
-                            ),
-                            if (kDebugMode) ...[
-                              const SizedBox(height: 12),
-                              OutlinedButton(
-                                onPressed: _handleDebugTap,
-                                style: OutlinedButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 12,
-                                  ),
-                                  side: BorderSide(
-                                    color: Theme.of(context).colorScheme.outline
-                                        .withValues(alpha: 0.5),
-                                  ),
-                                ),
-                                child: Text(
-                                  t.auth.debugEnterToken,
-                                  style: TextStyle(fontSize: 12),
-                                ),
-                              ),
-                            ],
-                            if (_errorMessage != null) ...[
-                              const SizedBox(height: 16),
-                              Text(
-                                _errorMessage!,
-                                style: TextStyle(
-                                  color: Theme.of(context).colorScheme.error,
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                            ],
-                          ],
-                        ],
-                      ),
-                    ),
-                  ],
-                )
-              : Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Image.asset('assets/plezy.png', width: 120, height: 120),
-                    const SizedBox(height: 24),
-                    Text(
-                      t.app.title,
-                      style: Theme.of(context).textTheme.headlineMedium
-                          ?.copyWith(fontWeight: FontWeight.bold),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 48),
-                    if (_isAuthenticating) ...[
-                      const Center(child: CircularProgressIndicator()),
-                      const SizedBox(height: 16),
-                      Text(
-                        t.auth.waitingForAuth,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(color: Colors.grey),
-                      ),
-                      const SizedBox(height: 24),
-                      OutlinedButton(
-                        onPressed: _retryAuthentication,
-                        style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(
-                            vertical: 12,
-                            horizontal: 24,
-                          ),
-                        ),
-                        child: Text(t.auth.retry),
-                      ),
-                    ] else ...[
-                      // add QR button here
-                      ElevatedButton(
-                        onPressed: _startAuthentication,
-                        style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                        ),
-                        child: Text(t.auth.signInWithPlex),
-                      ),
-                      const SizedBox(height: 12),
-                      OutlinedButton(
-                        onPressed: () {
-                          setState(() {
-                            _useQrFlow = true;
-                          });
-                          _startAuthentication();
-                        },
-                        style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                        ),
-                        child: Text(t.auth.showQRCode),
-                      ),
-                      if (kDebugMode) ...[
-                        const SizedBox(height: 12),
-                        OutlinedButton(
-                          onPressed: _handleDebugTap,
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            side: BorderSide(
-                              color: Theme.of(
-                                context,
-                              ).colorScheme.outline.withValues(alpha: 0.5),
-                            ),
-                          ),
-                          child: Text(
-                            t.auth.debugEnterToken,
-                            style: TextStyle(fontSize: 12),
-                          ),
-                        ),
-                      ],
-                      if (_errorMessage != null) ...[
-                        const SizedBox(height: 16),
-                        Text(
-                          _errorMessage!,
-                          style: TextStyle(
-                            color: Theme.of(context).colorScheme.error,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ],
+        child: SingleChildScrollView(
+          child: Container(
+            constraints: BoxConstraints(maxWidth: isDesktop ? 800 : 400),
+            padding: const EdgeInsets.all(24),
+            child: isDesktop
+                ? Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Expanded(child: _buildBranding()),
+                      const SizedBox(width: 48),
+                      Expanded(child: _buildAuthContent()),
                     ],
-                  ],
-                ),
+                  )
+                : Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _buildBranding(),
+                      const SizedBox(height: 48),
+                      _buildAuthContent(),
+                    ],
+                  ),
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildRetryButton() {
+  Widget _buildBranding() {
     return Column(
-      mainAxisSize: MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
+        Image.asset(
+          'assets/openflix.png',
+          width: 120,
+          height: 120,
+        ),
         const SizedBox(height: 24),
-        OutlinedButton(
-          onPressed: _retryAuthentication,
-          style: OutlinedButton.styleFrom(
-            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
-          ),
-          child: Text(t.auth.retry),
+        Text(
+          t.app.title,
+          style: Theme.of(context)
+              .textTheme
+              .headlineMedium
+              ?.copyWith(fontWeight: FontWeight.bold),
+          textAlign: TextAlign.center,
         ),
       ],
+    );
+  }
+
+  Widget _buildAuthContent() {
+    if (_connectedServerUrl == null) {
+      return _buildServerForm();
+    }
+    return _buildAuthForm();
+  }
+
+  Widget _buildServerForm() {
+    return Form(
+      key: _serverFormKey,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            t.auth.connectToServer,
+            style: Theme.of(context).textTheme.titleLarge,
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 24),
+          TextFormField(
+            controller: _serverUrlController,
+            decoration: InputDecoration(
+              labelText: t.auth.serverUrl,
+              hintText: t.auth.serverUrlHint,
+              prefixIcon: const Icon(Icons.dns_outlined),
+              border: const OutlineInputBorder(),
+            ),
+            keyboardType: TextInputType.url,
+            textInputAction: TextInputAction.go,
+            validator: _validateServerUrl,
+            enabled: !_isConnectingToServer,
+            onFieldSubmitted: (_) => _connectToServer(),
+          ),
+          const SizedBox(height: 24),
+          ElevatedButton(
+            onPressed: _isConnectingToServer ? null : _connectToServer,
+            style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+            ),
+            child: _isConnectingToServer
+                ? Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                      const SizedBox(width: 12),
+                      Text(t.auth.connecting),
+                    ],
+                  )
+                : Text(t.auth.connectToServer),
+          ),
+          if (_errorMessage != null) ...[
+            const SizedBox(height: 16),
+            Text(
+              _errorMessage!,
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAuthForm() {
+    return Form(
+      key: _authFormKey,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Server info and change button
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.check_circle,
+                  color: Theme.of(context).colorScheme.primary,
+                  size: 20,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    t.auth.serverConnected(serverName: _serverName ?? ''),
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                ),
+                TextButton(
+                  onPressed: _isAuthenticating ? null : _disconnectServer,
+                  child: Text(t.auth.changeServer),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+
+          // Login/Register toggle
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _buildModeButton(t.auth.signIn, true),
+              const SizedBox(width: 16),
+              _buildModeButton(t.auth.signUp, false),
+            ],
+          ),
+          const SizedBox(height: 24),
+
+          // Username field
+          TextFormField(
+            controller: _usernameController,
+            decoration: InputDecoration(
+              labelText: t.auth.username,
+              hintText: t.auth.usernameHint,
+              prefixIcon: const Icon(Icons.person_outline),
+              border: const OutlineInputBorder(),
+            ),
+            textInputAction: TextInputAction.next,
+            validator: _validateUsername,
+            enabled: !_isAuthenticating,
+          ),
+          const SizedBox(height: 16),
+
+          // Email field (only for registration)
+          if (!_isLoginMode) ...[
+            TextFormField(
+              controller: _emailController,
+              decoration: InputDecoration(
+                labelText: t.auth.email,
+                hintText: t.auth.emailHint,
+                prefixIcon: const Icon(Icons.email_outlined),
+                border: const OutlineInputBorder(),
+              ),
+              keyboardType: TextInputType.emailAddress,
+              textInputAction: TextInputAction.next,
+              validator: _validateEmail,
+              enabled: !_isAuthenticating,
+            ),
+            const SizedBox(height: 16),
+          ],
+
+          // Password field
+          TextFormField(
+            controller: _passwordController,
+            decoration: InputDecoration(
+              labelText: t.auth.password,
+              hintText: t.auth.passwordHint,
+              prefixIcon: const Icon(Icons.lock_outline),
+              border: const OutlineInputBorder(),
+              suffixIcon: IconButton(
+                icon: Icon(
+                  _obscurePassword ? Icons.visibility : Icons.visibility_off,
+                ),
+                onPressed: () {
+                  setState(() {
+                    _obscurePassword = !_obscurePassword;
+                  });
+                },
+              ),
+            ),
+            obscureText: _obscurePassword,
+            textInputAction: _isLoginMode ? TextInputAction.go : TextInputAction.next,
+            validator: _validatePassword,
+            enabled: !_isAuthenticating,
+            onFieldSubmitted: _isLoginMode ? (_) => _authenticate() : null,
+          ),
+          const SizedBox(height: 16),
+
+          // Confirm password and display name (only for registration)
+          if (!_isLoginMode) ...[
+            TextFormField(
+              controller: _confirmPasswordController,
+              decoration: InputDecoration(
+                labelText: t.auth.confirmPassword,
+                hintText: t.auth.confirmPasswordHint,
+                prefixIcon: const Icon(Icons.lock_outline),
+                border: const OutlineInputBorder(),
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    _obscureConfirmPassword
+                        ? Icons.visibility
+                        : Icons.visibility_off,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _obscureConfirmPassword = !_obscureConfirmPassword;
+                    });
+                  },
+                ),
+              ),
+              obscureText: _obscureConfirmPassword,
+              textInputAction: TextInputAction.next,
+              validator: _validateConfirmPassword,
+              enabled: !_isAuthenticating,
+            ),
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: _displayNameController,
+              decoration: InputDecoration(
+                labelText: t.auth.displayName,
+                hintText: t.auth.displayNameHint,
+                prefixIcon: const Icon(Icons.badge_outlined),
+                border: const OutlineInputBorder(),
+              ),
+              textInputAction: TextInputAction.go,
+              enabled: !_isAuthenticating,
+              onFieldSubmitted: (_) => _authenticate(),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              t.auth.firstUserNote,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+          ],
+
+          // Submit button
+          ElevatedButton(
+            onPressed: _isAuthenticating ? null : _authenticate,
+            style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+            ),
+            child: _isAuthenticating
+                ? Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                      const SizedBox(width: 12),
+                      Text(_isLoginMode ? t.auth.loggingIn : t.auth.registering),
+                    ],
+                  )
+                : Text(_isLoginMode ? t.auth.signIn : t.auth.signUp),
+          ),
+
+          // Error message
+          if (_errorMessage != null) ...[
+            const SizedBox(height: 16),
+            Text(
+              _errorMessage!,
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+              textAlign: TextAlign.center,
+            ),
+          ],
+
+          // Toggle login/register link
+          const SizedBox(height: 24),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                _isLoginMode ? t.auth.noAccount : t.auth.haveAccount,
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+              TextButton(
+                onPressed: _isAuthenticating
+                    ? null
+                    : () {
+                        setState(() {
+                          _isLoginMode = !_isLoginMode;
+                          _errorMessage = null;
+                        });
+                      },
+                child: Text(_isLoginMode ? t.auth.signUp : t.auth.signIn),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildModeButton(String label, bool isLogin) {
+    final isSelected = _isLoginMode == isLogin;
+    return InkWell(
+      onTap: _isAuthenticating
+          ? null
+          : () {
+              setState(() {
+                _isLoginMode = isLogin;
+                _errorMessage = null;
+              });
+            },
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? Theme.of(context).colorScheme.primaryContainer
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: isSelected
+                ? Theme.of(context).colorScheme.primary
+                : Theme.of(context).colorScheme.outline,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isSelected
+                ? Theme.of(context).colorScheme.onPrimaryContainer
+                : Theme.of(context).colorScheme.onSurface,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+          ),
+        ),
+      ),
     );
   }
 }

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import '../models/plex_file_info.dart';
+import '../models/file_info.dart';
 import '../i18n/strings.g.dart';
 
 class FileInfoBottomSheet extends StatelessWidget {
-  final PlexFileInfo fileInfo;
+  final FileInfo fileInfo;
   final String title;
 
   const FileInfoBottomSheet({

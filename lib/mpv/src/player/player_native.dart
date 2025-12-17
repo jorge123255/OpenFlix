@@ -282,6 +282,7 @@ class PlayerNative implements Player {
       await _observeProperty('duration', 'double');
       await _observeProperty('pause', 'flag');
       await _observeProperty('paused-for-cache', 'flag');
+      await _observeProperty('demuxer-cache-time', 'double');
       await _observeProperty('track-list', 'node');
       await _observeProperty('eof-reached', 'flag');
       await _observeProperty('volume', 'double');
@@ -326,8 +327,42 @@ class PlayerNative implements Player {
       await setProperty('start', 'none');
     }
 
+    // Apply HTTP headers per request (needed for IPTV streams and authenticated endpoints).
+    final headers = media.headers;
+    if (headers != null && headers.isNotEmpty) {
+      String? userAgent;
+      final headerLines = <String>[];
+      for (final entry in headers.entries) {
+        final keyLower = entry.key.toLowerCase();
+        if (keyLower == 'user-agent') {
+          userAgent = entry.value;
+          continue;
+        }
+        headerLines.add('${entry.key}: ${entry.value}');
+      }
+
+      if (userAgent != null && userAgent.isNotEmpty) {
+        await setProperty('user-agent', userAgent);
+      } else {
+        await setProperty('user-agent', '');
+      }
+      if (headerLines.isNotEmpty) {
+        // mpv expects CRLF-separated header lines
+        await setProperty('http-header-fields', headerLines.join('\r\n'));
+      } else {
+        await setProperty('http-header-fields', '');
+      }
+    } else {
+      // Clear any previous request headers
+      await setProperty('http-header-fields', '');
+      await setProperty('user-agent', '');
+    }
+
     await command(['loadfile', media.uri, 'replace']);
-    if (!play) {
+
+    if (play) {
+      await setProperty('pause', 'no');
+    } else {
       await setProperty('pause', 'yes');
     }
   }

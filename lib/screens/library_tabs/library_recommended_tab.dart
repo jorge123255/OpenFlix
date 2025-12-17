@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../models/plex_hub.dart';
+import '../../models/hub.dart';
 import '../../widgets/hub_section.dart';
 import '../../widgets/hub_navigation_controller.dart';
 import '../../i18n/strings.g.dart';
@@ -7,7 +7,7 @@ import 'base_library_tab.dart';
 
 /// Recommended tab for library screen
 /// Shows library-specific hubs and recommendations
-class LibraryRecommendedTab extends BaseLibraryTab<PlexHub> {
+class LibraryRecommendedTab extends BaseLibraryTab<Hub> {
   const LibraryRecommendedTab({super.key, required super.library});
 
   @override
@@ -15,7 +15,7 @@ class LibraryRecommendedTab extends BaseLibraryTab<PlexHub> {
 }
 
 class _LibraryRecommendedTabState
-    extends BaseLibraryTabState<PlexHub, LibraryRecommendedTab> {
+    extends BaseLibraryTabState<Hub, LibraryRecommendedTab> {
   final HubNavigationController _hubNavigationController =
       HubNavigationController();
 
@@ -41,7 +41,7 @@ class _LibraryRecommendedTabState
   String get errorContext => t.libraries.tabs.recommended;
 
   @override
-  Future<List<PlexHub>> loadData() async {
+  Future<List<Hub>> loadData() async {
     // Use server-specific client for this library
     final client = getClientForLibrary();
 
@@ -50,7 +50,7 @@ class _LibraryRecommendedTabState
   }
 
   @override
-  Widget buildContent(List<PlexHub> items) {
+  Widget buildContent(List<Hub> items) {
     return HubNavigationScope(
       controller: _hubNavigationController,
       child: ListView.builder(
@@ -68,7 +68,7 @@ class _LibraryRecommendedTabState
     );
   }
 
-  IconData _getHubIcon(PlexHub hub) {
+  IconData _getHubIcon(Hub hub) {
     final title = hub.title.toLowerCase();
     if (title.contains('continue watching') || title.contains('on deck')) {
       return Icons.play_circle;

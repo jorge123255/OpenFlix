@@ -1,8 +1,8 @@
 import 'package:os_media_controls/os_media_controls.dart';
 import 'package:rate_limiter/rate_limiter.dart';
 
-import '../client/plex_client.dart';
-import '../models/plex_metadata.dart';
+import '../client/media_client.dart';
+import '../models/media_item.dart';
 import '../utils/app_logger.dart';
 
 /// Manages OS media controls integration for video playback.
@@ -32,8 +32,8 @@ class MediaControlsManager {
   ///
   /// This includes title, artist, artwork, and duration.
   Future<void> updateMetadata({
-    required PlexMetadata metadata,
-    PlexClient? client,
+    required MediaItem metadata,
+    MediaClient? client,
     Duration? duration,
   }) async {
     try {
@@ -162,7 +162,7 @@ class MediaControlsManager {
   /// For episodes: "Show Name - Season X Episode Y"
   /// For movies: Director or studio
   /// For other content: Fallback to year or empty
-  String _buildArtist(PlexMetadata metadata) {
+  String _buildArtist(MediaItem metadata) {
     if (metadata.type.toLowerCase() == 'episode') {
       final parts = <String>[];
 
@@ -181,7 +181,7 @@ class MediaControlsManager {
       return parts.join(' • ');
     } else if (metadata.type.toLowerCase() == 'movie') {
       // For movies, use director or studio
-      // Note: These fields may need to be added to PlexMetadata model
+      // Note: These fields may need to be added to MediaItem model
       if (metadata.year != null) {
         return metadata.year.toString();
       }

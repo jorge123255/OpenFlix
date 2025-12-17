@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -7,7 +8,7 @@ import 'package:provider/provider.dart';
 
 import '../models/dvr.dart';
 import '../mpv/mpv.dart';
-import '../providers/plex_client_provider.dart';
+import '../providers/media_client_provider.dart';
 import '../services/settings_service.dart';
 import '../utils/app_logger.dart';
 
@@ -119,13 +120,19 @@ class _DVRPlayerScreenState extends State<DVRPlayerScreen> {
       });
 
       // Get the stream URL for the recording
-      final client = context.read<PlexClientProvider>().client;
+      final client = context.read<MediaClientProvider>().client;
       if (client != null && widget.recording.filePath != null) {
         // Construct the streaming URL for the recording file
-        final streamUrl = '${client.config.baseUrl}/dvr/stream/${widget.recording.id}?X-Plex-Token=${client.config.token}';
+        final base = '${client.config.baseUrl}/dvr/stream/${widget.recording.id}';
+        final separator = base.contains('?') ? '&' : '?';
+        final streamUrl = '${base}${separator}X-Plex-Token=${client.config.token}';
         appLogger.d('Playing DVR recording: ${widget.recording.title} - $streamUrl');
 
-        await _player!.open(Media(streamUrl));
+        final headers = <String, String>{
+          'User-Agent': 'VLC/3.0.20 LibVLC/3.0.20',
+          ...client.config.headers,
+        };
+        await _player!.open(Media(streamUrl, headers: headers));
         await _player!.play();
       }
     } catch (e) {
@@ -135,7 +142,7 @@ class _DVRPlayerScreenState extends State<DVRPlayerScreen> {
 
   Future<void> _loadCommercialSegments() async {
     try {
-      final client = context.read<PlexClientProvider>().client;
+      final client = context.read<MediaClientProvider>().client;
       if (client == null) return;
 
       final commercials = await client.getCommercialSegments(widget.recording.id);
@@ -309,7 +316,7 @@ class _DVRPlayerScreenState extends State<DVRPlayerScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: Platform.isMacOS ? Colors.transparent : Colors.black,
       body: Focus(
         autofocus: true,
         onKeyEvent: _handleKeyEvent,

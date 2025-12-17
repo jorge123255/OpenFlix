@@ -3,16 +3,17 @@ import 'dart:io' show Platform;
 
 import 'package:flutter/material.dart';
 import 'package:rate_limiter/rate_limiter.dart';
-import 'package:flutter/services.dart' show SystemChrome, DeviceOrientation;
+import 'package:flutter/services.dart'
+    show DeviceOrientation, HardwareKeyboard, SystemChrome;
 import 'package:macos_window_utils/macos_window_utils.dart';
 import 'package:window_manager/window_manager.dart';
 
 import '../../mpv/mpv.dart';
 
-import '../../client/plex_client.dart';
-import '../../models/plex_media_info.dart';
-import '../../models/plex_media_version.dart';
-import '../../models/plex_metadata.dart';
+import '../../client/media_client.dart';
+import '../../models/media_info.dart';
+import '../../models/media_version.dart';
+import '../../models/media_item.dart';
 import '../../screens/video_player_screen.dart';
 import '../../services/keyboard_shortcuts_service.dart';
 import '../../services/settings_service.dart';
@@ -26,20 +27,20 @@ import 'widgets/track_chapter_controls.dart';
 import 'mobile_video_controls.dart';
 import 'desktop_video_controls.dart';
 
-/// Custom video controls builder for Plex with chapter, audio, and subtitle support
-Widget plexVideoControlsBuilder(
+/// Custom video controls builder with chapter, audio, and subtitle support
+Widget videoControlsBuilder(
   Player player,
-  PlexMetadata metadata, {
+  MediaItem metadata, {
   VoidCallback? onNext,
   VoidCallback? onPrevious,
-  List<PlexMediaVersion>? availableVersions,
+  List<MediaVersion>? availableVersions,
   int? selectedMediaIndex,
   int boxFitMode = 0,
   VoidCallback? onCycleBoxFitMode,
   Function(AudioTrack)? onAudioTrackChanged,
   Function(SubtitleTrack)? onSubtitleTrackChanged,
 }) {
-  return PlexVideoControls(
+  return VideoControls(
     player: player,
     metadata: metadata,
     onNext: onNext,
@@ -53,19 +54,19 @@ Widget plexVideoControlsBuilder(
   );
 }
 
-class PlexVideoControls extends StatefulWidget {
+class VideoControls extends StatefulWidget {
   final Player player;
-  final PlexMetadata metadata;
+  final MediaItem metadata;
   final VoidCallback? onNext;
   final VoidCallback? onPrevious;
-  final List<PlexMediaVersion> availableVersions;
+  final List<MediaVersion> availableVersions;
   final int selectedMediaIndex;
   final int boxFitMode;
   final VoidCallback? onCycleBoxFitMode;
   final Function(AudioTrack)? onAudioTrackChanged;
   final Function(SubtitleTrack)? onSubtitleTrackChanged;
 
-  const PlexVideoControls({
+  const VideoControls({
     super.key,
     required this.player,
     required this.metadata,
@@ -80,14 +81,14 @@ class PlexVideoControls extends StatefulWidget {
   });
 
   @override
-  State<PlexVideoControls> createState() => _PlexVideoControlsState();
+  State<VideoControls> createState() => _VideoControlsState();
 }
 
-class _PlexVideoControlsState extends State<PlexVideoControls>
+class _VideoControlsState extends State<VideoControls>
     with WindowListener, WidgetsBindingObserver {
   bool _showControls = true;
   bool _controlsFullyHidden = false; // For Linux: true after fade-out completes
-  List<PlexChapter> _chapters = [];
+  List<Chapter> _chapters = [];
   bool _chaptersLoaded = false;
   Timer? _hideTimer;
   bool _isFullscreen = false;
@@ -98,8 +99,8 @@ class _PlexVideoControlsState extends State<PlexVideoControls>
   int _subtitleSyncOffset = 0; // Default, loaded from settings
   bool _isRotationLocked = true; // Default locked (landscape only)
 
-  /// Get the correct PlexClient for this metadata's server
-  PlexClient _getClientForMetadata() {
+  /// Get the correct MediaClient for this metadata's server
+  MediaClient _getClientForMetadata() {
     return context.getClientForServer(widget.metadata.serverId!);
   }
 
@@ -111,8 +112,8 @@ class _PlexVideoControlsState extends State<PlexVideoControls>
   // Seek throttle
   late final Throttle _seekThrottle;
   // Current marker state
-  PlexMarker? _currentMarker;
-  List<PlexMarker> _markers = [];
+  Marker? _currentMarker;
+  List<Marker> _markers = [];
   bool _markersLoaded = false;
   // Playback state subscription for auto-hide timer
   StreamSubscription<bool>? _playingSubscription;
@@ -132,6 +133,10 @@ class _PlexVideoControlsState extends State<PlexVideoControls>
   void initState() {
     super.initState();
     _focusNode = FocusNode();
+
+    if (Platform.isMacOS) {
+      HardwareKeyboard.instance.clearState();
+    }
     _seekThrottle = throttle(
       (Duration pos) => widget.player.seek(pos),
       const Duration(milliseconds: 200),
@@ -164,7 +169,7 @@ class _PlexVideoControlsState extends State<PlexVideoControls>
         return;
       }
 
-      PlexMarker? foundMarker;
+      Marker? foundMarker;
       for (final marker in _markers) {
         if (marker.containsPosition(position)) {
           foundMarker = marker;
@@ -227,7 +232,7 @@ class _PlexVideoControlsState extends State<PlexVideoControls>
     _cancelAutoSkipTimer();
   }
 
-  void _startAutoSkipTimer(PlexMarker marker) {
+  void _startAutoSkipTimer(Marker marker) {
     _cancelAutoSkipTimer();
 
     final shouldAutoSkip =

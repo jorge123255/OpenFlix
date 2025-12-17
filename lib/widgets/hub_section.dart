@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../models/plex_hub.dart';
+import '../models/hub.dart';
 import '../screens/hub_detail_screen.dart';
 import 'media_card.dart';
 import 'horizontal_scroll_with_arrows.dart';
@@ -11,7 +11,7 @@ import 'focus/focus_indicator.dart';
 /// Shared hub section widget used in both discover and library screens
 /// Displays a hub title with icon and a horizontal scrollable list of items
 class HubSection extends StatefulWidget {
-  final PlexHub hub;
+  final Hub hub;
   final IconData icon;
   final void Function(String)? onRefresh;
   final VoidCallback? onRemoveFromContinueWatching;

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../mpv/mpv.dart';
-import '../models/plex_metadata.dart';
+import '../models/media_item.dart';
 import '../screens/video_player_screen.dart';
 import '../services/settings_service.dart';
 
@@ -13,7 +13,7 @@ import '../services/settings_service.dart';
 ///
 /// Parameters:
 /// - [context]: The build context for navigation
-/// - [metadata]: The Plex metadata for the content to play
+/// - [metadata]: The media item for the content to play
 /// - [preferredAudioTrack]: Optional audio track to select on playback start
 /// - [preferredSubtitleTrack]: Optional subtitle track to select on playback start
 /// - [preferredPlaybackRate]: Optional playback speed to set on playback start
@@ -26,7 +26,7 @@ import '../services/settings_service.dart';
 /// was watched, or null if navigation was cancelled.
 Future<bool?> navigateToVideoPlayer(
   BuildContext context, {
-  required PlexMetadata metadata,
+  required MediaItem metadata,
   AudioTrack? preferredAudioTrack,
   SubtitleTrack? preferredSubtitleTrack,
   double? preferredPlaybackRate,

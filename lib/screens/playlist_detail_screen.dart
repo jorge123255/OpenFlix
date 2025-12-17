@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../client/plex_client.dart';
-import '../models/plex_playlist.dart';
-import '../models/plex_metadata.dart';
+import '../client/media_client.dart';
+import '../models/playlist.dart';
+import '../models/media_item.dart';
 import '../providers/settings_provider.dart';
 import '../providers/playback_state_provider.dart';
 import '../utils/app_logger.dart';
@@ -18,7 +18,7 @@ import 'base_media_list_detail_screen.dart';
 
 /// Screen to display the contents of a playlist
 class PlaylistDetailScreen extends StatefulWidget {
-  final PlexPlaylist playlist;
+  final Playlist playlist;
 
   const PlaylistDetailScreen({super.key, required this.playlist});
 
@@ -42,7 +42,7 @@ class _PlaylistDetailScreenState
   IconData get emptyIcon => Icons.playlist_play;
 
   @override
-  Future<List<PlexMetadata>> fetchItems() async {
+  Future<List<MediaItem>> fetchItems() async {
     return await client.getPlaylist(widget.playlist.ratingKey);
   }
 
@@ -51,8 +51,8 @@ class _PlaylistDetailScreenState
     return 'Loaded $itemCount items for playlist: ${widget.playlist.title}';
   }
 
-  /// Get the correct PlexClient for this playlist's server
-  PlexClient _getClientForPlaylist() {
+  /// Get the correct MediaClient for this playlist's server
+  MediaClient _getClientForPlaylist() {
     return context.getClientForServer(widget.playlist.serverId!);
   }
 

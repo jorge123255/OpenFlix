@@ -1,25 +1,27 @@
+import 'dart:convert';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
-import '../models/plex_home.dart';
-import '../models/plex_home_user.dart';
-import '../models/plex_user_profile.dart';
+import '../models/home.dart';
+import '../models/home_user.dart';
+import '../models/user_profile.dart';
 import '../services/plex_auth_service.dart';
 import '../services/storage_service.dart';
 import '../utils/app_logger.dart';
 import '../utils/provider_extensions.dart';
 import '../widgets/pin_entry_dialog.dart';
-import 'plex_client_provider.dart';
+import 'media_client_provider.dart';
 
 class UserProfileProvider extends ChangeNotifier {
-  PlexHome? _home;
-  PlexHomeUser? _currentUser;
-  PlexUserProfile? _profileSettings;
+  Home? _home;
+  HomeUser? _currentUser;
+  UserProfile? _profileSettings;
   bool _isLoading = false;
   String? _error;
 
-  PlexHome? get home => _home;
-  PlexHomeUser? get currentUser => _currentUser;
-  PlexUserProfile? get profileSettings => _profileSettings;
+  Home? get home => _home;
+  HomeUser? get currentUser => _currentUser;
+  UserProfile? get profileSettings => _profileSettings;
   bool get isLoading => _isLoading;
   String? get error => _error;
   bool get hasMultipleUsers {
@@ -32,6 +34,18 @@ class UserProfileProvider extends ChangeNotifier {
 
   PlexAuthService? _authService;
   StorageService? _storageService;
+
+  bool _isOpenFlixJwt(String token) {
+    try {
+      final parts = token.split('.');
+      if (parts.length != 3) return false;
+      final payload = utf8.decode(base64Url.decode(base64Url.normalize(parts[1])));
+      final json = jsonDecode(payload);
+      return json is Map<String, dynamic> && json['iss'] == 'openflix';
+    } catch (_) {
+      return false;
+    }
+  }
 
   // Callback for data invalidation when switching profiles
   // Receives the list of servers with new profile tokens for reconnection
@@ -110,7 +124,7 @@ class UserProfileProvider extends ChangeNotifier {
     final cachedHomeData = _storageService!.getHomeUsersCache();
     if (cachedHomeData != null) {
       try {
-        _home = PlexHome.fromJson(cachedHomeData);
+        _home = Home.fromJson(cachedHomeData);
       } catch (e) {
         appLogger.w('Failed to load cached home data', error: e);
       }
@@ -137,11 +151,15 @@ class UserProfileProvider extends ChangeNotifier {
 
     appLogger.d('Fetching user profile settings from Plex API');
     try {
-      final currentToken = _storageService!.getPlexToken();
+      final currentToken = _storageService!.getToken();
       if (currentToken == null) {
         appLogger.w(
           'refreshProfileSettings: No Plex token available, cannot fetch profile',
         );
+        return;
+      }
+
+      if (_isOpenFlixJwt(currentToken)) {
         return;
       }
 
@@ -189,10 +207,15 @@ class UserProfileProvider extends ChangeNotifier {
     _clearError();
 
     try {
-      final currentToken = _storageService!.getPlexToken();
+      final currentToken = _storageService!.getToken();
       if (currentToken == null) {
         throw Exception('No Plex.tv authentication token available');
       }
+
+      if (_isOpenFlixJwt(currentToken)) {
+        return;
+      }
+
       appLogger.d('loadHomeUsers: Using Plex.tv token');
 
       appLogger.d('loadHomeUsers: Fetching home users from API');
@@ -238,7 +261,7 @@ class UserProfileProvider extends ChangeNotifier {
     }
   }
 
-  Future<bool> switchToUser(PlexHomeUser user, BuildContext? context) async {
+  Future<bool> switchToUser(HomeUser user, BuildContext? context) async {
     if (_authService == null || _storageService == null) {
       _setError('Services not initialized');
       return false;
@@ -250,12 +273,12 @@ class UserProfileProvider extends ChangeNotifier {
     }
 
     // Extract client provider before async operations
-    PlexClientProvider? clientProvider;
+    MediaClientProvider? clientProvider;
     if (context != null) {
       try {
         clientProvider = context.plexClient;
       } catch (e) {
-        appLogger.w('Failed to get PlexClientProvider', error: e);
+        appLogger.w('Failed to get MediaClientProvider', error: e);
       }
     }
 
@@ -266,13 +289,13 @@ class UserProfileProvider extends ChangeNotifier {
   }
 
   Future<bool> _attemptUserSwitch(
-    PlexHomeUser user,
+    HomeUser user,
     BuildContext? context,
-    PlexClientProvider? clientProvider,
+    MediaClientProvider? clientProvider,
     String? errorMessage,
   ) async {
     try {
-      final currentToken = _storageService!.getPlexToken();
+      final currentToken = _storageService!.getToken();
       if (currentToken == null) {
         throw Exception('No Plex.tv authentication token available');
       }
@@ -313,7 +336,7 @@ class UserProfileProvider extends ChangeNotifier {
       appLogger.d('Fetched ${servers.length} servers for new profile');
 
       // Save the new Plex.tv token for future profile operations
-      await _storageService!.savePlexToken(switchResponse.authToken);
+      await _storageService!.saveToken(switchResponse.authToken);
 
       // Update current user UUID in storage
       await _storageService!.saveCurrentUserUUID(user.uuid);

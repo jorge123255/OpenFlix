@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../models/plex_filter.dart';
+import '../models/filter.dart';
 import '../widgets/app_bar_back_button.dart';
 import '../widgets/bottom_sheet_header.dart';
 import '../utils/provider_extensions.dart';
@@ -7,7 +7,7 @@ import '../utils/keyboard_utils.dart';
 import '../i18n/strings.g.dart';
 
 class FiltersBottomSheet extends StatefulWidget {
-  final List<PlexFilter> filters;
+  final List<Filter> filters;
   final Map<String, String> selectedFilters;
   final Function(Map<String, String>) onFiltersChanged;
   final String serverId;
@@ -25,12 +25,12 @@ class FiltersBottomSheet extends StatefulWidget {
 }
 
 class _FiltersBottomSheetState extends State<FiltersBottomSheet> {
-  PlexFilter? _currentFilter;
-  List<PlexFilterValue> _filterValues = [];
+  Filter? _currentFilter;
+  List<FilterValue> _filterValues = [];
   bool _isLoadingValues = false;
   final Map<String, String> _tempSelectedFilters = {};
   final Map<String, String> _filterDisplayNames = {}; // Cache for display names
-  late List<PlexFilter> _sortedFilters;
+  late List<Filter> _sortedFilters;
   final FocusNode _firstItemFocusNode = FocusNode(
     debugLabel: 'FilterFirstItem',
   );
@@ -69,11 +69,11 @@ class _FiltersBottomSheetState extends State<FiltersBottomSheet> {
     _sortedFilters = [...booleanFilters, ...regularFilters];
   }
 
-  bool _isBooleanFilter(PlexFilter filter) {
+  bool _isBooleanFilter(Filter filter) {
     return filter.filterType == 'boolean';
   }
 
-  Future<void> _loadFilterValues(PlexFilter filter) async {
+  Future<void> _loadFilterValues(Filter filter) async {
     setState(() {
       _currentFilter = filter;
       _isLoadingValues = true;

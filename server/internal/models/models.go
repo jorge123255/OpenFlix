@@ -291,6 +291,7 @@ type Channel struct {
 	Group       string `gorm:"size:255;index" json:"group,omitempty"`
 	StreamURL   string `gorm:"size:2000" json:"streamUrl"`
 	Enabled     bool   `gorm:"default:true" json:"enabled"`
+	IsFavorite  bool   `gorm:"default:false" json:"isFavorite"`
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
 }

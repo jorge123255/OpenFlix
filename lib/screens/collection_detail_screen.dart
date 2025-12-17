@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../models/plex_metadata.dart';
+import '../models/media_item.dart';
 import '../providers/settings_provider.dart';
 import '../widgets/media_card.dart';
 import '../widgets/desktop_app_bar.dart';
@@ -12,7 +12,7 @@ import 'base_media_list_detail_screen.dart';
 
 /// Screen to display the contents of a collection
 class CollectionDetailScreen extends StatefulWidget {
-  final PlexMetadata collection;
+  final MediaItem collection;
 
   const CollectionDetailScreen({super.key, required this.collection});
 
@@ -24,7 +24,7 @@ class _CollectionDetailScreenState
     extends BaseMediaListDetailScreen<CollectionDetailScreen>
     with StandardItemLoader<CollectionDetailScreen> {
   @override
-  PlexMetadata get mediaItem => widget.collection;
+  MediaItem get mediaItem => widget.collection;
 
   @override
   String get title => widget.collection.title;
@@ -33,7 +33,7 @@ class _CollectionDetailScreenState
   String get emptyMessage => t.collections.empty;
 
   @override
-  Future<List<PlexMetadata>> fetchItems() async {
+  Future<List<MediaItem>> fetchItems() async {
     return await client.getCollectionItems(widget.collection.ratingKey);
   }
 

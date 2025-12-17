@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import '../client/plex_client.dart';
+import '../client/media_client.dart';
 import '../i18n/strings.g.dart';
 import '../utils/app_logger.dart';
 import '../utils/keyboard_utils.dart';
@@ -45,7 +45,7 @@ class BackNavigationScope extends InheritedWidget {
 }
 
 class MainScreen extends StatefulWidget {
-  final PlexClient client;
+  final MediaClient client;
 
   const MainScreen({super.key, required this.client});
 

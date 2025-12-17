@@ -93,6 +93,19 @@ func (s *Server) Run() error {
 	return s.router.Run(addr)
 }
 
+// reinitializeTMDBAgent creates or updates the TMDB agent with a new API key
+func (s *Server) reinitializeTMDBAgent() {
+	if s.config.Library.TMDBApiKey != "" {
+		dataDir := s.config.GetDataDir()
+		tmdbAgent := metadata.NewTMDBAgent(s.config.Library.TMDBApiKey, s.db, dataDir)
+		s.scanner.SetTMDBAgent(tmdbAgent)
+		fmt.Println("TMDB metadata agent re-initialized with new API key")
+	} else {
+		s.scanner.SetTMDBAgent(nil)
+		fmt.Println("TMDB metadata agent disabled (no API key)")
+	}
+}
+
 // setupRouter configures all routes
 func (s *Server) setupRouter() {
 	gin.SetMode(gin.ReleaseMode)
@@ -103,6 +116,9 @@ func (s *Server) setupRouter() {
 
 	// Health check
 	r.GET("/health", s.healthCheck)
+
+	// Web Admin UI
+	s.setupWebUI(r)
 
 	// Server identity (Plex-compatible)
 	r.GET("/", s.getServerInfo)
@@ -153,6 +169,21 @@ func (s *Server) setupRouter() {
 		admin.POST("/libraries/:id/paths", s.adminAddLibraryPath)
 		admin.DELETE("/libraries/:id/paths/:pathId", s.adminRemoveLibraryPath)
 		admin.POST("/libraries/:id/scan", s.adminScanLibrary)
+		admin.GET("/libraries/:id/stats", s.adminGetLibraryStats)
+
+		// Filesystem browser (admin only)
+		admin.GET("/filesystem/browse", s.adminBrowseFilesystem)
+
+		// Server settings (admin only)
+		admin.GET("/settings", s.adminGetSettings)
+		admin.PUT("/settings", s.adminUpdateSettings)
+
+		// Media management (admin only)
+		admin.GET("/media", s.adminGetMedia)
+		admin.PUT("/media/:id", s.adminUpdateMedia)
+		admin.POST("/media/:id/refresh", s.adminRefreshMediaMetadata)
+		admin.GET("/media/search-tmdb", s.adminSearchTMDB)
+		admin.POST("/media/:id/match", s.adminApplyMediaMatch)
 	}
 
 	// ============ Library API ============
@@ -258,6 +289,7 @@ func (s *Server) setupRouter() {
 		livetv.GET("/channels", s.getChannels)
 		livetv.GET("/channels/:id", s.getChannel)
 		livetv.PUT("/channels/:id", s.updateChannel)
+		livetv.POST("/channels/:id/favorite", s.toggleChannelFavorite)
 
 		// Guide (EPG)
 		livetv.GET("/guide", s.getGuide)

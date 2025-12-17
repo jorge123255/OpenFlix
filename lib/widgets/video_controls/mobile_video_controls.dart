@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../mpv/mpv.dart';
-import '../../models/plex_media_info.dart';
-import '../../models/plex_metadata.dart';
+import '../../models/media_info.dart';
+import '../../models/media_item.dart';
 import '../../utils/desktop_window_padding.dart';
 import '../../utils/duration_formatter.dart';
 import '../../utils/player_utils.dart';
@@ -19,8 +19,8 @@ import 'widgets/timeline_slider.dart';
 /// - Bottom bar: Timeline slider with chapter markers and timestamps
 class MobileVideoControls extends StatelessWidget {
   final Player player;
-  final PlexMetadata metadata;
-  final List<PlexChapter> chapters;
+  final MediaItem metadata;
+  final List<Chapter> chapters;
   final bool chaptersLoaded;
   final int seekTimeSmall;
   final Widget trackChapterControls;

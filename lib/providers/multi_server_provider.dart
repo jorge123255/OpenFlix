@@ -1,13 +1,13 @@
 import 'package:flutter/foundation.dart';
 
-import '../client/plex_client.dart';
+import '../client/media_client.dart';
 import '../services/data_aggregation_service.dart';
 import '../services/multi_server_manager.dart';
 import '../services/plex_auth_service.dart';
 import '../utils/app_logger.dart';
 
 /// Provider for multi-server Plex connections
-/// Manages multiple PlexClient instances and provides data aggregation
+/// Manages multiple MediaClient instances and provides data aggregation
 class MultiServerProvider extends ChangeNotifier {
   final MultiServerManager _serverManager;
   final DataAggregationService _aggregationService;
@@ -26,7 +26,7 @@ class MultiServerProvider extends ChangeNotifier {
   DataAggregationService get aggregationService => _aggregationService;
 
   /// Get client for specific server
-  PlexClient? getClientForServer(String serverId) {
+  MediaClient? getClientForServer(String serverId) {
     return _serverManager.getClient(serverId);
   }
 

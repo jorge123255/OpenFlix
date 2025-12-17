@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../models/dvr.dart';
 import '../models/livetv_channel.dart';
-import '../providers/plex_client_provider.dart';
+import '../providers/media_client_provider.dart';
 import '../utils/app_logger.dart';
 import 'dvr_player_screen.dart';
 
@@ -22,6 +22,8 @@ class _DVRScreenState extends State<DVRScreen> with SingleTickerProviderStateMix
   List<DVRSeriesRule> _rules = [];
   bool _isLoading = true;
   String? _error;
+  String _recordingStatusFilter = 'all'; // all, scheduled, recording, completed, failed
+  String _sortBy = 'date'; // date, title, size
 
   @override
   void initState() {
@@ -43,7 +45,7 @@ class _DVRScreenState extends State<DVRScreen> with SingleTickerProviderStateMix
     });
 
     try {
-      final client = context.read<PlexClientProvider>().client;
+      final client = context.read<MediaClientProvider>().client;
       if (client == null) {
         setState(() {
           _error = 'Not connected to server';
@@ -89,7 +91,7 @@ class _DVRScreenState extends State<DVRScreen> with SingleTickerProviderStateMix
     );
 
     if (confirmed == true) {
-      final client = context.read<PlexClientProvider>().client;
+      final client = context.read<MediaClientProvider>().client;
       if (client != null) {
         final success = await client.deleteDVRRecording(recording.id);
         if (success) {
@@ -119,7 +121,7 @@ class _DVRScreenState extends State<DVRScreen> with SingleTickerProviderStateMix
     );
 
     if (confirmed == true) {
-      final client = context.read<PlexClientProvider>().client;
+      final client = context.read<MediaClientProvider>().client;
       if (client != null) {
         final success = await client.deleteSeriesRule(rule.id);
         if (success) {
@@ -130,7 +132,7 @@ class _DVRScreenState extends State<DVRScreen> with SingleTickerProviderStateMix
   }
 
   Future<void> _toggleRuleEnabled(DVRSeriesRule rule) async {
-    final client = context.read<PlexClientProvider>().client;
+    final client = context.read<MediaClientProvider>().client;
     if (client != null) {
       await client.updateSeriesRule(rule.id, enabled: !rule.enabled);
       _loadData();
@@ -207,32 +209,161 @@ class _DVRScreenState extends State<DVRScreen> with SingleTickerProviderStateMix
       );
     }
 
-    // Group recordings by status
-    final scheduled = _recordings.where((r) => r.isScheduled).toList();
-    final recording = _recordings.where((r) => r.isRecording).toList();
-    final completed = _recordings.where((r) => r.isCompleted).toList();
-    final failed = _recordings.where((r) => r.isFailed).toList();
+    // Filter recordings by status
+    var filtered = _recordings;
+    if (_recordingStatusFilter != 'all') {
+      filtered = _recordings.where((r) => r.status == _recordingStatusFilter).toList();
+    }
 
-    return ListView(
-      padding: const EdgeInsets.all(8),
+    // Sort recordings
+    filtered = List.from(filtered);
+    switch (_sortBy) {
+      case 'title':
+        filtered.sort((a, b) => a.title.compareTo(b.title));
+        break;
+      case 'size':
+        filtered.sort((a, b) => (b.fileSize ?? 0).compareTo(a.fileSize ?? 0));
+        break;
+      case 'date':
+      default:
+        filtered.sort((a, b) => b.startTime.compareTo(a.startTime));
+        break;
+    }
+
+    // Calculate storage stats
+    final totalSize = _recordings.where((r) => r.fileSize != null).fold<int>(
+      0, (sum, r) => sum + (r.fileSize ?? 0));
+    final totalSizeMB = totalSize / (1024 * 1024);
+
+    return Column(
       children: [
-        if (recording.isNotEmpty) ...[
-          _buildSectionHeader('Recording Now', Icons.fiber_manual_record, Colors.red),
-          ...recording.map((r) => _buildRecordingTile(r)),
-        ],
-        if (scheduled.isNotEmpty) ...[
-          _buildSectionHeader('Scheduled', Icons.schedule, Colors.orange),
-          ...scheduled.map((r) => _buildRecordingTile(r)),
-        ],
-        if (completed.isNotEmpty) ...[
-          _buildSectionHeader('Completed', Icons.check_circle, Colors.green),
-          ...completed.map((r) => _buildRecordingTile(r)),
-        ],
-        if (failed.isNotEmpty) ...[
-          _buildSectionHeader('Failed', Icons.error, Colors.grey),
-          ...failed.map((r) => _buildRecordingTile(r)),
-        ],
+        // Filter chips and stats
+        Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Column(
+            children: [
+              // Storage stats
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(12.0),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.storage, size: 20),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Storage: ${totalSizeMB.toStringAsFixed(1)} MB',
+                        style: const TextStyle(fontWeight: FontWeight.w500),
+                      ),
+                      const Spacer(),
+                      Text(
+                        '${_recordings.length} recordings',
+                        style: TextStyle(color: Colors.grey[600]),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              // Filter and sort options
+              Row(
+                children: [
+                  Expanded(
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: [
+                          _buildFilterChip('All', 'all'),
+                          _buildFilterChip('Scheduled', 'scheduled'),
+                          _buildFilterChip('Recording', 'recording'),
+                          _buildFilterChip('Completed', 'completed'),
+                          _buildFilterChip('Failed', 'failed'),
+                        ],
+                      ),
+                    ),
+                  ),
+                  PopupMenuButton<String>(
+                    icon: const Icon(Icons.sort),
+                    tooltip: 'Sort by',
+                    onSelected: (value) {
+                      setState(() => _sortBy = value);
+                    },
+                    itemBuilder: (context) => [
+                      PopupMenuItem(
+                        value: 'date',
+                        child: Row(
+                          children: [
+                            if (_sortBy == 'date') const Icon(Icons.check, size: 18),
+                            if (_sortBy != 'date') const SizedBox(width: 18),
+                            const SizedBox(width: 8),
+                            const Text('Date'),
+                          ],
+                        ),
+                      ),
+                      PopupMenuItem(
+                        value: 'title',
+                        child: Row(
+                          children: [
+                            if (_sortBy == 'title') const Icon(Icons.check, size: 18),
+                            if (_sortBy != 'title') const SizedBox(width: 18),
+                            const SizedBox(width: 8),
+                            const Text('Title'),
+                          ],
+                        ),
+                      ),
+                      PopupMenuItem(
+                        value: 'size',
+                        child: Row(
+                          children: [
+                            if (_sortBy == 'size') const Icon(Icons.check, size: 18),
+                            if (_sortBy != 'size') const SizedBox(width: 18),
+                            const SizedBox(width: 8),
+                            const Text('Size'),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        // Recordings list
+        Expanded(
+          child: filtered.isEmpty
+              ? Center(
+                  child: Text(
+                    'No ${_recordingStatusFilter != 'all' ? _recordingStatusFilter : ''} recordings',
+                    style: TextStyle(color: Colors.grey[600]),
+                  ),
+                )
+              : ListView.builder(
+                  padding: const EdgeInsets.all(8),
+                  itemCount: filtered.length,
+                  itemBuilder: (context, index) {
+                    return _buildRecordingTile(filtered[index]);
+                  },
+                ),
+        ),
       ],
+    );
+  }
+
+  Widget _buildFilterChip(String label, String value) {
+    final isSelected = _recordingStatusFilter == value;
+    final count = value == 'all'
+        ? _recordings.length
+        : _recordings.where((r) => r.status == value).length;
+
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: FilterChip(
+        label: Text('$label ($count)'),
+        selected: isSelected,
+        onSelected: (_) {
+          setState(() => _recordingStatusFilter = value);
+        },
+      ),
     );
   }
 
@@ -492,7 +623,7 @@ class _ScheduleRecordingDialogState extends State<ScheduleRecordingDialog> {
 
     setState(() => _isSubmitting = true);
 
-    final client = context.read<PlexClientProvider>().client;
+    final client = context.read<MediaClientProvider>().client;
     if (client != null) {
       final recording = await client.scheduleRecording(
         channelId: widget.channel.id,

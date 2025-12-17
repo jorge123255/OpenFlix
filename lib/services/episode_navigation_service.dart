@@ -2,16 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../mpv/mpv.dart';
-import '../client/plex_client.dart';
-import '../models/plex_metadata.dart';
+import '../client/media_client.dart';
+import '../models/media_item.dart';
 import '../providers/playback_state_provider.dart';
 import '../utils/app_logger.dart';
 import '../utils/video_player_navigation.dart';
 
 /// Result of loading adjacent episodes
 class AdjacentEpisodes {
-  final PlexMetadata? next;
-  final PlexMetadata? previous;
+  final MediaItem? next;
+  final MediaItem? previous;
 
   AdjacentEpisodes({this.next, this.previous});
 
@@ -36,8 +36,8 @@ class EpisodeNavigationService {
   /// - Previous episode doesn't exist (first episode)
   Future<AdjacentEpisodes> loadAdjacentEpisodes({
     required BuildContext context,
-    required PlexClient client,
-    required PlexMetadata metadata,
+    required MediaClient client,
+    required MediaItem metadata,
   }) async {
     try {
       final playbackState = context.read<PlaybackStateProvider>();
@@ -76,7 +76,7 @@ class EpisodeNavigationService {
   /// selections when transitioning between episodes.
   Future<void> navigateToEpisode({
     required BuildContext context,
-    required PlexMetadata episode,
+    required MediaItem episode,
     required Player? player,
     bool usePushReplacement = true,
   }) async {

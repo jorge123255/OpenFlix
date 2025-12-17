@@ -23,6 +23,6 @@ PlayQueueResponse _$PlayQueueResponseFromJson(Map<String, dynamic> json) =>
       playQueueVersion: (json['playQueueVersion'] as num).toInt(),
       size: (json['size'] as num?)?.toInt(),
       items: (json['Metadata'] as List<dynamic>?)
-          ?.map((e) => PlexMetadata.fromJson(e as Map<String, dynamic>))
+          ?.map((e) => MediaItem.fromJson(e as Map<String, dynamic>))
           .toList(),
     );
