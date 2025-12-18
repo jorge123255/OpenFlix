@@ -30,7 +30,7 @@ class ChannelListItem extends StatelessWidget {
         ),
         decoration: BoxDecoration(
           color: isCurrentChannel
-              ? theme.colorScheme.primary.withOpacity(0.2)
+              ? theme.colorScheme.primary.withValues(alpha: 0.2)
               : null,
           border: Border(
             left: BorderSide(
@@ -40,7 +40,7 @@ class ChannelListItem extends StatelessWidget {
               width: 4,
             ),
             bottom: BorderSide(
-              color: Colors.white.withOpacity(0.05),
+              color: Colors.white.withValues(alpha: 0.05),
               width: 1,
             ),
           ),
@@ -116,7 +116,7 @@ class ChannelListItem extends StatelessWidget {
                             borderRadius: BorderRadius.circular(2),
                             child: LinearProgressIndicator(
                               value: now.progress,
-                              backgroundColor: Colors.white.withOpacity(0.1),
+                              backgroundColor: Colors.white.withValues(alpha: 0.1),
                               valueColor: AlwaysStoppedAnimation<Color>(
                                 isCurrentChannel
                                     ? theme.colorScheme.primary
@@ -175,7 +175,7 @@ class ChannelListItem extends StatelessWidget {
       height: 48,
       decoration: BoxDecoration(
         color: isCurrentChannel
-            ? theme.colorScheme.primary.withOpacity(0.3)
+            ? theme.colorScheme.primary.withValues(alpha: 0.3)
             : theme.colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(6),
       ),

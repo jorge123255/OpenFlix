@@ -379,7 +379,7 @@ class _DVRPlayerScreenState extends State<DVRPlayerScreen> {
                       vertical: 6,
                     ),
                     decoration: BoxDecoration(
-                      color: Colors.red.withOpacity(0.8),
+                      color: Colors.red.withValues(alpha: 0.8),
                       borderRadius: BorderRadius.circular(4),
                     ),
                     child: const Text(
@@ -409,10 +409,10 @@ class _DVRPlayerScreenState extends State<DVRPlayerScreen> {
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: [
-            Colors.black.withOpacity(0.7),
+            Colors.black.withValues(alpha: 0.7),
             Colors.transparent,
             Colors.transparent,
-            Colors.black.withOpacity(0.7),
+            Colors.black.withValues(alpha: 0.7),
           ],
           stops: const [0.0, 0.2, 0.8, 1.0],
         ),
@@ -583,7 +583,7 @@ class _DVRPlayerScreenState extends State<DVRPlayerScreen> {
                                 bottom: 8,
                                 child: Container(
                                   decoration: BoxDecoration(
-                                    color: Colors.red.withOpacity(0.6),
+                                    color: Colors.red.withValues(alpha: 0.6),
                                     borderRadius: BorderRadius.circular(2),
                                   ),
                                 ),

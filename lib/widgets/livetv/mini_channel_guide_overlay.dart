@@ -134,7 +134,7 @@ class _MiniChannelGuideOverlayState extends State<MiniChannelGuideOverlay>
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.5),
+                      color: Colors.black.withValues(alpha: 0.5),
                       blurRadius: 20,
                       spreadRadius: 5,
                     ),
@@ -153,7 +153,7 @@ class _MiniChannelGuideOverlayState extends State<MiniChannelGuideOverlay>
                         ),
                         border: Border(
                           bottom: BorderSide(
-                            color: Colors.white.withOpacity(0.1),
+                            color: Colors.white.withValues(alpha: 0.1),
                             width: 1,
                           ),
                         ),
@@ -247,7 +247,7 @@ class _MiniChannelGuideOverlayState extends State<MiniChannelGuideOverlay>
                         color: Colors.grey[850],
                         border: Border(
                           top: BorderSide(
-                            color: Colors.white.withOpacity(0.1),
+                            color: Colors.white.withValues(alpha: 0.1),
                             width: 1,
                           ),
                         ),

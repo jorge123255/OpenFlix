@@ -22,11 +22,11 @@ class LiveTVVolumeOverlay extends StatelessWidget {
         width: 120,
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: Colors.black.withOpacity(0.85),
+          color: Colors.black.withValues(alpha: 0.85),
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.3),
+              color: Colors.black.withValues(alpha: 0.3),
               blurRadius: 10,
               spreadRadius: 2,
             ),
@@ -68,7 +68,7 @@ class LiveTVVolumeOverlay extends StatelessWidget {
                     width: 8,
                     height: 200,
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
+                      color: Colors.white.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(4),
                     ),
                   ),
@@ -83,7 +83,7 @@ class LiveTVVolumeOverlay extends StatelessWidget {
                         end: Alignment.topCenter,
                         colors: [
                           _getVolumeColor(displayVolume),
-                          _getVolumeColor(displayVolume).withOpacity(0.7),
+                          _getVolumeColor(displayVolume).withValues(alpha: 0.7),
                         ],
                       ),
                       borderRadius: BorderRadius.circular(4),
@@ -98,7 +98,7 @@ class LiveTVVolumeOverlay extends StatelessWidget {
                       child: Container(
                         width: 12,
                         height: 1,
-                        color: Colors.white.withOpacity(0.3),
+                        color: Colors.white.withValues(alpha: 0.3),
                       ),
                     );
                   }),
@@ -113,10 +113,10 @@ class LiveTVVolumeOverlay extends StatelessWidget {
                   vertical: 4,
                 ),
                 decoration: BoxDecoration(
-                  color: Colors.red.withOpacity(0.2),
+                  color: Colors.red.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(4),
                   border: Border.all(
-                    color: Colors.red.withOpacity(0.5),
+                    color: Colors.red.withValues(alpha: 0.5),
                     width: 1,
                   ),
                 ),

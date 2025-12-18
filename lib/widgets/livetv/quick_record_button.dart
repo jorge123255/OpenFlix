@@ -40,8 +40,8 @@ class QuickRecordButton extends StatelessWidget {
           : 'Quick Record (R)',
       style: isScheduled
           ? IconButton.styleFrom(
-              backgroundColor: Colors.red.withOpacity(0.2),
-              side: BorderSide(color: Colors.red.withOpacity(0.5), width: 1.5),
+              backgroundColor: Colors.red.withValues(alpha: 0.2),
+              side: BorderSide(color: Colors.red.withValues(alpha: 0.5), width: 1.5),
             )
           : null,
     );
