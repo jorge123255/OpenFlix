@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
-import '../client/media_client.dart';
 import '../models/livetv_channel.dart';
 import '../providers/media_client_provider.dart';
 import '../utils/app_logger.dart';
@@ -19,7 +18,6 @@ class EPGGuideScreen extends StatefulWidget {
 class _EPGGuideScreenState extends State<EPGGuideScreen> {
   LiveTVGuideData? _guideData;
   bool _isLoading = true;
-  DateTime _currentTime = DateTime.now();
   final ScrollController _horizontalScrollController = ScrollController();
   final ScrollController _verticalScrollController = ScrollController();
   Timer? _timeUpdateTimer;
@@ -112,21 +110,6 @@ class _EPGGuideScreenState extends State<EPGGuideScreen> {
         curve: Curves.easeOut,
       );
     }
-  }
-
-  void _goToTime(DateTime time) {
-    if (_guideData == null) return;
-
-    final start = _guideData!.startTime;
-    final minutesSinceStart = time.difference(start).inMinutes;
-    final pixelsPerMinute = timeSlotWidth / 30;
-    final scrollOffset = minutesSinceStart * pixelsPerMinute - 200;
-
-    _horizontalScrollController.animateTo(
-      scrollOffset.clamp(0, _horizontalScrollController.position.maxScrollExtent),
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeOut,
-    );
   }
 
   Widget _buildTimeHeader() {

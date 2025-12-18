@@ -367,25 +367,6 @@ class _DVRScreenState extends State<DVRScreen> with SingleTickerProviderStateMix
     );
   }
 
-  Widget _buildSectionHeader(String title, IconData icon, Color color) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-      child: Row(
-        children: [
-          Icon(icon, color: color, size: 20),
-          const SizedBox(width: 8),
-          Text(
-            title,
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              color: color,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   void _playRecording(DVRRecording recording) {
     if (!recording.isCompleted || recording.filePath == null) return;
 
