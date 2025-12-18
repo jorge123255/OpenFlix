@@ -91,6 +91,7 @@ class _DVRScreenState extends State<DVRScreen> with SingleTickerProviderStateMix
     );
 
     if (confirmed == true) {
+      if (!mounted) return;
       final client = context.read<MediaClientProvider>().client;
       if (client != null) {
         final success = await client.deleteDVRRecording(recording.id);
@@ -121,6 +122,7 @@ class _DVRScreenState extends State<DVRScreen> with SingleTickerProviderStateMix
     );
 
     if (confirmed == true) {
+      if (!mounted) return;
       final client = context.read<MediaClientProvider>().client;
       if (client != null) {
         final success = await client.deleteSeriesRule(rule.id);

@@ -1,4 +1,5 @@
 /// Utility functions to format MPV player statistics for display
+library;
 
 /// Formats bitrate in human-readable format (Kbps/Mbps)
 String formatBitrate(int? bitrate) {
