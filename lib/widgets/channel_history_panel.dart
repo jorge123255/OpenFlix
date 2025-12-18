@@ -65,7 +65,7 @@ class ChannelHistoryPanel extends StatelessWidget {
                   color: Colors.grey[900],
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.5),
+                      color: Colors.black.withValues(alpha: 0.5),
                       blurRadius: 10,
                       spreadRadius: 5,
                     ),
@@ -81,7 +81,7 @@ class ChannelHistoryPanel extends StatelessWidget {
                           color: Colors.grey[850],
                           border: Border(
                             bottom: BorderSide(
-                              color: Colors.white.withOpacity(0.1),
+                              color: Colors.white.withValues(alpha: 0.1),
                               width: 1,
                             ),
                           ),
@@ -222,7 +222,7 @@ class _ChannelHistoryTile extends StatelessWidget {
         decoration: BoxDecoration(
           border: Border(
             bottom: BorderSide(
-              color: Colors.white.withOpacity(0.05),
+              color: Colors.white.withValues(alpha: 0.05),
               width: 1,
             ),
           ),
