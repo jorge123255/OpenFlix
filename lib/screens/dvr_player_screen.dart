@@ -120,12 +120,13 @@ class _DVRPlayerScreenState extends State<DVRPlayerScreen> {
       });
 
       // Get the stream URL for the recording
+      if (!mounted) return;
       final client = context.read<MediaClientProvider>().client;
       if (client != null && widget.recording.filePath != null) {
         // Construct the streaming URL for the recording file
         final base = '${client.config.baseUrl}/dvr/stream/${widget.recording.id}';
         final separator = base.contains('?') ? '&' : '?';
-        final streamUrl = '${base}${separator}X-Plex-Token=${client.config.token}';
+        final streamUrl = '$base${separator}X-Plex-Token=${client.config.token}';
         appLogger.d('Playing DVR recording: ${widget.recording.title} - $streamUrl');
 
         final headers = <String, String>{
