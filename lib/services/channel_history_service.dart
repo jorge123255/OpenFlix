@@ -59,9 +59,6 @@ class ChannelHistoryService {
   /// List of channel history entries in chronological order (most recent last)
   final List<ChannelHistoryEntry> _history = [];
 
-  /// Current position in history for back/forward navigation
-  int _currentPosition = -1;
-
   /// Whether the service has been initialized
   bool _isInitialized = false;
 
@@ -104,16 +101,12 @@ class ChannelHistoryService {
     );
     _history.add(newEntry);
 
-    // Update current position to the end
-    _currentPosition = _history.length - 1;
-
     // Start tracking watch time for this channel
     _currentChannelStartTime = DateTime.now();
 
     // Trim history if it exceeds max size
     if (_history.length > _maxHistorySize) {
       _history.removeAt(0);
-      _currentPosition = _history.length - 1;
     }
 
     // Save to persistent storage
@@ -160,7 +153,6 @@ class ChannelHistoryService {
   /// Clear all channel history
   Future<void> clearHistory() async {
     _history.clear();
-    _currentPosition = -1;
     await _saveHistory();
     appLogger.d('Channel history cleared');
   }
@@ -177,7 +169,6 @@ class ChannelHistoryService {
         _history.addAll(
           decoded.map((e) => ChannelHistoryEntry.fromJson(e as Map<String, dynamic>)),
         );
-        _currentPosition = _history.isEmpty ? -1 : _history.length - 1;
       }
     } catch (e) {
       appLogger.e('Failed to load channel history', error: e);
@@ -200,7 +191,6 @@ class ChannelHistoryService {
   /// Reset the service (for testing)
   void reset() {
     _history.clear();
-    _currentPosition = -1;
     _isInitialized = false;
   }
 }

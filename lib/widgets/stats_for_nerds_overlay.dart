@@ -27,8 +27,6 @@ class _StatsForNerdsOverlayState extends State<StatsForNerdsOverlay> {
   String _audioCodec = 'N/A';
   String _resolution = 'N/A';
   String _fps = 'N/A';
-  String _videoBitrate = 'N/A';
-  String _audioBitrate = 'N/A';
   String _bufferHealth = 'N/A';
   String _droppedFrames = 'N/A';
   String _decoderInfo = 'N/A';
@@ -134,14 +132,10 @@ class _StatsForNerdsOverlayState extends State<StatsForNerdsOverlay> {
           final totalDropped = (droppedFrameDecoder ?? 0) + (droppedFrameOutput ?? 0);
           _droppedFrames = formatDroppedFrames(totalDropped, null);
 
-          // Bitrate estimates (MPV doesn't always expose this directly for live streams)
-          _videoBitrate = 'N/A'; // Would need container-estimated-bitrate or similar
-          _audioBitrate = 'N/A';
-
           // Buffer health - use cache status
           try {
             final cacheUsed = widget.player.state.buffer;
-            if (cacheUsed != null && cacheUsed.inSeconds > 0) {
+            if (cacheUsed.inSeconds > 0) {
               _bufferHealth = '${cacheUsed.inSeconds.toDouble().toStringAsFixed(1)}s';
             } else {
               _bufferHealth = 'Live';
