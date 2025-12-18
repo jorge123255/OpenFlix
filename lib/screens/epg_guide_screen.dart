@@ -39,7 +39,7 @@ class _EPGGuideScreenState extends State<EPGGuideScreen> {
     _timeUpdateTimer = Timer.periodic(const Duration(minutes: 1), (_) {
       if (mounted) {
         setState(() {
-          _currentTime = DateTime.now();
+          // Force rebuild to update time-dependent widgets
         });
       }
     });
