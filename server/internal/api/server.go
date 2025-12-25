@@ -27,6 +27,7 @@ type Server struct {
 	scanner        *library.Scanner
 	transcoder     *transcode.Transcoder
 	recorder       *dvr.Recorder
+	epgService     *EPGService
 }
 
 // NewServer creates a new API server
@@ -74,6 +75,9 @@ func NewServer(cfg *config.Config, db *gorm.DB) *Server {
 		}
 	}
 
+	// Initialize EPG service
+	epgService := NewEPGService()
+
 	s := &Server{
 		config:         cfg,
 		db:             db,
@@ -82,6 +86,7 @@ func NewServer(cfg *config.Config, db *gorm.DB) *Server {
 		scanner:        scanner,
 		transcoder:     transcoder,
 		recorder:       recorder,
+		epgService:     epgService,
 	}
 	s.setupRouter()
 	return s
@@ -332,6 +337,9 @@ func (s *Server) setupRouter() {
 		// Recording Playback
 		dvrGroup.GET("/stream/:id", s.streamRecording)
 	}
+
+	// ============ Gracenote EPG API ============
+	s.epgService.RegisterRoutes(r)
 
 	// ============ Server Preferences ============
 	// Plex uses /:/prefs - we use /-/prefs
