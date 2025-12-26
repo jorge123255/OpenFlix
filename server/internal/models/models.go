@@ -271,9 +271,19 @@ type M3USource struct {
 type EPGSource struct {
 	ID            uint       `gorm:"primaryKey" json:"id"`
 	Name          string     `gorm:"size:255" json:"name"`
-	URL           string     `gorm:"size:2000" json:"url"`
+	ProviderType  string     `gorm:"size:50;default:xmltv" json:"providerType"` // xmltv or gracenote
+
+	// XMLTV settings
+	URL           string     `gorm:"size:2000" json:"url,omitempty"`
+
+	// Gracenote settings
+	GracenoteAffiliate   string `gorm:"size:50" json:"gracenoteAffiliate,omitempty"`   // e.g., orbebb
+	GracenotePostalCode  string `gorm:"size:20" json:"gracenotePostalCode,omitempty"`  // ZIP code
+	GracenoteHours       int    `gorm:"default:6" json:"gracenoteHours,omitempty"`     // Hours to fetch
+
 	Enabled       bool       `gorm:"default:true" json:"enabled"`
 	LastFetched   *time.Time `json:"lastFetched,omitempty"`
+	LastError     string     `gorm:"type:text" json:"lastError,omitempty"`
 	ProgramCount  int        `json:"programCount"`
 	ChannelCount  int        `json:"channelCount"`
 	CreatedAt     time.Time  `json:"createdAt"`
@@ -284,6 +294,7 @@ type EPGSource struct {
 type Channel struct {
 	ID          uint   `gorm:"primaryKey" json:"id"`
 	M3USourceID uint   `gorm:"index" json:"sourceId"`
+	EPGSourceID *uint  `gorm:"index" json:"epgSourceId,omitempty"` // Assigned EPG source
 	ChannelID   string `gorm:"size:255;index" json:"channelId"` // EPG channel ID
 	Number      int    `gorm:"index" json:"number"`
 	Name        string `gorm:"size:255" json:"name"`
@@ -298,16 +309,19 @@ type Channel struct {
 
 // Program represents an EPG program entry
 type Program struct {
-	ID          uint      `gorm:"primaryKey" json:"id"`
-	ChannelID   string    `gorm:"size:255;index" json:"channelId"`
-	Title       string    `gorm:"size:500" json:"title"`
-	Description string    `gorm:"type:text" json:"description,omitempty"`
-	Start       time.Time `gorm:"index" json:"start"`
-	End         time.Time `gorm:"index" json:"end"`
-	Icon        string    `gorm:"size:2000" json:"icon,omitempty"`
-	Category    string    `gorm:"size:100" json:"category,omitempty"`
-	EpisodeNum  string    `gorm:"size:50" json:"episodeNum,omitempty"`
-	CreatedAt   time.Time
+	ID           uint      `gorm:"primaryKey" json:"id"`
+	ChannelID    string    `gorm:"size:255;index" json:"channelId"`
+	CallSign     string    `gorm:"size:50" json:"callSign,omitempty"`     // Station call letters (e.g., "WMAQ", "WBBM")
+	ChannelNo    string    `gorm:"size:20" json:"channelNo,omitempty"`     // Channel number (e.g., "5", "7.1")
+	AffiliateName string   `gorm:"size:100" json:"affiliateName,omitempty"` // Network name (e.g., "NBC", "CBS")
+	Title        string    `gorm:"size:500" json:"title"`
+	Description  string    `gorm:"type:text" json:"description,omitempty"`
+	Start        time.Time `gorm:"index" json:"start"`
+	End          time.Time `gorm:"index" json:"end"`
+	Icon         string    `gorm:"size:2000" json:"icon,omitempty"`
+	Category     string    `gorm:"size:100" json:"category,omitempty"`
+	EpisodeNum   string    `gorm:"size:50" json:"episodeNum,omitempty"`
+	CreatedAt    time.Time
 }
 
 // ========== DVR Models ==========

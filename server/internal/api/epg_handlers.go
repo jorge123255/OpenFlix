@@ -11,16 +11,16 @@ import (
 
 // EPGService handles EPG (Electronic Program Guide) requests
 type EPGService struct {
-	gracenoteClient *gracenote.Client
+	gracenoteClient *gracenote.BrowserClient
 	cache           *gracenote.Cache
 }
 
 // NewEPGService creates a new EPG service
 func NewEPGService() *EPGService {
-	// Initialize Gracenote client
-	gnClient := gracenote.NewClient(gracenote.Config{
+	// Initialize Gracenote browser client (uses headless Chrome for cookies)
+	gnClient := gracenote.NewBrowserClient(gracenote.Config{
 		BaseURL:   "https://tvlistings.gracenote.com",
-		UserAgent: "Mozilla/5.0 (compatible; Plezy/1.0)",
+		UserAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
 		Timeout:   30 * time.Second,
 	})
 

@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 
 import '../models/livetv_channel.dart';
 import '../providers/media_client_provider.dart';
+import '../services/gracenote_epg_service.dart';
 import '../utils/app_logger.dart';
 import '../utils/desktop_window_padding.dart';
 import '../widgets/focus/focus_indicator.dart';
@@ -95,6 +96,101 @@ class _LiveTVGuideScreenState extends State<LiveTVGuideScreen> {
     final minutes = now.minute;
     final snappedMinutes = minutes < 30 ? 0 : 30;
     return DateTime(now.year, now.month, now.day, now.hour, snappedMinutes);
+  }
+
+  Future<void> _testGracenote() async {
+    try {
+      // Show loading dialog
+      if (!mounted) return;
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(
+          child: Card(
+            child: Padding(
+              padding: EdgeInsets.all(24.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 16),
+                  Text('Testing Gracenote EPG...'),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+
+      final epgService = GracenoteEPGService();
+      final channels = await epgService.getTVListings(
+        affiliateId: 'orbebb',
+        hours: 3,
+      );
+
+      if (!mounted) return;
+      Navigator.pop(context); // Close loading dialog
+
+      // Show results
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('✅ Gracenote EPG Test'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Success! Got ${channels.length} channels'),
+                const SizedBox(height: 16),
+                if (channels.isNotEmpty) ...[
+                  const Text('Sample channels:', style: TextStyle(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  ...channels.take(5).map((ch) => Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('${ch.channelNo} - ${ch.callSign}'),
+                            if (ch.events.isNotEmpty)
+                              Text(
+                                '  Now: ${ch.events.first.program.title}',
+                                style: const TextStyle(fontSize: 12, color: Colors.grey),
+                              ),
+                          ],
+                        ),
+                      )),
+                ],
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Close'),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.pop(context); // Close loading dialog if open
+
+      // Show error
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('❌ Gracenote Test Failed'),
+          content: Text('Error: $e'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Close'),
+            ),
+          ],
+        ),
+      );
+    }
   }
 
   Future<void> _loadGuide({bool silent = false}) async {
@@ -298,6 +394,11 @@ class _LiveTVGuideScreenState extends State<LiveTVGuideScreen> {
                   .toList(),
             ),
           IconButton(
+            icon: const Icon(Icons.science),
+            tooltip: 'Test Gracenote EPG',
+            onPressed: _testGracenote,
+          ),
+          IconButton(
             icon: const Icon(Icons.refresh),
             tooltip: 'Refresh',
             onPressed: () => _loadGuide(),
@@ -305,6 +406,11 @@ class _LiveTVGuideScreenState extends State<LiveTVGuideScreen> {
         ]),
       ),
       body: _buildBody(),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _testGracenote,
+        tooltip: 'Test Gracenote EPG',
+        child: const Icon(Icons.science),
+      ),
     );
   }
 

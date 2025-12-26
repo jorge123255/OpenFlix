@@ -9,6 +9,8 @@ import type {
   FilesystemBrowseResponse,
   M3USource,
   EPGSource,
+  EPGChannel,
+  ProgramsResponse,
   Recording,
   SeriesRule,
   ServerStatus,
@@ -179,7 +181,35 @@ class ApiClient {
     return response.data.sources || []
   }
 
-  async createEPGSource(data: { name: string; url: string }): Promise<EPGSource> {
+  async previewEPGSource(data: {
+    postalCode: string
+    affiliate?: string
+    hours?: number
+  }): Promise<{
+    affiliate: string
+    postalCode: string
+    totalChannels: number
+    totalPrograms: number
+    previewChannels: Array<{
+      channelId: string
+      callSign: string
+      channelNo: string
+      affiliateName: string
+      programCount: number
+    }>
+  }> {
+    const response = await this.client.post('/livetv/epg/sources/preview', data)
+    return response.data
+  }
+
+  async createEPGSource(data: {
+    name: string
+    providerType: 'xmltv' | 'gracenote'
+    url?: string
+    gracenoteAffiliate?: string
+    gracenotePostalCode?: string
+    gracenoteHours?: number
+  }): Promise<EPGSource> {
     const response = await this.client.post<EPGSource>('/livetv/epg/sources', data)
     return response.data
   }
@@ -190,6 +220,23 @@ class ApiClient {
 
   async refreshEPG(): Promise<void> {
     await this.client.post('/livetv/epg/refresh')
+  }
+
+  async getEPGPrograms(params?: {
+    page?: number
+    limit?: number
+    epgSourceId?: number
+    channelId?: string
+  }): Promise<ProgramsResponse> {
+    const response = await this.client.get<ProgramsResponse>('/livetv/epg/programs', { params })
+    return response.data
+  }
+
+  async getEPGChannels(epgSourceId?: number): Promise<EPGChannel[]> {
+    const response = await this.client.get<{ channels: EPGChannel[] }>('/livetv/epg/channels', {
+      params: epgSourceId ? { epgSourceId } : undefined
+    })
+    return response.data.channels || []
   }
 
   // DVR endpoints

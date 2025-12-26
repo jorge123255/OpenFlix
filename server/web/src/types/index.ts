@@ -108,9 +108,20 @@ export interface M3USource {
 export interface EPGSource {
   id: number
   name: string
-  url: string
-  lastRefresh?: string
+  providerType: 'xmltv' | 'gracenote'
+  // XMLTV fields
+  url?: string
+  // Gracenote fields
+  gracenoteAffiliate?: string
+  gracenotePostalCode?: string
+  gracenoteHours?: number
+  // Common fields
+  lastFetched?: string
+  programCount?: number
+  channelCount?: number
+  enabled: boolean
   createdAt: string
+  updatedAt: string
 }
 
 export interface Channel {
@@ -119,6 +130,34 @@ export interface Channel {
   name: string
   logo?: string
   sourceId: number
+  epgSourceId?: number
+  channelId?: string // EPG channel ID for mapping
+}
+
+export interface EPGChannel {
+  channelId: string
+  sampleTitle: string
+}
+
+export interface Program {
+  id: number
+  channelId: string
+  title: string
+  description?: string
+  start: string
+  end: string
+  icon?: string
+  category?: string
+  episodeNum?: string
+  channelName?: string
+}
+
+export interface ProgramsResponse {
+  programs: Program[]
+  total: number
+  page: number
+  limit: number
+  pages: number
 }
 
 // DVR types
