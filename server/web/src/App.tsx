@@ -7,6 +7,7 @@ import { UsersPage } from './pages/Users'
 import { LibrariesPage } from './pages/Libraries'
 import { MediaPage } from './pages/Media'
 import { LiveTVPage } from './pages/LiveTV'
+import { EPGEditorSimplePage } from './pages/EPGEditorSimple'
 import { DVRPage } from './pages/DVR'
 import { SettingsPage } from './pages/Settings'
 import { api } from './api/client'
@@ -46,6 +47,7 @@ function App() {
             <Route path="libraries" element={<LibrariesPage />} />
             <Route path="media" element={<MediaPage />} />
             <Route path="livetv" element={<LiveTVPage />} />
+            <Route path="livetv/epg-editor" element={<EPGEditorSimplePage />} />
             <Route path="dvr" element={<DVRPage />} />
             <Route path="settings" element={<SettingsPage />} />
           </Route>

@@ -294,6 +294,8 @@ func (s *Server) setupRouter() {
 		livetv.GET("/channels", s.getChannels)
 		livetv.GET("/channels/:id", s.getChannel)
 		livetv.PUT("/channels/:id", s.updateChannel)
+		livetv.POST("/channels/bulk-map", s.bulkMapChannels)      // Bulk map multiple channels
+		livetv.DELETE("/channels/:id/epg-mapping", s.unmapChannel) // Remove EPG mapping
 		livetv.POST("/channels/:id/favorite", s.toggleChannelFavorite)
 
 		// Guide (EPG)
@@ -303,6 +305,7 @@ func (s *Server) setupRouter() {
 
 		// EPG Sources (standalone XMLTV sources)
 		livetv.GET("/epg/sources", s.getEPGSources)
+		livetv.POST("/epg/sources/preview", s.previewEPGSource) // Preview before adding
 		livetv.POST("/epg/sources", s.addEPGSource)
 		livetv.PUT("/epg/sources/:id", s.updateEPGSource)
 		livetv.DELETE("/epg/sources/:id", s.deleteEPGSource)
@@ -311,6 +314,8 @@ func (s *Server) setupRouter() {
 		// EPG management
 		livetv.GET("/epg/stats", s.getEPGStats)
 		livetv.POST("/epg/refresh", s.refreshAllEPG)
+		livetv.GET("/epg/programs", s.getEPGPrograms)
+		livetv.GET("/epg/channels", s.getEPGChannels)
 	}
 
 	// ============ DVR API ============

@@ -2,6 +2,7 @@ package livetv
 
 import (
 	"compress/gzip"
+	"context"
 	"encoding/xml"
 	"fmt"
 	"io"
@@ -9,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/openflix/openflix-server/internal/epg/gracenote"
 	"github.com/openflix/openflix-server/internal/models"
 	"gorm.io/gorm"
 )
@@ -383,16 +385,141 @@ func (p *EPGParser) ImportProgramsFromEPGSource(source *models.EPGSource, xmltv 
 	return imported, len(channelSet), nil
 }
 
-// RefreshEPGSource refreshes programs from a standalone EPG source
-func (p *EPGParser) RefreshEPGSource(source *models.EPGSource) error {
-	xmltv, err := p.FetchAndParseEPG(source.URL)
+// ImportProgramsFromGracenote imports programs from Gracenote TV listings
+func (p *EPGParser) ImportProgramsFromGracenote(source *models.EPGSource) (int, int, error) {
+	imported := 0
+	now := time.Now()
+
+	// Create Gracenote client
+	gnClient := gracenote.NewBrowserClient(gracenote.Config{
+		BaseURL:   "https://tvlistings.gracenote.com",
+		UserAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+		Timeout:   30 * time.Second,
+	})
+
+	// Fetch listings
+	ctx := context.Background()
+	gridResp, err := gnClient.GetListingsForAffiliate(
+		ctx,
+		source.GracenoteAffiliate,
+		source.GracenotePostalCode,
+		source.GracenoteHours,
+	)
 	if err != nil {
-		return err
+		return 0, 0, fmt.Errorf("failed to fetch Gracenote listings: %w", err)
 	}
 
-	imported, channelCount, err := p.ImportProgramsFromEPGSource(source, xmltv)
-	if err != nil {
-		return err
+	// Delete old programs (before today)
+	p.db.Where("start < ?", now.Add(-24*time.Hour)).Delete(&models.Program{})
+
+	// Count unique channels
+	channelSet := make(map[string]bool)
+
+	// Process each channel and its programs
+	for i, channel := range gridResp.Channels {
+		channelID := fmt.Sprintf("gracenote-%s-%s", source.GracenoteAffiliate, channel.ChannelID)
+		channelSet[channelID] = true
+
+		// Debug: print first channel to see what data we're getting
+		if i == 0 {
+			fmt.Printf("🔍 DEBUG - First channel data:\n")
+			fmt.Printf("  ChannelID: %s\n", channel.ChannelID)
+			fmt.Printf("  CallSign: '%s'\n", channel.CallSign)
+			fmt.Printf("  ChannelNo: '%s'\n", channel.ChannelNo)
+			fmt.Printf("  AffiliateName: '%s'\n", channel.AffiliateName)
+			fmt.Printf("  Thumbnail: '%s'\n", channel.Thumbnail)
+		}
+
+		// Process each event/program
+		for _, event := range channel.Events {
+			// Parse start and end times
+			start, err := time.Parse(time.RFC3339, event.StartTime)
+			if err != nil {
+				continue
+			}
+
+			end, err := time.Parse(time.RFC3339, event.EndTime)
+			if err != nil {
+				continue
+			}
+
+			// Skip programs in the past
+			if end.Before(now) {
+				continue
+			}
+
+			// Get category
+			category := ""
+			if len(event.Tags) > 0 {
+				category = event.Tags[0]
+			}
+
+			// Get icon
+			icon := event.Thumbnail
+			if icon == "" && channel.Thumbnail != "" {
+				icon = channel.Thumbnail
+			}
+
+			// Check if program already exists
+			var existing models.Program
+			result := p.db.Where("channel_id = ? AND start = ?", channelID, start).First(&existing)
+
+			if result.Error == nil {
+				// Update existing
+				existing.End = end
+				existing.Title = event.Program.Title
+				existing.Description = event.Program.ShortDesc
+				existing.Category = category
+				existing.Icon = icon
+				existing.CallSign = channel.CallSign
+				existing.ChannelNo = channel.ChannelNo
+				existing.AffiliateName = channel.AffiliateName
+				p.db.Save(&existing)
+			} else {
+				// Create new
+				program := models.Program{
+					ChannelID:     channelID,
+					CallSign:      channel.CallSign,
+					ChannelNo:     channel.ChannelNo,
+					AffiliateName: channel.AffiliateName,
+					Start:         start,
+					End:           end,
+					Title:         event.Program.Title,
+					Description:   event.Program.ShortDesc,
+					Category:      category,
+					Icon:          icon,
+				}
+				p.db.Create(&program)
+				imported++
+			}
+		}
+	}
+
+	return imported, len(channelSet), nil
+}
+
+// RefreshEPGSource refreshes programs from a standalone EPG source
+func (p *EPGParser) RefreshEPGSource(source *models.EPGSource) error {
+	var imported, channelCount int
+	var err error
+
+	// Handle different provider types
+	if source.ProviderType == "gracenote" {
+		imported, channelCount, err = p.ImportProgramsFromGracenote(source)
+		if err != nil {
+			return err
+		}
+	} else {
+		// Default to XMLTV
+		xmltv, err := p.FetchAndParseEPG(source.URL)
+		if err != nil {
+			return err
+		}
+
+		imported, channelCount, err = p.ImportProgramsFromEPGSource(source, xmltv)
+		if err != nil {
+			return err
+		}
 	}
 
 	// Update source metadata

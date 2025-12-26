@@ -52,7 +52,14 @@ export function useCreateEPGSource() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (data: { name: string; url: string }) => api.createEPGSource(data),
+    mutationFn: (data: {
+      name: string
+      providerType: 'xmltv' | 'gracenote'
+      url?: string
+      gracenoteAffiliate?: string
+      gracenotePostalCode?: string
+      gracenoteHours?: number
+    }) => api.createEPGSource(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['epgSources'] })
     },

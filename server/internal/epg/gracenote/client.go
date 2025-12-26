@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/http/cookiejar"
 	"net/url"
 	"strconv"
 	"time"
@@ -21,6 +22,7 @@ type Config struct {
 type Client struct {
 	config     Config
 	httpClient *http.Client
+	warmed     bool
 }
 
 // NewClient creates a new Gracenote API client
@@ -32,16 +34,57 @@ func NewClient(config Config) *Client {
 		config.UserAgent = "Mozilla/5.0 (compatible; Plezy/1.0)"
 	}
 
+	// Create cookie jar to maintain session across requests
+	jar, _ := cookiejar.New(nil)
+
 	return &Client{
 		config: config,
 		httpClient: &http.Client{
 			Timeout: config.Timeout,
+			Jar:     jar,
 		},
+		warmed: false,
 	}
+}
+
+// warmupSession visits the main Gracenote page to establish cookies
+func (c *Client) warmupSession(ctx context.Context, affiliateID string) error {
+	if c.warmed {
+		return nil
+	}
+
+	// Visit the main page to get cookies
+	mainURL := fmt.Sprintf("%s/grid-affiliates.html?aid=%s", c.config.BaseURL, affiliateID)
+	req, err := http.NewRequestWithContext(ctx, "GET", mainURL, nil)
+	if err != nil {
+		return fmt.Errorf("failed to create warmup request: %w", err)
+	}
+
+	// Set browser-like headers
+	req.Header.Set("User-Agent", c.config.UserAgent)
+	req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+	req.Header.Set("Accept-Language", "en-US,en;q=0.9")
+	req.Header.Set("Connection", "keep-alive")
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("warmup request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	// Don't fail on non-200 status, as long as we got cookies
+	c.warmed = true
+	return nil
 }
 
 // GetListingsForAffiliate fetches TV listings for a specific affiliate
 func (c *Client) GetListingsForAffiliate(ctx context.Context, affiliateID, postalCode string, hours int) (*GridResponse, error) {
+	// Warm up session first to get cookies
+	if err := c.warmupSession(ctx, affiliateID); err != nil {
+		// Log warning but don't fail
+		fmt.Printf("Warning: session warmup failed: %v\n", err)
+	}
+
 	// First, get affiliate properties to determine lineup details
 	props, err := c.GetAffiliateProperties(ctx, affiliateID, "en-us")
 	if err != nil {
@@ -105,6 +148,12 @@ func (c *Client) GetListingsForAffiliate(ctx context.Context, affiliateID, posta
 
 // GetAffiliateProperties fetches configuration for a specific affiliate
 func (c *Client) GetAffiliateProperties(ctx context.Context, affiliateID, languageCode string) (*AffiliateProperties, error) {
+	// Warm up session first to get cookies
+	if err := c.warmupSession(ctx, affiliateID); err != nil {
+		// Log warning but don't fail
+		fmt.Printf("Warning: session warmup failed: %v\n", err)
+	}
+
 	// Build request URL
 	reqURL := fmt.Sprintf("%s/gapzap_webapi/api/affiliates/getaffiliatesprop/%s/%s",
 		c.config.BaseURL, affiliateID, languageCode)
