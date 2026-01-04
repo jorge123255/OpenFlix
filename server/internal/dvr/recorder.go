@@ -1,13 +1,18 @@
 package dvr
 
 import (
+	"context"
 	"fmt"
+	"io"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
+	"github.com/openflix/openflix-server/internal/logger"
 	"github.com/openflix/openflix-server/internal/models"
 	"gorm.io/gorm"
 )
@@ -238,6 +243,31 @@ func (r *Recorder) startRecording(recording *models.Recording) error {
 		return fmt.Errorf("channel not found: %w", err)
 	}
 
+	// Validate stream before starting
+	r.mutex.Unlock() // Release lock during validation (network I/O)
+	validation := r.ValidateStream(channel.StreamURL)
+	r.mutex.Lock()
+
+	if !validation.Valid {
+		r.mutex.Unlock()
+		recording.Status = "failed"
+		r.db.Save(recording)
+		logger.Log.WithFields(map[string]interface{}{
+			"recording_id": recording.ID,
+			"channel_id":   channel.ID,
+			"stream_url":   channel.StreamURL,
+			"error":        validation.Error,
+		}).Error("Stream validation failed before recording")
+		return fmt.Errorf("stream validation failed: %s", validation.Error)
+	}
+
+	logger.Log.WithFields(map[string]interface{}{
+		"recording_id":    recording.ID,
+		"channel_id":      channel.ID,
+		"validation_ms":   validation.Duration,
+		"is_hls":          validation.IsHLS,
+	}).Info("Stream validated successfully, starting recording")
+
 	// Create output file path
 	timestamp := recording.StartTime.Format("2006-01-02_15-04-05")
 	safeTitle := sanitizeFilename(recording.Title)
@@ -352,7 +382,10 @@ func (r *Recorder) runCommercialDetection(recording *models.Recording) {
 
 	if err := r.comskip.DetectCommercials(recording); err != nil {
 		// Log but don't fail - commercial detection is optional
-		fmt.Printf("Commercial detection failed for recording %d: %v\n", recording.ID, err)
+		logger.Log.WithFields(map[string]interface{}{
+			"recording_id": recording.ID,
+			"error":        err.Error(),
+		}).Warn("Commercial detection failed for recording")
 	}
 }
 
@@ -440,4 +473,115 @@ func sanitizeFilename(name string) string {
 		result = result[:100]
 	}
 	return string(result)
+}
+
+// StreamValidationResult contains the result of stream validation
+type StreamValidationResult struct {
+	Valid       bool   `json:"valid"`
+	StatusCode  int    `json:"statusCode,omitempty"`
+	ContentType string `json:"contentType,omitempty"`
+	Error       string `json:"error,omitempty"`
+	IsHLS       bool   `json:"isHLS"`
+	Duration    int64  `json:"validationDuration"` // milliseconds
+}
+
+// ValidateStream checks if a stream URL is accessible and valid
+func (r *Recorder) ValidateStream(streamURL string) StreamValidationResult {
+	start := time.Now()
+	result := StreamValidationResult{}
+
+	// Create context with timeout
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	// Determine if HLS stream
+	result.IsHLS = strings.Contains(streamURL, ".m3u8") || strings.Contains(streamURL, "m3u8")
+
+	// Create HTTP client with timeout
+	client := &http.Client{
+		Timeout: 10 * time.Second,
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			if len(via) >= 10 {
+				return fmt.Errorf("too many redirects")
+			}
+			return nil
+		},
+	}
+
+	// Create request
+	req, err := http.NewRequestWithContext(ctx, "GET", streamURL, nil)
+	if err != nil {
+		result.Error = fmt.Sprintf("failed to create request: %v", err)
+		result.Duration = time.Since(start).Milliseconds()
+		return result
+	}
+
+	// Set user agent to avoid blocks
+	req.Header.Set("User-Agent", "OpenFlix/1.0 DVR")
+
+	// Make request
+	resp, err := client.Do(req)
+	if err != nil {
+		result.Error = fmt.Sprintf("stream unreachable: %v", err)
+		result.Duration = time.Since(start).Milliseconds()
+		return result
+	}
+	defer resp.Body.Close()
+
+	result.StatusCode = resp.StatusCode
+	result.ContentType = resp.Header.Get("Content-Type")
+
+	// Check status code
+	if resp.StatusCode < 200 || resp.StatusCode >= 400 {
+		result.Error = fmt.Sprintf("stream returned status %d", resp.StatusCode)
+		result.Duration = time.Since(start).Milliseconds()
+		return result
+	}
+
+	// For HLS streams, validate the playlist content
+	if result.IsHLS {
+		body, err := io.ReadAll(io.LimitReader(resp.Body, 1024*1024)) // Limit to 1MB
+		if err != nil {
+			result.Error = fmt.Sprintf("failed to read playlist: %v", err)
+			result.Duration = time.Since(start).Milliseconds()
+			return result
+		}
+
+		content := string(body)
+		// Check for valid HLS markers
+		if !strings.Contains(content, "#EXTM3U") {
+			result.Error = "invalid HLS playlist: missing #EXTM3U header"
+			result.Duration = time.Since(start).Milliseconds()
+			return result
+		}
+
+		// Check for either master playlist or media playlist indicators
+		isValidPlaylist := strings.Contains(content, "#EXTINF") ||
+			strings.Contains(content, "#EXT-X-STREAM-INF") ||
+			strings.Contains(content, "#EXT-X-MEDIA")
+
+		if !isValidPlaylist {
+			result.Error = "invalid HLS playlist: no valid segments or streams found"
+			result.Duration = time.Since(start).Milliseconds()
+			return result
+		}
+	}
+
+	result.Valid = true
+	result.Duration = time.Since(start).Milliseconds()
+	return result
+}
+
+// ValidateChannelStream validates the stream URL for a specific channel
+func (r *Recorder) ValidateChannelStream(channelID uint) (StreamValidationResult, error) {
+	var channel models.Channel
+	if err := r.db.First(&channel, channelID).Error; err != nil {
+		return StreamValidationResult{Error: "channel not found"}, err
+	}
+
+	if channel.StreamURL == "" {
+		return StreamValidationResult{Error: "channel has no stream URL"}, fmt.Errorf("no stream URL")
+	}
+
+	return r.ValidateStream(channel.StreamURL), nil
 }

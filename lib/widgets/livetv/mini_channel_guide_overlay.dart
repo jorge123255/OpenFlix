@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 
 import '../../models/livetv_channel.dart';
@@ -33,6 +34,22 @@ class _MiniChannelGuideOverlayState extends State<MiniChannelGuideOverlay>
   late AnimationController _animationController;
   late Animation<Offset> _slideAnimation;
   final ScrollController _scrollController = ScrollController();
+
+  // Vibrant accent colors
+  static const _accentColors = [
+    Color(0xFF6366F1), // Indigo
+    Color(0xFF8B5CF6), // Violet
+    Color(0xFFEC4899), // Pink
+    Color(0xFF10B981), // Emerald
+    Color(0xFF3B82F6), // Blue
+    Color(0xFFF97316), // Orange
+    Color(0xFF14B8A6), // Teal
+    Color(0xFFEF4444), // Red
+  ];
+
+  Color _getChannelColor(String name) {
+    return _accentColors[name.hashCode.abs() % _accentColors.length];
+  }
 
   @override
   void initState() {
@@ -116,165 +133,317 @@ class _MiniChannelGuideOverlayState extends State<MiniChannelGuideOverlay>
     return GestureDetector(
       onTap: _close,
       child: Container(
-        color: Colors.black54,
-        child: GestureDetector(
-          onTap: () {}, // Prevent closing when tapping the guide
-          child: Align(
-            alignment: Alignment.bottomCenter,
-            child: SlideTransition(
-              position: _slideAnimation,
-              child: Container(
-                height: overlayHeight,
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: Colors.grey[900],
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(16),
-                    topRight: Radius.circular(16),
+        color: Colors.black.withValues(alpha: 0.6),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+          child: GestureDetector(
+            onTap: () {}, // Prevent closing when tapping the guide
+            child: Align(
+              alignment: Alignment.bottomCenter,
+              child: SlideTransition(
+                position: _slideAnimation,
+                child: Container(
+                  height: overlayHeight,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Color(0xFF1F2937),
+                        Color(0xFF111827),
+                      ],
+                    ),
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(24),
+                      topRight: Radius.circular(24),
+                    ),
+                    border: Border(
+                      top: BorderSide(
+                        color: Colors.white.withValues(alpha: 0.1),
+                        width: 1,
+                      ),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF3B82F6).withValues(alpha: 0.2),
+                        blurRadius: 30,
+                        spreadRadius: -5,
+                        offset: const Offset(0, -10),
+                      ),
+                    ],
                   ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.5),
-                      blurRadius: 20,
-                      spreadRadius: 5,
-                    ),
-                  ],
-                ),
-                child: Column(
-                  children: [
-                    // Header
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.grey[850],
-                        borderRadius: const BorderRadius.only(
-                          topLeft: Radius.circular(16),
-                          topRight: Radius.circular(16),
-                        ),
-                        border: Border(
-                          bottom: BorderSide(
-                            color: Colors.white.withValues(alpha: 0.1),
-                            width: 1,
-                          ),
+                  child: Column(
+                    children: [
+                      // Drag handle
+                      Container(
+                        margin: const EdgeInsets.only(top: 12),
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.3),
+                          borderRadius: BorderRadius.circular(2),
                         ),
                       ),
-                      child: Row(
-                        children: [
-                          const Icon(
-                            Icons.view_list,
-                            color: Colors.white,
-                            size: 24,
+                      // Header
+                      Container(
+                        padding: const EdgeInsets.fromLTRB(20, 16, 16, 16),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              const Color(0xFF3B82F6).withValues(alpha: 0.15),
+                              const Color(0xFF8B5CF6).withValues(alpha: 0.08),
+                            ],
                           ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  'Channel Guide',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                          border: Border(
+                            bottom: BorderSide(
+                              color: Colors.white.withValues(alpha: 0.08),
+                              width: 1,
+                            ),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  colors: [Color(0xFF3B82F6), Color(0xFF8B5CF6)],
                                 ),
-                                Text(
-                                  widget.favoritesFilterActive
-                                      ? '${displayChannels.length} favorites'
-                                      : '${displayChannels.length} channels',
-                                  style: TextStyle(
-                                    color: Colors.grey[400],
-                                    fontSize: 13,
+                                borderRadius: BorderRadius.circular(12),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: const Color(0xFF3B82F6).withValues(alpha: 0.4),
+                                    blurRadius: 12,
+                                    spreadRadius: 1,
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
+                              child: const Icon(
+                                Icons.live_tv_rounded,
+                                color: Colors.white,
+                                size: 22,
+                              ),
                             ),
-                          ),
-                          // Favorites filter toggle
-                          IconButton(
-                            onPressed: widget.onToggleFavoritesFilter,
-                            icon: Icon(
-                              widget.favoritesFilterActive
-                                  ? Icons.star
-                                  : Icons.star_outline,
-                              color: widget.favoritesFilterActive
-                                  ? Colors.amber
-                                  : Colors.white70,
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'Channel Guide',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.bold,
+                                      letterSpacing: -0.3,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Row(
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                        decoration: BoxDecoration(
+                                          color: widget.favoritesFilterActive
+                                              ? Colors.amber.withValues(alpha: 0.2)
+                                              : Colors.white.withValues(alpha: 0.08),
+                                          borderRadius: BorderRadius.circular(6),
+                                        ),
+                                        child: Text(
+                                          widget.favoritesFilterActive
+                                              ? '${displayChannels.length} favorites'
+                                              : '${displayChannels.length} channels',
+                                          style: TextStyle(
+                                            color: widget.favoritesFilterActive
+                                                ? Colors.amber
+                                                : Colors.white.withValues(alpha: 0.6),
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
                             ),
-                            tooltip: widget.favoritesFilterActive
-                                ? 'Show All Channels (F)'
-                                : 'Show Favorites Only (F)',
-                          ),
-                          IconButton(
-                            onPressed: _close,
-                            icon: const Icon(
-                              Icons.close,
-                              color: Colors.white70,
+                            // Favorites filter toggle
+                            _buildHeaderButton(
+                              icon: widget.favoritesFilterActive
+                                  ? Icons.star_rounded
+                                  : Icons.star_outline_rounded,
+                              isActive: widget.favoritesFilterActive,
+                              activeColor: Colors.amber,
+                              onTap: widget.onToggleFavoritesFilter,
                             ),
-                            tooltip: 'Close (Esc)',
-                          ),
-                        ],
+                            const SizedBox(width: 8),
+                            _buildHeaderButton(
+                              icon: Icons.close_rounded,
+                              onTap: _close,
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                    // Channel list
-                    Expanded(
-                      child: displayChannels.isEmpty
-                          ? _buildEmptyState()
-                          : ListView.builder(
-                              controller: _scrollController,
-                              padding: EdgeInsets.zero,
-                              itemCount: displayChannels.length,
-                              itemBuilder: (context, index) {
-                                final channel = displayChannels[index];
-                                final isCurrentChannel =
-                                    channel.id == widget.currentChannel.id;
+                      // Channel list
+                      Expanded(
+                        child: displayChannels.isEmpty
+                            ? _buildEmptyState()
+                            : ListView.builder(
+                                controller: _scrollController,
+                                padding: const EdgeInsets.symmetric(vertical: 8),
+                                itemCount: displayChannels.length,
+                                itemBuilder: (context, index) {
+                                  final channel = displayChannels[index];
+                                  final isCurrentChannel =
+                                      channel.id == widget.currentChannel.id;
 
-                                return ChannelListItem(
-                                  channel: channel,
-                                  isCurrentChannel: isCurrentChannel,
-                                  onTap: () => _selectChannel(channel),
-                                );
-                              },
-                            ),
-                    ),
-                    // Footer hint
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 12,
+                                  return ChannelListItem(
+                                    channel: channel,
+                                    isCurrentChannel: isCurrentChannel,
+                                    accentColor: _getChannelColor(channel.name),
+                                    onTap: () => _selectChannel(channel),
+                                  );
+                                },
+                              ),
                       ),
-                      decoration: BoxDecoration(
-                        color: Colors.grey[850],
-                        border: Border(
-                          top: BorderSide(
-                            color: Colors.white.withValues(alpha: 0.1),
-                            width: 1,
+                      // Footer hint
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 14,
+                        ),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              Colors.transparent,
+                              Colors.black.withValues(alpha: 0.3),
+                            ],
+                          ),
+                          border: Border(
+                            top: BorderSide(
+                              color: Colors.white.withValues(alpha: 0.08),
+                              width: 1,
+                            ),
                           ),
                         ),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.touch_app,
-                            size: 16,
-                            color: Colors.grey[500],
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Tap to select • Swipe down to close',
-                            style: TextStyle(
-                              color: Colors.grey[500],
-                              fontSize: 12,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.08),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.touch_app_rounded,
+                                    size: 14,
+                                    color: Colors.white.withValues(alpha: 0.5),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    'Tap to select',
+                                    style: TextStyle(
+                                      color: Colors.white.withValues(alpha: 0.5),
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
-                          ),
-                        ],
+                            const SizedBox(width: 12),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.08),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.swipe_down_rounded,
+                                    size: 14,
+                                    color: Colors.white.withValues(alpha: 0.5),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    'Swipe to close',
+                                    style: TextStyle(
+                                      color: Colors.white.withValues(alpha: 0.5),
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeaderButton({
+    required IconData icon,
+    required VoidCallback onTap,
+    bool isActive = false,
+    Color? activeColor,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            gradient: isActive && activeColor != null
+                ? LinearGradient(
+                    colors: [
+                      activeColor.withValues(alpha: 0.3),
+                      activeColor.withValues(alpha: 0.15),
+                    ],
+                  )
+                : null,
+            color: isActive ? null : Colors.white.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: isActive && activeColor != null
+                  ? activeColor.withValues(alpha: 0.5)
+                  : Colors.white.withValues(alpha: 0.1),
+            ),
+            boxShadow: isActive && activeColor != null
+                ? [
+                    BoxShadow(
+                      color: activeColor.withValues(alpha: 0.3),
+                      blurRadius: 10,
+                    ),
+                  ]
+                : null,
+          ),
+          child: Icon(
+            icon,
+            color: isActive && activeColor != null
+                ? activeColor
+                : Colors.white.withValues(alpha: 0.7),
+            size: 22,
           ),
         ),
       ),

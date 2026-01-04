@@ -17,6 +17,39 @@ class AuthResponse {
   }
 }
 
+/// Profile information for profile selection (Disney+ style)
+class ProfileInfo {
+  final int id;
+  final String uuid;
+  final String name;
+  final String? avatarUrl;
+  final int avatarIndex; // Index for default character avatars
+  final bool isKidsProfile;
+  final bool isAdmin;
+
+  ProfileInfo({
+    required this.id,
+    required this.uuid,
+    required this.name,
+    this.avatarUrl,
+    this.avatarIndex = 0,
+    this.isKidsProfile = false,
+    this.isAdmin = false,
+  });
+
+  factory ProfileInfo.fromJson(Map<String, dynamic> json) {
+    return ProfileInfo(
+      id: json['id'] as int,
+      uuid: json['uuid'] as String? ?? '',
+      name: json['title'] as String? ?? json['name'] as String? ?? json['username'] as String? ?? 'User',
+      avatarUrl: json['thumb'] as String?,
+      avatarIndex: json['avatarIndex'] as int? ?? 0,
+      isKidsProfile: json['kidsProfile'] as bool? ?? false,
+      isAdmin: json['admin'] as bool? ?? false,
+    );
+  }
+}
+
 /// User information returned from auth endpoints
 class UserInfo {
   final int id;
@@ -157,6 +190,53 @@ class OpenFlixAuthService {
       throw AuthException('Registration failed: ${e.message}');
     } catch (e) {
       throw AuthException('Registration failed: $e');
+    }
+  }
+
+  /// Get list of profiles for local network access (no auth required)
+  /// Returns null if the server doesn't support local profile access
+  Future<List<ProfileInfo>?> getLocalProfiles() async {
+    try {
+      final response = await _dio.get(
+        '$_serverUrl/auth/profiles',
+        options: Options(
+          headers: {'Accept': 'application/json'},
+        ),
+      );
+
+      final data = response.data;
+      if (data is Map && data['profiles'] != null) {
+        final profiles = (data['profiles'] as List)
+            .map((p) => ProfileInfo.fromJson(p as Map<String, dynamic>))
+            .toList();
+        return profiles;
+      }
+      return null;
+    } catch (e) {
+      appLogger.w('Failed to get local profiles', error: e);
+      return null;
+    }
+  }
+
+  /// Login as a profile for local network access (no password required)
+  /// Returns null if the server doesn't support local profile login
+  Future<AuthResponse?> loginAsProfile(int profileId) async {
+    try {
+      final response = await _dio.post(
+        '$_serverUrl/auth/profile-login',
+        data: {'profileId': profileId},
+        options: Options(
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+        ),
+      );
+
+      return AuthResponse.fromJson(response.data as Map<String, dynamic>);
+    } catch (e) {
+      appLogger.w('Profile login failed', error: e);
+      return null;
     }
   }
 

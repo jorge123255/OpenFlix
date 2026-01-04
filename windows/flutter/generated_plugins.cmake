@@ -6,7 +6,9 @@ list(APPEND FLUTTER_PLUGIN_LIST
   connectivity_plus
   hotkey_manager_windows
   os_media_controls
+  permission_handler_windows
   screen_retriever_windows
+  speech_to_text_windows
   url_launcher_windows
   window_manager
 )

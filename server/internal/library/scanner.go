@@ -79,14 +79,14 @@ func (s *Scanner) ScanLibrary(library *models.Library) (*ScanResult, error) {
 		return nil, err
 	}
 
-	// Track existing files to detect removals
-	existingFiles := make(map[string]bool)
+	// Track existing files to detect removals and modifications
+	existingFiles := make(map[string]*models.MediaFile)
 	var existingItems []models.MediaFile
 	s.db.Joins("JOIN media_items ON media_items.id = media_files.media_item_id").
 		Where("media_items.library_id = ?", library.ID).
 		Find(&existingItems)
-	for _, item := range existingItems {
-		existingFiles[item.FilePath] = true
+	for i := range existingItems {
+		existingFiles[existingItems[i].FilePath] = &existingItems[i]
 	}
 
 	foundFiles := make(map[string]bool)
@@ -112,8 +112,15 @@ func (s *Scanner) ScanLibrary(library *models.Library) (*ScanResult, error) {
 			foundFiles[path] = true
 
 			// Check if file already exists
-			if existingFiles[path] {
-				// TODO: Check if file was modified and update if needed
+			if existingFile, exists := existingFiles[path]; exists {
+				// Check if file was modified (size or mod time changed)
+				if info.Size() != existingFile.FileSize || !info.ModTime().Equal(existingFile.FileModTime) {
+					if err := s.updateMediaFile(existingFile, path, info); err != nil {
+						result.Errors = append(result.Errors, fmt.Sprintf("Error updating %s: %v", path, err))
+					} else {
+						result.FilesUpdated++
+					}
+				}
 				return nil
 			}
 
@@ -133,9 +140,9 @@ func (s *Scanner) ScanLibrary(library *models.Library) (*ScanResult, error) {
 	}
 
 	// Remove files that no longer exist
-	for path := range existingFiles {
+	for path, file := range existingFiles {
 		if !foundFiles[path] {
-			s.removeMediaFile(path)
+			s.removeMediaFileByID(file)
 			result.FilesRemoved++
 		}
 	}
@@ -502,6 +509,7 @@ func (s *Scanner) createMediaFile(item *models.MediaItem, filePath string, fileI
 		MediaItemID: item.ID,
 		FilePath:    filePath,
 		FileSize:    fileInfo.Size(),
+		FileModTime: fileInfo.ModTime(),
 		Container:   strings.TrimPrefix(filepath.Ext(filePath), "."),
 		Duration:    mediaInfo.Duration,
 		Bitrate:     int(mediaInfo.Bitrate),
@@ -515,6 +523,48 @@ func (s *Scanner) createMediaFile(item *models.MediaItem, filePath string, fileI
 		return err
 	}
 
+	// Create stream records
+	s.createStreamRecords(&file, mediaInfo)
+
+	return nil
+}
+
+// updateMediaFile updates an existing media file that was modified
+func (s *Scanner) updateMediaFile(existingFile *models.MediaFile, filePath string, fileInfo os.FileInfo) error {
+	// Re-scan media info
+	mediaInfo := s.getMediaInfo(filePath)
+
+	// Update file record
+	updates := map[string]interface{}{
+		"file_size":     fileInfo.Size(),
+		"file_mod_time": fileInfo.ModTime(),
+		"duration":      mediaInfo.Duration,
+		"bitrate":       int(mediaInfo.Bitrate),
+		"width":         mediaInfo.Width,
+		"height":        mediaInfo.Height,
+		"video_codec":   mediaInfo.VideoCodec,
+		"audio_codec":   mediaInfo.AudioCodec,
+	}
+
+	if err := s.db.Model(existingFile).Updates(updates).Error; err != nil {
+		return err
+	}
+
+	// Delete old streams and recreate
+	s.db.Where("media_file_id = ?", existingFile.ID).Delete(&models.MediaStream{})
+	s.createStreamRecords(existingFile, mediaInfo)
+
+	// Update media item duration if changed
+	if mediaInfo.Duration > 0 {
+		s.db.Model(&models.MediaItem{}).Where("id = ?", existingFile.MediaItemID).
+			Update("duration", mediaInfo.Duration)
+	}
+
+	return nil
+}
+
+// createStreamRecords creates audio/video/subtitle stream records for a file
+func (s *Scanner) createStreamRecords(file *models.MediaFile, mediaInfo MediaInfo) {
 	// Create video stream record
 	if mediaInfo.VideoCodec != "" {
 		videoStream := models.MediaStream{
@@ -539,22 +589,24 @@ func (s *Scanner) createMediaFile(item *models.MediaItem, filePath string, fileI
 		}
 		s.db.Create(&audioStream)
 	}
-
-	return nil
 }
 
-// removeMediaFile removes a media file that no longer exists
+// removeMediaFile removes a media file that no longer exists (by path lookup)
 func (s *Scanner) removeMediaFile(filePath string) {
 	var file models.MediaFile
 	if err := s.db.Where("file_path = ?", filePath).First(&file).Error; err != nil {
 		return
 	}
+	s.removeMediaFileByID(&file)
+}
 
+// removeMediaFileByID removes a media file that no longer exists (by ID)
+func (s *Scanner) removeMediaFileByID(file *models.MediaFile) {
 	// Delete streams
 	s.db.Where("media_file_id = ?", file.ID).Delete(&models.MediaStream{})
 
 	// Delete file
-	s.db.Delete(&file)
+	s.db.Delete(file)
 
 	// Check if media item has other files, if not delete it
 	var count int64

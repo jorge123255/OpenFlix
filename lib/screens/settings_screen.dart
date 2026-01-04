@@ -9,16 +9,22 @@ import '../providers/settings_provider.dart';
 import '../providers/theme_provider.dart';
 import '../services/keyboard_shortcuts_service.dart';
 import '../services/openflix_auth_service.dart';
+import '../services/remote_access_service.dart';
 import '../services/settings_service.dart' as settings;
 import '../services/storage_service.dart';
 import '../services/update_service.dart';
 import '../utils/app_logger.dart';
 import '../utils/keyboard_utils.dart';
+import '../utils/content_rating_filter.dart';
 import '../widgets/desktop_app_bar.dart';
 import '../widgets/hotkey_recorder_widget.dart';
+import '../widgets/pin_entry_dialog.dart';
 import 'about_screen.dart';
 import 'logs_screen.dart';
 import 'subtitle_styling_screen.dart';
+import 'profile_selection_screen.dart';
+import 'avatar_selection_screen.dart';
+import '../services/profile_storage_service.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -43,10 +49,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _autoSkipCredits = true;
   int _autoSkipDelay = 5;
   String? _tmdbApiKey;
+  bool _parentalControlsEnabled = false;
+  bool _kidsModeEnabled = false;
+  String _maxMovieRating = 'NC-17';
+  String _maxTvRating = 'TV-MA';
+
+  // Home screen settings
+  String _startupBehavior = settings.SettingsService.startupBehaviorHome;
+  bool _dockedPlayerEnabled = true;
+  bool _dockedPlayerAutoMute = true;
 
   // Update checking state
   bool _isCheckingForUpdate = false;
   Map<String, dynamic>? _updateInfo;
+
+  // Remote access state
+  RemoteAccessStatus? _remoteAccessStatus;
+  bool _isLoadingRemoteAccess = false;
 
   @override
   void initState() {
@@ -70,8 +89,53 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _autoSkipCredits = _settingsService.getAutoSkipCredits();
       _autoSkipDelay = _settingsService.getAutoSkipDelay();
       _tmdbApiKey = _settingsService.getTmdbApiKey();
+      _parentalControlsEnabled = _settingsService.getParentalControlsEnabled();
+      _kidsModeEnabled = _settingsService.getKidsModeEnabled();
+      _maxMovieRating = _settingsService.getMaxMovieRating();
+      _maxTvRating = _settingsService.getMaxTvRating();
+      _startupBehavior = _settingsService.getStartupBehavior();
+      _dockedPlayerEnabled = _settingsService.getDockedPlayerEnabled();
+      _dockedPlayerAutoMute = _settingsService.getDockedPlayerAutoMute();
       _isLoading = false;
     });
+
+    // Load remote access status in background
+    _loadRemoteAccessStatus();
+  }
+
+  Future<void> _loadRemoteAccessStatus() async {
+    try {
+      final storageService = await StorageService.getInstance();
+      final serverUrl = storageService.getServerUrl();
+      final token = storageService.getToken();
+
+      if (serverUrl == null || token == null) return;
+
+      setState(() {
+        _isLoadingRemoteAccess = true;
+      });
+
+      final remoteAccessService = RemoteAccessService(
+        baseUrl: serverUrl,
+        token: token,
+      );
+
+      final status = await remoteAccessService.getStatus();
+
+      if (mounted) {
+        setState(() {
+          _remoteAccessStatus = status;
+          _isLoadingRemoteAccess = false;
+        });
+      }
+    } catch (e) {
+      appLogger.d('Remote access status not available: $e');
+      if (mounted) {
+        setState(() {
+          _isLoadingRemoteAccess = false;
+        });
+      }
+    }
   }
 
   /// Handle back key press - focus bottom navigation
@@ -99,13 +163,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
               padding: const EdgeInsets.all(16),
               sliver: SliverList(
                 delegate: SliverChildListDelegate([
+                  _buildProfileSection(),
+                  const SizedBox(height: 24),
+                  _buildHomeScreenSection(),
+                  const SizedBox(height: 24),
                   _buildAppearanceSection(),
                   const SizedBox(height: 24),
                   _buildVideoPlaybackSection(),
                   const SizedBox(height: 24),
                   _buildKeyboardShortcutsSection(),
                   const SizedBox(height: 24),
+                  _buildParentalControlsSection(),
+                  const SizedBox(height: 24),
                   _buildAdvancedSection(),
+                  const SizedBox(height: 24),
+                  _buildRemoteAccessSection(),
                   const SizedBox(height: 24),
                   if (UpdateService.isUpdateCheckEnabled) ...[
                     _buildUpdateSection(),
@@ -119,6 +191,224 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildProfileSection() {
+    return FutureBuilder<ProfileStorageService>(
+      future: ProfileStorageService.getInstance(),
+      builder: (context, snapshot) {
+        final activeProfile = snapshot.data?.getActiveProfile();
+        final avatarData = activeProfile != null
+            ? AvatarData.getAvatarById(activeProfile.avatarId)
+            : null;
+
+        return Card(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Text(
+                  t.settings.profile,
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleMedium
+                      ?.copyWith(fontWeight: FontWeight.bold),
+                ),
+              ),
+              // Current profile display
+              ListTile(
+                leading: activeProfile != null && avatarData != null
+                    ? Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: LinearGradient(
+                            colors: [
+                              avatarData.primaryColor,
+                              avatarData.secondaryColor,
+                            ],
+                          ),
+                        ),
+                        child: Icon(
+                          avatarData.icon,
+                          color: Colors.white,
+                          size: 20,
+                        ),
+                      )
+                    : const CircleAvatar(child: Icon(Icons.person)),
+                title: Text(activeProfile?.name ?? t.settings.noProfileSelected),
+                subtitle: activeProfile?.isKidsProfile == true
+                    ? Text(t.settings.kidsMode)
+                    : null,
+              ),
+              const Divider(height: 1),
+              // Switch Profile option
+              ListTile(
+                leading: const Icon(Icons.swap_horiz),
+                title: Text(t.settings.switchProfile),
+                subtitle: Text(t.settings.switchProfileDescription),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => _switchProfile(),
+              ),
+              // Manage Profiles option
+              ListTile(
+                leading: const Icon(Icons.manage_accounts),
+                title: Text(t.settings.manageProfiles),
+                subtitle: Text(t.settings.manageProfilesDescription),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => _manageProfiles(),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _switchProfile() async {
+    final storage = await StorageService.getInstance();
+    final serverUrl = storage.getServerUrl();
+
+    if (serverUrl != null && mounted) {
+      // Clear the navigation stack and go to profile selection
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(
+          builder: (context) => ProfileSelectionScreen(
+            serverUrl: serverUrl,
+            serverName: Uri.tryParse(serverUrl)?.host,
+          ),
+        ),
+        (route) => false, // Remove all routes
+      );
+    }
+  }
+
+  Future<void> _manageProfiles() async {
+    final storage = await StorageService.getInstance();
+    final serverUrl = storage.getServerUrl();
+
+    if (serverUrl != null && mounted) {
+      // Navigate to profile selection in manage mode
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(
+          builder: (context) => ProfileSelectionScreen(
+            serverUrl: serverUrl,
+            serverName: Uri.tryParse(serverUrl)?.host,
+            manageMode: true,
+          ),
+        ),
+        (route) => false, // Remove all routes
+      );
+    }
+  }
+
+  Widget _buildHomeScreenSection() {
+    return Card(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Text(
+              'Home Screen',
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+            ),
+          ),
+          ListTile(
+            leading: const Icon(Icons.home),
+            title: const Text('Startup Behavior'),
+            subtitle: Text(
+              _startupBehavior == settings.SettingsService.startupBehaviorLastChannel
+                  ? 'Start on last watched channel'
+                  : 'Start on home screen',
+            ),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => _showStartupBehaviorDialog(),
+          ),
+          SwitchListTile(
+            secondary: const Icon(Icons.picture_in_picture),
+            title: const Text('Docked Player'),
+            subtitle: const Text('Show mini player on home screen with last watched channel'),
+            value: _dockedPlayerEnabled,
+            onChanged: (value) async {
+              setState(() {
+                _dockedPlayerEnabled = value;
+              });
+              await _settingsService.setDockedPlayerEnabled(value);
+            },
+          ),
+          if (_dockedPlayerEnabled)
+            SwitchListTile(
+              secondary: const Icon(Icons.volume_off),
+              title: const Text('Auto-mute Docked Player'),
+              subtitle: const Text('Start docked player muted (tap to unmute)'),
+              value: _dockedPlayerAutoMute,
+              onChanged: (value) async {
+                setState(() {
+                  _dockedPlayerAutoMute = value;
+                });
+                await _settingsService.setDockedPlayerAutoMute(value);
+              },
+            ),
+        ],
+      ),
+    );
+  }
+
+  void _showStartupBehaviorDialog() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Startup Behavior'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              RadioListTile<String>(
+                title: const Text('Home Screen'),
+                subtitle: const Text('Start on the home menu screen'),
+                value: settings.SettingsService.startupBehaviorHome,
+                groupValue: _startupBehavior,
+                onChanged: (value) async {
+                  if (value != null) {
+                    setState(() {
+                      _startupBehavior = value;
+                    });
+                    await _settingsService.setStartupBehavior(value);
+                    if (mounted) Navigator.pop(context);
+                  }
+                },
+              ),
+              RadioListTile<String>(
+                title: const Text('Last Watched Channel'),
+                subtitle: const Text('Start on the last channel you were watching'),
+                value: settings.SettingsService.startupBehaviorLastChannel,
+                groupValue: _startupBehavior,
+                onChanged: (value) async {
+                  if (value != null) {
+                    setState(() {
+                      _startupBehavior = value;
+                    });
+                    await _settingsService.setStartupBehavior(value);
+                    if (mounted) Navigator.pop(context);
+                  }
+                },
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(t.common.cancel),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -378,6 +668,103 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  Widget _buildParentalControlsSection() {
+    return Card(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Text(
+              t.settings.parentalControls,
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+            ),
+          ),
+          SwitchListTile(
+            secondary: Icon(
+              Icons.child_care,
+              color: _kidsModeEnabled ? Colors.pink : null,
+            ),
+            title: Text(t.settings.kidsMode),
+            subtitle: Text(t.settings.kidsModeDescription),
+            value: _kidsModeEnabled,
+            onChanged: (value) async {
+              setState(() {
+                _kidsModeEnabled = value;
+                if (value) {
+                  // Kids mode auto-sets ratings and enables parental controls
+                  _parentalControlsEnabled = true;
+                  _maxMovieRating = 'PG';
+                  _maxTvRating = 'TV-Y7';
+                }
+              });
+              await _settingsService.setKidsModeEnabled(value);
+              if (value) {
+                await _settingsService.setParentalControlsEnabled(true);
+              }
+            },
+          ),
+          const Divider(),
+          SwitchListTile(
+            secondary: const Icon(Icons.lock),
+            title: Text(t.settings.enableParentalControls),
+            subtitle: Text(t.settings.enableParentalControlsDescription),
+            value: _parentalControlsEnabled,
+            onChanged: (value) async {
+              if (value) {
+                // Enabling - require PIN setup
+                _showSetPinDialog();
+              } else {
+                // Disabling - require current PIN
+                final pin = _settingsService.getParentalControlsPin();
+                if (pin != null) {
+                  _showVerifyPinDialog(() async {
+                    setState(() {
+                      _parentalControlsEnabled = false;
+                    });
+                    await _settingsService.setParentalControlsEnabled(false);
+                    await _settingsService.setParentalControlsPin(null);
+                  });
+                } else {
+                  setState(() {
+                    _parentalControlsEnabled = false;
+                  });
+                  await _settingsService.setParentalControlsEnabled(false);
+                }
+              }
+            },
+          ),
+          if (_parentalControlsEnabled) ...[
+            const Divider(),
+            ListTile(
+              leading: const Icon(Icons.pin),
+              title: Text(t.settings.changePin),
+              subtitle: Text(t.settings.changePinDescription),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => _showChangePinDialog(),
+            ),
+            ListTile(
+              leading: const Icon(Icons.movie),
+              title: Text(t.settings.maxMovieRating),
+              subtitle: Text(getMovieRatingDisplayName(_maxMovieRating)),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => _showMovieRatingDialog(),
+            ),
+            ListTile(
+              leading: const Icon(Icons.tv),
+              title: Text(t.settings.maxTvRating),
+              subtitle: Text(getTvRatingDisplayName(_maxTvRating)),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => _showTvRatingDialog(),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
   Widget _buildAdvancedSection() {
     return Card(
       child: Column(
@@ -417,6 +804,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
             },
           ),
           ListTile(
+            leading: const Icon(Icons.cloud_upload),
+            title: const Text('Send Logs to Server'),
+            subtitle: const Text('Upload logs for remote troubleshooting'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => _sendLogsToServer(),
+          ),
+          ListTile(
             leading: const Icon(Icons.cleaning_services),
             title: Text(t.settings.clearCache),
             subtitle: Text(t.settings.clearCacheDescription),
@@ -454,6 +848,127 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildRemoteAccessSection() {
+    final status = _remoteAccessStatus;
+    final isConnected = status?.isConnected ?? false;
+    final isInstalled = status?.isInstalled ?? false;
+
+    return Card(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Text(
+                  t.settings.remoteAccess,
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleMedium
+                      ?.copyWith(fontWeight: FontWeight.bold),
+                ),
+                const Spacer(),
+                if (_isLoadingRemoteAccess)
+                  const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+              ],
+            ),
+          ),
+          ListTile(
+            leading: Icon(
+              isConnected
+                  ? Icons.cloud_done
+                  : isInstalled
+                      ? Icons.cloud_off
+                      : Icons.cloud_queue,
+              color: isConnected ? Colors.green : null,
+            ),
+            title: Text(t.settings.tailscaleStatus),
+            subtitle: Text(
+              status?.statusText ?? t.settings.remoteAccessCheckingStatus,
+            ),
+            trailing: _isLoadingRemoteAccess
+                ? const SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : IconButton(
+                    icon: const Icon(Icons.refresh),
+                    onPressed: _loadRemoteAccessStatus,
+                    tooltip: t.settings.refreshStatus,
+                  ),
+          ),
+          if (isConnected && status?.tailscaleUrl != null) ...[
+            const Divider(),
+            ListTile(
+              leading: const Icon(Icons.link),
+              title: Text(t.settings.remoteUrl),
+              subtitle: Text(
+                status!.tailscaleUrl!,
+                style: const TextStyle(fontFamily: 'monospace'),
+              ),
+              trailing: IconButton(
+                icon: const Icon(Icons.copy),
+                onPressed: () => _copyRemoteUrl(status.tailscaleUrl!),
+                tooltip: t.settings.copyUrl,
+              ),
+            ),
+          ],
+          if (isConnected && status?.tailscaleIp != null) ...[
+            ListTile(
+              leading: const Icon(Icons.computer),
+              title: Text(t.settings.tailscaleIp),
+              subtitle: Text(status!.tailscaleIp!),
+            ),
+          ],
+          if (!isInstalled) ...[
+            const Divider(),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    t.settings.tailscaleNotInstalled,
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    t.settings.tailscaleDescription,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+          if (status?.needsLogin == true) ...[
+            const Divider(),
+            ListTile(
+              leading: const Icon(Icons.login, color: Colors.orange),
+              title: Text(t.settings.tailscaleNeedsLogin),
+              subtitle: Text(t.settings.tailscaleNeedsLoginDescription),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  void _copyRemoteUrl(String url) {
+    // Copy to clipboard functionality would be added here
+    // For now just show a snackbar
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(t.settings.urlCopied)),
     );
   }
 
@@ -907,6 +1422,68 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  Future<void> _sendLogsToServer() async {
+    // Show loading indicator
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const AlertDialog(
+        content: Row(
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(width: 16),
+            Text('Sending logs to server...'),
+          ],
+        ),
+      ),
+    );
+
+    try {
+      // Get server URL and auth token from storage
+      final storage = await StorageService.getInstance();
+      final serverUrl = storage.getServerUrl();
+      final token = storage.getToken();
+
+      if (serverUrl == null || token == null) {
+        if (mounted) Navigator.pop(context);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Not connected to a server')),
+          );
+        }
+        return;
+      }
+
+      final success = await sendLogsToServer(
+        serverUrl: serverUrl,
+        authToken: token,
+      );
+
+      if (mounted) Navigator.pop(context);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(success
+                ? 'Logs sent successfully'
+                : 'Failed to send logs'),
+            backgroundColor: success ? Colors.green : Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) Navigator.pop(context);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   void _showClearCacheDialog() {
     showDialog(
       context: context,
@@ -1151,6 +1728,139 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void _restartApp() {
     // Navigate to the root and remove all previous routes
     Navigator.pushNamedAndRemoveUntil(context, '/', (route) => false);
+  }
+
+  Future<void> _showSetPinDialog() async {
+    final pin = await showPinEntryDialog(
+      context,
+      t.settings.setPin,
+    );
+    if (pin != null && mounted) {
+      _showConfirmPinDialog(pin);
+    }
+  }
+
+  Future<void> _showConfirmPinDialog(String originalPin) async {
+    final confirmPin = await showPinEntryDialog(
+      context,
+      t.settings.confirmPin,
+    );
+    if (!mounted) return;
+
+    if (confirmPin == originalPin) {
+      await _settingsService.setParentalControlsPin(originalPin);
+      await _settingsService.setParentalControlsEnabled(true);
+      setState(() {
+        _parentalControlsEnabled = true;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(t.settings.pinSet)),
+      );
+    } else if (confirmPin != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(t.settings.pinMismatch)),
+      );
+    }
+  }
+
+  Future<void> _showVerifyPinDialog(VoidCallback onSuccess) async {
+    final pin = await showPinEntryDialog(
+      context,
+      t.settings.enterPin,
+    );
+    if (!mounted) return;
+
+    if (pin != null && _settingsService.verifyParentalPin(pin)) {
+      onSuccess();
+    } else if (pin != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(t.settings.incorrectPin)),
+      );
+    }
+  }
+
+  void _showChangePinDialog() {
+    _showVerifyPinDialog(() {
+      _showSetPinDialog();
+    });
+  }
+
+  void _showMovieRatingDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: Text(t.settings.maxMovieRating),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: movieRatings.map((rating) {
+              return ListTile(
+                leading: Icon(
+                  _maxMovieRating == rating
+                      ? Icons.radio_button_checked
+                      : Icons.radio_button_unchecked,
+                ),
+                title: Text(getMovieRatingDisplayName(rating)),
+                onTap: () async {
+                  setState(() {
+                    _maxMovieRating = rating;
+                  });
+                  await _settingsService.setMaxMovieRating(rating);
+                  if (dialogContext.mounted) {
+                    Navigator.pop(dialogContext);
+                  }
+                },
+              );
+            }).toList(),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: Text(t.common.cancel),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showTvRatingDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: Text(t.settings.maxTvRating),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: tvRatings.map((rating) {
+              return ListTile(
+                leading: Icon(
+                  _maxTvRating == rating
+                      ? Icons.radio_button_checked
+                      : Icons.radio_button_unchecked,
+                ),
+                title: Text(getTvRatingDisplayName(rating)),
+                onTap: () async {
+                  setState(() {
+                    _maxTvRating = rating;
+                  });
+                  await _settingsService.setMaxTvRating(rating);
+                  if (dialogContext.mounted) {
+                    Navigator.pop(dialogContext);
+                  }
+                },
+              );
+            }).toList(),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: Text(t.common.cancel),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   Future<void> _checkForUpdates() async {

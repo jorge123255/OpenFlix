@@ -1,35 +1,100 @@
-version: '3.8'
+networks:
+  br0-net:
+    external: true
 
 services:
-  openflix-server:
+  openflix:
     build: .
-    container_name: openflix-server
-    ports:
-      - "32400:32400"
+    image: openflix:latest
+    container_name: openflix
+    networks:
+      br0-net:
+        ipv4_address: 192.168.1.185
     volumes:
-      - ./data:/data
-      - /path/to/your/media:/media:ro  # Mount your media folder here
+      # Database and config
+      - openflix_data:/data
+
+      # Media libraries
+      - /mnt/user/complete/movies:/movies:ro
+      - /mnt/user/complete/tv:/tv:ro
+
+      # DVR recordings (read-write for recording)
+      - /mnt/user/dvr:/app/recordings
+
+      # Transcode temp directory
+      - ./transcode:/app/transcode
+
+      # App downloads (APK files)
+      - ./downloads:/app/downloads
+
+    # GPU Device Access
+    devices:
+      # Intel/AMD VA-API (render devices)
+      - /dev/dri/renderD128:/dev/dri/renderD128
+      - /dev/dri/renderD129:/dev/dri/renderD129
+      - /dev/dri/card0:/dev/dri/card0
+      - /dev/dri/card1:/dev/dri/card1
+
+    # NVIDIA GPU Support
+    runtime: nvidia
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu, video, compute]
+
     environment:
+      # Server
       - OPENFLIX_HOST=0.0.0.0
       - OPENFLIX_PORT=32400
+
+      # Database
       - OPENFLIX_DB_DRIVER=sqlite
       - OPENFLIX_DB_DSN=/data/openflix.db
-      - OPENFLIX_JWT_SECRET=change-this-in-production
+
+      # Auth - CHANGE THIS IN PRODUCTION!
+      - OPENFLIX_JWT_SECRET=${JWT_SECRET:-change-this-to-a-random-string}
+
+      # Metadata APIs (optional but recommended)
       - OPENFLIX_TMDB_API_KEY=${TMDB_API_KEY:-}
       - OPENFLIX_TVDB_API_KEY=${TVDB_API_KEY:-}
-    restart: unless-stopped
 
-  # Optional: PostgreSQL for production
-  # postgres:
-  #   image: postgres:16-alpine
-  #   container_name: openflix-db
-  #   environment:
-  #     - POSTGRES_USER=openflix
-  #     - POSTGRES_PASSWORD=openflix
-  #     - POSTGRES_DB=openflix
-  #   volumes:
-  #     - postgres_data:/var/lib/postgresql/data
-  #   restart: unless-stopped
+      # Gracenote EPG (for Live TV guide data)
+      - OPENFLIX_GRACENOTE_API_KEY=${GRACENOTE_API_KEY:-}
+
+      # Live TV & DVR
+      - OPENFLIX_LIVETV_ENABLED=true
+      - OPENFLIX_DVR_ENABLED=true
+      - OPENFLIX_RECORDING_DIR=/app/recordings
+
+      # Transcoding with NVIDIA GPU
+      - OPENFLIX_TRANSCODE_ENABLED=true
+      - OPENFLIX_TRANSCODE_DIR=/app/transcode
+      - OPENFLIX_FFMPEG_PATH=/usr/bin/ffmpeg
+      # Options: auto, none, vaapi, nvenc, qsv
+      - OPENFLIX_HARDWARE_ACCEL=${HARDWARE_ACCEL:-nvenc}
+
+      # NVIDIA visible devices (all GPUs)
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,video,utility
+
+      # Timezone
+      - TZ=${TZ:-America/New_York}
+
+    # Run as user with video group access
+    user: "0:0"
+    group_add:
+      - "18"  # video group ID from your system
+
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O- http://localhost:32400/health | grep -q ok"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
 
 volumes:
-  postgres_data:
+  openflix_data:

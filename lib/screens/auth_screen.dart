@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 import '../services/openflix_auth_service.dart';
+import '../services/server_discovery_service.dart';
 import '../services/storage_service.dart';
 import '../client/media_client.dart';
 import '../config/client_config.dart';
@@ -9,7 +11,9 @@ import '../providers/multi_server_provider.dart';
 import '../providers/media_client_provider.dart';
 import '../i18n/strings.g.dart';
 import '../utils/app_logger.dart';
+import '../utils/platform_detector.dart';
 import 'main_screen.dart';
+import 'profile_selection_screen.dart';
 
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
@@ -18,7 +22,26 @@ class AuthScreen extends StatefulWidget {
   State<AuthScreen> createState() => _AuthScreenState();
 }
 
+/// Connection mode for the auth screen
+enum ConnectionMode {
+  /// Initial mode selection (At Home / Away from Home)
+  selection,
+  /// At home - auto-discover servers on local network
+  atHome,
+  /// Away from home - manual server URL entry
+  awayFromHome,
+}
+
 class _AuthScreenState extends State<AuthScreen> {
+  // Connection mode
+  ConnectionMode _connectionMode = ConnectionMode.selection;
+
+  // Server discovery
+  final ServerDiscoveryService _discoveryService = ServerDiscoveryService();
+  List<DiscoveredServer> _discoveredServers = [];
+  bool _isDiscovering = false;
+  String? _discoveryProgress;
+
   // Server connection state
   String? _connectedServerUrl;
   String? _serverName;
@@ -59,7 +82,134 @@ class _AuthScreenState extends State<AuthScreen> {
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     _displayNameController.dispose();
+    _discoveryService.dispose();
     super.dispose();
+  }
+
+  /// Start server discovery on local network
+  Future<void> _startDiscovery() async {
+    setState(() {
+      _isDiscovering = true;
+      _discoveredServers = [];
+      _discoveryProgress = t.auth.checkingNetwork;
+      _errorMessage = null;
+    });
+
+    try {
+      final servers = await _discoveryService.discoverServers(
+        onProgress: (progress) {
+          if (mounted) {
+            setState(() {
+              _discoveryProgress = progress;
+            });
+          }
+        },
+        onServerFound: (server) {
+          if (mounted) {
+            setState(() {
+              _discoveredServers = [..._discoveredServers, server];
+            });
+
+            // Auto-select the first server found immediately
+            if (_discoveredServers.length == 1 && _connectedServerUrl == null) {
+              // Small delay to show the UI briefly, then auto-connect
+              Future.delayed(const Duration(milliseconds: 500), () {
+                if (mounted && _connectedServerUrl == null) {
+                  _selectDiscoveredServer(server);
+                }
+              });
+            }
+          }
+        },
+      );
+
+      if (mounted) {
+        setState(() {
+          _isDiscovering = false;
+          _discoveredServers = servers;
+          if (servers.isEmpty) {
+            _errorMessage = t.auth.noServersFound;
+          }
+        });
+      }
+    } catch (e) {
+      appLogger.e('Server discovery failed', error: e);
+      if (mounted) {
+        setState(() {
+          _isDiscovering = false;
+          _errorMessage = t.auth.discoveryFailed(error: e.toString());
+        });
+      }
+    }
+  }
+
+  /// Select a discovered server
+  void _selectDiscoveredServer(DiscoveredServer server) {
+    _serverUrlController.text = server.url;
+    _connectToServerDirect(server.url, server.name);
+  }
+
+  /// Connect to server directly without form validation (used by discovery)
+  Future<void> _connectToServerDirect(String serverUrl, String serverName) async {
+    setState(() {
+      _isConnectingToServer = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final authService = OpenFlixAuthService.create(serverUrl);
+      final isValid = await authService.testConnection();
+
+      if (!isValid) {
+        setState(() {
+          _isConnectingToServer = false;
+          _errorMessage = t.auth.serverConnectionFailed;
+        });
+        return;
+      }
+
+      // Save the server URL
+      final storage = await StorageService.getInstance();
+      await storage.saveServerUrl(serverUrl);
+
+      // For "At Home" mode, go directly to profile selection (skip login)
+      if (_connectionMode == ConnectionMode.atHome && mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ProfileSelectionScreen(
+              serverUrl: serverUrl,
+              serverName: serverName,
+            ),
+          ),
+        );
+        return;
+      }
+
+      // Fall back to showing login form if profiles not available
+      setState(() {
+        _isConnectingToServer = false;
+        _connectedServerUrl = serverUrl;
+        _serverName = serverName;
+      });
+    } catch (e) {
+      appLogger.e('Failed to connect to server', error: e);
+      setState(() {
+        _isConnectingToServer = false;
+        _errorMessage = t.auth.serverConnectionFailed;
+      });
+    }
+  }
+
+  /// Go back to mode selection
+  void _goBackToModeSelection() {
+    setState(() {
+      _connectionMode = ConnectionMode.selection;
+      _discoveredServers = [];
+      _isDiscovering = false;
+      _discoveryProgress = null;
+      _errorMessage = null;
+    });
   }
 
   Future<void> _loadSavedServerUrl() async {
@@ -67,8 +217,12 @@ class _AuthScreenState extends State<AuthScreen> {
     final savedUrl = storage.getServerUrl();
     if (savedUrl != null && savedUrl.isNotEmpty) {
       _serverUrlController.text = savedUrl;
-      // Try to reconnect to saved server
-      _connectToServer();
+      // Try to reconnect to saved server - treat as "At Home" for profile selection
+      setState(() {
+        _connectionMode = ConnectionMode.atHome;
+      });
+      final serverName = Uri.tryParse(savedUrl)?.host ?? 'Server';
+      _connectToServerDirect(savedUrl, serverName);
     }
   }
 
@@ -334,10 +488,244 @@ class _AuthScreenState extends State<AuthScreen> {
   }
 
   Widget _buildAuthContent() {
-    if (_connectedServerUrl == null) {
-      return _buildServerForm();
+    if (_connectedServerUrl != null) {
+      return _buildAuthForm();
     }
-    return _buildAuthForm();
+
+    switch (_connectionMode) {
+      case ConnectionMode.selection:
+        return _buildModeSelection();
+      case ConnectionMode.atHome:
+        return _buildDiscoveryView();
+      case ConnectionMode.awayFromHome:
+        return _buildServerForm();
+    }
+  }
+
+  Widget _buildModeSelection() {
+    final isTV = PlatformDetector.isTV(context);
+    final buttonPadding = isTV
+        ? const EdgeInsets.symmetric(vertical: 24, horizontal: 32)
+        : const EdgeInsets.symmetric(vertical: 16, horizontal: 24);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          t.auth.howConnecting,
+          style: Theme.of(context).textTheme.titleLarge,
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 32),
+
+        // At Home button
+        _FocusableCard(
+          onTap: () {
+            setState(() {
+              _connectionMode = ConnectionMode.atHome;
+            });
+            _startDiscovery();
+          },
+          child: Padding(
+            padding: buttonPadding,
+            child: Row(
+              children: [
+                Icon(
+                  Icons.home,
+                  size: isTV ? 48 : 40,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        t.auth.atHome,
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        t.auth.atHomeDescription,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  Icons.chevron_right,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ],
+            ),
+          ),
+        ),
+
+        const SizedBox(height: 16),
+
+        // Away from Home button
+        _FocusableCard(
+          onTap: () {
+            setState(() {
+              _connectionMode = ConnectionMode.awayFromHome;
+            });
+          },
+          child: Padding(
+            padding: buttonPadding,
+            child: Row(
+              children: [
+                Icon(
+                  Icons.public,
+                  size: isTV ? 48 : 40,
+                  color: Theme.of(context).colorScheme.secondary,
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        t.auth.awayFromHome,
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        t.auth.awayFromHomeDescription,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  Icons.chevron_right,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDiscoveryView() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Header with back button
+        Row(
+          children: [
+            IconButton(
+              icon: const Icon(Icons.arrow_back),
+              onPressed: _goBackToModeSelection,
+            ),
+            Expanded(
+              child: Text(
+                t.auth.findYourServer,
+                style: Theme.of(context).textTheme.titleLarge,
+                textAlign: TextAlign.center,
+              ),
+            ),
+            const SizedBox(width: 48), // Balance the back button
+          ],
+        ),
+        const SizedBox(height: 24),
+
+        // Discovery status
+        if (_isDiscovering) ...[
+          const Center(child: CircularProgressIndicator()),
+          const SizedBox(height: 16),
+          Text(
+            _discoveryProgress ?? t.auth.searching,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+
+        // Discovered servers list
+        if (_discoveredServers.isNotEmpty) ...[
+          Text(
+            t.auth.serversFound,
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+              color: Theme.of(context).colorScheme.primary,
+            ),
+          ),
+          const SizedBox(height: 12),
+          ..._discoveredServers.map((server) => Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: _FocusableCard(
+              onTap: () => _selectDiscoveredServer(server),
+              child: ListTile(
+                leading: const Icon(Icons.dns),
+                title: Text(server.name),
+                subtitle: Text(server.url),
+                trailing: Text(
+                  '${server.responseTime.inMilliseconds}ms',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ),
+            ),
+          )),
+        ],
+
+        // Error message
+        if (_errorMessage != null && !_isDiscovering) ...[
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.errorContainer,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              _errorMessage!,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onErrorContainer,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ],
+
+        // Retry / Manual entry buttons
+        if (!_isDiscovering) ...[
+          const SizedBox(height: 24),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _startDiscovery,
+                  icon: const Icon(Icons.refresh),
+                  label: Text(t.auth.scanAgain),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    setState(() {
+                      _connectionMode = ConnectionMode.awayFromHome;
+                    });
+                  },
+                  icon: const Icon(Icons.edit),
+                  label: Text(t.auth.enterManually),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ],
+    );
   }
 
   Widget _buildServerForm() {
@@ -346,10 +734,22 @@ class _AuthScreenState extends State<AuthScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(
-            t.auth.connectToServer,
-            style: Theme.of(context).textTheme.titleLarge,
-            textAlign: TextAlign.center,
+          // Header with back button
+          Row(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: _goBackToModeSelection,
+              ),
+              Expanded(
+                child: Text(
+                  t.auth.connectToServer,
+                  style: Theme.of(context).textTheme.titleLarge,
+                  textAlign: TextAlign.center,
+                ),
+              ),
+              const SizedBox(width: 48), // Balance the back button
+            ],
           ),
           const SizedBox(height: 24),
           TextFormField(
@@ -650,6 +1050,79 @@ class _AuthScreenState extends State<AuthScreen> {
                 : Theme.of(context).colorScheme.onSurface,
             fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// A card widget that handles focus for TV/keyboard navigation
+class _FocusableCard extends StatefulWidget {
+  final Widget child;
+  final VoidCallback onTap;
+
+  const _FocusableCard({
+    required this.child,
+    required this.onTap,
+  });
+
+  @override
+  State<_FocusableCard> createState() => _FocusableCardState();
+}
+
+class _FocusableCardState extends State<_FocusableCard> {
+  bool _isFocused = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Focus(
+      onFocusChange: (hasFocus) {
+        setState(() {
+          _isFocused = hasFocus;
+        });
+      },
+      onKeyEvent: (node, event) {
+        if (event is KeyDownEvent) {
+          if (event.logicalKey == LogicalKeyboardKey.enter ||
+              event.logicalKey == LogicalKeyboardKey.select ||
+              event.logicalKey == LogicalKeyboardKey.space) {
+            widget.onTap();
+            return KeyEventResult.handled;
+          }
+        }
+        return KeyEventResult.ignored;
+      },
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          curve: Curves.easeOutCubic,
+          transform: _isFocused
+              ? Matrix4.diagonal3Values(1.02, 1.02, 1.0)
+              : Matrix4.identity(),
+          transformAlignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: _isFocused
+                ? Theme.of(context).colorScheme.primaryContainer
+                : Theme.of(context).colorScheme.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: _isFocused
+                  ? Theme.of(context).colorScheme.primary
+                  : Theme.of(context).colorScheme.outline.withValues(alpha: 0.5),
+              width: _isFocused ? 2 : 1,
+            ),
+            boxShadow: _isFocused
+                ? [
+                    BoxShadow(
+                      color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
+                      blurRadius: 8,
+                      spreadRadius: 1,
+                    ),
+                  ]
+                : null,
+          ),
+          child: widget.child,
         ),
       ),
     );

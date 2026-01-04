@@ -282,6 +282,14 @@ func (p *M3UParser) ImportChannels(sourceID uint, channels []ParsedChannel) (int
 
 	p.cleanupDuplicateChannels(sourceID)
 
+	// Get all EPG channel IDs that have programs in the database for validation
+	var epgChannelIDs []string
+	p.db.Model(&models.Program{}).Distinct("channel_id").Where("channel_id != ''").Pluck("channel_id", &epgChannelIDs)
+	validEPGChannels := make(map[string]bool)
+	for _, id := range epgChannelIDs {
+		validEPGChannels[id] = true
+	}
+
 	// Track seen channels in this import to handle duplicates within the M3U
 	seen := make(map[string]bool)
 
@@ -314,15 +322,27 @@ func (p *M3UParser) ImportChannels(sourceID uint, channels []ParsedChannel) (int
 			existing.Group = ch.Group
 			existing.Number = number
 			if ch.TVGId != "" {
-				existing.ChannelID = ch.TVGId
+				existing.TVGId = ch.TVGId // Store original TVG-ID
+				// Only set ChannelID from TVGId if:
+				// 1. ChannelID is not already mapped
+				// 2. TVGId matches a valid EPG channel (has programs)
+				if existing.ChannelID == "" && validEPGChannels[ch.TVGId] {
+					existing.ChannelID = ch.TVGId
+				}
 			}
 			p.db.Save(&existing)
 			updated++
 		} else {
 			// Create new
+			channelID := ""
+			// Only use TVGId as ChannelID if it matches a valid EPG channel
+			if ch.TVGId != "" && validEPGChannels[ch.TVGId] {
+				channelID = ch.TVGId
+			}
 			channel := models.Channel{
 				M3USourceID: sourceID,
-				ChannelID:   ch.TVGId,
+				TVGId:       ch.TVGId,   // Store original TVG-ID
+				ChannelID:   channelID,  // Only set if TVGId matches EPG programs
 				Name:        ch.Name,
 				Logo:        ch.Logo,
 				Group:       ch.Group,

@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../api/client'
-import type { LoginRequest } from '../types'
+import type { LoginRequest, RegisterRequest } from '../types'
 
 export function useCurrentUser() {
   return useQuery({
@@ -19,6 +19,12 @@ export function useLogin() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['currentUser'] })
     },
+  })
+}
+
+export function useRegister() {
+  return useMutation({
+    mutationFn: (data: RegisterRequest) => api.register(data),
   })
 }
 

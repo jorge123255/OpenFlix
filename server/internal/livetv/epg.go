@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/openflix/openflix-server/internal/epg/gracenote"
+	"github.com/openflix/openflix-server/internal/logger"
 	"github.com/openflix/openflix-server/internal/models"
 	"gorm.io/gorm"
 )
@@ -78,14 +79,55 @@ func (p *EPGParser) ParseXMLTV(content []byte) (*XMLTV, error) {
 	return &xmltv, nil
 }
 
-// FetchAndParseEPG fetches and parses EPG from URL
+// EPGFetchResult contains the result of a conditional EPG fetch
+type EPGFetchResult struct {
+	XMLTV        *XMLTV
+	NotModified  bool   // True if server returned 304 Not Modified
+	ETag         string // New ETag from response
+	LastModified string // New Last-Modified from response
+}
+
+// FetchAndParseEPG fetches and parses EPG from URL (without conditional request support)
 func (p *EPGParser) FetchAndParseEPG(url string) (*XMLTV, error) {
-	client := &http.Client{Timeout: 60 * time.Second}
-	resp, err := client.Get(url)
+	result, err := p.FetchAndParseEPGConditional(url, "", "")
+	if err != nil {
+		return nil, err
+	}
+	return result.XMLTV, nil
+}
+
+// FetchAndParseEPGConditional fetches EPG with conditional request support (ETag/Last-Modified)
+// If the content hasn't changed (304 response), returns NotModified=true with nil XMLTV
+func (p *EPGParser) FetchAndParseEPGConditional(url, etag, lastModified string) (*EPGFetchResult, error) {
+	client := &http.Client{Timeout: 120 * time.Second}
+
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	// Add conditional request headers if we have cached values
+	if etag != "" {
+		req.Header.Set("If-None-Match", etag)
+	}
+	if lastModified != "" {
+		req.Header.Set("If-Modified-Since", lastModified)
+	}
+
+	resp, err := client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch EPG: %w", err)
 	}
 	defer resp.Body.Close()
+
+	// Check for 304 Not Modified
+	if resp.StatusCode == http.StatusNotModified {
+		return &EPGFetchResult{
+			NotModified:  true,
+			ETag:         etag,         // Keep existing values
+			LastModified: lastModified,
+		}, nil
+	}
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("failed to fetch EPG: status %d", resp.StatusCode)
@@ -108,7 +150,17 @@ func (p *EPGParser) FetchAndParseEPG(url string) (*XMLTV, error) {
 		return nil, fmt.Errorf("failed to read EPG: %w", err)
 	}
 
-	return p.ParseXMLTV(content)
+	xmltv, err := p.ParseXMLTV(content)
+	if err != nil {
+		return nil, err
+	}
+
+	return &EPGFetchResult{
+		XMLTV:        xmltv,
+		NotModified:  false,
+		ETag:         resp.Header.Get("ETag"),
+		LastModified: resp.Header.Get("Last-Modified"),
+	}, nil
 }
 
 // ImportPrograms imports EPG programs into the database
@@ -215,22 +267,44 @@ func (p *EPGParser) ImportPrograms(sourceID uint, xmltv *XMLTV) (int, error) {
 	return imported, nil
 }
 
-// RefreshEPG refreshes EPG for a source
+// RefreshEPG refreshes EPG for a source with retry logic and conditional request support
 func (p *EPGParser) RefreshEPG(source *models.M3USource) error {
 	if source.EPGUrl == "" {
 		return nil
 	}
 
-	xmltv, err := p.FetchAndParseEPG(source.EPGUrl)
-	if err != nil {
+	retrier := NewRetrier(DefaultRetryConfig())
+	var fetchResult *EPGFetchResult
+
+	// Fetch with retry, using conditional request headers
+	result := retrier.Do(context.Background(), "fetch EPG for "+source.Name, func() error {
+		var err error
+		fetchResult, err = p.FetchAndParseEPGConditional(source.EPGUrl, source.EPGETag, source.EPGLastModified)
 		return err
+	})
+
+	if !result.Success {
+		return fmt.Errorf("failed to fetch EPG after %d attempts: %w", result.Attempts, result.LastError)
 	}
 
-	_, err = p.ImportPrograms(source.ID, xmltv)
-	if err != nil {
-		return err
+	// If content hasn't changed (304 Not Modified), skip import
+	if fetchResult.NotModified {
+		logger.Log.Infof("EPG for %s not modified (304), skipping import", source.Name)
+		return nil
 	}
 
+	// Update cache headers
+	source.EPGETag = fetchResult.ETag
+	source.EPGLastModified = fetchResult.LastModified
+	p.db.Save(source)
+
+	// Import programs (no retry needed for DB operations)
+	imported, err := p.ImportPrograms(source.ID, fetchResult.XMLTV)
+	if err != nil {
+		return fmt.Errorf("failed to import programs: %w", err)
+	}
+
+	logger.Log.Infof("Imported %d programs for %s", imported, source.Name)
 	return nil
 }
 
@@ -498,28 +572,53 @@ func (p *EPGParser) ImportProgramsFromGracenote(source *models.EPGSource) (int, 
 	return imported, len(channelSet), nil
 }
 
-// RefreshEPGSource refreshes programs from a standalone EPG source
+// RefreshEPGSource refreshes programs from a standalone EPG source with retry logic
 func (p *EPGParser) RefreshEPGSource(source *models.EPGSource) error {
 	var imported, channelCount int
-	var err error
+	retrier := NewRetrier(DefaultRetryConfig())
 
 	// Handle different provider types
 	if source.ProviderType == "gracenote" {
-		imported, channelCount, err = p.ImportProgramsFromGracenote(source)
-		if err != nil {
+		// Fetch Gracenote data with retry (no conditional request support for browser-based scraping)
+		result := retrier.Do(context.Background(), "fetch Gracenote EPG for "+source.Name, func() error {
+			var err error
+			imported, channelCount, err = p.ImportProgramsFromGracenote(source)
 			return err
+		})
+
+		if !result.Success {
+			return fmt.Errorf("failed to fetch Gracenote EPG after %d attempts: %w", result.Attempts, result.LastError)
 		}
 	} else {
-		// Default to XMLTV
-		xmltv, err := p.FetchAndParseEPG(source.URL)
-		if err != nil {
+		// Default to XMLTV - fetch with retry and conditional request support
+		var fetchResult *EPGFetchResult
+		result := retrier.Do(context.Background(), "fetch XMLTV EPG for "+source.Name, func() error {
+			var err error
+			fetchResult, err = p.FetchAndParseEPGConditional(source.URL, source.ETag, source.LastModified)
 			return err
+		})
+
+		if !result.Success {
+			return fmt.Errorf("failed to fetch XMLTV after %d attempts: %w", result.Attempts, result.LastError)
 		}
 
-		imported, channelCount, err = p.ImportProgramsFromEPGSource(source, xmltv)
-		if err != nil {
-			return err
+		// If content hasn't changed (304 Not Modified), skip import
+		if fetchResult.NotModified {
+			logger.Log.Infof("EPG source %s not modified (304), skipping import", source.Name)
+			return nil
 		}
+
+		// Update cache headers
+		source.ETag = fetchResult.ETag
+		source.LastModified = fetchResult.LastModified
+
+		var err error
+		imported, channelCount, err = p.ImportProgramsFromEPGSource(source, fetchResult.XMLTV)
+		if err != nil {
+			return fmt.Errorf("failed to import programs: %w", err)
+		}
+
+		logger.Log.Infof("Imported %d programs from %d channels for %s", imported, channelCount, source.Name)
 	}
 
 	// Update source metadata

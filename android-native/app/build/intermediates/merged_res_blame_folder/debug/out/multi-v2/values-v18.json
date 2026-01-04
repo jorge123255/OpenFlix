@@ -1,0 +1,38 @@
+{
+    "logs": [
+        {
+            "outputFile": "com.openflix.app-mergeDebugResources-2:/values-v18/values-v18.xml",
+            "map": [
+                {
+                    "source": "/Users/georgeszulc/.gradle/caches/transforms-3/879f814a1926be262fea833236b1631d/transformed/appcompat-1.6.1/res/values-v18/values-v18.xml",
+                    "from": {
+                        "startLines": "2",
+                        "startColumns": "4",
+                        "startOffsets": "55",
+                        "endColumns": "48",
+                        "endOffsets": "99"
+                    }
+                },
+                {
+                    "source": "/Users/georgeszulc/.gradle/caches/transforms-3/40204ff9fd828af79aa964a89586e543/transformed/leanback-1.2.0-alpha04/res/values-v18/values-v18.xml",
+                    "from": {
+                        "startLines": "2,12",
+                        "startColumns": "4,4",
+                        "startOffsets": "55,765",
+                        "endLines": "11,20",
+                        "endColumns": "12,12",
+                        "endOffsets": "760,1352"
+                    },
+                    "to": {
+                        "startLines": "3,13",
+                        "startColumns": "4,4",
+                        "startOffsets": "104,814",
+                        "endLines": "12,21",
+                        "endColumns": "12,12",
+                        "endOffsets": "809,1401"
+                    }
+                }
+            ]
+        }
+    ]
+}

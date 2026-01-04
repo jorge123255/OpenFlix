@@ -1,9 +1,13 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:provider/provider.dart';
+import 'content_badge.dart';
 import 'focus/focus_indicator.dart';
 import 'hub_navigation_controller.dart';
+import 'netflix_preview_card.dart';
 import '../client/media_client.dart';
 import '../mixins/keyboard_long_press_mixin.dart';
 import '../models/media_item.dart';
@@ -277,6 +281,7 @@ class _MediaCardGridState extends State<_MediaCardGrid>
     with KeyboardLongPressMixin {
   FocusNode? _ownFocusNode;
   bool _isFocused = false;
+  Timer? _previewTimer;
 
   @override
   void onKeyboardTap() => widget.onTap();
@@ -310,6 +315,7 @@ class _MediaCardGridState extends State<_MediaCardGrid>
   @override
   void dispose() {
     _focusNode.removeListener(_handleFocusChange);
+    _previewTimer?.cancel();
     // Only dispose if we created the node
     _ownFocusNode?.dispose();
     super.dispose();
@@ -329,8 +335,60 @@ class _MediaCardGridState extends State<_MediaCardGrid>
 
         // Scroll to center only if item is not fully visible
         _scrollToCenterIfNeeded();
+
+        // Schedule Netflix-style preview for movies and shows
+        _schedulePreview();
+      } else {
+        // Cancel preview when focus is lost
+        _cancelPreview();
       }
     }
+  }
+
+  /// Schedule a Netflix-style preview card after holding focus for 800ms
+  void _schedulePreview() {
+    // Only show preview for MediaItem (not Playlists)
+    if (widget.item is! MediaItem) return;
+
+    final item = widget.item as MediaItem;
+    final itemType = item.type.toLowerCase();
+
+    // Only show preview for movies and shows (not episodes, seasons, or collections)
+    if (itemType != 'movie' && itemType != 'show') return;
+
+    _previewTimer?.cancel();
+    _previewTimer = Timer(const Duration(milliseconds: 800), () {
+      if (!mounted || !_focusNode.hasFocus) return;
+
+      final overlay = NetflixPreviewOverlay.of(context);
+      if (overlay == null) return;
+
+      // Get card position and size for the preview
+      final renderBox = context.findRenderObject() as RenderBox?;
+      if (renderBox == null) return;
+
+      final position = renderBox.localToGlobal(Offset.zero);
+      final size = renderBox.size;
+
+      overlay.schedulePreview(
+        item: item,
+        position: position,
+        cardSize: size,
+        onPlay: () {
+          // Navigate to video player
+          navigateToVideoPlayer(context, metadata: item);
+        },
+        onDetails: widget.onTap,
+        delay: Duration.zero, // Show immediately since we already waited
+      );
+    });
+  }
+
+  /// Cancel any scheduled preview
+  void _cancelPreview() {
+    _previewTimer?.cancel();
+    _previewTimer = null;
+    NetflixPreviewOverlay.of(context)?.cancelPreview();
   }
 
   /// Scrolls to center the item only if it's not already fully visible.
@@ -999,11 +1057,24 @@ Widget _buildPosterImage(BuildContext context, dynamic item) {
   }
 }
 
-/// Overlay widget for poster showing watched indicator and progress bar
+/// Overlay widget for poster showing watched indicator, progress bar, and badges
 class _PosterOverlay extends StatelessWidget {
   final dynamic item; // Can be MediaItem or Playlist
+  final bool showLiveBadge;
 
-  const _PosterOverlay({required this.item});
+  const _PosterOverlay({required this.item, this.showLiveBadge = false});
+
+  /// Check if the content was recently added (within 14 days) and unwatched
+  bool _shouldShowNewBadge(MediaItem metadata) {
+    // Don't show NEW badge for watched content
+    if (metadata.isWatched) return false;
+
+    // Don't show NEW badge for partially watched content
+    if (metadata.viewOffset != null && metadata.viewOffset! > 0) return false;
+
+    // Check if added within last 14 days
+    return isNewContent(metadata.addedAt, withinDays: 14);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1013,9 +1084,24 @@ class _PosterOverlay extends StatelessWidget {
     }
 
     final metadata = item as MediaItem;
+    final showNew = _shouldShowNewBadge(metadata);
 
     return Stack(
       children: [
+        // NEW badge for recently added unwatched content (top-left)
+        if (showNew && !showLiveBadge)
+          const Positioned(
+            top: 4,
+            left: 4,
+            child: ContentBadge(type: BadgeType.newContent),
+          ),
+        // LIVE badge for live content (top-left, takes priority over NEW)
+        if (showLiveBadge)
+          const Positioned(
+            top: 4,
+            left: 4,
+            child: LiveBadge(),
+          ),
         // Watched indicator (checkmark)
         if (metadata.isWatched)
           Positioned(

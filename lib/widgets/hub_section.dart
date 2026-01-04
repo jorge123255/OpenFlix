@@ -181,43 +181,53 @@ class _HubSectionState extends State<HubSection> {
         mainAxisSize: MainAxisSize.min,
         children: [
           // Hub header
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
-            child: Focus(
-              focusNode: _headerFocusNode,
-              onKeyEvent: _handleHeaderKeyEvent,
-              canRequestFocus: widget.hub.more, // Only focusable if has "more"
-              child: FocusIndicator(
-                isFocused: _headerIsFocused && widget.hub.more,
-                borderRadius: 8,
-                child: InkWell(
-                  onTap: widget.hub.more ? _navigateToHubDetail : null,
-                  borderRadius: BorderRadius.circular(8),
-                  focusColor: Colors.transparent,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(widget.icon),
-                        const SizedBox(width: 8),
-                        Text(
-                          widget.hub.title,
-                          style: Theme.of(context).textTheme.titleLarge,
+          Builder(
+            builder: (context) {
+              final screenWidth = MediaQuery.of(context).size.width;
+              final isTV = screenWidth > 1000;
+              return Padding(
+                padding: EdgeInsets.fromLTRB(16, isTV ? 28 : 24, 16, isTV ? 12 : 8),
+                child: Focus(
+                  focusNode: _headerFocusNode,
+                  onKeyEvent: _handleHeaderKeyEvent,
+                  canRequestFocus: widget.hub.more, // Only focusable if has "more"
+                  child: FocusIndicator(
+                    isFocused: _headerIsFocused && widget.hub.more,
+                    borderRadius: 8,
+                    child: InkWell(
+                      onTap: widget.hub.more ? _navigateToHubDetail : null,
+                      borderRadius: BorderRadius.circular(8),
+                      focusColor: Colors.transparent,
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: isTV ? 12 : 8,
+                          vertical: isTV ? 8 : 4,
                         ),
-                        if (widget.hub.more) ...[
-                          const SizedBox(width: 4),
-                          const Icon(Icons.chevron_right, size: 20),
-                        ],
-                      ],
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(widget.icon, size: isTV ? 28 : 24),
+                            SizedBox(width: isTV ? 12 : 8),
+                            Text(
+                              widget.hub.title,
+                              style: isTV
+                                  ? Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                        fontWeight: FontWeight.w600,
+                                      )
+                                  : Theme.of(context).textTheme.titleLarge,
+                            ),
+                            if (widget.hub.more) ...[
+                              SizedBox(width: isTV ? 8 : 4),
+                              Icon(Icons.chevron_right, size: isTV ? 28 : 20),
+                            ],
+                          ],
+                        ),
+                      ),
                     ),
                   ),
                 ),
-              ),
-            ),
+              );
+            },
           ),
 
           // Hub items (horizontal scroll)
@@ -225,8 +235,13 @@ class _HubSectionState extends State<HubSection> {
             LayoutBuilder(
               builder: (context, constraints) {
                 // Responsive card width based on screen size
+                // Larger cards for TV mode for better 10-foot visibility
                 final screenWidth = constraints.maxWidth;
-                final cardWidth = screenWidth > 1600
+                final isTV = MediaQuery.of(context).size.width > 1200 &&
+                    MediaQuery.of(context).size.height < MediaQuery.of(context).size.width;
+                final cardWidth = isTV
+                    ? (screenWidth > 1600 ? 240.0 : 220.0)
+                    : screenWidth > 1600
                     ? 220.0
                     : screenWidth > 1200
                     ? 200.0

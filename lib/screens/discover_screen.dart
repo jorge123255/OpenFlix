@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../client/media_client.dart';
 import '../models/media_item.dart';
 import '../models/hub.dart';
+import '../models/livetv_channel.dart';
 import '../providers/multi_server_provider.dart';
 import '../providers/server_state_provider.dart';
 import '../providers/hidden_libraries_provider.dart';
@@ -14,7 +15,20 @@ import '../widgets/desktop_app_bar.dart';
 import '../widgets/user_avatar_widget.dart';
 import '../widgets/hub_section.dart';
 import '../widgets/hub_navigation_controller.dart';
+import '../widgets/livetv_home_section.dart';
+import '../widgets/top10_section.dart';
+import '../widgets/featured_collection_section.dart';
+import '../widgets/brand_hub_section.dart';
+import '../widgets/your_next_watch_section.dart';
+import '../widgets/continue_watching_section.dart';
+import '../widgets/just_added_section.dart';
+import '../widgets/mood_collection_section.dart';
+import '../widgets/because_you_watched_section.dart';
+import '../widgets/random_picker_button.dart';
+import '../widgets/calendar_view_section.dart';
 import 'profile_switch_screen.dart';
+import 'profile_selection_screen.dart';
+import '../services/storage_service.dart';
 import '../providers/user_profile_provider.dart';
 import '../providers/settings_provider.dart';
 import '../mixins/refreshable.dart';
@@ -27,6 +41,18 @@ import '../utils/video_player_navigation.dart';
 import '../utils/content_rating_formatter.dart';
 import 'auth_screen.dart';
 import 'main_screen.dart';
+import 'screensaver_screen.dart';
+import 'channel_surfing_screen.dart';
+import 'downloads_screen.dart';
+import 'watchlist_screen.dart';
+import 'virtual_channels_screen.dart';
+import '../services/settings_service.dart';
+import '../services/profile_storage_service.dart';
+import '../widgets/voice_control_button.dart';
+import '../services/voice_control_service.dart';
+import '../services/last_watched_service.dart';
+import '../widgets/docked_player.dart';
+import 'livetv_player_screen.dart';
 
 class DiscoverScreen extends StatefulWidget {
   final VoidCallback? onBecameVisible;
@@ -57,9 +83,13 @@ class _DiscoverScreenState extends State<DiscoverScreen>
 
   List<MediaItem> _onDeck = [];
   List<Hub> _hubs = [];
+  List<LiveTVChannel> _liveChannels = [];
+  List<MediaItem> _nextWatchItems = [];
+  List<MediaItem> _recentlyAdded = [];
   bool _isLoading = true;
   bool _isInitialLoad = true;
   String? _errorMessage;
+  Timer? _liveTVRefreshTimer;
   final PageController _heroController = PageController();
   final ScrollController _scrollController = ScrollController();
   int _currentHeroIndex = 0;
@@ -70,6 +100,58 @@ class _DiscoverScreenState extends State<DiscoverScreen>
       HubNavigationController();
   late final FocusNode _heroFocusNode;
   bool _heroIsFocused = false;
+
+  // Category filter for TV-friendly navigation
+  String _selectedCategory = 'all';
+  static const List<Map<String, dynamic>> _categories = [
+    {'id': 'all', 'label': 'All', 'icon': Icons.grid_view},
+    {'id': 'movies', 'label': 'Movies', 'icon': Icons.movie},
+    {'id': 'shows', 'label': 'TV Shows', 'icon': Icons.tv},
+    {'id': 'live', 'label': 'Live TV', 'icon': Icons.live_tv},
+  ];
+
+  // Genre filter
+  String? _selectedGenre;
+  List<String> _availableGenres = [];
+
+  // Screensaver idle timer
+  Timer? _screensaverIdleTimer;
+  bool _screensaverEnabled = true;
+  int _screensaverIdleMinutes = 5;
+
+  // Docked player
+  final GlobalKey<DockedPlayerState> _dockedPlayerKey = GlobalKey();
+  bool _dockedPlayerEnabled = true;
+  LiveTVChannel? _lastWatchedChannel;
+
+  // Common genre icons mapping
+  static const Map<String, IconData> _genreIcons = {
+    'action': Icons.flash_on,
+    'adventure': Icons.explore,
+    'animation': Icons.animation,
+    'comedy': Icons.mood,
+    'crime': Icons.gavel,
+    'documentary': Icons.videocam,
+    'drama': Icons.theater_comedy,
+    'family': Icons.family_restroom,
+    'fantasy': Icons.auto_fix_high,
+    'history': Icons.history_edu,
+    'horror': Icons.nights_stay,
+    'music': Icons.music_note,
+    'mystery': Icons.search,
+    'romance': Icons.favorite,
+    'science fiction': Icons.rocket_launch,
+    'sci-fi': Icons.rocket_launch,
+    'thriller': Icons.warning_amber,
+    'war': Icons.military_tech,
+    'western': Icons.landscape,
+    'kids': Icons.child_care,
+    'reality': Icons.tv,
+    'talk show': Icons.mic,
+    'news': Icons.newspaper,
+    'sport': Icons.sports,
+    'sports': Icons.sports,
+  };
 
   /// Get the correct MediaClient for an item's server
   MediaClient _getClientForItem(MediaItem? item) {
@@ -101,6 +183,91 @@ class _DiscoverScreenState extends State<DiscoverScreen>
     _heroFocusNode.addListener(_handleHeroFocusChange);
     _loadContent();
     _startAutoScroll();
+    _loadScreensaverSettings();
+    _loadDockedPlayerSettings();
+  }
+
+  Future<void> _loadDockedPlayerSettings() async {
+    final settings = await SettingsService.getInstance();
+    final lastWatchedService = await LastWatchedService.getInstance();
+
+    if (mounted) {
+      setState(() {
+        _dockedPlayerEnabled = settings.getDockedPlayerEnabled();
+        _lastWatchedChannel = lastWatchedService.getLastWatchedChannel();
+      });
+    }
+  }
+
+  Future<void> _loadScreensaverSettings() async {
+    final settings = await SettingsService.getInstance();
+    if (mounted) {
+      setState(() {
+        _screensaverEnabled = settings.getScreensaverEnabled();
+        _screensaverIdleMinutes = settings.getScreensaverIdleMinutes();
+      });
+      _resetScreensaverTimer();
+    }
+  }
+
+  void _resetScreensaverTimer() {
+    _screensaverIdleTimer?.cancel();
+    if (!_screensaverEnabled || _screensaverIdleMinutes <= 0) return;
+
+    _screensaverIdleTimer = Timer(
+      Duration(minutes: _screensaverIdleMinutes),
+      _launchScreensaver,
+    );
+  }
+
+  void _launchScreensaver() {
+    if (!mounted) return;
+
+    // Collect all items for the screensaver slideshow
+    final items = <MediaItem>[];
+    items.addAll(_onDeck);
+    items.addAll(_recentlyAdded);
+    for (final hub in _hubs) {
+      items.addAll(hub.items.take(10)); // Take up to 10 from each hub
+    }
+
+    // Need at least a few items for a good slideshow
+    if (items.length < 3) return;
+
+    Navigator.of(context).push(
+      PageRouteBuilder(
+        opaque: true,
+        pageBuilder: (context, animation, secondaryAnimation) {
+          return FadeTransition(
+            opacity: animation,
+            child: ScreensaverScreen(items: items),
+          );
+        },
+        transitionDuration: const Duration(milliseconds: 500),
+      ),
+    ).then((_) {
+      // Reset timer when returning from screensaver
+      _resetScreensaverTimer();
+    });
+  }
+
+  /// Navigate to the live TV player for a channel
+  void _navigateToLiveTVPlayer(LiveTVChannel channel) {
+    // Stop the docked player before navigating
+    _dockedPlayerKey.currentState?.stop();
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => LiveTVPlayerScreen(
+          channel: channel,
+          channels: _liveChannels.isNotEmpty ? _liveChannels : [channel],
+        ),
+      ),
+    ).then((_) {
+      // Reload docked player settings when returning
+      _loadDockedPlayerSettings();
+    });
   }
 
   void _handleHeroFocusChange() {
@@ -177,6 +344,8 @@ class _DiscoverScreenState extends State<DiscoverScreen>
   @override
   void dispose() {
     _autoScrollTimer?.cancel();
+    _liveTVRefreshTimer?.cancel();
+    _screensaverIdleTimer?.cancel();
     _heroController.dispose();
     _scrollController.dispose();
     _indicatorAnimationController.dispose();
@@ -318,11 +487,18 @@ class _DiscoverScreenState extends State<DiscoverScreen>
       setState(() {
         _onDeck = onDeck;
         _hubs = filteredHubs;
+        _nextWatchItems = _extractNextWatchItems(filteredHubs);
+        _availableGenres = _extractGenresFromHubs(filteredHubs);
         _isLoading = false;
 
         // Reset hero index to avoid sync issues
         _currentHeroIndex = 0;
       });
+
+      // Fetch live TV and recently added separately (non-blocking)
+      _fetchLiveTV();
+      _fetchRecentlyAdded();
+      _startLiveTVRefresh();
 
       // Sync PageController to first page after data loads
       if (_heroController.hasClients && onDeck.isNotEmpty) {
@@ -383,6 +559,77 @@ class _DiscoverScreenState extends State<DiscoverScreen>
     }
   }
 
+  /// Fetch live TV channels for "What's On Now" section
+  Future<void> _fetchLiveTV() async {
+    try {
+      final multiServerProvider = Provider.of<MultiServerProvider>(
+        context,
+        listen: false,
+      );
+
+      if (!multiServerProvider.hasConnectedServers) {
+        return;
+      }
+
+      // Fetch from first available server (Live TV is typically on one server)
+      final client = context.getClientForServer(
+        multiServerProvider.onlineServerIds.first,
+      );
+
+      final channels = await client.getLiveTVWhatsOnNow();
+
+      if (mounted) {
+        setState(() {
+          // Limit to top 5 channels for home screen section
+          _liveChannels = channels.take(5).toList();
+        });
+        appLogger.d('Fetched ${_liveChannels.length} live TV channels for home screen');
+      }
+    } catch (e) {
+      appLogger.w('Failed to fetch live TV for home', error: e);
+      // Silently fail - live TV section is optional
+    }
+  }
+
+  /// Fetch recently added content for "Just Added" section
+  Future<void> _fetchRecentlyAdded() async {
+    try {
+      final multiServerProvider = Provider.of<MultiServerProvider>(
+        context,
+        listen: false,
+      );
+
+      if (!multiServerProvider.hasConnectedServers) {
+        return;
+      }
+
+      // Fetch from first available server
+      final client = context.getClientForServer(
+        multiServerProvider.onlineServerIds.first,
+      );
+
+      final items = await client.getRecentlyAdded(limit: 20);
+
+      if (mounted) {
+        setState(() {
+          _recentlyAdded = items;
+        });
+        appLogger.d('Fetched ${_recentlyAdded.length} recently added items');
+      }
+    } catch (e) {
+      appLogger.w('Failed to fetch recently added', error: e);
+      // Silently fail - section is optional
+    }
+  }
+
+  /// Start periodic refresh of live TV data (every 60 seconds)
+  void _startLiveTVRefresh() {
+    _liveTVRefreshTimer?.cancel();
+    _liveTVRefreshTimer = Timer.periodic(const Duration(seconds: 60), (_) {
+      _fetchLiveTV();
+    });
+  }
+
   // Public method to refresh content (for normal navigation)
   @override
   void refresh() {
@@ -403,6 +650,130 @@ class _DiscoverScreenState extends State<DiscoverScreen>
     if (_onDeck.isNotEmpty) {
       _heroFocusNode.requestFocus();
     }
+  }
+
+  /// Check if hub should be displayed as Top 10 style (trending/popular content)
+  bool _isTrendingHub(Hub hub) {
+    final id = hub.hubIdentifier?.toLowerCase() ?? '';
+    final title = hub.title.toLowerCase();
+    return id.contains('trending') ||
+        id.contains('popular') ||
+        title.contains('top 10') ||
+        title.contains('top ten') ||
+        title.contains('trending') ||
+        title.contains('most popular') ||
+        (title.contains('top ') && title.contains('in'));
+  }
+
+  /// Check if hub should be displayed as a featured collection
+  bool _isFeaturedHub(Hub hub) {
+    final id = hub.hubIdentifier?.toLowerCase() ?? '';
+    final title = hub.title.toLowerCase();
+    return id.contains('recommended') ||
+        id.contains('featured') ||
+        id.contains('picks') ||
+        id.contains('award') ||
+        id.contains('best') ||
+        title.contains('recommended') ||
+        title.contains('picks for you') ||
+        title.contains('award') ||
+        title.contains('editor') ||
+        title.contains('staff picks') ||
+        title.contains('top rated');
+  }
+
+  /// Get accent color for featured hub based on its type
+  Color? _getFeaturedHubColor(Hub hub) {
+    final title = hub.title.toLowerCase();
+    if (title.contains('award') || title.contains('best')) {
+      return Colors.amber;
+    }
+    if (title.contains('recommended') || title.contains('picks')) {
+      return Colors.deepPurple;
+    }
+    if (title.contains('top rated')) {
+      return Colors.green;
+    }
+    return null;
+  }
+
+  /// Get icon for featured hub based on its type
+  IconData _getFeaturedHubIcon(Hub hub) {
+    final title = hub.title.toLowerCase();
+    if (title.contains('award') || title.contains('best')) {
+      return Icons.emoji_events;
+    }
+    if (title.contains('recommended') || title.contains('picks')) {
+      return Icons.thumb_up;
+    }
+    if (title.contains('top rated')) {
+      return Icons.star;
+    }
+    return Icons.auto_awesome;
+  }
+
+  /// Build the appropriate hub section widget based on hub type
+  Widget _buildHubSection(Hub hub, int index) {
+    // Check for brand/studio hubs first (Marvel, Disney, Pixar, etc.)
+    final brandInfo = BrandInfo.fromHub(hub);
+    if (brandInfo != null) {
+      return BrandHubSection(
+        hub: hub,
+        brandInfo: brandInfo,
+        onRefresh: updateItem,
+        navigationOrder: 3 + index,
+      );
+    }
+
+    // Check for trending hubs (Top 10 style)
+    if (_isTrendingHub(hub)) {
+      return Top10Section(
+        hub: hub,
+        onRefresh: updateItem,
+        navigationOrder: 3 + index,
+      );
+    }
+
+    // Check for featured collections (Award Winners, Staff Picks, etc.)
+    if (_isFeaturedHub(hub)) {
+      return FeaturedCollectionSection(
+        hub: hub,
+        accentColor: _getFeaturedHubColor(hub),
+        icon: _getFeaturedHubIcon(hub),
+        onRefresh: updateItem,
+        navigationOrder: 3 + index,
+      );
+    }
+
+    // Check for mood-based collections (Feel-Good, Date Night, etc.)
+    final moodInfo = MoodInfo.fromHub(hub);
+    if (moodInfo != null) {
+      return MoodCollectionSection(
+        hub: hub,
+        mood: moodInfo,
+        onRefresh: updateItem,
+        navigationOrder: 3 + index,
+      );
+    }
+
+    // Check for "Because you watched X" recommendations
+    final becauseInfo = BecauseYouWatchedInfo.fromHub(hub);
+    if (becauseInfo != null) {
+      return BecauseYouWatchedSection(
+        hub: hub,
+        info: becauseInfo,
+        onRefresh: updateItem,
+        navigationOrder: 3 + index,
+      );
+    }
+
+    // Default to regular hub section
+    return HubSection(
+      hub: hub,
+      icon: _getHubIcon(hub.title),
+      onRefresh: updateItem,
+      navigationOrder: 3 + index,
+    );
   }
 
   /// Get icon for hub based on its title
@@ -505,6 +876,139 @@ class _DiscoverScreenState extends State<DiscoverScreen>
     return Icons.auto_awesome;
   }
 
+  /// Extract "Your Next Watch" items from recommendation hubs
+  /// Prioritizes hubs that are personalized recommendations
+  List<MediaItem> _extractNextWatchItems(List<Hub> hubs) {
+    final items = <MediaItem>[];
+    final seenKeys = <String>{};
+
+    // Priority order for recommendation hubs
+    final priorityPatterns = [
+      'recommended',
+      'for you',
+      'picks for',
+      'based on',
+      'because you',
+      'similar to',
+      'you might like',
+      'top rated',
+      'popular',
+    ];
+
+    // Sort hubs by priority
+    final sortedHubs = List<Hub>.from(hubs);
+    sortedHubs.sort((a, b) {
+      final aTitle = a.title.toLowerCase();
+      final bTitle = b.title.toLowerCase();
+      final aId = a.hubIdentifier?.toLowerCase() ?? '';
+      final bId = b.hubIdentifier?.toLowerCase() ?? '';
+
+      int getPriority(String title, String id) {
+        for (int i = 0; i < priorityPatterns.length; i++) {
+          if (title.contains(priorityPatterns[i]) ||
+              id.contains(priorityPatterns[i])) {
+            return i;
+          }
+        }
+        return priorityPatterns.length;
+      }
+
+      return getPriority(aTitle, aId).compareTo(getPriority(bTitle, bId));
+    });
+
+    // Collect items from sorted hubs (max 10 unique items)
+    for (final hub in sortedHubs) {
+      for (final item in hub.items) {
+        if (items.length >= 10) break;
+        if (!seenKeys.contains(item.ratingKey)) {
+          // Skip items that are in continue watching
+          final isInOnDeck = _onDeck.any((d) => d.ratingKey == item.ratingKey);
+          if (!isInOnDeck) {
+            items.add(item);
+            seenKeys.add(item.ratingKey);
+          }
+        }
+      }
+      if (items.length >= 10) break;
+    }
+
+    return items;
+  }
+
+  /// Extract available genres from hub titles
+  /// Looks for patterns like "Top in Thrillers", "Action Movies", "Comedy Films"
+  List<String> _extractGenresFromHubs(List<Hub> hubs) {
+    final genreSet = <String>{};
+
+    // Known genre keywords to look for in hub titles
+    final knownGenres = [
+      'Action',
+      'Adventure',
+      'Animation',
+      'Anime',
+      'Comedy',
+      'Crime',
+      'Documentary',
+      'Drama',
+      'Family',
+      'Fantasy',
+      'History',
+      'Horror',
+      'Kids',
+      'Music',
+      'Musical',
+      'Mystery',
+      'Romance',
+      'Sci-Fi',
+      'Science Fiction',
+      'Thriller',
+      'Thrillers',
+      'War',
+      'Western',
+    ];
+
+    for (final hub in hubs) {
+      final title = hub.title;
+      for (final genre in knownGenres) {
+        if (title.toLowerCase().contains(genre.toLowerCase())) {
+          // Normalize some genres
+          if (genre == 'Thrillers') {
+            genreSet.add('Thriller');
+          } else if (genre == 'Science Fiction') {
+            genreSet.add('Sci-Fi');
+          } else {
+            genreSet.add(genre);
+          }
+        }
+      }
+    }
+
+    // Sort alphabetically
+    final genres = genreSet.toList()..sort();
+    return genres;
+  }
+
+  /// Get icon for a genre
+  IconData _getGenreIcon(String genre) {
+    final lowerGenre = genre.toLowerCase();
+    return _genreIcons[lowerGenre] ?? Icons.category;
+  }
+
+  /// Filter hubs based on selected genre (by hub title)
+  List<Hub> _getFilteredHubs() {
+    if (_selectedGenre == null) return _hubs;
+
+    final selectedLower = _selectedGenre!.toLowerCase();
+
+    return _hubs.where((hub) {
+      final titleLower = hub.title.toLowerCase();
+      // Match the genre in the hub title
+      return titleLower.contains(selectedLower) ||
+          (selectedLower == 'sci-fi' && titleLower.contains('science fiction')) ||
+          (selectedLower == 'thriller' && titleLower.contains('thrillers'));
+    }).toList();
+  }
+
   @override
   void updateItemInLists(String ratingKey, MediaItem updatedMetadata) {
     // Check and update in _onDeck list
@@ -523,6 +1027,23 @@ class _DiscoverScreenState extends State<DiscoverScreen>
       if (itemIndex != -1) {
         hub.items[itemIndex] = updatedMetadata;
       }
+    }
+  }
+
+  Future<void> _handleSwitchLocalProfile() async {
+    final storage = await StorageService.getInstance();
+    final serverUrl = storage.getServerUrl();
+
+    if (serverUrl != null && mounted) {
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(
+          builder: (context) => ProfileSelectionScreen(
+            serverUrl: serverUrl,
+            serverName: Uri.tryParse(serverUrl)?.host,
+          ),
+        ),
+        (route) => false,
+      );
     }
   }
 
@@ -581,13 +1102,52 @@ class _DiscoverScreenState extends State<DiscoverScreen>
     );
   }
 
+  void _handleVoiceCommand(VoiceCommandResult result) {
+    switch (result.command) {
+      case VoiceCommand.search:
+        if (result.query != null) {
+          // Navigate to search tab and perform search
+          final mainScreenState = context.findAncestorStateOfType<MainScreenState>();
+          mainScreenState?.switchToTab(3); // Search tab index
+          // TODO: Pass query to search screen
+        }
+        break;
+      case VoiceCommand.home:
+        // Already on home, scroll to top
+        _scrollController.animateTo(
+          0,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+        break;
+      case VoiceCommand.play:
+        // Start channel surfing as a "play something" action
+        showChannelSurfingSheet(context);
+        break;
+      default:
+        // Show feedback for unhandled commands on this screen
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Voice command: ${result.command.name}'),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: SafeArea(
-        child: Focus(
-          onKeyEvent: _handleBackKey,
-          child: HubNavigationScope(
+    return Listener(
+      onPointerDown: (_) => _resetScreensaverTimer(),
+      onPointerMove: (_) => _resetScreensaverTimer(),
+      child: Scaffold(
+        body: SafeArea(
+          child: Focus(
+            onKeyEvent: (node, event) {
+              _resetScreensaverTimer();
+              return _handleBackKey(node, event);
+            },
+            child: HubNavigationScope(
             controller: _hubNavigationController,
             child: CustomScrollView(
               controller: _scrollController,
@@ -601,6 +1161,10 @@ class _DiscoverScreenState extends State<DiscoverScreen>
                   shadowColor: Colors.transparent,
                   scrolledUnderElevation: 0,
                   actions: [
+                    // Voice Control Button
+                    VoiceControlIconButton(
+                      onCommand: (result) => _handleVoiceCommand(result),
+                    ),
                     IconButton(
                       icon: const Icon(Icons.refresh),
                       onPressed: _loadContent,
@@ -616,21 +1180,102 @@ class _DiscoverScreenState extends State<DiscoverScreen>
                                 )
                               : const Icon(Icons.account_circle, size: 32),
                           onSelected: (value) {
-                            if (value == 'switch_profile') {
+                            if (value == 'switch_local_profile') {
+                              _handleSwitchLocalProfile();
+                            } else if (value == 'switch_profile') {
                               _handleSwitchProfile(context);
                             } else if (value == 'logout') {
                               _handleLogout();
+                            } else if (value == 'channel_surfing') {
+                              showChannelSurfingSheet(context);
+                            } else if (value == 'downloads') {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const DownloadsScreen(),
+                                ),
+                              );
+                            } else if (value == 'watchlist') {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const WatchlistScreen(),
+                                ),
+                              );
+                            } else if (value == 'virtual_channels') {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const VirtualChannelsScreen(),
+                                ),
+                              );
                             }
                           },
                           itemBuilder: (context) => [
-                            // Only show Switch Profile if multiple users available
+                            // Channel Surfing
+                            PopupMenuItem(
+                              value: 'channel_surfing',
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.shuffle),
+                                  const SizedBox(width: 8),
+                                  const Text('Channel Surfing'),
+                                ],
+                              ),
+                            ),
+                            // Downloads
+                            PopupMenuItem(
+                              value: 'downloads',
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.download_for_offline),
+                                  const SizedBox(width: 8),
+                                  const Text('Downloads'),
+                                ],
+                              ),
+                            ),
+                            // Watchlist
+                            PopupMenuItem(
+                              value: 'watchlist',
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.bookmark),
+                                  const SizedBox(width: 8),
+                                  Text(t.watchlist.title),
+                                ],
+                              ),
+                            ),
+                            // Virtual Channels
+                            PopupMenuItem(
+                              value: 'virtual_channels',
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.playlist_play),
+                                  const SizedBox(width: 8),
+                                  Text(t.virtualChannels.title),
+                                ],
+                              ),
+                            ),
+                            const PopupMenuDivider(),
+                            // Switch Local Profile (always available)
+                            PopupMenuItem(
+                              value: 'switch_local_profile',
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.swap_horiz),
+                                  const SizedBox(width: 8),
+                                  Text(t.settings.switchProfile),
+                                ],
+                              ),
+                            ),
+                            // Only show Switch Plex User if multiple users available
                             if (userProvider.hasMultipleUsers)
                               PopupMenuItem(
                                 value: 'switch_profile',
                                 child: Row(
                                   children: [
-                                    Icon(Icons.people),
-                                    SizedBox(width: 8),
+                                    const Icon(Icons.people),
+                                    const SizedBox(width: 8),
                                     Text(t.discover.switchProfile),
                                   ],
                                 ),
@@ -651,6 +1296,39 @@ class _DiscoverScreenState extends State<DiscoverScreen>
                     ),
                   ],
                 ),
+                // Personalized Greeting Header
+                SliverToBoxAdapter(
+                  child: _buildPersonalizedHeader(),
+                ),
+                // Category Filter Chips for TV-friendly browsing
+                SliverToBoxAdapter(
+                  child: _buildCategoryFilterChips(),
+                ),
+                // Genre Filter Chips (only show when genres are available)
+                if (_availableGenres.isNotEmpty)
+                  SliverToBoxAdapter(
+                    child: _buildGenreFilterChips(),
+                  ),
+                // Docked Player (last watched channel mini-player)
+                if (_dockedPlayerEnabled && _lastWatchedChannel != null)
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                      child: DockedPlayer(
+                        key: _dockedPlayerKey,
+                        channels: _liveChannels,
+                        isVisible: true,
+                        autoPlay: true,
+                        height: 180,
+                        onExpandToFullscreen: () => _navigateToLiveTVPlayer(_lastWatchedChannel!),
+                        onChannelChange: (channel) {
+                          setState(() {
+                            _lastWatchedChannel = channel;
+                          });
+                        },
+                      ),
+                    ),
+                  ),
                 if (_isLoading)
                   const SliverFillRemaining(
                     child: Center(child: CircularProgressIndicator()),
@@ -689,37 +1367,74 @@ class _DiscoverScreenState extends State<DiscoverScreen>
                     },
                   ),
 
-                  // On Deck / Continue Watching
-                  if (_onDeck.isNotEmpty)
+                  // "What's On Now" Live TV Section
+                  if (_liveChannels.isNotEmpty)
                     SliverToBoxAdapter(
-                      child: HubSection(
-                        hub: Hub(
-                          hubKey: 'continue_watching',
-                          title: t.discover.continueWatching,
-                          type: 'mixed',
-                          hubIdentifier: '_continue_watching_',
-                          size: _onDeck.length,
-                          more: false,
-                          items: _onDeck,
-                        ),
-                        icon: Icons.play_circle_outline,
-                        onRefresh: updateItem,
-                        onRemoveFromContinueWatching: _refreshContinueWatching,
-                        isInContinueWatching: true,
-                        navigationOrder: 1, // After hero
+                      child: LiveTVHomeSection(
+                        channels: _liveChannels,
+                        navigationOrder: 1,
                       ),
                     ),
 
-                  // Recommendation Hubs (Trending, Top in Genre, etc.)
-                  for (int i = 0; i < _hubs.length; i++)
+                  // "Your Next Watch" Personalized Recommendations
+                  if (_nextWatchItems.isNotEmpty)
                     SliverToBoxAdapter(
-                      child: HubSection(
-                        hub: _hubs[i],
-                        icon: _getHubIcon(_hubs[i].title),
-                        onRefresh: updateItem,
-                        navigationOrder: 2 + i, // After continue watching
+                      child: Consumer<UserProfileProvider>(
+                        builder: (context, userProvider, _) {
+                          final userName = userProvider.currentUser?.displayName;
+                          return YourNextWatchSection(
+                            items: _nextWatchItems,
+                            userName: userName,
+                            navigationOrder: 2,
+                          );
+                        },
                       ),
                     ),
+
+                  // On Deck / Continue Watching (Enhanced)
+                  if (_onDeck.isNotEmpty)
+                    SliverToBoxAdapter(
+                      child: ContinueWatchingSection(
+                        items: _onDeck,
+                        onRefresh: updateItem,
+                        onRemoveItem: _refreshContinueWatching,
+                        navigationOrder: 3, // After hero, live TV, and next watch
+                      ),
+                    ),
+
+                  // Just Added Section
+                  if (_recentlyAdded.isNotEmpty)
+                    SliverToBoxAdapter(
+                      child: JustAddedSection(
+                        items: _recentlyAdded,
+                        onRefresh: updateItem,
+                        navigationOrder: 4,
+                      ),
+                    ),
+
+                  // Calendar View Section (shows content by date)
+                  if (_recentlyAdded.isNotEmpty)
+                    SliverToBoxAdapter(
+                      child: CalendarViewSection(
+                        items: _recentlyAdded,
+                        title: t.discover.calendar,
+                        icon: Icons.calendar_month,
+                        navigationOrder: 5,
+                      ),
+                    ),
+
+                  // Recommendation Hubs (filtered by genre if selected)
+                  Builder(
+                    builder: (context) {
+                      final filteredHubs = _getFilteredHubs();
+                      return SliverList(
+                        delegate: SliverChildBuilderDelegate(
+                          (context, i) => _buildHubSection(filteredHubs[i], i + 1),
+                          childCount: filteredHubs.length,
+                        ),
+                      );
+                    },
+                  ),
 
                   if (_onDeck.isEmpty && _hubs.isEmpty)
                     SliverFillRemaining(
@@ -751,6 +1466,7 @@ class _DiscoverScreenState extends State<DiscoverScreen>
           ),
         ),
       ),
+    ),
     );
   }
 
@@ -894,6 +1610,156 @@ class _DiscoverScreenState extends State<DiscoverScreen>
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  /// Build personalized greeting header (Netflix-style "For [Username]")
+  Widget _buildPersonalizedHeader() {
+    final userProvider = Provider.of<UserProfileProvider>(context);
+    final currentUser = userProvider.currentUser;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isTV = screenWidth > 1000;
+
+    // Get greeting based on time of day
+    final hour = DateTime.now().hour;
+    String greeting;
+    if (hour < 12) {
+      greeting = t.discover.goodMorning;
+    } else if (hour < 17) {
+      greeting = t.discover.goodAfternoon;
+    } else {
+      greeting = t.discover.goodEvening;
+    }
+
+    // Use FutureBuilder to get local profile name
+    return FutureBuilder<ProfileStorageService>(
+      future: ProfileStorageService.getInstance(),
+      builder: (context, snapshot) {
+        String userName;
+        if (snapshot.hasData) {
+          final activeProfile = snapshot.data?.getActiveProfile();
+          userName = activeProfile?.name ?? currentUser?.displayName ?? t.discover.defaultUser;
+        } else {
+          userName = currentUser?.displayName ?? t.discover.defaultUser;
+        }
+
+        return Padding(
+      padding: EdgeInsets.fromLTRB(
+        isTV ? 24 : 16,
+        isTV ? 16 : 12,
+        isTV ? 24 : 16,
+        0,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '$greeting,',
+            style: TextStyle(
+              fontSize: isTV ? 18 : 14,
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            userName,
+            style: TextStyle(
+              fontSize: isTV ? 28 : 22,
+              fontWeight: FontWeight.bold,
+              color: Theme.of(context).colorScheme.onSurface,
+            ),
+          ),
+        ],
+      ),
+        );
+      },
+    );
+  }
+
+  /// Build category filter chips for TV-friendly navigation
+  Widget _buildCategoryFilterChips() {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isTV = screenWidth > 1000;
+
+    return Container(
+      height: isTV ? 72 : 56,
+      padding: EdgeInsets.symmetric(vertical: isTV ? 12 : 8),
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        padding: EdgeInsets.symmetric(horizontal: isTV ? 24 : 16),
+        itemCount: _categories.length,
+        itemBuilder: (context, index) {
+          final category = _categories[index];
+          final isSelected = _selectedCategory == category['id'];
+          return Padding(
+            padding: EdgeInsets.only(right: index < _categories.length - 1 ? (isTV ? 16 : 8) : 0),
+            child: _CategoryChip(
+              label: category['label'] as String,
+              icon: category['icon'] as IconData,
+              isSelected: isSelected,
+              onTap: () {
+                setState(() {
+                  _selectedCategory = category['id'] as String;
+                });
+              },
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  /// Build genre filter chips
+  Widget _buildGenreFilterChips() {
+    if (_availableGenres.isEmpty) return const SizedBox.shrink();
+
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isTV = screenWidth > 1000;
+    final theme = Theme.of(context);
+
+    return Container(
+      height: isTV ? 56 : 44,
+      padding: EdgeInsets.only(bottom: isTV ? 8 : 4),
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        padding: EdgeInsets.symmetric(horizontal: isTV ? 24 : 16),
+        itemCount: _availableGenres.length + 1, // +1 for "All Genres" chip
+        itemBuilder: (context, index) {
+          if (index == 0) {
+            // "All Genres" chip
+            final isSelected = _selectedGenre == null;
+            return Padding(
+              padding: EdgeInsets.only(right: isTV ? 12 : 8),
+              child: _GenreChip(
+                genre: 'All Genres',
+                icon: Icons.grid_view,
+                isSelected: isSelected,
+                onTap: () {
+                  setState(() {
+                    _selectedGenre = null;
+                  });
+                },
+              ),
+            );
+          }
+
+          final genre = _availableGenres[index - 1];
+          final isSelected = _selectedGenre == genre;
+          return Padding(
+            padding: EdgeInsets.only(right: index < _availableGenres.length ? (isTV ? 12 : 8) : 0),
+            child: _GenreChip(
+              genre: genre,
+              icon: _getGenreIcon(genre),
+              isSelected: isSelected,
+              onTap: () {
+                setState(() {
+                  _selectedGenre = isSelected ? null : genre;
+                });
+              },
+            ),
+          );
+        },
       ),
     );
   }
@@ -1154,10 +2020,10 @@ class _DiscoverScreenState extends State<DiscoverScreen>
                           ),
                         ],
 
-                        // On small screens: show button before summary
+                        // On small screens: show buttons before summary
                         if (!isLargeScreen) ...[
                           const SizedBox(height: 20),
-                          _buildSmartPlayButton(heroItem),
+                          _buildHeroActionButtons(heroItem),
                         ],
 
                         // Summary with episode info (Apple TV style)
@@ -1197,10 +2063,10 @@ class _DiscoverScreenState extends State<DiscoverScreen>
                           ),
                         ],
 
-                        // On large screens: show button after summary
+                        // On large screens: show buttons after summary
                         if (isLargeScreen) ...[
                           const SizedBox(height: 20),
-                          _buildSmartPlayButton(heroItem),
+                          _buildHeroActionButtons(heroItem),
                         ],
                       ],
                     ),
@@ -1214,7 +2080,8 @@ class _DiscoverScreenState extends State<DiscoverScreen>
     );
   }
 
-  Widget _buildSmartPlayButton(MediaItem heroItem) {
+  /// Build hero action buttons (Play + Info) like Hulu/Netflix
+  Widget _buildHeroActionButtons(MediaItem heroItem) {
     final hasProgress =
         heroItem.viewOffset != null &&
         heroItem.duration != null &&
@@ -1229,62 +2096,390 @@ class _DiscoverScreenState extends State<DiscoverScreen>
         ? heroItem.viewOffset! / heroItem.duration!
         : 0.0;
 
-    return InkWell(
-      onTap: () {
-        appLogger.d('Playing: ${heroItem.title}');
-        navigateToVideoPlayer(context, metadata: heroItem);
-      },
-      borderRadius: BorderRadius.circular(24),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(24),
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Play button
+        _HeroActionButton(
+          icon: Icons.play_arrow,
+          label: hasProgress ? '$minutesLeft min left' : t.discover.play,
+          isPrimary: true,
+          progress: hasProgress ? progress : null,
+          onTap: () {
+            appLogger.d('Playing: ${heroItem.title}');
+            navigateToVideoPlayer(context, metadata: heroItem);
+          },
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.play_arrow, size: 20, color: Colors.black),
-            const SizedBox(width: 8),
-            if (hasProgress) ...[
-              // Progress bar
-              Container(
-                width: 40,
-                height: 6,
-                decoration: BoxDecoration(
-                  color: Colors.black26,
-                  borderRadius: BorderRadius.circular(3),
-                ),
-                child: FractionallySizedBox(
-                  alignment: Alignment.centerLeft,
-                  widthFactor: progress,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.black,
-                      borderRadius: BorderRadius.circular(2),
+        const SizedBox(width: 12),
+        // Info/Details button
+        _HeroActionButton(
+          icon: Icons.info_outline,
+          label: 'Details',
+          isPrimary: false,
+          onTap: () {
+            _navigateToMediaDetail(heroItem);
+          },
+        ),
+        const SizedBox(width: 12),
+        // Surprise Me button
+        _HeroActionButton(
+          icon: Icons.casino,
+          label: t.discover.surpriseMe,
+          isPrimary: false,
+          onTap: _showRandomPicker,
+        ),
+      ],
+    );
+  }
+
+  void _showRandomPicker() {
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (context) => const RandomPickerDialog(),
+    );
+  }
+
+  void _navigateToMediaDetail(MediaItem item) {
+    // Navigate to media detail screen
+    Navigator.pushNamed(
+      context,
+      '/media/${item.ratingKey}',
+      arguments: {'item': item, 'serverId': item.serverId},
+    );
+  }
+}
+
+/// TV-friendly hero action button with focus support
+class _HeroActionButton extends StatefulWidget {
+  final IconData icon;
+  final String label;
+  final bool isPrimary;
+  final double? progress;
+  final VoidCallback onTap;
+
+  const _HeroActionButton({
+    required this.icon,
+    required this.label,
+    required this.isPrimary,
+    this.progress,
+    required this.onTap,
+  });
+
+  @override
+  State<_HeroActionButton> createState() => _HeroActionButtonState();
+}
+
+class _HeroActionButtonState extends State<_HeroActionButton> {
+  bool _isFocused = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final bgColor = widget.isPrimary
+        ? (_isFocused ? Colors.white : Colors.white.withValues(alpha: 0.95))
+        : (_isFocused ? Colors.white.withValues(alpha: 0.3) : Colors.white.withValues(alpha: 0.2));
+
+    final textColor = widget.isPrimary ? Colors.black : Colors.white;
+    final iconColor = widget.isPrimary ? Colors.black : Colors.white;
+
+    return Focus(
+      onFocusChange: (hasFocus) {
+        setState(() => _isFocused = hasFocus);
+      },
+      onKeyEvent: (node, event) {
+        if (event is KeyDownEvent) {
+          if (event.logicalKey == LogicalKeyboardKey.enter ||
+              event.logicalKey == LogicalKeyboardKey.select ||
+              event.logicalKey == LogicalKeyboardKey.space) {
+            widget.onTap();
+            return KeyEventResult.handled;
+          }
+        }
+        return KeyEventResult.ignored;
+      },
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+          transform: _isFocused
+              ? Matrix4.diagonal3Values(1.05, 1.05, 1.0)
+              : Matrix4.identity(),
+          transformAlignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: bgColor,
+            borderRadius: BorderRadius.circular(8),
+            border: _isFocused
+                ? Border.all(color: Colors.white, width: 3)
+                : null,
+            boxShadow: _isFocused
+                ? [
+                    BoxShadow(
+                      color: Colors.white.withValues(alpha: 0.3),
+                      blurRadius: 12,
+                      spreadRadius: 2,
+                    ),
+                  ]
+                : null,
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(widget.icon, size: 24, color: iconColor),
+              const SizedBox(width: 8),
+              if (widget.progress != null) ...[
+                // Progress bar for continue watching
+                Container(
+                  width: 40,
+                  height: 6,
+                  decoration: BoxDecoration(
+                    color: Colors.black26,
+                    borderRadius: BorderRadius.circular(3),
+                  ),
+                  child: FractionallySizedBox(
+                    alignment: Alignment.centerLeft,
+                    widthFactor: widget.progress!,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.black,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
                     ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 8),
+                const SizedBox(width: 8),
+              ],
               Text(
-                t.discover.minutesLeft(minutes: minutesLeft),
-                style: const TextStyle(
-                  color: Colors.black,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ] else
-              Text(
-                t.discover.play,
+                widget.label,
                 style: TextStyle(
-                  color: Colors.black,
-                  fontSize: 14,
+                  color: textColor,
+                  fontSize: 16,
                   fontWeight: FontWeight.w600,
                 ),
               ),
-          ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// TV-friendly category filter chip with focus support
+class _CategoryChip extends StatefulWidget {
+  final String label;
+  final IconData icon;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _CategoryChip({
+    required this.label,
+    required this.icon,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  State<_CategoryChip> createState() => _CategoryChipState();
+}
+
+class _CategoryChipState extends State<_CategoryChip> {
+  bool _isFocused = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isTV = screenWidth > 1000;
+
+    final selectedBg = theme.colorScheme.primary;
+    final unselectedBg = isDark
+        ? Colors.white.withValues(alpha: 0.1)
+        : Colors.black.withValues(alpha: 0.05);
+
+    final selectedFg = theme.colorScheme.onPrimary;
+    final unselectedFg = isDark ? Colors.white70 : Colors.black87;
+
+    // Larger sizes for TV mode
+    final horizontalPadding = isTV ? 24.0 : 16.0;
+    final verticalPadding = isTV ? 14.0 : 10.0;
+    final iconSize = isTV ? 24.0 : 18.0;
+    final fontSize = isTV ? 18.0 : 14.0;
+
+    return Focus(
+      onFocusChange: (hasFocus) {
+        setState(() => _isFocused = hasFocus);
+      },
+      onKeyEvent: (node, event) {
+        if (event is KeyDownEvent) {
+          if (event.logicalKey == LogicalKeyboardKey.enter ||
+              event.logicalKey == LogicalKeyboardKey.select ||
+              event.logicalKey == LogicalKeyboardKey.space) {
+            widget.onTap();
+            return KeyEventResult.handled;
+          }
+        }
+        return KeyEventResult.ignored;
+      },
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          padding: EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: verticalPadding),
+          transform: _isFocused
+              ? Matrix4.diagonal3Values(isTV ? 1.1 : 1.08, isTV ? 1.1 : 1.08, 1.0)
+              : Matrix4.identity(),
+          transformAlignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: widget.isSelected ? selectedBg : unselectedBg,
+            borderRadius: BorderRadius.circular(isTV ? 28 : 24),
+            border: _isFocused
+                ? Border.all(color: Colors.white, width: isTV ? 3 : 2)
+                : widget.isSelected
+                    ? null
+                    : Border.all(color: Colors.white24, width: 1),
+            boxShadow: _isFocused
+                ? [
+                    BoxShadow(
+                      color: Colors.white.withValues(alpha: isTV ? 0.4 : 0.3),
+                      blurRadius: isTV ? 16 : 8,
+                      spreadRadius: isTV ? 2 : 1,
+                    ),
+                  ]
+                : null,
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                widget.icon,
+                size: iconSize,
+                color: widget.isSelected ? selectedFg : unselectedFg,
+              ),
+              SizedBox(width: isTV ? 12 : 8),
+              Text(
+                widget.label,
+                style: TextStyle(
+                  color: widget.isSelected ? selectedFg : unselectedFg,
+                  fontSize: fontSize,
+                  fontWeight: widget.isSelected ? FontWeight.w600 : FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// TV-friendly genre filter chip with focus support
+class _GenreChip extends StatefulWidget {
+  final String genre;
+  final IconData icon;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _GenreChip({
+    required this.genre,
+    required this.icon,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  State<_GenreChip> createState() => _GenreChipState();
+}
+
+class _GenreChipState extends State<_GenreChip> {
+  bool _isFocused = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isTV = screenWidth > 1000;
+
+    // Genre chips use a slightly different color scheme
+    final selectedBg = theme.colorScheme.secondary;
+    final unselectedBg = isDark
+        ? Colors.white.withValues(alpha: 0.08)
+        : Colors.black.withValues(alpha: 0.04);
+
+    final selectedFg = theme.colorScheme.onSecondary;
+    final unselectedFg = isDark ? Colors.white60 : Colors.black54;
+
+    final horizontalPadding = isTV ? 20.0 : 14.0;
+    final verticalPadding = isTV ? 12.0 : 8.0;
+    final iconSize = isTV ? 20.0 : 16.0;
+    final fontSize = isTV ? 15.0 : 12.0;
+
+    return Focus(
+      onFocusChange: (hasFocus) {
+        setState(() => _isFocused = hasFocus);
+      },
+      onKeyEvent: (node, event) {
+        if (event is KeyDownEvent) {
+          if (event.logicalKey == LogicalKeyboardKey.enter ||
+              event.logicalKey == LogicalKeyboardKey.select ||
+              event.logicalKey == LogicalKeyboardKey.space) {
+            widget.onTap();
+            return KeyEventResult.handled;
+          }
+        }
+        return KeyEventResult.ignored;
+      },
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          padding: EdgeInsets.symmetric(
+            horizontal: horizontalPadding,
+            vertical: verticalPadding,
+          ),
+          transform: _isFocused
+              ? Matrix4.diagonal3Values(isTV ? 1.08 : 1.05, isTV ? 1.08 : 1.05, 1.0)
+              : Matrix4.identity(),
+          transformAlignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: widget.isSelected ? selectedBg : unselectedBg,
+            borderRadius: BorderRadius.circular(isTV ? 20 : 16),
+            border: _isFocused
+                ? Border.all(color: theme.colorScheme.secondary, width: isTV ? 2 : 1.5)
+                : widget.isSelected
+                    ? null
+                    : Border.all(color: Colors.white12, width: 1),
+            boxShadow: _isFocused
+                ? [
+                    BoxShadow(
+                      color: theme.colorScheme.secondary.withValues(alpha: 0.3),
+                      blurRadius: isTV ? 12 : 6,
+                      spreadRadius: 1,
+                    ),
+                  ]
+                : null,
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                widget.icon,
+                size: iconSize,
+                color: widget.isSelected ? selectedFg : unselectedFg,
+              ),
+              SizedBox(width: isTV ? 8 : 6),
+              Text(
+                widget.genre,
+                style: TextStyle(
+                  color: widget.isSelected ? selectedFg : unselectedFg,
+                  fontSize: fontSize,
+                  fontWeight: widget.isSelected ? FontWeight.w600 : FontWeight.w400,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

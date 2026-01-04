@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
-import { Tv, Plus, Trash2, RefreshCw, FileText, Radio, Search, Edit, X, Check, Settings } from 'lucide-react'
+import { Tv, Plus, Trash2, RefreshCw, FileText, Radio, Search, Edit, X, Check, Settings, MapPin, Zap, AlertCircle, Film, Monitor, Download, Clock, Archive } from 'lucide-react'
 import { EPGSourceCard } from '../components/EPGSourceCard'
 import {
   useM3USources,
@@ -13,7 +13,7 @@ import {
   useDeleteEPGSource,
   useRefreshEPG,
 } from '../hooks/useLiveTV'
-import { api } from '../api/client'
+import { api, type Provider, type ProviderGroup } from '../api/client'
 
 interface Channel {
   id: number
@@ -26,6 +26,8 @@ interface Channel {
   streamUrl: string
   enabled: boolean
   epgSourceId?: number
+  archiveEnabled?: boolean
+  archiveDays?: number
 }
 
 function AddSourceModal({
@@ -47,9 +49,52 @@ function AddSourceModal({
   const [isPreviewing, setIsPreviewing] = useState(false)
   const [previewError, setPreviewError] = useState('')
 
+  // Provider discovery state
+  const [providerGroups, setProviderGroups] = useState<ProviderGroup[]>([])
+  const [selectedProvider, setSelectedProvider] = useState<Provider | null>(null)
+  const [isDiscoveringProviders, setIsDiscoveringProviders] = useState(false)
+
+  const handleDiscoverProviders = async () => {
+    if (!gracenotePostalCode || gracenotePostalCode.length < 5) {
+      setPreviewError('Please enter a valid 5-digit ZIP code')
+      return
+    }
+
+    setIsDiscoveringProviders(true)
+    setPreviewError('')
+    setProviderGroups([])
+    setSelectedProvider(null)
+    setPreview(null)
+
+    try {
+      const response = await api.discoverProviders(gracenotePostalCode)
+      setProviderGroups(response.grouped)
+
+      // Auto-select first cable provider if available
+      const cableGroup = response.grouped.find(g => g.type === 'Cable')
+      if (cableGroup && cableGroup.providers.length > 0) {
+        const firstCable = cableGroup.providers[0]
+        setSelectedProvider(firstCable)
+        setGracenoteAffiliate(firstCable.headendId)
+        setName(firstCable.name + ' - ' + firstCable.location)
+      }
+    } catch (error: any) {
+      setPreviewError(error.response?.data?.error || error.message || 'Failed to discover providers')
+    } finally {
+      setIsDiscoveringProviders(false)
+    }
+  }
+
+  const handleProviderSelect = (provider: Provider) => {
+    setSelectedProvider(provider)
+    setGracenoteAffiliate(provider.headendId)
+    setName(provider.name + ' - ' + provider.location)
+    setPreview(null) // Clear any previous preview
+  }
+
   const handlePreview = async () => {
-    if (!gracenotePostalCode && !gracenoteAffiliate) {
-      setPreviewError('Please enter a postal code')
+    if (!gracenoteAffiliate) {
+      setPreviewError('Please select a provider first')
       return
     }
 
@@ -63,10 +108,6 @@ function AddSourceModal({
         hours: gracenoteHours,
       })
       setPreview(response)
-      // Auto-fill affiliate if it was detected
-      if (response.affiliate && !gracenoteAffiliate) {
-        setGracenoteAffiliate(response.affiliate)
-      }
     } catch (error: any) {
       setPreviewError(error.message || 'Failed to preview EPG data')
       setPreview(null)
@@ -87,7 +128,7 @@ function AddSourceModal({
       } else {
         // Validate Gracenote requirements
         if (!gracenoteAffiliate) {
-          setPreviewError('Please click "Preview Channels" to auto-detect affiliate ID')
+          setPreviewError('Please select a TV provider')
           return
         }
 
@@ -184,52 +225,116 @@ function AddSourceModal({
 
           {type === 'epg' && providerType === 'gracenote' && (
             <>
-              {/* Step 1: Postal Code - Primary input for auto-detection */}
+              {/* Step 1: Postal Code - Enter ZIP to find providers */}
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Postal Code <span className="text-red-400">*</span>
+                  ZIP Code <span className="text-red-400">*</span>
                 </label>
-                <input
-                  type="text"
-                  value={gracenotePostalCode}
-                  onChange={(e) => setGracenotePostalCode(e.target.value)}
-                  className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
-                  placeholder="10001"
-                  required
-                />
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={gracenotePostalCode}
+                    onChange={(e) => setGracenotePostalCode(e.target.value.replace(/\D/g, '').slice(0, 5))}
+                    className="flex-1 px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
+                    placeholder="10001"
+                    maxLength={5}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleDiscoverProviders}
+                    disabled={isDiscoveringProviders || gracenotePostalCode.length < 5}
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg flex items-center gap-2"
+                  >
+                    {isDiscoveringProviders ? (
+                      <RefreshCw className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <MapPin className="h-4 w-4" />
+                    )}
+                    Find
+                  </button>
+                </div>
                 <p className="text-xs text-gray-500 mt-1">
-                  Enter your ZIP code to auto-detect channels for your area
+                  Enter your ZIP code to find available TV providers
                 </p>
               </div>
 
-              {/* Step 2: Preview Button - Click to discover channels */}
-              <div className="mb-4">
-                <button
-                  type="button"
-                  onClick={handlePreview}
-                  disabled={isPreviewing || (!gracenotePostalCode && !gracenoteAffiliate)}
-                  className="w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg flex items-center justify-center gap-2"
-                >
-                  {isPreviewing ? (
-                    <>
-                      <RefreshCw className="h-4 w-4 animate-spin" />
-                      Loading Preview...
-                    </>
-                  ) : (
-                    <>
-                      <Search className="h-4 w-4" />
-                      Preview Channels
-                    </>
-                  )}
-                </button>
-                {previewError && (
-                  <p className="text-sm text-red-400 mt-2">{previewError}</p>
-                )}
-              </div>
+              {previewError && (
+                <p className="text-sm text-red-400 mb-4">{previewError}</p>
+              )}
+
+              {/* Step 2: Provider Selection - Show discovered providers */}
+              {providerGroups.length > 0 && (
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Select Your TV Provider
+                  </label>
+                  <div className="space-y-3">
+                    {providerGroups.map((group) => (
+                      <div key={group.type}>
+                        <p className="text-xs text-gray-500 mb-2 uppercase tracking-wide">
+                          {group.type === 'Cable' && '📺 Cable'}
+                          {group.type === 'Satellite' && '📡 Satellite'}
+                          {group.type === 'Antenna' && '📻 Over-the-Air'}
+                        </p>
+                        <div className="space-y-1">
+                          {group.providers.map((provider) => (
+                            <button
+                              key={provider.headendId}
+                              type="button"
+                              onClick={() => handleProviderSelect(provider)}
+                              className={`w-full text-left px-4 py-3 rounded-lg border transition-colors ${
+                                selectedProvider?.headendId === provider.headendId
+                                  ? 'bg-indigo-600/20 border-indigo-500 text-white'
+                                  : 'bg-gray-700/50 border-gray-600 text-gray-300 hover:border-gray-500 hover:bg-gray-700'
+                              }`}
+                            >
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <span className="font-medium">{provider.name}</span>
+                                  {provider.location && (
+                                    <span className="text-gray-400 ml-2 text-sm">• {provider.location}</span>
+                                  )}
+                                </div>
+                                {selectedProvider?.headendId === provider.headendId && (
+                                  <Check className="h-4 w-4 text-indigo-400" />
+                                )}
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Step 3: Preview Channels (optional) */}
+              {selectedProvider && (
+                <div className="mb-4">
+                  <button
+                    type="button"
+                    onClick={handlePreview}
+                    disabled={isPreviewing}
+                    className="w-full py-2 px-4 bg-gray-700 hover:bg-gray-600 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg flex items-center justify-center gap-2"
+                  >
+                    {isPreviewing ? (
+                      <>
+                        <RefreshCw className="h-4 w-4 animate-spin" />
+                        Loading Preview...
+                      </>
+                    ) : (
+                      <>
+                        <Search className="h-4 w-4" />
+                        Preview Channels (Optional)
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
 
               {/* Preview Results */}
               {preview && (
-                <div className="mb-4 p-4 bg-gray-700/50 rounded-lg border border-gray-600">
+                <div className="mb-4 p-4 bg-gray-700/50 rounded-lg border border-green-500/50">
                   <div className="flex items-center gap-2 mb-3">
                     <Check className="h-5 w-5 text-green-400" />
                     <h3 className="text-sm font-semibold text-white">
@@ -237,64 +342,64 @@ function AddSourceModal({
                     </h3>
                   </div>
                   <div className="text-xs text-gray-400 mb-3">
-                    <p>Affiliate: <span className="text-white font-mono">{preview.affiliate}</span></p>
                     <p>Programs: {preview.totalPrograms}</p>
                   </div>
-                  <div className="max-h-48 overflow-y-auto space-y-1">
+                  <div className="max-h-32 overflow-y-auto space-y-1">
                     <p className="text-xs text-gray-500 mb-2">Sample channels:</p>
-                    {preview.previewChannels?.map((ch: any, idx: number) => (
+                    {preview.previewChannels?.slice(0, 5).map((ch: any, idx: number) => (
                       <div key={idx} className="flex items-center gap-2 text-xs text-gray-300 py-1">
                         <span className="font-medium text-white">{ch.callSign || ch.channelId}</span>
                         {ch.channelNo && <span className="text-gray-500">Ch {ch.channelNo}</span>}
-                        {ch.affiliateName && <span className="text-gray-400">• {ch.affiliateName}</span>}
                       </div>
                     ))}
-                    {preview.totalChannels > preview.previewChannels?.length && (
+                    {preview.totalChannels > 5 && (
                       <p className="text-xs text-gray-500 mt-2">
-                        ... and {preview.totalChannels - preview.previewChannels.length} more channels
+                        ... and {preview.totalChannels - 5} more channels
                       </p>
                     )}
                   </div>
                 </div>
               )}
 
-              {/* Step 3: Advanced Settings (shown after preview or optional) */}
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Affiliate ID {preview && <span className="text-xs text-gray-500">(auto-detected)</span>}
-                </label>
-                <input
-                  type="text"
-                  value={gracenoteAffiliate}
-                  onChange={(e) => setGracenoteAffiliate(e.target.value)}
-                  className={`w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white ${
-                    preview ? 'border-green-500' : ''
-                  }`}
-                  placeholder="Will be auto-detected from postal code"
-                  readOnly={!!preview && !!preview.affiliate}
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  {preview
-                    ? 'Auto-detected from your postal code'
-                    : 'Click "Preview Channels" to auto-detect'
-                  }
-                </p>
-              </div>
-
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Hours of Guide Data
-                </label>
-                <input
-                  type="number"
-                  value={gracenoteHours}
-                  onChange={(e) => setGracenoteHours(parseInt(e.target.value) || 6)}
-                  min="1"
-                  max="24"
-                  className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
-                />
-                <p className="text-xs text-gray-500 mt-1">1-24 hours (default: 6)</p>
-              </div>
+              {/* Advanced Settings */}
+              {selectedProvider && (
+                <div className="mb-4 pt-4 border-t border-gray-700">
+                  <details className="group">
+                    <summary className="text-sm font-medium text-gray-400 cursor-pointer hover:text-white flex items-center gap-2">
+                      <Settings className="h-4 w-4" />
+                      Advanced Settings
+                    </summary>
+                    <div className="mt-3 space-y-3">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-400 mb-1">
+                          Provider ID
+                        </label>
+                        <input
+                          type="text"
+                          value={gracenoteAffiliate}
+                          onChange={(e) => setGracenoteAffiliate(e.target.value)}
+                          className="w-full px-3 py-1.5 bg-gray-700 border border-gray-600 rounded text-white text-sm font-mono"
+                          readOnly
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-400 mb-1">
+                          Hours of Guide Data
+                        </label>
+                        <input
+                          type="number"
+                          value={gracenoteHours}
+                          onChange={(e) => setGracenoteHours(parseInt(e.target.value) || 6)}
+                          min="1"
+                          max="12"
+                          className="w-full px-3 py-1.5 bg-gray-700 border border-gray-600 rounded text-white text-sm"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">1-12 hours (default: 6). API limits longer requests.</p>
+                      </div>
+                    </div>
+                  </details>
+                </div>
+              )}
             </>
           )}
 
@@ -486,6 +591,290 @@ function EditChannelModal({
               className="flex-1 py-2 px-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg"
             >
               {updateChannel.isPending ? 'Saving...' : 'Save'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
+function AddXtreamSourceModal({ onClose }: { onClose: () => void }) {
+  const queryClient = useQueryClient()
+  const [name, setName] = useState('')
+  const [serverUrl, setServerUrl] = useState('')
+  const [username, setUsername] = useState('')
+  const [password, setPassword] = useState('')
+  const [m3uUrl, setM3uUrl] = useState('')
+  const [useM3uParse, setUseM3uParse] = useState(false)
+  const [parseResult, setParseResult] = useState<any>(null)
+  const [parseError, setParseError] = useState('')
+  const [isParsing, setIsParsing] = useState(false)
+
+  // VOD/Series import settings
+  const [importVod, setImportVod] = useState(false)
+  const [importSeries, setImportSeries] = useState(false)
+  const [vodLibraryId, setVodLibraryId] = useState<number | null>(null)
+  const [seriesLibraryId, setSeriesLibraryId] = useState<number | null>(null)
+
+  // Fetch libraries for dropdown
+  const { data: libraries } = useQuery({
+    queryKey: ['libraries'],
+    queryFn: () => api.getLibraries(),
+  })
+
+  const movieLibraries = libraries?.filter(l => l.type === 'movie') || []
+  const showLibraries = libraries?.filter(l => l.type === 'show') || []
+
+  const createXtream = useMutation({
+    mutationFn: async (data: {
+      name: string
+      serverUrl: string
+      username: string
+      password: string
+      importVod?: boolean
+      importSeries?: boolean
+      vodLibraryId?: number
+      seriesLibraryId?: number
+    }) => {
+      return api.createXtreamSource(data)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['xtreamSources'] })
+      onClose()
+    },
+  })
+
+  const handleParseM3U = async () => {
+    if (!m3uUrl) return
+    setIsParsing(true)
+    setParseError('')
+    setParseResult(null)
+
+    try {
+      const result = await api.parseXtreamFromM3U(m3uUrl)
+      if (result.success) {
+        setParseResult(result)
+        setServerUrl(result.serverUrl || '')
+        setUsername(result.username || '')
+        setName(result.name || '')
+      } else {
+        setParseError(result.error || 'Failed to parse URL')
+        // Still try to use extracted info if available
+        if (result.serverUrl) setServerUrl(result.serverUrl)
+        if (result.username) setUsername(result.username)
+      }
+    } catch (error: any) {
+      setParseError(error.message || 'Failed to parse URL')
+    } finally {
+      setIsParsing(false)
+    }
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    await createXtream.mutateAsync({
+      name,
+      serverUrl,
+      username,
+      password,
+      importVod,
+      importSeries,
+      vodLibraryId: vodLibraryId ?? undefined,
+      seriesLibraryId: seriesLibraryId ?? undefined,
+    })
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="bg-gray-800 rounded-xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+            <Zap className="h-5 w-5 text-yellow-400" />
+            Add Xtream Source
+          </h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-white">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        {/* Auto-detect from M3U URL */}
+        <div className="mb-6 p-4 bg-gray-700/50 rounded-lg border border-gray-600">
+          <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={useM3uParse}
+              onChange={(e) => setUseM3uParse(e.target.checked)}
+              className="rounded"
+            />
+            Auto-detect from M3U URL
+          </label>
+          {useM3uParse && (
+            <div className="mt-3">
+              <div className="flex gap-2">
+                <input
+                  type="url"
+                  value={m3uUrl}
+                  onChange={(e) => setM3uUrl(e.target.value)}
+                  className="flex-1 px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm"
+                  placeholder="http://server:port/get.php?username=...&password=..."
+                />
+                <button
+                  type="button"
+                  onClick={handleParseM3U}
+                  disabled={isParsing || !m3uUrl}
+                  className="px-3 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-600 text-white rounded-lg text-sm"
+                >
+                  {isParsing ? <RefreshCw className="h-4 w-4 animate-spin" /> : 'Parse'}
+                </button>
+              </div>
+              {parseError && (
+                <p className="text-sm text-yellow-400 mt-2 flex items-center gap-1">
+                  <AlertCircle className="h-4 w-4" />
+                  {parseError}
+                </p>
+              )}
+              {parseResult && parseResult.success && (
+                <div className="mt-3 p-2 bg-green-500/20 border border-green-500/50 rounded text-sm text-green-300">
+                  <Check className="inline h-4 w-4 mr-1" />
+                  Credentials detected! Account status: {parseResult.userInfo?.status}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        <form onSubmit={handleSubmit}>
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-300 mb-2">Name</label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
+              placeholder="My IPTV Provider"
+              required
+            />
+          </div>
+
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-300 mb-2">Server URL</label>
+            <input
+              type="url"
+              value={serverUrl}
+              onChange={(e) => setServerUrl(e.target.value)}
+              className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
+              placeholder="http://server.com:8080"
+              required
+            />
+          </div>
+
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-300 mb-2">Username</label>
+            <input
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
+              required
+            />
+          </div>
+
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-300 mb-2">Password</label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
+              required
+            />
+          </div>
+
+          {/* VOD/Series Import Settings */}
+          <div className="mb-6 p-4 bg-gray-700/50 rounded-lg border border-gray-600">
+            <h3 className="text-sm font-semibold text-white mb-3">Content Import</h3>
+            <p className="text-xs text-gray-400 mb-4">
+              Import VOD movies and series from this source into your media libraries
+            </p>
+
+            {/* Import VOD */}
+            <div className="mb-4">
+              <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={importVod}
+                  onChange={(e) => setImportVod(e.target.checked)}
+                  className="rounded bg-gray-600 border-gray-500"
+                />
+                Import VOD Movies
+              </label>
+              {importVod && (
+                <div className="mt-2 ml-6">
+                  <select
+                    value={vodLibraryId || ''}
+                    onChange={(e) => setVodLibraryId(e.target.value ? parseInt(e.target.value) : null)}
+                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm"
+                    required={importVod}
+                  >
+                    <option value="">Select Movie Library...</option>
+                    {movieLibraries.map(lib => (
+                      <option key={lib.id} value={lib.id}>{lib.title}</option>
+                    ))}
+                  </select>
+                  {movieLibraries.length === 0 && (
+                    <p className="text-xs text-yellow-400 mt-1">No movie libraries found. Create one first.</p>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Import Series */}
+            <div>
+              <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={importSeries}
+                  onChange={(e) => setImportSeries(e.target.checked)}
+                  className="rounded bg-gray-600 border-gray-500"
+                />
+                Import TV Series
+              </label>
+              {importSeries && (
+                <div className="mt-2 ml-6">
+                  <select
+                    value={seriesLibraryId || ''}
+                    onChange={(e) => setSeriesLibraryId(e.target.value ? parseInt(e.target.value) : null)}
+                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm"
+                    required={importSeries}
+                  >
+                    <option value="">Select TV Library...</option>
+                    {showLibraries.map(lib => (
+                      <option key={lib.id} value={lib.id}>{lib.title}</option>
+                    ))}
+                  </select>
+                  {showLibraries.length === 0 && (
+                    <p className="text-xs text-yellow-400 mt-1">No TV show libraries found. Create one first.</p>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 py-2 px-4 bg-gray-700 hover:bg-gray-600 text-white rounded-lg"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={createXtream.isPending}
+              className="flex-1 py-2 px-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg"
+            >
+              {createXtream.isPending ? 'Adding...' : 'Add Source'}
             </button>
           </div>
         </form>
@@ -693,11 +1082,59 @@ export function LiveTVPage() {
   const refreshM3U = useRefreshM3USource()
   const deleteEPG = useDeleteEPGSource()
   const refreshEPG = useRefreshEPG()
-  const [showAddModal, setShowAddModal] = useState<'m3u' | 'epg' | null>(null)
+  const [showAddModal, setShowAddModal] = useState<'m3u' | 'epg' | 'xtream' | null>(null)
   const [activeTab, setActiveTab] = useState<'sources' | 'channels' | 'programs'>('sources')
   const [channelSearch, setChannelSearch] = useState('')
   const [editingChannel, setEditingChannel] = useState<Channel | null>(null)
   const [refreshingEPGId, setRefreshingEPGId] = useState<number | null>(null)
+  const [refreshingXtreamId, setRefreshingXtreamId] = useState<number | null>(null)
+
+  // Xtream sources
+  const { data: xtreamSources, isLoading: loadingXtream } = useQuery({
+    queryKey: ['xtreamSources'],
+    queryFn: () => api.getXtreamSources(),
+  })
+
+  const deleteXtream = useMutation({
+    mutationFn: (id: number) => api.deleteXtreamSource(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['xtreamSources'] })
+      queryClient.invalidateQueries({ queryKey: ['channels'] })
+    },
+  })
+
+  const refreshXtream = useMutation({
+    mutationFn: (id: number) => api.refreshXtreamSource(id),
+    onMutate: (id) => setRefreshingXtreamId(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['xtreamSources'] })
+      queryClient.invalidateQueries({ queryKey: ['channels'] })
+    },
+    onSettled: () => setRefreshingXtreamId(null),
+  })
+
+  const [importingVodId, setImportingVodId] = useState<number | null>(null)
+  const [importingSeriesId, setImportingSeriesId] = useState<number | null>(null)
+
+  const importVod = useMutation({
+    mutationFn: (id: number) => api.importXtreamVOD(id),
+    onMutate: (id) => setImportingVodId(id),
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ['xtreamSources'] })
+      alert(`VOD Import: ${result.added} added, ${result.updated} updated`)
+    },
+    onSettled: () => setImportingVodId(null),
+  })
+
+  const importSeries = useMutation({
+    mutationFn: (id: number) => api.importXtreamSeries(id),
+    onMutate: (id) => setImportingSeriesId(id),
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ['xtreamSources'] })
+      alert(`Series Import: ${result.added} added, ${result.updated} updated`)
+    },
+    onSettled: () => setImportingSeriesId(null),
+  })
 
   // Individual EPG source refresh
   const refreshIndividualEPG = useMutation({
@@ -751,6 +1188,28 @@ export function LiveTVPage() {
     },
   })
 
+  // Toggle archive/catch-up for a channel
+  const toggleArchive = useMutation({
+    mutationFn: async ({ id, enabled }: { id: number; enabled: boolean }) => {
+      const endpoint = enabled
+        ? `/livetv/channels/${id}/archive/enable`
+        : `/livetv/channels/${id}/archive/disable`
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Plex-Token': api.getToken() || '',
+        },
+        body: enabled ? JSON.stringify({ days: 7 }) : undefined,
+      })
+      if (!response.ok) throw new Error('Failed to update channel archive')
+      return response.json()
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['channels'] })
+    },
+  })
+
   const filteredChannels = channelsData?.filter(
     (ch) =>
       ch.name.toLowerCase().includes(channelSearch.toLowerCase()) ||
@@ -760,6 +1219,7 @@ export function LiveTVPage() {
 
   const enabledCount = channelsData?.filter((ch) => ch.enabled).length || 0
   const totalCount = channelsData?.length || 0
+  const archiveCount = channelsData?.filter((ch) => ch.archiveEnabled).length || 0
 
   return (
     <div>
@@ -798,6 +1258,11 @@ export function LiveTVPage() {
           }`}
         >
           Channels {totalCount > 0 && `(${enabledCount}/${totalCount})`}
+          {archiveCount > 0 && (
+            <span className="ml-2 px-1.5 py-0.5 bg-purple-600 text-white text-xs rounded">
+              {archiveCount} recording
+            </span>
+          )}
         </button>
         <button
           onClick={() => setActiveTab('programs')}
@@ -868,6 +1333,133 @@ export function LiveTVPage() {
               <div className="text-center py-8 bg-gray-800 rounded-xl">
                 <Tv className="h-10 w-10 text-gray-600 mx-auto mb-3" />
                 <p className="text-gray-400">No M3U playlists configured</p>
+              </div>
+            )}
+          </div>
+
+          {/* Xtream Sources */}
+          <div className="mb-8">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+                <Zap className="h-5 w-5 text-yellow-400" />
+                Xtream Codes API
+              </h2>
+              <button
+                onClick={() => setShowAddModal('xtream')}
+                className="flex items-center gap-2 px-3 py-1.5 bg-yellow-600 hover:bg-yellow-700 text-white text-sm rounded-lg"
+              >
+                <Plus className="h-4 w-4" />
+                Add Xtream
+              </button>
+            </div>
+
+            {loadingXtream ? (
+              <div className="text-gray-400">Loading...</div>
+            ) : xtreamSources?.length ? (
+              <div className="bg-gray-800 rounded-xl divide-y divide-gray-700">
+                {xtreamSources.map((source) => (
+                  <div key={source.id} className="p-4">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-medium text-white">{source.name}</h3>
+                          {!source.enabled && (
+                            <span className="px-2 py-0.5 bg-gray-700 text-gray-400 text-xs rounded">
+                              Disabled
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-sm text-gray-400">
+                          {source.channelCount} channels • {source.username}@{source.serverUrl.replace(/^https?:\/\//, '')}
+                        </p>
+                        {source.expirationDate && (
+                          <p className="text-xs text-gray-500 mt-1">
+                            Expires: {new Date(source.expirationDate).toLocaleDateString()}
+                          </p>
+                        )}
+                        {source.lastError && (
+                          <p className="text-xs text-red-400 mt-1 flex items-center gap-1">
+                            <AlertCircle className="h-3 w-3" />
+                            {source.lastError}
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => refreshXtream.mutate(source.id)}
+                          disabled={refreshingXtreamId === source.id}
+                          className="p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg"
+                          title="Refresh Channels"
+                        >
+                          <RefreshCw className={`h-4 w-4 ${refreshingXtreamId === source.id ? 'animate-spin' : ''}`} />
+                        </button>
+                        <button
+                          onClick={() => deleteXtream.mutate(source.id)}
+                          className="p-2 text-gray-400 hover:text-red-400 hover:bg-gray-700 rounded-lg"
+                          title="Delete"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* VOD/Series Import Section */}
+                    {(source.importVod || source.importSeries) && (
+                      <div className="mt-3 pt-3 border-t border-gray-700 flex flex-wrap gap-3">
+                        {source.importVod && source.vodLibraryId && (
+                          <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1 text-sm text-gray-400">
+                              <Film className="h-4 w-4" />
+                              <span>VOD: {source.vodCount || 0} movies</span>
+                            </div>
+                            <button
+                              onClick={() => importVod.mutate(source.id)}
+                              disabled={importingVodId === source.id}
+                              className="px-2 py-1 text-xs bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white rounded flex items-center gap-1"
+                              title="Import VOD Movies"
+                            >
+                              {importingVodId === source.id ? (
+                                <RefreshCw className="h-3 w-3 animate-spin" />
+                              ) : (
+                                <Download className="h-3 w-3" />
+                              )}
+                              Import
+                            </button>
+                          </div>
+                        )}
+                        {source.importSeries && source.seriesLibraryId && (
+                          <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1 text-sm text-gray-400">
+                              <Monitor className="h-4 w-4" />
+                              <span>Series: {source.seriesCount || 0} shows</span>
+                            </div>
+                            <button
+                              onClick={() => importSeries.mutate(source.id)}
+                              disabled={importingSeriesId === source.id}
+                              className="px-2 py-1 text-xs bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 text-white rounded flex items-center gap-1"
+                              title="Import TV Series"
+                            >
+                              {importingSeriesId === source.id ? (
+                                <RefreshCw className="h-3 w-3 animate-spin" />
+                              ) : (
+                                <Download className="h-3 w-3" />
+                              )}
+                              Import
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 bg-gray-800 rounded-xl">
+                <Zap className="h-10 w-10 text-gray-600 mx-auto mb-3" />
+                <p className="text-gray-400">No Xtream Codes sources configured</p>
+                <p className="text-sm text-gray-500 mt-1">
+                  Add your Xtream provider to import channels via API
+                </p>
               </div>
             )}
           </div>
@@ -954,6 +1546,12 @@ export function LiveTVPage() {
                       <th className="text-left p-3 text-gray-400 text-sm font-medium">#</th>
                       <th className="text-left p-3 text-gray-400 text-sm font-medium">Channel</th>
                       <th className="text-left p-3 text-gray-400 text-sm font-medium">Group</th>
+                      <th className="text-left p-3 text-gray-400 text-sm font-medium">
+                        <div className="flex items-center gap-1">
+                          <Archive className="h-3 w-3" />
+                          Catch-up
+                        </div>
+                      </th>
                       <th className="text-left p-3 text-gray-400 text-sm font-medium">Actions</th>
                     </tr>
                   </thead>
@@ -997,6 +1595,21 @@ export function LiveTVPage() {
                         <td className="p-3 text-gray-400 text-sm">{channel.group || '-'}</td>
                         <td className="p-3">
                           <button
+                            onClick={() => toggleArchive.mutate({ id: channel.id, enabled: !channel.archiveEnabled })}
+                            disabled={!channel.enabled}
+                            className={`px-2 py-1 rounded text-xs font-medium flex items-center gap-1 ${
+                              channel.archiveEnabled
+                                ? 'bg-purple-600 text-white hover:bg-purple-700'
+                                : 'bg-gray-700 text-gray-400 hover:bg-gray-600 hover:text-white'
+                            } ${!channel.enabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            title={channel.archiveEnabled ? 'Disable catch-up recording' : 'Enable catch-up recording (7 days)'}
+                          >
+                            <Clock className="h-3 w-3" />
+                            {channel.archiveEnabled ? `${channel.archiveDays || 7}d` : 'Off'}
+                          </button>
+                        </td>
+                        <td className="p-3">
+                          <button
                             onClick={() => setEditingChannel(channel)}
                             className="p-1.5 text-gray-400 hover:text-white hover:bg-gray-700 rounded"
                             title="Edit"
@@ -1021,8 +1634,16 @@ export function LiveTVPage() {
         </div>
       )}
 
-      {showAddModal && (
-        <AddSourceModal type={showAddModal} onClose={() => setShowAddModal(null)} />
+      {showAddModal === 'm3u' && (
+        <AddSourceModal type="m3u" onClose={() => setShowAddModal(null)} />
+      )}
+
+      {showAddModal === 'epg' && (
+        <AddSourceModal type="epg" onClose={() => setShowAddModal(null)} />
+      )}
+
+      {showAddModal === 'xtream' && (
+        <AddXtreamSourceModal onClose={() => setShowAddModal(null)} />
       )}
 
       {editingChannel && (

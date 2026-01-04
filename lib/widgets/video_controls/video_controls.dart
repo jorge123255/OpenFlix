@@ -98,6 +98,7 @@ class _VideoControlsState extends State<VideoControls>
   int _audioSyncOffset = 0; // Default, loaded from settings
   int _subtitleSyncOffset = 0; // Default, loaded from settings
   bool _isRotationLocked = true; // Default locked (landscape only)
+  bool _isScreenLocked = false; // Screen lock to prevent accidental touches
 
   /// Get the correct MediaClient for this metadata's server
   MediaClient _getClientForMetadata() {
@@ -530,6 +531,16 @@ class _VideoControlsState extends State<VideoControls>
     }
   }
 
+  void _toggleScreenLock() {
+    setState(() {
+      _isScreenLocked = !_isScreenLocked;
+    });
+    // When screen is locked, cancel auto-hide timer to keep unlock button visible
+    if (_isScreenLocked) {
+      _hideTimer?.cancel();
+    }
+  }
+
   void _updateTrafficLightVisibility() async {
     if (Platform.isMacOS) {
       if (_showControls) {
@@ -581,9 +592,11 @@ class _VideoControlsState extends State<VideoControls>
       subtitleSyncOffset: _subtitleSyncOffset,
       isRotationLocked: _isRotationLocked,
       isFullscreen: _isFullscreen,
+      isScreenLocked: _isScreenLocked,
       onCycleBoxFitMode: widget.onCycleBoxFitMode,
       onToggleRotationLock: _toggleRotationLock,
       onToggleFullscreen: _toggleFullscreen,
+      onToggleScreenLock: _toggleScreenLock,
       onSwitchVersion: _switchMediaVersion,
       onAudioTrackChanged: widget.onAudioTrackChanged,
       onSubtitleTrackChanged: widget.onSubtitleTrackChanged,
@@ -966,7 +979,7 @@ class _VideoControlsState extends State<VideoControls>
                 ),
               ),
             // Skip intro/credits button
-            if (_currentMarker != null)
+            if (_currentMarker != null && !_isScreenLocked)
               Positioned(
                 right: 24,
                 bottom: isMobile ? 80 : 115,
@@ -974,6 +987,56 @@ class _VideoControlsState extends State<VideoControls>
                   opacity: 1.0,
                   duration: const Duration(milliseconds: 300),
                   child: _buildSkipMarkerButton(),
+                ),
+              ),
+            // Screen lock overlay (mobile only)
+            if (isMobile && _isScreenLocked)
+              Positioned.fill(
+                child: GestureDetector(
+                  onTap: _toggleScreenLock,
+                  behavior: HitTestBehavior.opaque,
+                  child: Container(
+                    color: Colors.black.withValues(alpha: 0.3),
+                    child: Center(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 16,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.7),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.lock,
+                              color: Colors.white,
+                              size: 48,
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              t.videoControls.screenLocked,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              t.videoControls.tapToUnlock,
+                              style: const TextStyle(
+                                color: Colors.white70,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
               ),
           ],

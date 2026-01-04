@@ -1,4 +1,7 @@
+import 'dart:io';
+import 'package:dio/dio.dart';
 import 'package:logger/logger.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 import 'log_redaction_manager.dart';
 
@@ -189,4 +192,96 @@ void setLoggerLevel(bool debugEnabled) {
 
   // Also set the static level for consistency
   Logger.level = newLevel;
+}
+
+/// Sends logs to the server for remote troubleshooting
+/// Returns true if successful, false otherwise
+Future<bool> sendLogsToServer({
+  required String serverUrl,
+  required String authToken,
+}) async {
+  try {
+    final logs = MemoryLogOutput.getLogs();
+    if (logs.isEmpty) {
+      appLogger.i('No logs to send');
+      return true;
+    }
+
+    // Get device info
+    final deviceInfo = <String, dynamic>{
+      'platform': Platform.operatingSystem,
+      'osVersion': Platform.operatingSystemVersion,
+      'dartVersion': Platform.version,
+      'isAndroidTV': false, // Will be set by caller if needed
+    };
+
+    // Get app version
+    String appVersion = 'unknown';
+    try {
+      final packageInfo = await PackageInfo.fromPlatform();
+      appVersion = '${packageInfo.version}+${packageInfo.buildNumber}';
+    } catch (e) {
+      // Ignore
+    }
+
+    // Convert logs to JSON format
+    final logEntries = logs.map((log) {
+      final entry = <String, dynamic>{
+        'timestamp': log.timestamp.toIso8601String(),
+        'level': log.level.name,
+        'message': log.message,
+      };
+      if (log.error != null) entry['error'] = log.error.toString();
+      if (log.stackTrace != null) entry['stackTrace'] = log.stackTrace.toString();
+      return entry;
+    }).toList();
+
+    final dio = Dio();
+    final response = await dio.post(
+      '$serverUrl/api/client-logs',
+      options: Options(
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $authToken',
+        },
+      ),
+      data: {
+        'deviceInfo': deviceInfo,
+        'appVersion': appVersion,
+        'platform': Platform.operatingSystem,
+        'logs': logEntries,
+      },
+    );
+
+    if (response.statusCode == 200) {
+      appLogger.i('Successfully sent ${logs.length} logs to server');
+      return true;
+    } else {
+      appLogger.e('Failed to send logs: ${response.statusCode} ${response.data}');
+      return false;
+    }
+  } catch (e, stack) {
+    appLogger.e('Error sending logs to server', error: e, stackTrace: stack);
+    return false;
+  }
+}
+
+/// Get formatted logs as a string for display or sharing
+String getFormattedLogs() {
+  final logs = MemoryLogOutput.getLogs();
+  final buffer = StringBuffer();
+
+  for (final log in logs) {
+    final timestamp = log.timestamp.toIso8601String();
+    final level = log.level.name.toUpperCase().padRight(7);
+    buffer.writeln('[$timestamp] $level ${log.message}');
+    if (log.error != null) {
+      buffer.writeln('  ERROR: ${log.error}');
+    }
+    if (log.stackTrace != null) {
+      buffer.writeln('  STACK: ${log.stackTrace}');
+    }
+  }
+
+  return buffer.toString();
 }

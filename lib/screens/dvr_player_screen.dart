@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import '../i18n/strings.g.dart';
 import '../models/dvr.dart';
 import '../mpv/mpv.dart';
 import '../providers/media_client_provider.dart';
@@ -108,7 +109,7 @@ class _DVRPlayerScreenState extends State<DVRPlayerScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Playback error: $error'),
+              content: Text(t.liveTV.playbackError(error: error)),
               backgroundColor: Colors.red,
             ),
           );
@@ -317,7 +318,8 @@ class _DVRPlayerScreenState extends State<DVRPlayerScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Platform.isMacOS ? Colors.transparent : Colors.black,
+      // On Android/macOS, video is rendered behind Flutter - need transparency
+      backgroundColor: (Platform.isAndroid || Platform.isMacOS) ? Colors.transparent : Colors.black,
       body: Focus(
         autofocus: true,
         onKeyEvent: _handleKeyEvent,
@@ -357,7 +359,7 @@ class _DVRPlayerScreenState extends State<DVRPlayerScreen> {
                   child: ElevatedButton.icon(
                     onPressed: _skipCommercial,
                     icon: const Icon(Icons.skip_next),
-                    label: const Text('Skip Commercial'),
+                    label: Text(t.liveTV.skipCommercial),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.red,
                       foregroundColor: Colors.white,

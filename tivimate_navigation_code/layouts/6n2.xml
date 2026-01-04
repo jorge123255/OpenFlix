@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<merge android:layout_width="fill_parent" android:layout_height="wrap_content"
+  xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto">
+    <LinearLayout android:layout_gravity="center|top" android:orientation="horizontal" android:id="@id/2s9" android:paddingLeft="@dimen/lk" android:paddingTop="@dimen/lk" android:paddingRight="@dimen/lk" android:layout_width="fill_parent" android:layout_height="@dimen/1ek" android:paddingStart="@dimen/lk" android:paddingEnd="@dimen/lk" style="?3pa">
+        <com.google.android.material.button.MaterialButton android:gravity="center" android:layout_gravity="top" android:id="@id/6ql" android:padding="12.0dip" android:layout_width="@dimen/39s" android:layout_height="@dimen/39s" android:insetTop="0.0dip" android:insetBottom="0.0dip" android:contentDescription="@string/3rb" app:icon="@drawable/7ba" style="?61r" />
+        <FrameLayout android:id="@id/2e1" android:paddingLeft="@dimen/725" android:focusable="false" android:focusableInTouchMode="false" android:layout_width="0.0dip" android:layout_height="fill_parent" android:layout_weight="1.0" android:importantForAccessibility="yes" android:paddingStart="@dimen/725">
+            <TextView android:gravity="start|bottom" android:layout_gravity="start|top" android:id="@id/6nm" android:layout_width="fill_parent" android:layout_height="wrap_content" app:rp="@dimen/6l8" style="?6ga" />
+            <TextView android:gravity="start|bottom" android:layout_gravity="start|top" android:id="@id/3c0" android:layout_width="fill_parent" android:layout_height="wrap_content" app:rp="@dimen/7d8" app:1qd="@dimen/3gs" style="?285" />
+        </FrameLayout>
+        <LinearLayout android:orientation="@integer/61a" android:layout_width="wrap_content" android:layout_height="wrap_content">
+            <com.google.android.material.button.MaterialButton android:layout_gravity="end|top" android:id="@id/3qf" android:layout_width="wrap_content" android:layout_height="@dimen/39s" android:text="@string/3m" android:contentDescription="@string/3m" style="?4ob" />
+            <include layout="@layout/mtrl_picker_header_toggle" />
+        </LinearLayout>
+    </LinearLayout>
+    <View android:layout_gravity="bottom" android:layout_width="fill_parent" android:layout_height="@dimen/5lc" style="?6if" />
+</merge>

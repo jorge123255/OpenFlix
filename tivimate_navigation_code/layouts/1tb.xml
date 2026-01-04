@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout android:paddingBottom="@dimen/26c" android:focusable="true" android:focusableInTouchMode="true" android:clipToPadding="false" android:descendantFocusability="afterDescendants" android:layout_width="fill_parent" android:layout_height="wrap_content" android:paddingStart="@dimen/2js" android:paddingEnd="@dimen/5uh"
+  xmlns:android="http://schemas.android.com/apk/res/android" xmlns:lb="http://schemas.android.com/apk/res-auto">
+    <FrameLayout android:id="@id/449" android:layout_width="fill_parent" android:layout_height="@dimen/440" android:foreground="#ffffffff" android:elevation="@dimen/3cr">
+        <LinearLayout android:orientation="horizontal" android:id="@id/5dl" android:layout_width="fill_parent" android:layout_height="fill_parent">
+            <ImageView android:id="@id/5ee" android:layout_width="wrap_content" android:layout_height="fill_parent" android:scaleType="fitStart" android:adjustViewBounds="true" />
+            <LinearLayout android:orientation="vertical" android:id="@id/6fp" android:paddingBottom="@dimen/1gj" android:layout_width="fill_parent" android:layout_height="fill_parent">
+                <androidx.leanback.widget.NonOverlappingFrameLayout android:gravity="top" android:id="@id/1cn" android:paddingTop="@dimen/4n6" android:clipChildren="false" android:clipToPadding="false" android:layout_width="fill_parent" android:layout_height="0.0dip" android:layout_weight="1.0" android:layout_marginStart="@dimen/4oh" android:layout_marginEnd="@dimen/2mi" />
+                <androidx.leanback.widget.HorizontalGridView android:gravity="center" android:id="@id/1m8" android:focusable="true" android:focusableInTouchMode="true" android:clipChildren="false" android:clipToPadding="false" android:layout_width="fill_parent" android:layout_height="wrap_content" android:horizontalSpacing="@dimen/4rj" android:paddingStart="@dimen/4oh" android:paddingEnd="@dimen/2mi" lb:6ld="@dimen/3gl" />
+            </LinearLayout>
+        </LinearLayout>
+    </FrameLayout>
+</FrameLayout>

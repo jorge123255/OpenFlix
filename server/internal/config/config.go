@@ -1,6 +1,8 @@
 package config
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -9,21 +11,42 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// generateMachineID creates a random unique identifier for this server instance
+func generateMachineID() string {
+	bytes := make([]byte, 16)
+	rand.Read(bytes)
+	return hex.EncodeToString(bytes)
+}
+
 // Config holds all application configuration
 type Config struct {
-	Server   ServerConfig   `yaml:"server"`
-	Database DatabaseConfig `yaml:"database"`
-	Auth     AuthConfig     `yaml:"auth"`
-	Library  LibraryConfig  `yaml:"library"`
-	LiveTV   LiveTVConfig   `yaml:"livetv"`
-	DVR      DVRConfig      `yaml:"dvr"`
+	Server    ServerConfig    `yaml:"server"`
+	Database  DatabaseConfig  `yaml:"database"`
+	Auth      AuthConfig      `yaml:"auth"`
+	Library   LibraryConfig   `yaml:"library"`
+	LiveTV    LiveTVConfig    `yaml:"livetv"`
+	DVR       DVRConfig       `yaml:"dvr"`
 	Transcode TranscodeConfig `yaml:"transcode"`
+	Logging   LoggingConfig   `yaml:"logging"`
+}
+
+// LoggingConfig holds logging settings
+type LoggingConfig struct {
+	Level         string `yaml:"level"`           // debug, info, warn, error
+	JSON          bool   `yaml:"json"`            // output as JSON instead of text
+	File          string `yaml:"file"`            // log file path (empty = stdout only)
+	MaxSizeMB     int    `yaml:"max_size_mb"`     // max size per log file in MB
+	MaxBackups    int    `yaml:"max_backups"`     // number of old log files to keep
+	MaxAgeDays    int    `yaml:"max_age_days"`    // max age of log files in days
 }
 
 // ServerConfig holds HTTP server settings
 type ServerConfig struct {
-	Host string `yaml:"host"`
-	Port int    `yaml:"port"`
+	Host             string `yaml:"host"`
+	Port             int    `yaml:"port"`
+	Name             string `yaml:"name"`               // Friendly server name
+	MachineID        string `yaml:"machine_id"`         // Unique server identifier
+	DiscoveryEnabled bool   `yaml:"discovery_enabled"`  // Enable UDP discovery
 }
 
 // DatabaseConfig holds database connection settings
@@ -34,9 +57,10 @@ type DatabaseConfig struct {
 
 // AuthConfig holds authentication settings
 type AuthConfig struct {
-	JWTSecret     string `yaml:"jwt_secret"`
-	TokenExpiry   int    `yaml:"token_expiry"` // hours
-	AllowSignup   bool   `yaml:"allow_signup"`
+	JWTSecret        string `yaml:"jwt_secret"`
+	TokenExpiry      int    `yaml:"token_expiry"` // hours
+	AllowSignup      bool   `yaml:"allow_signup"`
+	AllowLocalAccess bool   `yaml:"allow_local_access"` // Allow access from localhost without auth
 }
 
 // LibraryConfig holds media library settings
@@ -80,17 +104,21 @@ func DefaultConfig() *Config {
 
 	return &Config{
 		Server: ServerConfig{
-			Host: "0.0.0.0",
-			Port: 32400,
+			Host:             "0.0.0.0",
+			Port:             32400,
+			Name:             "OpenFlix Server",
+			MachineID:        generateMachineID(),
+			DiscoveryEnabled: true,
 		},
 		Database: DatabaseConfig{
 			Driver: "sqlite",
 			DSN:    filepath.Join(dataDir, "openflix.db"),
 		},
 		Auth: AuthConfig{
-			JWTSecret:   "change-me-in-production",
-			TokenExpiry: 24 * 30, // 30 days
-			AllowSignup: true,
+			JWTSecret:        "change-me-in-production",
+			TokenExpiry:      24 * 30, // 30 days
+			AllowSignup:      true,
+			AllowLocalAccess: true, // Allow local network access without login
 		},
 		Library: LibraryConfig{
 			ScanInterval: 60,
@@ -98,7 +126,7 @@ func DefaultConfig() *Config {
 		},
 		LiveTV: LiveTVConfig{
 			Enabled:     true,
-			EPGInterval: 12,
+			EPGInterval: 4, // Refresh every 4 hours (Gracenote provides 6 hours of data)
 		},
 		DVR: DVRConfig{
 			Enabled:          true,
@@ -115,6 +143,14 @@ func DefaultConfig() *Config {
 			HardwareAccel: "auto",
 			TempDir:       filepath.Join(dataDir, "transcode"),
 			MaxSessions:   3,
+		},
+		Logging: LoggingConfig{
+			Level:      "debug",
+			JSON:       false,
+			File:       filepath.Join(dataDir, "logs", "openflix.log"),
+			MaxSizeMB:  50,
+			MaxBackups: 3,
+			MaxAgeDays: 7,
 		},
 	}
 }
@@ -180,6 +216,25 @@ func loadEnvOverrides(cfg *Config) {
 	}
 	if hwaccel := os.Getenv("OPENFLIX_HARDWARE_ACCEL"); hwaccel != "" {
 		cfg.Transcode.HardwareAccel = hwaccel
+	}
+	if logLevel := os.Getenv("OPENFLIX_LOG_LEVEL"); logLevel != "" {
+		cfg.Logging.Level = logLevel
+	}
+	if logJSON := os.Getenv("OPENFLIX_LOG_JSON"); logJSON == "true" || logJSON == "1" {
+		cfg.Logging.JSON = true
+	}
+	// Transcode settings
+	if transcodeDir := os.Getenv("OPENFLIX_TRANSCODE_DIR"); transcodeDir != "" {
+		cfg.Transcode.TempDir = transcodeDir
+	}
+	if maxSessions := os.Getenv("OPENFLIX_MAX_TRANSCODE_SESSIONS"); maxSessions != "" {
+		if s, err := strconv.Atoi(maxSessions); err == nil {
+			cfg.Transcode.MaxSessions = s
+		}
+	}
+	// DVR settings
+	if recordingDir := os.Getenv("OPENFLIX_RECORDING_DIR"); recordingDir != "" {
+		cfg.DVR.RecordingDir = recordingDir
 	}
 }
 

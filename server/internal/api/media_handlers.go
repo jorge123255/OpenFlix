@@ -238,6 +238,42 @@ func (s *Server) adminRefreshMediaMetadata(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Metadata refresh started"})
 }
 
+// adminRefreshAllMissingMetadata refreshes metadata for all items missing it
+func (s *Server) adminRefreshAllMissingMetadata(c *gin.Context) {
+	// Check if TMDB agent is available
+	tmdbAgent := s.scanner.GetTMDBAgent()
+	if tmdbAgent == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "TMDB agent not configured"})
+		return
+	}
+
+	// Find all movies and shows without poster (thumb) - indicates missing metadata
+	var items []models.MediaItem
+	s.db.Where("type IN ? AND (thumb IS NULL OR thumb = '')", []string{"movie", "show"}).Find(&items)
+
+	if len(items) == 0 {
+		c.JSON(http.StatusOK, gin.H{"message": "No items with missing metadata found", "count": 0})
+		return
+	}
+
+	// Process in background
+	go func() {
+		for _, item := range items {
+			itemCopy := item
+			if itemCopy.Type == "movie" {
+				tmdbAgent.UpdateMovieMetadata(&itemCopy)
+			} else if itemCopy.Type == "show" {
+				tmdbAgent.UpdateShowMetadata(&itemCopy)
+			}
+		}
+	}()
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": fmt.Sprintf("Refreshing metadata for %d items", len(items)),
+		"count":   len(items),
+	})
+}
+
 // adminSearchTMDB searches TMDB for matching media
 func (s *Server) adminSearchTMDB(c *gin.Context) {
 	query := c.Query("query")

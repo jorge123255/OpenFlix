@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout android:id="@id/2pk" android:paddingBottom="@dimen/26c" android:focusable="true" android:focusableInTouchMode="true" android:clipToPadding="false" android:descendantFocusability="afterDescendants" android:layout_width="fill_parent" android:layout_height="wrap_content"
+  xmlns:android="http://schemas.android.com/apk/res/android" xmlns:lb="http://schemas.android.com/apk/res-auto">
+    <FrameLayout android:id="@id/449" android:background="?5ts" android:clipToPadding="false" android:layout_width="fill_parent" android:layout_height="@dimen/1je" android:layout_marginTop="@dimen/1ba" android:elevation="@dimen/3cr">
+        <LinearLayout android:orientation="vertical" android:layout_width="fill_parent" android:layout_height="fill_parent">
+            <LinearLayout android:orientation="vertical" android:id="@id/2gp" android:background="?2t8" android:layout_width="fill_parent" android:layout_height="wrap_content">
+                <androidx.leanback.widget.HorizontalGridView android:gravity="center" android:id="@id/1m8" android:focusable="true" android:focusableInTouchMode="true" android:clipToPadding="false" android:layout_width="fill_parent" android:layout_height="@dimen/47v" android:horizontalSpacing="@dimen/4rj" android:paddingStart="@dimen/77p" android:paddingEnd="@dimen/4a7" lb:6ld="@dimen/47v" />
+            </LinearLayout>
+            <androidx.leanback.widget.NonOverlappingFrameLayout android:gravity="top" android:id="@id/1cn" android:paddingTop="@dimen/24t" android:focusable="true" android:focusableInTouchMode="true" android:clipChildren="false" android:clipToPadding="false" android:descendantFocusability="afterDescendants" android:layout_width="fill_parent" android:layout_height="wrap_content" android:paddingStart="@dimen/77p" android:paddingEnd="@dimen/4a7" />
+        </LinearLayout>
+    </FrameLayout>
+</FrameLayout>

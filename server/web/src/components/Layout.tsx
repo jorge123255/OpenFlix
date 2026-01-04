@@ -6,10 +6,14 @@ import {
   Film,
   Tv,
   Video,
+  FileText,
   Settings,
   LogOut,
   Menu,
   X,
+  Cpu,
+  CalendarDays,
+  Download,
 } from 'lucide-react'
 import { useState } from 'react'
 import { useCurrentUser, useLogout } from '../hooks/useAuth'
@@ -20,7 +24,11 @@ const navigation = [
   { name: 'Libraries', href: '/ui/libraries', icon: FolderOpen },
   { name: 'Media', href: '/ui/media', icon: Film },
   { name: 'Live TV', href: '/ui/livetv', icon: Tv },
+  { name: 'TV Guide', href: '/ui/tvguide', icon: CalendarDays },
   { name: 'DVR', href: '/ui/dvr', icon: Video },
+  { name: 'Transcode', href: '/ui/transcode', icon: Cpu },
+  { name: 'Logs', href: '/ui/logs', icon: FileText },
+  { name: 'Downloads', href: '/ui/downloads', icon: Download },
   { name: 'Settings', href: '/ui/settings', icon: Settings },
 ]
 

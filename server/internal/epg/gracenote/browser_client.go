@@ -8,7 +8,9 @@ import (
 	"net/http"
 	"net/http/cookiejar"
 	"net/url"
+	"os"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -64,8 +66,14 @@ func (c *BrowserClient) warmupWithBrowser(ctx context.Context, affiliateID strin
 		chromedp.Flag("headless", true),
 		chromedp.Flag("disable-blink-features", "AutomationControlled"),
 		chromedp.Flag("disable-extensions", true),
+		chromedp.Flag("no-sandbox", true), // Required for Docker
+		chromedp.Flag("disable-gpu", true),
 		chromedp.UserAgent(c.config.UserAgent),
 	)
+	// Use CHROME_PATH env var if set (for Docker with Google Chrome)
+	if chromePath := os.Getenv("CHROME_PATH"); chromePath != "" {
+		opts = append(opts, chromedp.ExecPath(chromePath))
+	}
 	allocCtx, allocCancel := chromedp.NewExecAllocator(ctx, opts...)
 	defer allocCancel()
 
@@ -301,60 +309,104 @@ func (c *BrowserClient) GetListingsForProvider(ctx context.Context, provider Pro
 	return &gridResp, nil
 }
 
-// GetListingsForAffiliate fetches TV listings
+// GetListingsForAffiliate fetches TV listings using the headend ID directly
+// Uses headless browser with JavaScript fetch to bypass IP blocking
 func (c *BrowserClient) GetListingsForAffiliate(ctx context.Context, affiliateID, postalCode string, hours int) (*GridResponse, error) {
-	// Get affiliate properties first
-	props, err := c.GetAffiliateProperties(ctx, affiliateID, "en-us")
-	if err != nil {
-		return nil, fmt.Errorf("failed to get affiliate properties: %w", err)
-	}
-
-	// Build lineup ID
-	lineupID := fmt.Sprintf("%s-%s-DEFAULT", props.DefaultCountry, props.DefaultHeadend)
-	if props.LineupID != "" {
-		lineupID = props.LineupID
-	}
+	commonAffiliateID := "orbebb"
+	lineupID := fmt.Sprintf("USA-%s-DEFAULT", affiliateID)
 
 	// Build query parameters
 	params := url.Values{}
 	params.Set("lineupId", lineupID)
-	params.Set("headendId", props.DefaultHeadend)
-	params.Set("country", props.DefaultCountry)
+	params.Set("headendId", affiliateID)
+	params.Set("country", "USA")
 	params.Set("postalCode", postalCode)
 	params.Set("time", strconv.FormatInt(time.Now().Unix(), 10))
 	params.Set("timespan", strconv.Itoa(hours))
-	params.Set("device", props.Device)
+	params.Set("device", "X")
 	params.Set("userId", "-")
-	params.Set("aid", affiliateID)
+	params.Set("aid", commonAffiliateID)
 	params.Set("languagecode", "en-us")
+	params.Set("isOverride", "true")
 
-	reqURL := fmt.Sprintf("%s/api/grid?%s", c.config.BaseURL, params.Encode())
+	apiURL := fmt.Sprintf("%s/api/grid?%s", c.config.BaseURL, params.Encode())
+	fmt.Printf("📡 Gracenote API request via browser fetch: headendId=%s, postalCode=%s\n", affiliateID, postalCode)
+	fmt.Printf("🔗 Full API URL: %s\n", apiURL)
 
-	req, err := http.NewRequestWithContext(ctx, "GET", reqURL, nil)
+	// Use headless browser to fetch data (bypasses IP blocking)
+	opts := append(chromedp.DefaultExecAllocatorOptions[:],
+		chromedp.Flag("headless", true),
+		chromedp.Flag("disable-blink-features", "AutomationControlled"),
+		chromedp.Flag("disable-extensions", true),
+		chromedp.Flag("no-sandbox", true), // Required for Docker
+		chromedp.Flag("disable-gpu", true),
+		chromedp.UserAgent(c.config.UserAgent),
+	)
+	// Use CHROME_PATH env var if set (for Docker with Google Chrome)
+	if chromePath := os.Getenv("CHROME_PATH"); chromePath != "" {
+		opts = append(opts, chromedp.ExecPath(chromePath))
+	}
+	allocCtx, allocCancel := chromedp.NewExecAllocator(ctx, opts...)
+	defer allocCancel()
+
+	taskCtx, cancel := chromedp.NewContext(allocCtx)
+	defer cancel()
+
+	// Set timeout (longer for data fetch)
+	taskCtx, cancel = context.WithTimeout(taskCtx, 90*time.Second)
+	defer cancel()
+
+	// First visit the page to establish session/cookies
+	warmupURL := fmt.Sprintf("%s/grid-affiliates.html?aid=%s", c.config.BaseURL, commonAffiliateID)
+	fmt.Printf("🌐 Warming up browser session at: %s\n", warmupURL)
+
+	var jsonData string
+
+	err := chromedp.Run(taskCtx,
+		chromedp.Navigate(warmupURL),
+		chromedp.Sleep(5*time.Second), // Wait for page to fully load and set cookies
+		chromedp.ActionFunc(func(ctx context.Context) error {
+			fmt.Println("🔗 Fetching grid data via JavaScript fetch...")
+			return nil
+		}),
+		// Use synchronous XHR instead of async fetch for simpler handling
+		// Include Referer and Origin headers which are required by Gracenote
+		chromedp.Evaluate(fmt.Sprintf(`
+			(function() {
+				var xhr = new XMLHttpRequest();
+				xhr.open('GET', '%s', false);  // false = synchronous
+				xhr.setRequestHeader('Accept', 'application/json, text/plain, */*');
+				xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+				// Note: Referer and Origin are set automatically by the browser
+				// based on the page context (warmup URL)
+				xhr.send(null);
+				return xhr.responseText;
+			})()
+		`, apiURL), &jsonData),
+	)
+
 	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
+		return nil, fmt.Errorf("browser fetch failed: %w", err)
 	}
 
-	// Set headers
-	req.Header.Set("User-Agent", c.config.UserAgent)
-	req.Header.Set("Accept", "application/json, text/plain, */*")
-	req.Header.Set("X-Requested-With", "XMLHttpRequest")
-	req.Header.Set("Referer", c.config.BaseURL+"/")
-	req.Header.Set("Origin", c.config.BaseURL)
+	// Clean up the response
+	jsonData = strings.TrimSpace(jsonData)
 
-	resp, err := c.httpClient.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("request failed: %w", err)
-	}
-	defer resp.Body.Close()
+	fmt.Printf("📊 Browser fetch response (%d bytes): %.500s\n", len(jsonData), jsonData)
 
-	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("unexpected status code: %d, body: %s", resp.StatusCode, string(body))
+	if jsonData == "" {
+		return nil, fmt.Errorf("empty response from browser fetch")
 	}
+
+	// Check for error response
+	if strings.Contains(jsonData, `"error"`) && len(jsonData) < 100 {
+		return nil, fmt.Errorf("API error: %s", jsonData)
+	}
+
+	fmt.Printf("✅ Got %d bytes of data from browser\n", len(jsonData))
 
 	var gridResp GridResponse
-	if err := json.NewDecoder(resp.Body).Decode(&gridResp); err != nil {
+	if err := json.Unmarshal([]byte(jsonData), &gridResp); err != nil {
 		return nil, fmt.Errorf("failed to decode response: %w", err)
 	}
 

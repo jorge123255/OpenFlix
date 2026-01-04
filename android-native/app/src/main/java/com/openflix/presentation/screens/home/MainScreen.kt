@@ -1,0 +1,314 @@
+package com.openflix.presentation.screens.home
+
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandHorizontally
+import androidx.compose.animation.shrinkHorizontally
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.tv.material3.*
+import coil.compose.AsyncImage
+import com.openflix.player.LiveTVPlayer
+import com.openflix.player.MpvPlayer
+import com.openflix.presentation.screens.dvr.DVRScreen
+import com.openflix.presentation.screens.livetv.LiveTVGuideScreen
+import com.openflix.presentation.screens.settings.SettingsScreen
+import com.openflix.presentation.theme.OpenFlixColors
+
+/**
+ * Main screen with modern Fubo-style sidebar navigation.
+ * Sidebar collapses to icons and expands on focus.
+ */
+@Composable
+fun MainScreen(
+    onNavigateToMediaDetail: (String) -> Unit,
+    onNavigateToPlayer: (String) -> Unit,
+    onNavigateToLiveTVPlayer: (String) -> Unit,
+    onNavigateToSettings: () -> Unit,
+    onNavigateToSearch: () -> Unit,
+    onNavigateToMultiview: () -> Unit = {},
+    mpvPlayer: MpvPlayer,
+    liveTVPlayer: LiveTVPlayer
+) {
+    var selectedTab by remember { mutableStateOf(MainTab.HOME) }
+    var isSidebarExpanded by remember { mutableStateOf(false) }
+    var isSidebarFocused by remember { mutableStateOf(false) }
+    var isLiveTVFullscreen by remember { mutableStateOf(false) }
+
+    // Auto-expand sidebar when any item is focused
+    val sidebarWidth by animateDpAsState(
+        targetValue = if (isSidebarExpanded || isSidebarFocused) 220.dp else 72.dp,
+        animationSpec = tween(200),
+        label = "sidebarWidth"
+    )
+
+    Row(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(OpenFlixColors.Background)
+    ) {
+        // Modern Sidebar - hide when Live TV is fullscreen
+        if (!isLiveTVFullscreen) {
+            ModernSidebar(
+                selectedTab = selectedTab,
+                isExpanded = isSidebarExpanded || isSidebarFocused,
+                width = sidebarWidth,
+                onTabSelected = { selectedTab = it },
+                onSearchClick = onNavigateToSearch,
+                onFocusChanged = { isSidebarFocused = it }
+            )
+        }
+
+        // Content Area
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .weight(1f)
+        ) {
+            when (selectedTab) {
+                MainTab.HOME -> DiscoverScreen(
+                    onMediaClick = onNavigateToMediaDetail,
+                    onPlayClick = onNavigateToPlayer
+                )
+                MainTab.LIVE_TV -> LiveTVGuideScreen(
+                    onBack = { selectedTab = MainTab.HOME },
+                    onChannelSelected = onNavigateToLiveTVPlayer,
+                    liveTVPlayer = liveTVPlayer,
+                    onFullscreenChanged = { isLiveTVFullscreen = it },
+                    onNavigateToMultiview = onNavigateToMultiview
+                )
+                MainTab.DVR -> DVRScreen(
+                    onRecordingClick = { recordingId ->
+                        onNavigateToPlayer(recordingId)
+                    }
+                )
+                MainTab.SETTINGS -> SettingsScreen(
+                    onBack = { selectedTab = MainTab.HOME },
+                    onNavigateToSubtitleStyling = { /* TODO */ },
+                    onNavigateToChannelLogoEditor = { /* TODO */ },
+                    onNavigateToRemoteMapping = { /* TODO */ },
+                    onNavigateToAbout = { /* TODO */ },
+                    onNavigateToLogs = { /* TODO */ },
+                    onSignOut = { /* TODO */ }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ModernSidebar(
+    selectedTab: MainTab,
+    isExpanded: Boolean,
+    width: androidx.compose.ui.unit.Dp,
+    onTabSelected: (MainTab) -> Unit,
+    onSearchClick: () -> Unit,
+    onFocusChanged: (Boolean) -> Unit
+) {
+    var hasFocusedChild by remember { mutableStateOf(false) }
+
+    Column(
+        modifier = Modifier
+            .width(width)
+            .fillMaxHeight()
+            .background(
+                brush = Brush.horizontalGradient(
+                    colors = listOf(
+                        OpenFlixColors.SidebarBackground,
+                        OpenFlixColors.SidebarBackground.copy(alpha = 0.95f)
+                    )
+                )
+            )
+            .padding(vertical = 20.dp)
+            .onFocusChanged { focusState ->
+                hasFocusedChild = focusState.hasFocus
+                onFocusChanged(focusState.hasFocus)
+            },
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        // Logo / Profile Avatar
+        Box(
+            modifier = Modifier
+                .padding(horizontal = 16.dp, vertical = 8.dp)
+                .size(40.dp)
+                .clip(CircleShape)
+                .background(
+                    brush = Brush.linearGradient(
+                        colors = listOf(
+                            OpenFlixColors.Primary,
+                            OpenFlixColors.PrimaryDark
+                        )
+                    )
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            // Could be profile image or logo icon
+            Text(
+                text = "O",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = Color.White
+            )
+        }
+
+        Spacer(modifier = Modifier.height(32.dp))
+
+        // Navigation Items
+        MainTab.entries.forEach { tab ->
+            SidebarNavItem(
+                tab = tab,
+                isSelected = selectedTab == tab,
+                isExpanded = isExpanded,
+                onClick = { onTabSelected(tab) }
+            )
+        }
+
+        Spacer(modifier = Modifier.weight(1f))
+
+        // Search button at bottom
+        SidebarNavItem(
+            icon = Icons.Outlined.Search,
+            selectedIcon = Icons.Filled.Search,
+            label = "Search",
+            isSelected = false,
+            isExpanded = isExpanded,
+            onClick = onSearchClick
+        )
+    }
+}
+
+@Composable
+private fun SidebarNavItem(
+    tab: MainTab,
+    isSelected: Boolean,
+    isExpanded: Boolean,
+    onClick: () -> Unit
+) {
+    SidebarNavItem(
+        icon = tab.icon,
+        selectedIcon = tab.selectedIcon,
+        label = tab.title,
+        isSelected = isSelected,
+        isExpanded = isExpanded,
+        onClick = onClick
+    )
+}
+
+@Composable
+private fun SidebarNavItem(
+    icon: ImageVector,
+    selectedIcon: ImageVector,
+    label: String,
+    isSelected: Boolean,
+    isExpanded: Boolean,
+    onClick: () -> Unit
+) {
+    var isFocused by remember { mutableStateOf(false) }
+
+    val backgroundColor by animateColorAsState(
+        targetValue = when {
+            isSelected -> OpenFlixColors.SidebarSelected
+            isFocused -> OpenFlixColors.SidebarHover
+            else -> Color.Transparent
+        },
+        label = "navItemBg"
+    )
+
+    val iconColor by animateColorAsState(
+        targetValue = when {
+            isSelected -> OpenFlixColors.Primary
+            isFocused -> OpenFlixColors.TextPrimary
+            else -> OpenFlixColors.TextSecondary
+        },
+        label = "iconColor"
+    )
+
+    val textColor by animateColorAsState(
+        targetValue = when {
+            isSelected -> OpenFlixColors.TextPrimary
+            isFocused -> OpenFlixColors.TextPrimary
+            else -> OpenFlixColors.TextSecondary
+        },
+        label = "textColor"
+    )
+
+    Surface(
+        onClick = onClick,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 4.dp)
+            .onFocusChanged { isFocused = it.isFocused },
+        shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(12.dp)),
+        colors = ClickableSurfaceDefaults.colors(
+            containerColor = backgroundColor,
+            focusedContainerColor = OpenFlixColors.SidebarHover
+        ),
+        border = ClickableSurfaceDefaults.border(
+            focusedBorder = Border(
+                border = BorderStroke(2.dp, OpenFlixColors.FocusBorder),
+                shape = RoundedCornerShape(12.dp)
+            )
+        ),
+        scale = ClickableSurfaceDefaults.scale(focusedScale = 1.02f)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = if (isSelected) selectedIcon else icon,
+                contentDescription = label,
+                tint = iconColor,
+                modifier = Modifier.size(24.dp)
+            )
+
+            AnimatedVisibility(
+                visible = isExpanded,
+                enter = expandHorizontally(),
+                exit = shrinkHorizontally()
+            ) {
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                    color = textColor,
+                    modifier = Modifier.padding(start = 16.dp)
+                )
+            }
+        }
+    }
+}
+
+enum class MainTab(
+    val title: String,
+    val icon: ImageVector,
+    val selectedIcon: ImageVector
+) {
+    HOME("Home", Icons.Outlined.Home, Icons.Filled.Home),
+    LIVE_TV("Live TV", Icons.Outlined.LiveTv, Icons.Filled.LiveTv),
+    DVR("DVR", Icons.Outlined.FiberManualRecord, Icons.Filled.FiberManualRecord),
+    SETTINGS("Settings", Icons.Outlined.Settings, Icons.Filled.Settings)
+}

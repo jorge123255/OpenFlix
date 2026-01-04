@@ -76,6 +76,10 @@ class StorageService {
     return _prefs.getString(_keyToken);
   }
 
+  Future<void> clearToken() async {
+    await _prefs.remove(_keyToken);
+  }
+
   // Alias for server access token for clarity
   Future<void> saveServerAccessToken(String token) async {
     await saveToken(token);

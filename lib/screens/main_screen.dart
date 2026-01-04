@@ -5,6 +5,7 @@ import '../client/media_client.dart';
 import '../i18n/strings.g.dart';
 import '../utils/app_logger.dart';
 import '../utils/keyboard_utils.dart';
+import '../utils/platform_detector.dart';
 import '../utils/provider_extensions.dart';
 import '../main.dart';
 import '../mixins/refreshable.dart';
@@ -14,9 +15,13 @@ import '../providers/hidden_libraries_provider.dart';
 import '../providers/playback_state_provider.dart';
 import '../services/plex_auth_service.dart';
 import '../services/storage_service.dart';
+import '../widgets/netflix_preview_card.dart';
+import 'catchup_screen.dart';
 import 'discover_screen.dart';
 import 'libraries_screen.dart';
 import 'livetv_screen.dart';
+import 'movies_screen.dart';
+import 'tvshows_screen.dart';
 import 'search_screen.dart';
 import 'settings_screen.dart';
 
@@ -50,16 +55,20 @@ class MainScreen extends StatefulWidget {
   const MainScreen({super.key, required this.client});
 
   @override
-  State<MainScreen> createState() => _MainScreenState();
+  State<MainScreen> createState() => MainScreenState();
 }
 
-class _MainScreenState extends State<MainScreen> with RouteAware {
+class MainScreenState extends State<MainScreen> with RouteAware {
   int _currentIndex = 0;
+  bool _isSidebarExpanded = false;
 
   late final List<Widget> _screens;
   final GlobalKey<State<DiscoverScreen>> _discoverKey = GlobalKey();
+  final GlobalKey<State<MoviesScreen>> _moviesKey = GlobalKey();
+  final GlobalKey<State<TVShowsScreen>> _tvShowsKey = GlobalKey();
   final GlobalKey<State<LibrariesScreen>> _librariesKey = GlobalKey();
   final GlobalKey<State<LiveTVScreen>> _liveTVKey = GlobalKey();
+  final GlobalKey<State<CatchupScreen>> _catchupKey = GlobalKey();
   final GlobalKey<State<SearchScreen>> _searchKey = GlobalKey();
   final GlobalKey<State<SettingsScreen>> _settingsKey = GlobalKey();
 
@@ -81,8 +90,11 @@ class _MainScreenState extends State<MainScreen> with RouteAware {
         key: _discoverKey,
         onBecameVisible: _onDiscoverBecameVisible,
       ),
+      MoviesScreen(key: _moviesKey),
+      TVShowsScreen(key: _tvShowsKey),
       LibrariesScreen(key: _librariesKey),
       LiveTVScreen(key: _liveTVKey),
+      CatchupScreen(key: _catchupKey, onBackToNav: _focusBottomNav),
       SearchScreen(key: _searchKey),
       SettingsScreen(key: _settingsKey),
     ];
@@ -217,6 +229,11 @@ class _MainScreenState extends State<MainScreen> with RouteAware {
     }
   }
 
+  /// Public method to switch tabs programmatically
+  void switchToTab(int index) {
+    _selectTab(index);
+  }
+
   void _selectTab(int index) {
     // Check if selection came from keyboard/d-pad (bottom nav has focus)
     final isKeyboardNavigation = _bottomNavFocusScopeNode.hasFocus;
@@ -257,14 +274,19 @@ class _MainScreenState extends State<MainScreen> with RouteAware {
 
   @override
   Widget build(BuildContext context) {
+    final isTV = PlatformDetector.isTV(context) || PlatformDetector.isDesktop(context);
+
     return Shortcuts(
       shortcuts: {
-        // Number keys 1-5 for quick tab switching
+        // Number keys 1-8 for quick tab switching
         const SingleActivator(LogicalKeyboardKey.digit1): _TabIntent(0),
         const SingleActivator(LogicalKeyboardKey.digit2): _TabIntent(1),
         const SingleActivator(LogicalKeyboardKey.digit3): _TabIntent(2),
         const SingleActivator(LogicalKeyboardKey.digit4): _TabIntent(3),
         const SingleActivator(LogicalKeyboardKey.digit5): _TabIntent(4),
+        const SingleActivator(LogicalKeyboardKey.digit6): _TabIntent(5),
+        const SingleActivator(LogicalKeyboardKey.digit7): _TabIntent(6),
+        const SingleActivator(LogicalKeyboardKey.digit8): _TabIntent(7),
       },
       child: Actions(
         actions: {
@@ -278,6 +300,84 @@ class _MainScreenState extends State<MainScreen> with RouteAware {
         child: Scaffold(
           body: BackNavigationScope(
             focusBottomNav: _focusBottomNav,
+            child: isTV ? _buildTVLayout() : _buildMobileLayout(),
+          ),
+          bottomNavigationBar: isTV
+              ? null
+              : FocusScope(
+                  node: _bottomNavFocusScopeNode,
+                  onKeyEvent: _handleNavBarBackKey,
+                  child: NavigationBar(
+                    selectedIndex: _currentIndex,
+                    onDestinationSelected: _selectTab,
+                    destinations: [
+                      NavigationDestination(
+                        icon: const Icon(Icons.home_outlined),
+                        selectedIcon: const Icon(Icons.home),
+                        label: t.navigation.home,
+                      ),
+                      NavigationDestination(
+                        icon: const Icon(Icons.movie_outlined),
+                        selectedIcon: const Icon(Icons.movie),
+                        label: t.navigation.movies,
+                      ),
+                      NavigationDestination(
+                        icon: const Icon(Icons.tv_outlined),
+                        selectedIcon: const Icon(Icons.tv),
+                        label: t.navigation.tvShows,
+                      ),
+                      NavigationDestination(
+                        icon: const Icon(Icons.live_tv_outlined),
+                        selectedIcon: const Icon(Icons.live_tv),
+                        label: t.navigation.livetv,
+                      ),
+                      NavigationDestination(
+                        icon: const Icon(Icons.search),
+                        selectedIcon: const Icon(Icons.search),
+                        label: t.navigation.search,
+                      ),
+                    ],
+                  ),
+                ),
+        ),
+      ),
+    );
+  }
+
+  /// Build mobile layout with bottom navigation
+  Widget _buildMobileLayout() {
+    return NetflixPreviewOverlay(
+      child: FocusScope(
+        node: _contentFocusScopeNode,
+        child: FocusTraversalGroup(
+          child: IndexedStack(index: _currentIndex, children: _screens),
+        ),
+      ),
+    );
+  }
+
+  /// Build TV layout with left navigation rail
+  Widget _buildTVLayout() {
+    return NetflixPreviewOverlay(
+      child: Row(
+        children: [
+          // Left navigation rail with auto-hide
+          FocusScope(
+            node: _bottomNavFocusScopeNode,
+            onKeyEvent: _handleNavBarBackKey,
+            child: _TVNavigationRail(
+              selectedIndex: _currentIndex,
+              onDestinationSelected: _selectTab,
+              onExpandChange: (expanded) {
+                if (expanded != _isSidebarExpanded) {
+                  setState(() => _isSidebarExpanded = expanded);
+                }
+              },
+              isExpanded: _isSidebarExpanded,
+            ),
+          ),
+          // Main content area
+          Expanded(
             child: FocusScope(
               node: _contentFocusScopeNode,
               child: FocusTraversalGroup(
@@ -285,40 +385,324 @@ class _MainScreenState extends State<MainScreen> with RouteAware {
               ),
             ),
           ),
-          bottomNavigationBar: FocusScope(
-            node: _bottomNavFocusScopeNode,
-            onKeyEvent: _handleNavBarBackKey,
-            child: NavigationBar(
-              selectedIndex: _currentIndex,
-              onDestinationSelected: _selectTab,
-              destinations: [
-                NavigationDestination(
-                  icon: const Icon(Icons.home_outlined),
-                  selectedIcon: const Icon(Icons.home),
-                  label: t.navigation.home,
+        ],
+      ),
+    );
+  }
+}
+
+/// TV-optimized navigation rail with focus support
+class _TVNavigationRail extends StatefulWidget {
+  final int selectedIndex;
+  final ValueChanged<int> onDestinationSelected;
+  final ValueChanged<bool>? onExpandChange;
+  final bool isExpanded;
+
+  const _TVNavigationRail({
+    required this.selectedIndex,
+    required this.onDestinationSelected,
+    this.onExpandChange,
+    this.isExpanded = false,
+  });
+
+  @override
+  State<_TVNavigationRail> createState() => _TVNavigationRailState();
+}
+
+class _TVNavigationRailState extends State<_TVNavigationRail> {
+  final Set<int> _focusedItems = {};
+
+  // Vibrant accent colors for each nav item
+  static const _navColors = [
+    Color(0xFFF97316), // Orange - Home
+    Color(0xFFEF4444), // Red - Movies
+    Color(0xFF8B5CF6), // Violet - TV Shows
+    Color(0xFF10B981), // Emerald - Libraries
+    Color(0xFF3B82F6), // Blue - Live TV
+    Color(0xFFF59E0B), // Amber - Catchup
+    Color(0xFF06B6D4), // Cyan - Search
+    Color(0xFF6366F1), // Indigo - Settings
+  ];
+
+  void _onItemFocusChange(int index, bool hasFocus) {
+    if (hasFocus) {
+      _focusedItems.add(index);
+    } else {
+      _focusedItems.remove(index);
+    }
+    // Notify parent about expansion state
+    final shouldExpand = _focusedItems.isNotEmpty;
+    widget.onExpandChange?.call(shouldExpand);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final destinations = [
+      _NavItem(Icons.home_rounded, Icons.home_rounded, t.navigation.home),
+      _NavItem(Icons.movie_rounded, Icons.movie_rounded, t.navigation.movies),
+      _NavItem(Icons.tv_rounded, Icons.tv_rounded, t.navigation.tvShows),
+      _NavItem(Icons.video_library_rounded, Icons.video_library_rounded, t.navigation.libraries),
+      _NavItem(Icons.live_tv_rounded, Icons.live_tv_rounded, t.navigation.livetv),
+      _NavItem(Icons.replay_rounded, Icons.replay_rounded, 'Catchup'),
+      _NavItem(Icons.search_rounded, Icons.search_rounded, t.navigation.search),
+      _NavItem(Icons.settings_rounded, Icons.settings_rounded, t.navigation.settings),
+    ];
+
+    final isExpanded = widget.isExpanded;
+
+    return FocusTraversalGroup(
+      child: AnimatedContainer(
+      duration: const Duration(milliseconds: 250),
+      curve: Curves.easeOutCubic,
+      width: isExpanded ? 200 : 72,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            const Color(0xFF1F2937).withValues(alpha: isExpanded ? 1.0 : 0.95),
+            const Color(0xFF111827),
+          ],
+        ),
+        border: Border(
+          right: BorderSide(
+            color: isExpanded
+                ? Colors.white.withValues(alpha: 0.12)
+                : Colors.white.withValues(alpha: 0.05),
+          ),
+        ),
+        boxShadow: isExpanded
+            ? [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.3),
+                  blurRadius: 20,
+                  offset: const Offset(4, 0),
                 ),
-                NavigationDestination(
-                  icon: const Icon(Icons.video_library_outlined),
-                  selectedIcon: const Icon(Icons.video_library),
-                  label: t.navigation.libraries,
-                ),
-                NavigationDestination(
-                  icon: const Icon(Icons.live_tv_outlined),
-                  selectedIcon: const Icon(Icons.live_tv),
-                  label: t.navigation.livetv,
-                ),
-                NavigationDestination(
-                  icon: const Icon(Icons.search),
-                  selectedIcon: const Icon(Icons.search),
-                  label: t.navigation.search,
-                ),
-                NavigationDestination(
-                  icon: const Icon(Icons.settings_outlined),
-                  selectedIcon: const Icon(Icons.settings),
-                  label: t.navigation.settings,
+              ]
+            : null,
+      ),
+      child: Column(
+        children: [
+          const SizedBox(height: 20),
+          // Logo/brand with gradient glow
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 250),
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFFF97316).withValues(alpha: isExpanded ? 0.4 : 0.2),
+                  blurRadius: isExpanded ? 24 : 16,
+                  spreadRadius: isExpanded ? 0 : -4,
                 ),
               ],
             ),
+            child: Image.asset(
+              'assets/openflix.png',
+              width: isExpanded ? 48 : 40,
+              height: isExpanded ? 48 : 40,
+            ),
+          ),
+          const SizedBox(height: 32),
+          // Divider - only show when expanded
+          AnimatedOpacity(
+            duration: const Duration(milliseconds: 200),
+            opacity: isExpanded ? 1.0 : 0.0,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Container(
+                height: 1,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      Colors.transparent,
+                      Colors.white.withValues(alpha: 0.15),
+                      Colors.transparent,
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          // Navigation items
+          Expanded(
+            child: ListView.builder(
+              itemCount: destinations.length,
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              itemBuilder: (context, index) {
+                final item = destinations[index];
+                final isSelected = index == widget.selectedIndex;
+
+                return _TVNavItem(
+                  icon: isSelected ? item.selectedIcon : item.icon,
+                  label: item.label,
+                  isSelected: isSelected,
+                  isExpanded: isExpanded,
+                  accentColor: _navColors[index],
+                  onTap: () => widget.onDestinationSelected(index),
+                  onFocusChange: (hasFocus) => _onItemFocusChange(index, hasFocus),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+      ),
+    );
+  }
+}
+
+class _NavItem {
+  final IconData icon;
+  final IconData selectedIcon;
+  final String label;
+
+  _NavItem(this.icon, this.selectedIcon, this.label);
+}
+
+/// Individual navigation item with TV focus support
+class _TVNavItem extends StatefulWidget {
+  final IconData icon;
+  final String label;
+  final bool isSelected;
+  final bool isExpanded;
+  final Color accentColor;
+  final VoidCallback onTap;
+  final ValueChanged<bool> onFocusChange;
+
+  const _TVNavItem({
+    required this.icon,
+    required this.label,
+    required this.isSelected,
+    required this.isExpanded,
+    required this.accentColor,
+    required this.onTap,
+    required this.onFocusChange,
+  });
+
+  @override
+  State<_TVNavItem> createState() => _TVNavItemState();
+}
+
+class _TVNavItemState extends State<_TVNavItem> {
+  bool _isFocused = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final isHighlighted = _isFocused || widget.isSelected;
+
+    return Focus(
+      onFocusChange: (hasFocus) {
+        setState(() => _isFocused = hasFocus);
+        widget.onFocusChange(hasFocus);
+      },
+      onKeyEvent: (node, event) {
+        if (event is KeyDownEvent) {
+          if (event.logicalKey == LogicalKeyboardKey.enter ||
+              event.logicalKey == LogicalKeyboardKey.select ||
+              event.logicalKey == LogicalKeyboardKey.space) {
+            widget.onTap();
+            return KeyEventResult.handled;
+          }
+        }
+        return KeyEventResult.ignored;
+      },
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          padding: EdgeInsets.symmetric(
+            horizontal: widget.isExpanded ? 14 : 0,
+            vertical: 14,
+          ),
+          decoration: BoxDecoration(
+            gradient: isHighlighted
+                ? LinearGradient(
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                    colors: [
+                      widget.accentColor.withValues(alpha: _isFocused ? 0.35 : 0.25),
+                      widget.accentColor.withValues(alpha: _isFocused ? 0.15 : 0.08),
+                    ],
+                  )
+                : null,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: isHighlighted
+                  ? widget.accentColor.withValues(alpha: _isFocused ? 0.6 : 0.4)
+                  : Colors.transparent,
+              width: _isFocused ? 2 : 1,
+            ),
+            boxShadow: isHighlighted
+                ? [
+                    BoxShadow(
+                      color: widget.accentColor.withValues(alpha: _isFocused ? 0.35 : 0.2),
+                      blurRadius: _isFocused ? 16 : 10,
+                      spreadRadius: _isFocused ? 1 : -2,
+                    ),
+                  ]
+                : null,
+          ),
+          child: Row(
+            mainAxisSize: widget.isExpanded ? MainAxisSize.max : MainAxisSize.min,
+            mainAxisAlignment: widget.isExpanded ? MainAxisAlignment.start : MainAxisAlignment.center,
+            children: [
+              // Icon with colored background when highlighted
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  gradient: isHighlighted
+                      ? LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            widget.accentColor,
+                            widget.accentColor.withValues(alpha: 0.7),
+                          ],
+                        )
+                      : null,
+                  color: isHighlighted ? null : Colors.white.withValues(alpha: 0.05),
+                  borderRadius: BorderRadius.circular(10),
+                  boxShadow: isHighlighted
+                      ? [
+                          BoxShadow(
+                            color: widget.accentColor.withValues(alpha: 0.5),
+                            blurRadius: 8,
+                            spreadRadius: 1,
+                          ),
+                        ]
+                      : null,
+                ),
+                child: Icon(
+                  widget.icon,
+                  size: 24,
+                  color: isHighlighted
+                      ? Colors.white
+                      : Colors.white.withValues(alpha: 0.6),
+                ),
+              ),
+              if (widget.isExpanded) ...[
+                const SizedBox(width: 14),
+                Flexible(
+                  child: Text(
+                    widget.label,
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: isHighlighted ? FontWeight.w600 : FontWeight.w500,
+                      color: isHighlighted
+                          ? Colors.white
+                          : Colors.white.withValues(alpha: 0.7),
+                      letterSpacing: isHighlighted ? 0.3 : 0,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ],
           ),
         ),
       ),

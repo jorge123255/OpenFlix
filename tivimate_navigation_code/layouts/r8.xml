@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout android:id="@id/2lk" android:layout_width="fill_parent" android:layout_height="fill_parent"
+  xmlns:android="http://schemas.android.com/apk/res/android">
+    <androidx.leanback.widget.BrowseFrameLayout android:id="@id/41" android:focusable="true" android:focusableInTouchMode="true" android:descendantFocusability="afterDescendants" android:layout_width="fill_parent" android:layout_height="fill_parent">
+        <androidx.leanback.widget.BrowseRowsFrameLayout android:id="@id/hq" android:layout_width="fill_parent" android:layout_height="fill_parent">
+            <androidx.leanback.widget.ScaleFrameLayout android:id="@id/5pp" android:layout_width="fill_parent" android:layout_height="fill_parent" />
+        </androidx.leanback.widget.BrowseRowsFrameLayout>
+        <FrameLayout android:id="@id/4ct" android:clipToPadding="false" android:layout_width="wrap_content" android:layout_height="fill_parent" android:paddingEnd="50.0dip" />
+    </androidx.leanback.widget.BrowseFrameLayout>
+</FrameLayout>

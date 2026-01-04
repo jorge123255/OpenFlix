@@ -2183,6 +2183,72 @@ class MediaClient {
     }
   }
 
+  /// Auto-detect EPG mappings for all channels
+  Future<Map<String, dynamic>?> autoDetectChannels() async {
+    try {
+      final response = await _dio.post('/livetv/channels/auto-detect');
+      if (response.data != null) {
+        return response.data as Map<String, dynamic>;
+      }
+      return null;
+    } catch (e) {
+      appLogger.e('Failed to auto-detect channels', error: e);
+      rethrow;
+    }
+  }
+
+  /// Get EPG source health status
+  Future<Map<String, dynamic>?> getEPGSourceHealth() async {
+    try {
+      final response = await _dio.get('/livetv/epg/sources/health');
+      if (response.data != null) {
+        return response.data as Map<String, dynamic>;
+      }
+      return null;
+    } catch (e) {
+      appLogger.e('Failed to get EPG source health', error: e);
+      return null;
+    }
+  }
+
+  /// Force refresh EPG data
+  Future<void> forceRefreshEPG() async {
+    try {
+      await _dio.post('/livetv/epg/scheduler/refresh');
+    } catch (e) {
+      appLogger.e('Failed to force refresh EPG', error: e);
+      rethrow;
+    }
+  }
+
+  /// Get EPG conflicts report
+  Future<Map<String, dynamic>?> getEPGConflicts() async {
+    try {
+      final response = await _dio.get('/livetv/epg/conflicts');
+      if (response.data != null) {
+        return response.data as Map<String, dynamic>;
+      }
+      return null;
+    } catch (e) {
+      appLogger.e('Failed to get EPG conflicts', error: e);
+      return null;
+    }
+  }
+
+  /// Get guide cache stats
+  Future<Map<String, dynamic>?> getGuideCacheStats() async {
+    try {
+      final response = await _dio.get('/livetv/guide/cache/stats');
+      if (response.data != null) {
+        return response.data as Map<String, dynamic>;
+      }
+      return null;
+    } catch (e) {
+      appLogger.e('Failed to get guide cache stats', error: e);
+      return null;
+    }
+  }
+
   // ========== DVR Methods ==========
 
   /// Get all DVR recordings for the current user
@@ -2240,6 +2306,25 @@ class MediaClient {
     } catch (e) {
       appLogger.e('Failed to schedule recording', error: e);
       return null;
+    }
+  }
+
+  /// Create a DVR recording from a program
+  Future<DVRRecording?> createDVRRecording({
+    required int channelId,
+    required int programId,
+    bool seriesRecord = false,
+  }) async {
+    try {
+      final response = await _dio.post('/dvr/recordings/from-program', data: {
+        'channelId': channelId,
+        'programId': programId,
+        'seriesRecord': seriesRecord,
+      });
+      return DVRRecording.fromJson(response.data as Map<String, dynamic>);
+    } catch (e) {
+      appLogger.e('Failed to create DVR recording', error: e);
+      rethrow;
     }
   }
 

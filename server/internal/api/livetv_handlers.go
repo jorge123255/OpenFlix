@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"sort"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -196,10 +198,19 @@ func (s *Server) getChannels(c *gin.Context) {
 		return
 	}
 
+	// Get M3U source names for provider display
+	var m3uSources []models.M3USource
+	s.db.Find(&m3uSources)
+	sourceNames := make(map[uint]string)
+	for _, src := range m3uSources {
+		sourceNames[src.ID] = src.Name
+	}
+
 	// Enrich with current program info
 	epgParser := livetv.NewEPGParser(s.db)
 	type ChannelWithProgram struct {
 		models.Channel
+		SourceName  string          `json:"sourceName,omitempty"`
 		NowPlaying  *models.Program `json:"nowPlaying,omitempty"`
 		NextProgram *models.Program `json:"nextProgram,omitempty"`
 	}
@@ -207,6 +218,7 @@ func (s *Server) getChannels(c *gin.Context) {
 	enrichedChannels := make([]ChannelWithProgram, len(channels))
 	for i, ch := range channels {
 		enrichedChannels[i].Channel = ch
+		enrichedChannels[i].SourceName = sourceNames[ch.M3USourceID]
 		if ch.ChannelID != "" {
 			if program, err := epgParser.GetCurrentProgram(ch.ChannelID); err == nil {
 				enrichedChannels[i].NowPlaying = program
@@ -234,14 +246,24 @@ func (s *Server) getChannel(c *gin.Context) {
 		return
 	}
 
+	// Auto-start buffering if requested (for catch-up TV support)
+	if c.Query("buffer") == "true" {
+		go s.timeshiftBuffer.StartBuffer(&channel)
+	}
+
 	// Get current and next program
 	type ChannelWithProgram struct {
 		models.Channel
-		NowPlaying  *models.Program `json:"nowPlaying,omitempty"`
-		NextProgram *models.Program `json:"nextProgram,omitempty"`
+		NowPlaying       *models.Program `json:"nowPlaying,omitempty"`
+		NextProgram      *models.Program `json:"nextProgram,omitempty"`
+		CatchUpAvailable bool            `json:"catchUpAvailable"`
 	}
 
-	response := ChannelWithProgram{Channel: channel}
+	response := ChannelWithProgram{
+		Channel:          channel,
+		CatchUpAvailable: s.timeshiftBuffer.IsBuffering(uint(id)),
+	}
+
 	if channel.ChannelID != "" {
 		epgParser := livetv.NewEPGParser(s.db)
 		if program, err := epgParser.GetCurrentProgram(channel.ChannelID); err == nil {
@@ -384,6 +406,328 @@ func (s *Server) unmapChannel(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Channel unmapped successfully"})
 }
 
+// autoDetectChannels automatically detects EPG mappings for channels
+func (s *Server) autoDetectChannels(c *gin.Context) {
+	// Get optional source filter
+	sourceID, _ := strconv.ParseUint(c.Query("sourceId"), 10, 32)
+	epgSourceID, _ := strconv.ParseUint(c.Query("epgSourceId"), 10, 32)
+	minConfidence := 0.7 // Default minimum confidence
+	if conf := c.Query("minConfidence"); conf != "" {
+		if parsed, err := strconv.ParseFloat(conf, 64); err == nil && parsed > 0 && parsed <= 1 {
+			minConfidence = parsed
+		}
+	}
+	applyMappings := c.Query("apply") == "true"
+	unmappedOnly := c.Query("unmappedOnly") != "false" // Default true
+
+	// Get channels to process
+	query := s.db.Model(&models.Channel{})
+	if sourceID > 0 {
+		query = query.Where("m3u_source_id = ?", sourceID)
+	}
+
+	var channels []models.Channel
+	if err := query.Find(&channels).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch channels"})
+		return
+	}
+
+	// Get M3U source names for provider matching
+	var m3uSources []models.M3USource
+	s.db.Find(&m3uSources)
+	sourceNames := make(map[uint]string)
+	for _, src := range m3uSources {
+		sourceNames[src.ID] = strings.ToLower(src.Name)
+	}
+
+	// Get all channel IDs that have programs in the database
+	var channelIDsWithPrograms []string
+	s.db.Model(&models.Program{}).
+		Distinct("channel_id").
+		Where("channel_id != ''").
+		Pluck("channel_id", &channelIDsWithPrograms)
+
+	// Create a map for fast lookup
+	hasPrograms := make(map[string]bool)
+	for _, id := range channelIDsWithPrograms {
+		hasPrograms[id] = true
+	}
+
+	// Track EPG channel IDs that are already assigned to prevent duplicates
+	usedEPGChannelIDs := make(map[string]bool)
+	var existingChannels []models.Channel
+	s.db.Where("channel_id != ''").Find(&existingChannels)
+	for _, ch := range existingChannels {
+		usedEPGChannelIDs[ch.ChannelID] = true
+	}
+
+	// If unmappedOnly, filter to channels without EPG programs
+	if unmappedOnly {
+		var unmappedChannels []models.Channel
+		for _, ch := range channels {
+			if !hasPrograms[ch.ChannelID] {
+				unmappedChannels = append(unmappedChannels, ch)
+			}
+		}
+		channels = unmappedChannels
+	}
+
+	if len(channels) == 0 {
+		c.JSON(http.StatusOK, gin.H{
+			"message": "No channels to process",
+			"summary": livetv.AutoDetectSummary{},
+			"results": []livetv.AutoDetectResult{},
+		})
+		return
+	}
+
+	// Get EPG channels to match against
+	var epgChannels []livetv.EPGChannelInfo
+
+	// If specific EPG source is specified, use only that source
+	if epgSourceID > 0 {
+		var epgSource models.EPGSource
+		if err := s.db.First(&epgSource, epgSourceID).Error; err != nil {
+			c.JSON(http.StatusNotFound, gin.H{"error": "EPG source not found"})
+			return
+		}
+
+		// Get unique channels from programs for this EPG source
+		var programs []models.Program
+		s.db.Select("DISTINCT channel_id, call_sign, channel_no, affiliate_name").
+			Where("channel_id != ''").
+			Find(&programs)
+
+		for _, p := range programs {
+			epgChannels = append(epgChannels, livetv.EPGChannelInfo{
+				ChannelID:     p.ChannelID,
+				CallSign:      p.CallSign,
+				Number:        p.ChannelNo,
+				AffiliateName: p.AffiliateName,
+				Name:          p.CallSign, // Use call sign as name
+			})
+		}
+	} else {
+		// Get all unique EPG channels from programs table
+		var programs []struct {
+			ChannelID     string
+			CallSign      string
+			ChannelNo     string
+			AffiliateName string
+		}
+		s.db.Model(&models.Program{}).
+			Select("DISTINCT channel_id, call_sign, channel_no, affiliate_name").
+			Where("channel_id != ''").
+			Scan(&programs)
+
+		for _, p := range programs {
+			epgChannels = append(epgChannels, livetv.EPGChannelInfo{
+				ChannelID:     p.ChannelID,
+				CallSign:      p.CallSign,
+				Number:        p.ChannelNo,
+				AffiliateName: p.AffiliateName,
+				Name:          p.CallSign,
+			})
+		}
+	}
+
+	if len(epgChannels) == 0 {
+		c.JSON(http.StatusOK, gin.H{
+			"message": "No EPG channels available for matching. Please add and refresh an EPG source first.",
+			"summary": livetv.AutoDetectSummary{TotalChannels: len(channels)},
+			"results": []livetv.AutoDetectResult{},
+		})
+		return
+	}
+
+	// Create matcher and process channels
+	matcher := livetv.NewChannelMatcher(epgChannels)
+
+	var results []livetv.AutoDetectResult
+	summary := livetv.AutoDetectSummary{
+		TotalChannels: len(channels),
+	}
+
+	for _, ch := range channels {
+		result := livetv.AutoDetectResult{
+			ChannelID:      ch.ID,
+			ChannelName:    ch.Name,
+			CurrentMapping: ch.ChannelID,
+		}
+
+		// Skip channels that already have EPG programs
+		if hasPrograms[ch.ChannelID] {
+			summary.AlreadyMapped++
+			continue
+		}
+
+		// First, check if the channel's TVGId directly matches EPG programs
+		// This is the preferred mapping (e.g., philo-11 -> philo-11)
+		if ch.TVGId != "" && hasPrograms[ch.TVGId] && !usedEPGChannelIDs[ch.TVGId] {
+			if applyMappings {
+				ch.ChannelID = ch.TVGId
+				ch.MatchConfidence = 1.0
+				ch.MatchStrategy = "tvg_id_direct"
+				ch.AutoDetected = true
+
+				if err := s.db.Save(&ch).Error; err == nil {
+					usedEPGChannelIDs[ch.TVGId] = true
+					result.AutoMapped = true
+					result.BestMatch = &livetv.MatchResult{
+						EPGChannelID:  ch.TVGId,
+						Confidence:    1.0,
+						MatchReason:   "Direct TVG-ID match",
+						MatchStrategy: "tvg_id_direct",
+					}
+					summary.NewMappings++
+					summary.HighConfidence++
+				}
+			} else {
+				result.BestMatch = &livetv.MatchResult{
+					EPGChannelID:  ch.TVGId,
+					Confidence:    1.0,
+					MatchReason:   "Direct TVG-ID match",
+					MatchStrategy: "tvg_id_direct",
+				}
+				summary.HighConfidence++
+			}
+			results = append(results, result)
+			continue
+		}
+
+		// Find matches using the matcher
+		matches := matcher.FindMatches(&ch)
+
+		// Get M3U source name for provider preference
+		m3uSourceName := sourceNames[ch.M3USourceID]
+
+		// Filter out already-used EPG channel IDs and prefer same-provider matches
+		var filteredMatches []livetv.MatchResult
+		for _, match := range matches {
+			// Skip already-used EPG channel IDs to prevent duplicates
+			if usedEPGChannelIDs[match.EPGChannelID] {
+				continue
+			}
+
+			// Boost confidence for same-provider matches
+			// e.g., if M3U source is "Philo" and EPG channel ID starts with "philo-"
+			epgChannelLower := strings.ToLower(match.EPGChannelID)
+			if m3uSourceName != "" && strings.HasPrefix(epgChannelLower, m3uSourceName+"-") {
+				match.Confidence = min(match.Confidence*1.2, 1.0) // 20% boost, max 1.0
+				match.MatchReason = match.MatchReason + " (same provider)"
+			}
+
+			filteredMatches = append(filteredMatches, match)
+		}
+
+		// Re-sort by confidence after filtering
+		sort.Slice(filteredMatches, func(i, j int) bool {
+			return filteredMatches[i].Confidence > filteredMatches[j].Confidence
+		})
+
+		result.AllMatches = filteredMatches
+
+		if len(filteredMatches) > 0 {
+			result.BestMatch = &filteredMatches[0]
+
+			if filteredMatches[0].Confidence >= minConfidence {
+				summary.HighConfidence++
+
+				// Apply mapping if requested
+				if applyMappings {
+					ch.ChannelID = filteredMatches[0].EPGChannelID
+					ch.EPGCallSign = filteredMatches[0].EPGCallSign
+					ch.EPGChannelNo = filteredMatches[0].EPGNumber
+					ch.MatchConfidence = filteredMatches[0].Confidence
+					ch.MatchStrategy = filteredMatches[0].MatchStrategy
+					ch.AutoDetected = true
+
+					if epgSourceID > 0 {
+						epgSrcID := uint(epgSourceID)
+						ch.EPGSourceID = &epgSrcID
+					}
+
+					if err := s.db.Save(&ch).Error; err == nil {
+						usedEPGChannelIDs[filteredMatches[0].EPGChannelID] = true
+						result.AutoMapped = true
+						summary.NewMappings++
+					}
+				}
+			} else {
+				summary.LowConfidence++
+			}
+		} else {
+			summary.NoMatchFound++
+		}
+
+		results = append(results, result)
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message":       "Auto-detection completed",
+		"summary":       summary,
+		"results":       results,
+		"epgChannels":   len(epgChannels),
+		"minConfidence": minConfidence,
+		"applied":       applyMappings,
+	})
+}
+
+// getSuggestedMatches returns suggested EPG matches for a single channel
+func (s *Server) getSuggestedMatches(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid channel ID"})
+		return
+	}
+
+	var channel models.Channel
+	if err := s.db.First(&channel, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Channel not found"})
+		return
+	}
+
+	// Get all unique EPG channels from programs
+	var programs []struct {
+		ChannelID     string
+		CallSign      string
+		ChannelNo     string
+		AffiliateName string
+	}
+	s.db.Model(&models.Program{}).
+		Select("DISTINCT channel_id, call_sign, channel_no, affiliate_name").
+		Where("channel_id != ''").
+		Scan(&programs)
+
+	var epgChannels []livetv.EPGChannelInfo
+	for _, p := range programs {
+		epgChannels = append(epgChannels, livetv.EPGChannelInfo{
+			ChannelID:     p.ChannelID,
+			CallSign:      p.CallSign,
+			Number:        p.ChannelNo,
+			AffiliateName: p.AffiliateName,
+			Name:          p.CallSign,
+		})
+	}
+
+	if len(epgChannels) == 0 {
+		c.JSON(http.StatusOK, gin.H{
+			"channel": channel,
+			"matches": []livetv.MatchResult{},
+			"message": "No EPG channels available",
+		})
+		return
+	}
+
+	matcher := livetv.NewChannelMatcher(epgChannels)
+	matches := matcher.FindMatches(&channel)
+
+	c.JSON(http.StatusOK, gin.H{
+		"channel": channel,
+		"matches": matches,
+	})
+}
+
 // toggleChannelFavorite toggles the favorite status of a channel
 func (s *Server) toggleChannelFavorite(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
@@ -411,7 +755,7 @@ func (s *Server) toggleChannelFavorite(c *gin.Context) {
 
 // ============ EPG Guide ============
 
-// getGuide returns EPG data for a time range
+// getGuide returns EPG data for a time range with caching
 func (s *Server) getGuide(c *gin.Context) {
 	// Parse time range (defaults to next 24 hours)
 	now := time.Now()
@@ -429,10 +773,28 @@ func (s *Server) getGuide(c *gin.Context) {
 		}
 	}
 
+	sourceID := c.Query("sourceId")
+
+	// Generate cache key - truncate times to 5-minute buckets for better cache hits
+	startBucket := start.Truncate(5 * time.Minute)
+	endBucket := end.Truncate(5 * time.Minute)
+	cacheKey := ""
+	if s.guideCache != nil {
+		cacheKey = s.guideCache.GenerateKey("guide", startBucket.Unix(), endBucket.Unix(), sourceID)
+
+		// Check cache first
+		if cached, found := s.guideCache.Get(cacheKey); found {
+			if response, ok := cached.(gin.H); ok {
+				c.JSON(http.StatusOK, response)
+				return
+			}
+		}
+	}
+
 	// Get channels
 	var channels []models.Channel
 	channelQuery := s.db.Where("enabled = ?", true).Order("number, name")
-	if sourceID := c.Query("sourceId"); sourceID != "" {
+	if sourceID != "" {
 		channelQuery = channelQuery.Where("m3u_source_id = ?", sourceID)
 	}
 	if err := channelQuery.Find(&channels).Error; err != nil {
@@ -462,12 +824,19 @@ func (s *Server) getGuide(c *gin.Context) {
 		programsByChannel[prog.ChannelID] = append(programsByChannel[prog.ChannelID], prog)
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"channels":          channels,
-		"programs":          programsByChannel,
-		"start":             start,
-		"end":               end,
-	})
+	response := gin.H{
+		"channels": channels,
+		"programs": programsByChannel,
+		"start":    start,
+		"end":      end,
+	}
+
+	// Store in cache
+	if s.guideCache != nil && cacheKey != "" {
+		s.guideCache.Set(cacheKey, response)
+	}
+
+	c.JSON(http.StatusOK, response)
 }
 
 // getChannelGuide returns EPG for a single channel
@@ -524,18 +893,26 @@ func (s *Server) getWhatsOnNow(c *gin.Context) {
 
 	// Flat structure that Flutter expects
 	type ChannelWithPrograms struct {
-		ID          uint            `json:"id"`
-		SourceID    uint            `json:"sourceId"`
-		ChannelID   string          `json:"channelId"`
-		Number      int             `json:"number"`
-		Name        string          `json:"name"`
-		Logo        string          `json:"logo,omitempty"`
-		Group       string          `json:"group,omitempty"`
-		StreamURL   string          `json:"streamUrl"`
-		Enabled     bool            `json:"enabled"`
-		IsFavorite  bool            `json:"isFavorite"`
-		NowPlaying  *models.Program `json:"nowPlaying,omitempty"`
-		NextProgram *models.Program `json:"nextProgram,omitempty"`
+		ID              uint            `json:"id"`
+		SourceID        uint            `json:"sourceId"`
+		ChannelID       string          `json:"channelId"`
+		Number          int             `json:"number"`
+		Name            string          `json:"name"`
+		Logo            string          `json:"logo,omitempty"`
+		Group           string          `json:"group,omitempty"`
+		StreamURL       string          `json:"streamUrl"`
+		Enabled         bool            `json:"enabled"`
+		IsFavorite      bool            `json:"isFavorite"`
+		NowPlaying      *models.Program `json:"nowPlaying,omitempty"`
+		NextProgram     *models.Program `json:"nextProgram,omitempty"`
+		// EPG Mapping fields
+		TvgId           string  `json:"tvgId,omitempty"`
+		EPGCallSign     string  `json:"epgCallSign,omitempty"`
+		EPGChannelNo    string  `json:"epgChannelNo,omitempty"`
+		MatchConfidence float64 `json:"matchConfidence"`
+		MatchStrategy   string  `json:"matchStrategy,omitempty"`
+		AutoDetected    bool    `json:"autoDetected"`
+		HasEpgData      bool    `json:"hasEpgData"`
 	}
 
 	epgParser := livetv.NewEPGParser(s.db)
@@ -543,20 +920,27 @@ func (s *Server) getWhatsOnNow(c *gin.Context) {
 
 	for _, ch := range channels {
 		item := ChannelWithPrograms{
-			ID:         ch.ID,
-			SourceID:   ch.M3USourceID,
-			ChannelID:  ch.ChannelID,
-			Number:     ch.Number,
-			Name:       ch.Name,
-			Logo:       ch.Logo,
-			Group:      ch.Group,
-			StreamURL:  ch.StreamURL,
-			Enabled:    ch.Enabled,
-			IsFavorite: ch.IsFavorite,
+			ID:              ch.ID,
+			SourceID:        ch.M3USourceID,
+			ChannelID:       ch.ChannelID,
+			Number:          ch.Number,
+			Name:            ch.Name,
+			Logo:            ch.Logo,
+			Group:           ch.Group,
+			StreamURL:       ch.StreamURL,
+			Enabled:         ch.Enabled,
+			IsFavorite:      ch.IsFavorite,
+			TvgId:           ch.TVGId,
+			EPGCallSign:     ch.EPGCallSign,
+			EPGChannelNo:    ch.EPGChannelNo,
+			MatchConfidence: ch.MatchConfidence,
+			MatchStrategy:   ch.MatchStrategy,
+			AutoDetected:    ch.AutoDetected,
 		}
 		if ch.ChannelID != "" {
 			if program, err := epgParser.GetCurrentProgram(ch.ChannelID); err == nil {
 				item.NowPlaying = program
+				item.HasEpgData = true
 			}
 			if program, err := epgParser.GetNextProgram(ch.ChannelID); err == nil {
 				item.NextProgram = program
@@ -578,6 +962,84 @@ func (s *Server) getEPGSources(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"sources": sources})
+}
+
+// discoverGracenoteProviders returns available TV providers for a zip code
+// This allows users to select their provider from a dropdown instead of knowing headend IDs
+func (s *Server) discoverGracenoteProviders(c *gin.Context) {
+	postalCode := c.Query("postalCode")
+	country := c.DefaultQuery("country", "USA")
+
+	if postalCode == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "postalCode is required"})
+		return
+	}
+
+	// Create Gracenote client
+	gnClient := gracenote.NewBrowserClient(gracenote.Config{
+		BaseURL:   "https://tvlistings.gracenote.com",
+		UserAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+		Timeout:   30 * time.Second,
+	})
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	// Discover providers for this postal code
+	providers, err := gnClient.DiscoverProviders(ctx, postalCode, country)
+	if err != nil || len(providers) == 0 {
+		// Try fallback providers - returns cable, satellite, and antenna options
+		fallbackProviders := getAllProvidersForArea(postalCode)
+		if len(fallbackProviders) > 0 {
+			providers = fallbackProviders
+		} else if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error":     fmt.Sprintf("Failed to discover providers: %v", err),
+				"providers": []gracenote.Provider{},
+			})
+			return
+		}
+	}
+
+	// Group providers by type for better UI organization
+	type ProviderGroup struct {
+		Type      string               `json:"type"`
+		Providers []gracenote.Provider `json:"providers"`
+	}
+
+	cable := []gracenote.Provider{}
+	satellite := []gracenote.Provider{}
+	antenna := []gracenote.Provider{}
+
+	for _, p := range providers {
+		switch p.Type {
+		case "Cable":
+			cable = append(cable, p)
+		case "Satellite":
+			satellite = append(satellite, p)
+		case "Antenna":
+			antenna = append(antenna, p)
+		}
+	}
+
+	groups := []ProviderGroup{}
+	if len(cable) > 0 {
+		groups = append(groups, ProviderGroup{Type: "Cable", Providers: cable})
+	}
+	if len(satellite) > 0 {
+		groups = append(groups, ProviderGroup{Type: "Satellite", Providers: satellite})
+	}
+	if len(antenna) > 0 {
+		groups = append(groups, ProviderGroup{Type: "Antenna", Providers: antenna})
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"postalCode": postalCode,
+		"country":    country,
+		"providers":  providers,
+		"grouped":    groups,
+		"total":      len(providers),
+	})
 }
 
 // previewEPGSource previews channels available from Gracenote for a postal code
@@ -1103,6 +1565,215 @@ func autoDetectAffiliate(postalCode string) string {
 	return ""
 }
 
+// getAllProvidersForArea returns multiple provider options for a given postal code
+// including local cable, national satellite, and over-the-air options
+func getAllProvidersForArea(postalCode string) []gracenote.Provider {
+	providers := []gracenote.Provider{}
+
+	// Get local cable provider
+	cableProvider := getFallbackProvider(postalCode)
+	if cableProvider != nil {
+		providers = append(providers, *cableProvider)
+	}
+
+	// Add national providers that work everywhere
+	// DirecTV headend IDs by region (verified from Gracenote)
+	directvHeadends := map[string]struct {
+		headendID string
+		name      string
+	}{
+		// Major market DirecTV headends
+		"NY": {"DITV802", "DirecTV"},
+		"CA": {"DITV810", "DirecTV"},
+		"TX": {"DITV804", "DirecTV"},
+		"FL": {"DITV806", "DirecTV"},
+		"IL": {"DITV803", "DirecTV"},
+		"PA": {"DITV805", "DirecTV"},
+		"GA": {"DITV807", "DirecTV"},
+		"MA": {"DITV808", "DirecTV"},
+		"WA": {"DITV809", "DirecTV"},
+		"CO": {"DITV811", "DirecTV"},
+	}
+
+	// Determine state from postal code
+	state := lookupStateFromZIP(postalCode)
+	if state == "" {
+		// Fallback to state detection from zip prefix
+		state = getStateFromZipPrefix(postalCode)
+	}
+
+	// Add DirecTV for this region
+	if directv, ok := directvHeadends[state]; ok {
+		providers = append(providers, gracenote.Provider{
+			HeadendID: directv.headendID,
+			Name:      directv.name,
+			Type:      "Satellite",
+			Location:  state,
+			LineupID:  fmt.Sprintf("USA-%s-DEFAULT", directv.headendID),
+		})
+	} else {
+		// Default DirecTV headend
+		providers = append(providers, gracenote.Provider{
+			HeadendID: "DITV802",
+			Name:      "DirecTV",
+			Type:      "Satellite",
+			Location:  "National",
+			LineupID:  "USA-DITV802-DEFAULT",
+		})
+	}
+
+	// DISH Network (national)
+	providers = append(providers, gracenote.Provider{
+		HeadendID: "DISH120",
+		Name:      "DISH Network",
+		Type:      "Satellite",
+		Location:  "National",
+		LineupID:  "USA-DISH120-DEFAULT",
+	})
+
+	// Add over-the-air antenna options based on market
+	otaHeadends := map[string]struct {
+		headendID string
+		name      string
+		market    string
+	}{
+		"NY": {"NY66511", "Over The Air", "New York"},
+		"CA": {"CA01544", "Over The Air", "Los Angeles"},
+		"IL": {"IL51244", "Over The Air", "Chicago"},
+		"TX": {"TX30063", "Over The Air", "Dallas"},
+		"FL": {"FL14124", "Over The Air", "Miami"},
+		"PA": {"PA44583", "Over The Air", "Philadelphia"},
+		"GA": {"GA03631", "Over The Air", "Atlanta"},
+		"MA": {"MA02540", "Over The Air", "Boston"},
+		"WA": {"WA69021", "Over The Air", "Seattle"},
+		"CO": {"CO08066", "Over The Air", "Denver"},
+	}
+
+	if ota, ok := otaHeadends[state]; ok {
+		providers = append(providers, gracenote.Provider{
+			HeadendID: ota.headendID,
+			Name:      ota.name,
+			Type:      "Antenna",
+			Location:  ota.market,
+			LineupID:  fmt.Sprintf("USA-%s-DEFAULT", ota.headendID),
+		})
+	}
+
+	return providers
+}
+
+// getStateFromZipPrefix determines state from zip code prefix when API lookup fails
+func getStateFromZipPrefix(postalCode string) string {
+	if len(postalCode) < 3 {
+		return ""
+	}
+	prefix := postalCode[:3]
+	prefixNum := 0
+	fmt.Sscanf(prefix, "%d", &prefixNum)
+
+	switch {
+	case prefixNum >= 100 && prefixNum <= 149:
+		return "NY"
+	case prefixNum >= 150 && prefixNum <= 196:
+		return "PA"
+	case prefixNum >= 200 && prefixNum <= 205:
+		return "DC"
+	case prefixNum >= 206 && prefixNum <= 219:
+		return "MD"
+	case prefixNum >= 220 && prefixNum <= 246:
+		return "VA"
+	case prefixNum >= 250 && prefixNum <= 268:
+		return "WV"
+	case prefixNum >= 270 && prefixNum <= 289:
+		return "NC"
+	case prefixNum >= 290 && prefixNum <= 299:
+		return "SC"
+	case prefixNum >= 300 && prefixNum <= 319:
+		return "GA"
+	case prefixNum >= 320 && prefixNum <= 339:
+		return "FL"
+	case prefixNum >= 350 && prefixNum <= 369:
+		return "AL"
+	case prefixNum >= 370 && prefixNum <= 385:
+		return "TN"
+	case prefixNum >= 386 && prefixNum <= 397:
+		return "MS"
+	case prefixNum >= 400 && prefixNum <= 427:
+		return "KY"
+	case prefixNum >= 430 && prefixNum <= 459:
+		return "OH"
+	case prefixNum >= 460 && prefixNum <= 479:
+		return "IN"
+	case prefixNum >= 480 && prefixNum <= 499:
+		return "MI"
+	case prefixNum >= 500 && prefixNum <= 528:
+		return "IA"
+	case prefixNum >= 530 && prefixNum <= 549:
+		return "WI"
+	case prefixNum >= 550 && prefixNum <= 567:
+		return "MN"
+	case prefixNum >= 570 && prefixNum <= 577:
+		return "SD"
+	case prefixNum >= 580 && prefixNum <= 588:
+		return "ND"
+	case prefixNum >= 590 && prefixNum <= 599:
+		return "MT"
+	case prefixNum >= 600 && prefixNum <= 629:
+		return "IL"
+	case prefixNum >= 630 && prefixNum <= 658:
+		return "MO"
+	case prefixNum >= 660 && prefixNum <= 679:
+		return "KS"
+	case prefixNum >= 680 && prefixNum <= 693:
+		return "NE"
+	case prefixNum >= 700 && prefixNum <= 714:
+		return "LA"
+	case prefixNum >= 716 && prefixNum <= 729:
+		return "AR"
+	case prefixNum >= 730 && prefixNum <= 749:
+		return "OK"
+	case prefixNum >= 750 && prefixNum <= 799:
+		return "TX"
+	case prefixNum >= 800 && prefixNum <= 816:
+		return "CO"
+	case prefixNum >= 820 && prefixNum <= 831:
+		return "WY"
+	case prefixNum >= 832 && prefixNum <= 838:
+		return "ID"
+	case prefixNum >= 840 && prefixNum <= 847:
+		return "UT"
+	case prefixNum >= 850 && prefixNum <= 865:
+		return "AZ"
+	case prefixNum >= 870 && prefixNum <= 884:
+		return "NM"
+	case prefixNum >= 889 && prefixNum <= 898:
+		return "NV"
+	case prefixNum >= 900 && prefixNum <= 961:
+		return "CA"
+	case prefixNum >= 970 && prefixNum <= 979:
+		return "OR"
+	case prefixNum >= 980 && prefixNum <= 994:
+		return "WA"
+	case prefixNum >= 995 && prefixNum <= 999:
+		return "AK"
+	case prefixNum >= 10 && prefixNum <= 27:
+		return "MA"
+	case prefixNum >= 28 && prefixNum <= 29:
+		return "RI"
+	case prefixNum >= 30 && prefixNum <= 38:
+		return "NH"
+	case prefixNum >= 39 && prefixNum <= 49:
+		return "ME"
+	case prefixNum >= 50 && prefixNum <= 54:
+		return "VT"
+	case prefixNum >= 60 && prefixNum <= 69:
+		return "CT"
+	case prefixNum >= 70 && prefixNum <= 89:
+		return "NJ"
+	}
+	return ""
+}
+
 // getTotalPrograms counts total programs across all channels
 func getTotalPrograms(gridResp *gracenote.GridResponse) int {
 	total := 0
@@ -1310,11 +1981,77 @@ func (s *Server) getEPGStats(c *gin.Context) {
 	stats["m3uSources"] = m3uSourceCount
 	stats["epgSources"] = epgSourceCount
 
+	// Add scheduler status
+	if s.epgScheduler != nil {
+		stats["scheduler"] = s.epgScheduler.GetStatus()
+	}
+
 	c.JSON(http.StatusOK, stats)
+}
+
+// getEPGSchedulerStatus returns the EPG scheduler status
+func (s *Server) getEPGSchedulerStatus(c *gin.Context) {
+	if s.epgScheduler == nil {
+		c.JSON(http.StatusOK, gin.H{
+			"enabled": false,
+			"message": "EPG scheduler not initialized",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, s.epgScheduler.GetStatus())
+}
+
+// getGuideCacheStats returns cache statistics
+func (s *Server) getGuideCacheStats(c *gin.Context) {
+	if s.guideCache == nil {
+		c.JSON(http.StatusOK, gin.H{
+			"enabled": false,
+			"message": "Guide cache not initialized",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, s.guideCache.Stats())
+}
+
+// invalidateGuideCache clears the guide cache
+func (s *Server) invalidateGuideCache(c *gin.Context) {
+	if s.guideCache == nil {
+		c.JSON(http.StatusOK, gin.H{"message": "Guide cache not initialized"})
+		return
+	}
+
+	s.guideCache.InvalidateAll()
+	c.JSON(http.StatusOK, gin.H{"message": "Guide cache invalidated"})
+}
+
+// forceEPGRefresh triggers an immediate EPG refresh
+func (s *Server) forceEPGRefresh(c *gin.Context) {
+	if s.epgScheduler == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "EPG scheduler not initialized"})
+		return
+	}
+
+	// Invalidate cache when refreshing EPG
+	if s.guideCache != nil {
+		s.guideCache.InvalidateAll()
+	}
+
+	s.epgScheduler.ForceRefresh()
+	c.JSON(http.StatusOK, gin.H{
+		"message": "EPG refresh triggered",
+		"status":  s.epgScheduler.GetStatus(),
+	})
 }
 
 // refreshAllEPG refreshes EPG from all sources
 func (s *Server) refreshAllEPG(c *gin.Context) {
+	// Invalidate cache when refreshing EPG
+	if s.guideCache != nil {
+		s.guideCache.InvalidateAll()
+	}
+
 	epgParser := livetv.NewEPGParser(s.db)
 	errors := []string{}
 	refreshed := 0
@@ -1515,7 +2252,7 @@ func (s *Server) getEPGPrograms(c *gin.Context) {
 	if page < 1 {
 		page = 1
 	}
-	if limit < 1 || limit > 500 {
+	if limit < 1 || limit > 15000 {
 		limit = 100
 	}
 	offset := (page - 1) * limit
@@ -1523,19 +2260,29 @@ func (s *Server) getEPGPrograms(c *gin.Context) {
 	// Build query
 	query := s.db.Model(&models.Program{})
 
-	// Filter by EPG source if provided (via channel relationship)
+	// Filter by EPG source if provided
 	if epgSourceID != "" {
 		sourceID, err := strconv.Atoi(epgSourceID)
 		if err == nil {
-			// Get channels for this EPG source
-			var channels []models.Channel
-			s.db.Where("epg_source_id = ?", sourceID).Find(&channels)
-			if len(channels) > 0 {
-				channelIDs := make([]string, len(channels))
-				for i, ch := range channels {
-					channelIDs[i] = ch.ChannelID
+			// Get the EPG source to determine how to filter
+			var epgSource models.EPGSource
+			if err := s.db.First(&epgSource, sourceID).Error; err == nil {
+				// For Gracenote sources, filter by channel_id prefix
+				if epgSource.ProviderType == "gracenote" && epgSource.GracenoteAffiliate != "" {
+					prefix := fmt.Sprintf("gracenote-%s-%%", epgSource.GracenoteAffiliate)
+					query = query.Where("channel_id LIKE ?", prefix)
+				} else if epgSource.ProviderType == "xmltv" {
+					// For XMLTV sources, use the old logic (filter by mapped channels)
+					var channels []models.Channel
+					s.db.Where("epg_source_id = ?", sourceID).Find(&channels)
+					if len(channels) > 0 {
+						channelIDs := make([]string, len(channels))
+						for i, ch := range channels {
+							channelIDs[i] = ch.ChannelID
+						}
+						query = query.Where("channel_id IN ?", channelIDs)
+					}
 				}
-				query = query.Where("channel_id IN ?", channelIDs)
 			}
 		}
 	}
@@ -1602,15 +2349,25 @@ func (s *Server) getEPGChannels(c *gin.Context) {
 	if epgSourceID != "" {
 		sourceID, err := strconv.Atoi(epgSourceID)
 		if err == nil {
-			// Get channels for this EPG source
-			var channels []models.Channel
-			s.db.Where("epg_source_id = ?", sourceID).Find(&channels)
-			if len(channels) > 0 {
-				channelIDs := make([]string, len(channels))
-				for i, ch := range channels {
-					channelIDs[i] = ch.ChannelID
+			// Get the EPG source to determine how to filter
+			var epgSource models.EPGSource
+			if err := s.db.First(&epgSource, sourceID).Error; err == nil {
+				// For Gracenote sources, filter by channel_id prefix
+				if epgSource.ProviderType == "gracenote" && epgSource.GracenoteAffiliate != "" {
+					prefix := fmt.Sprintf("gracenote-%s-%%", epgSource.GracenoteAffiliate)
+					query = query.Where("channel_id LIKE ?", prefix)
+				} else if epgSource.ProviderType == "xmltv" {
+					// For XMLTV sources, filter by mapped channels
+					var channels []models.Channel
+					s.db.Where("epg_source_id = ?", sourceID).Find(&channels)
+					if len(channels) > 0 {
+						channelIDs := make([]string, len(channels))
+						for i, ch := range channels {
+							channelIDs[i] = ch.ChannelID
+						}
+						query = query.Where("channel_id IN ?", channelIDs)
+					}
 				}
-				query = query.Where("channel_id IN ?", channelIDs)
 			}
 		}
 	}
@@ -1621,8 +2378,11 @@ func (s *Server) getEPGChannels(c *gin.Context) {
 
 	// For each channel ID, get a sample program to show what's on that channel
 	type EPGChannel struct {
-		ChannelID   string `json:"channelId"`
-		SampleTitle string `json:"sampleTitle"`
+		ChannelID     string `json:"channelId"`
+		CallSign      string `json:"callSign"`
+		ChannelNo     string `json:"channelNo"`
+		AffiliateName string `json:"affiliateName,omitempty"`
+		SampleTitle   string `json:"sampleTitle"`
 	}
 
 	channels := make([]EPGChannel, 0, len(channelIDs))
@@ -1631,12 +2391,623 @@ func (s *Server) getEPGChannels(c *gin.Context) {
 		s.db.Where("channel_id = ?", channelID).Order("start DESC").First(&program)
 
 		channels = append(channels, EPGChannel{
-			ChannelID:   channelID,
-			SampleTitle: program.Title,
+			ChannelID:     channelID,
+			CallSign:      program.CallSign,
+			ChannelNo:     program.ChannelNo,
+			AffiliateName: program.AffiliateName,
+			SampleTitle:   program.Title,
 		})
 	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"channels": channels,
+	})
+}
+
+// ============ Catch-Up TV / Time-Shift Handlers ============
+
+// getCatchUpPrograms returns programs available for catch-up viewing
+func (s *Server) getCatchUpPrograms(c *gin.Context) {
+	channelID := c.Param("id")
+
+	id, err := strconv.ParseUint(channelID, 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid channel ID"})
+		return
+	}
+
+	// Get channel
+	var channel models.Channel
+	if err := s.db.First(&channel, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Channel not found"})
+		return
+	}
+
+	// Check if channel is being buffered
+	isBuffering := s.timeshiftBuffer.IsBuffering(uint(id))
+	bufferActive, bufferStart, bufferDuration := s.timeshiftBuffer.GetBufferStatus(uint(id))
+
+	// Default buffer window (4 hours) even if not actively buffering
+	now := time.Now()
+	if !bufferActive {
+		bufferStart = now.Add(-4 * time.Hour)
+	}
+
+	var programs []models.Program
+	s.db.Where("channel_id = ? AND start >= ? AND start <= ?",
+		channel.ChannelID, bufferStart, now).
+		Order("start ASC").
+		Find(&programs)
+
+	type CatchUpProgram struct {
+		ID          uint      `json:"id"`
+		ProgramID   string    `json:"programId"`
+		ChannelID   uint      `json:"channelId"`
+		Title       string    `json:"title"`
+		StartTime   time.Time `json:"startTime"`
+		EndTime     time.Time `json:"endTime"`
+		Duration    int       `json:"duration"`
+		Description string    `json:"description,omitempty"`
+		Thumb       string    `json:"thumb,omitempty"`
+		Available   bool      `json:"available"`
+	}
+
+	result := make([]CatchUpProgram, 0, len(programs))
+	for _, p := range programs {
+		// Program is available if buffering is active and program is within buffer window
+		available := bufferActive && p.End.Before(now) && p.Start.After(bufferStart)
+
+		result = append(result, CatchUpProgram{
+			ID:          p.ID,
+			ProgramID:   fmt.Sprintf("%d", p.ID),
+			ChannelID:   uint(id),
+			Title:       p.Title,
+			StartTime:   p.Start,
+			EndTime:     p.End,
+			Duration:    int(p.End.Sub(p.Start).Seconds()),
+			Description: p.Description,
+			Thumb:       p.Icon,
+			Available:   available,
+		})
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"channel":        channel,
+		"programs":       result,
+		"bufferStart":    bufferStart,
+		"bufferHours":    4,
+		"bufferActive":   bufferActive,
+		"bufferDuration": int(bufferDuration.Seconds()),
+		"isBuffering":    isBuffering,
+	})
+}
+
+// getStartOverInfo returns info for starting over the current program
+func (s *Server) getStartOverInfo(c *gin.Context) {
+	channelID := c.Param("id")
+
+	id, err := strconv.ParseUint(channelID, 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid channel ID"})
+		return
+	}
+
+	// Get channel
+	var channel models.Channel
+	if err := s.db.First(&channel, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Channel not found"})
+		return
+	}
+
+	// Get current program
+	now := time.Now()
+	var program models.Program
+	err = s.db.Where("channel_id = ? AND start <= ? AND end > ?",
+		channel.ChannelID, now, now).First(&program).Error
+
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"channel":      channel,
+			"program":      nil,
+			"startOverUrl": nil,
+			"available":    false,
+		})
+		return
+	}
+
+	// Calculate how far into the program we are
+	elapsedSeconds := int(now.Sub(program.Start).Seconds())
+
+	// For Start Over, we provide a URL that seeks back to the program start
+	// This works with DVR buffer or time-shift buffer
+	startOverUrl := fmt.Sprintf("/livetv/channels/%d/stream?startOver=true&offset=%d", id, elapsedSeconds)
+
+	c.JSON(http.StatusOK, gin.H{
+		"channel": channel,
+		"program": gin.H{
+			"id":          program.ID,
+			"title":       program.Title,
+			"startTime":   program.Start,
+			"endTime":     program.End,
+			"description": program.Description,
+			"thumb":       program.Icon,
+			"elapsed":     elapsedSeconds,
+			"remaining":   int(program.End.Sub(now).Seconds()),
+		},
+		"startOverUrl": startOverUrl,
+		"available":    elapsedSeconds > 30, // Only allow start over if we're at least 30 seconds in
+	})
+}
+
+// ============ TimeShift Streaming ============
+
+// getTimeshiftPlaylist returns an HLS playlist for time-shifted playback
+func (s *Server) getTimeshiftPlaylist(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid channel ID"})
+		return
+	}
+
+	// Get start segment from query
+	startSegment := 0
+	if startStr := c.Query("start"); startStr != "" {
+		if s, err := strconv.Atoi(startStr); err == nil {
+			startSegment = s
+		}
+	}
+
+	// Generate playlist
+	playlist, err := s.timeshiftBuffer.GenerateTimeshiftPlaylist(uint(id), startSegment)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.Header("Content-Type", "application/vnd.apple.mpegurl")
+	c.Header("Cache-Control", "no-cache")
+	c.String(http.StatusOK, playlist)
+}
+
+// getTimeshiftSegment serves a timeshift segment file
+func (s *Server) getTimeshiftSegment(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid channel ID"})
+		return
+	}
+
+	filename := c.Param("filename")
+	if filename == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Missing filename"})
+		return
+	}
+
+	// Security: only allow .ts files and prevent path traversal
+	if len(filename) < 3 || filename[len(filename)-3:] != ".ts" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid segment filename"})
+		return
+	}
+
+	// Get buffer directory for this channel
+	bufferDir := s.timeshiftBuffer.GetBufferDir(uint(id))
+	if bufferDir == "" {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Channel not being buffered"})
+		return
+	}
+
+	// Serve the segment file
+	segmentPath := bufferDir + "/" + filename
+	c.Header("Content-Type", "video/mp2t")
+	c.Header("Cache-Control", "max-age=3600")
+	c.File(segmentPath)
+}
+
+// startTimeshiftBuffer starts buffering a channel for catch-up
+func (s *Server) startTimeshiftBuffer(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid channel ID"})
+		return
+	}
+
+	// Get the channel
+	var channel models.Channel
+	if err := s.db.First(&channel, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Channel not found"})
+		return
+	}
+
+	// Start buffering
+	if err := s.timeshiftBuffer.StartBuffer(&channel); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"status":    "buffering",
+		"channelId": id,
+		"message":   fmt.Sprintf("Started buffering channel %s", channel.Name),
+	})
+}
+
+// stopTimeshiftBuffer stops buffering a channel
+func (s *Server) stopTimeshiftBuffer(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid channel ID"})
+		return
+	}
+
+	s.timeshiftBuffer.StopBuffer(uint(id))
+
+	c.JSON(http.StatusOK, gin.H{
+		"status":    "stopped",
+		"channelId": id,
+		"message":   "Stopped buffering channel",
+	})
+}
+
+// ============ EPG Maintenance ============
+
+// getEPGConflicts detects duplicate and conflicting EPG programs
+func (s *Server) getEPGConflicts(c *gin.Context) {
+	// Optional filter by channel IDs
+	channelIDsParam := c.Query("channelIds")
+	var channelIDs []string
+	if channelIDsParam != "" {
+		channelIDs = splitAndTrim(channelIDsParam, ",")
+	}
+
+	detector := livetv.NewDuplicateDetector(s.db)
+	report, err := detector.DetectConflicts(channelIDs)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, report)
+}
+
+// resolveDuplicates removes duplicate EPG programs
+func (s *Server) resolveDuplicates(c *gin.Context) {
+	dryRun := c.Query("dryRun") != "false" // Default to dry run
+
+	detector := livetv.NewDuplicateDetector(s.db)
+	result, err := detector.ResolveDuplicates(dryRun)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Invalidate cache after cleaning up
+	if !dryRun && result.Deleted > 0 && s.guideCache != nil {
+		s.guideCache.InvalidateAll()
+	}
+
+	c.JSON(http.StatusOK, result)
+}
+
+// resolveOverlaps fixes overlapping EPG programs
+func (s *Server) resolveOverlaps(c *gin.Context) {
+	dryRun := c.Query("dryRun") != "false" // Default to dry run
+
+	// Optional filter by channel IDs
+	channelIDsParam := c.Query("channelIds")
+	var channelIDs []string
+	if channelIDsParam != "" {
+		channelIDs = splitAndTrim(channelIDsParam, ",")
+	}
+
+	detector := livetv.NewDuplicateDetector(s.db)
+	result, err := detector.ResolveOverlaps(channelIDs, dryRun)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Invalidate cache after cleaning up
+	if !dryRun && result.Fixed > 0 && s.guideCache != nil {
+		s.guideCache.InvalidateAll()
+	}
+
+	c.JSON(http.StatusOK, result)
+}
+
+// cleanupOldPrograms removes programs that ended more than X hours ago
+func (s *Server) cleanupOldPrograms(c *gin.Context) {
+	hours, _ := strconv.Atoi(c.DefaultQuery("hours", "48"))
+	if hours < 1 {
+		hours = 48
+	}
+
+	detector := livetv.NewDuplicateDetector(s.db)
+	deleted, err := detector.CleanupOldPrograms(hours)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Invalidate cache after cleanup
+	if deleted > 0 && s.guideCache != nil {
+		s.guideCache.InvalidateAll()
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"deleted": deleted,
+		"cutoff":  fmt.Sprintf("%d hours ago", hours),
+	})
+}
+
+// splitAndTrim splits a string by separator and trims whitespace
+func splitAndTrim(s, sep string) []string {
+	parts := make([]string, 0)
+	for _, part := range strings.Split(s, sep) {
+		trimmed := strings.TrimSpace(part)
+		if trimmed != "" {
+			parts = append(parts, trimmed)
+		}
+	}
+	return parts
+}
+
+// ============ Multi-Source Fallback ============
+
+// getEPGSourceHealth returns health status for all EPG sources
+func (s *Server) getEPGSourceHealth(c *gin.Context) {
+	manager := livetv.NewMultiSourceManager(s.db)
+	if err := manager.InitializeSources(); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, manager.GetSourceStatus())
+}
+
+// fetchWithFallback attempts to fetch EPG with automatic fallback
+func (s *Server) fetchWithFallback(c *gin.Context) {
+	manager := livetv.NewMultiSourceManager(s.db)
+	if err := manager.InitializeSources(); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	parser := livetv.NewEPGParser(s.db)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+
+	result := manager.FetchWithFallback(ctx, parser)
+
+	// Invalidate cache after successful fetch
+	if result.Success && s.guideCache != nil {
+		s.guideCache.InvalidateAll()
+	}
+
+	// Add error string if there's an error
+	if result.Error != nil {
+		result.ErrorStr = result.Error.Error()
+	}
+
+	statusCode := http.StatusOK
+	if !result.Success {
+		statusCode = http.StatusServiceUnavailable
+	}
+
+	c.JSON(statusCode, result)
+}
+
+// resetSourceHealth resets the health tracking for a specific source
+func (s *Server) resetSourceHealth(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid source ID"})
+		return
+	}
+
+	manager := livetv.NewMultiSourceManager(s.db)
+	if err := manager.InitializeSources(); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	manager.ResetSourceHealth(uint(id))
+
+	// Also clear the error in the database
+	s.db.Model(&models.EPGSource{}).Where("id = ?", id).Update("last_error", "")
+
+	c.JSON(http.StatusOK, gin.H{"message": "Source health reset successfully"})
+}
+
+// ============ Archive / Catch-up Handlers ============
+
+// getArchivedPrograms returns archived programs available for catch-up on a channel
+func (s *Server) getArchivedPrograms(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid channel ID"})
+		return
+	}
+
+	limit := 50 // Default limit
+	if limitStr := c.Query("limit"); limitStr != "" {
+		if l, err := strconv.Atoi(limitStr); err == nil && l > 0 {
+			limit = l
+		}
+	}
+
+	if s.archiveManager == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Archive manager not available"})
+		return
+	}
+
+	programs, err := s.archiveManager.GetArchivedPrograms(uint(id), limit)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Get channel info for archive status
+	isArchiving, startTime, retentionDays := s.archiveManager.GetArchiveStatus(uint(id))
+
+	c.JSON(http.StatusOK, gin.H{
+		"programs":      programs,
+		"isArchiving":   isArchiving,
+		"archiveStart":  startTime,
+		"retentionDays": retentionDays,
+	})
+}
+
+// enableChannelArchive enables archive recording for a channel
+func (s *Server) enableChannelArchive(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid channel ID"})
+		return
+	}
+
+	var req struct {
+		Days int `json:"days"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		req.Days = 7 // Default 7 days
+	}
+
+	if s.archiveManager == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Archive manager not available"})
+		return
+	}
+
+	if err := s.archiveManager.EnableArchive(uint(id), req.Days); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message":       "Archive enabled for channel",
+		"channelId":     id,
+		"retentionDays": req.Days,
+	})
+}
+
+// disableChannelArchive disables archive recording for a channel
+func (s *Server) disableChannelArchive(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid channel ID"})
+		return
+	}
+
+	if s.archiveManager == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Archive manager not available"})
+		return
+	}
+
+	if err := s.archiveManager.DisableArchive(uint(id)); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message":   "Archive disabled for channel",
+		"channelId": id,
+	})
+}
+
+// getArchivePlaylist returns an HLS playlist for an archived program
+func (s *Server) getArchivePlaylist(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid archive program ID"})
+		return
+	}
+
+	if s.archiveManager == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Archive manager not available"})
+		return
+	}
+
+	playlist, err := s.archiveManager.GenerateArchivePlaylist(uint(id))
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.Header("Content-Type", "application/vnd.apple.mpegurl")
+	c.Header("Cache-Control", "no-cache")
+	c.String(http.StatusOK, playlist)
+}
+
+// getArchiveSegment serves an individual segment file
+func (s *Server) getArchiveSegment(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid archive program ID"})
+		return
+	}
+
+	filename := c.Param("filename")
+	if filename == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Segment filename required"})
+		return
+	}
+
+	if s.archiveManager == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Archive manager not available"})
+		return
+	}
+
+	segPath, err := s.archiveManager.GetSegmentPath(uint(id), filename)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.Header("Content-Type", "video/MP2T")
+	c.Header("Cache-Control", "max-age=86400") // Cache segments for 24 hours
+	c.File(segPath)
+}
+
+// getArchiveStatus returns status of all archive recordings
+func (s *Server) getArchiveStatus(c *gin.Context) {
+	if s.archiveManager == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Archive manager not available"})
+		return
+	}
+
+	// Get all channels with archive enabled
+	var channels []models.Channel
+	s.db.Where("archive_enabled = ?", true).Find(&channels)
+
+	type channelStatus struct {
+		ChannelID     uint      `json:"channelId"`
+		ChannelName   string    `json:"channelName"`
+		IsArchiving   bool      `json:"isArchiving"`
+		ArchiveStart  time.Time `json:"archiveStart,omitempty"`
+		RetentionDays int       `json:"retentionDays"`
+		ProgramCount  int64     `json:"programCount"`
+	}
+
+	statuses := make([]channelStatus, 0, len(channels))
+	for _, ch := range channels {
+		isArchiving, startTime, retentionDays := s.archiveManager.GetArchiveStatus(ch.ID)
+
+		var count int64
+		s.db.Model(&models.ArchiveProgram{}).Where("channel_id = ? AND status = ?", ch.ID, "available").Count(&count)
+
+		statuses = append(statuses, channelStatus{
+			ChannelID:     ch.ID,
+			ChannelName:   ch.Name,
+			IsArchiving:   isArchiving,
+			ArchiveStart:  startTime,
+			RetentionDays: retentionDays,
+			ProgramCount:  count,
+		})
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"channels":        statuses,
+		"totalChannels":   len(channels),
+		"activeRecording": len(statuses),
 	})
 }

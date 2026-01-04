@@ -1,0 +1,312 @@
+1<?xml version="1.0" encoding="utf-8"?>
+2<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+3    package="com.openflix.tv"
+4    android:versionCode="1"
+5    android:versionName="1.0.0" >
+6
+7    <uses-sdk
+8        android:minSdkVersion="26"
+9        android:targetSdkVersion="34" />
+10
+11    <!-- TV Feature Requirements -->
+12    <uses-feature
+12-->/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/android-native/app/src/main/AndroidManifest.xml:6:5-8:35
+13        android:name="android.software.leanback"
+13-->/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/android-native/app/src/main/AndroidManifest.xml:7:9-49
+14        android:required="true" />
+14-->/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/android-native/app/src/main/AndroidManifest.xml:8:9-32
+15    <uses-feature
+15-->/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/android-native/app/src/main/AndroidManifest.xml:9:5-11:36
+16        android:name="android.hardware.touchscreen"
+16-->/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/android-native/app/src/main/AndroidManifest.xml:10:9-52
+17        android:required="false" />
+17-->/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/android-native/app/src/main/AndroidManifest.xml:11:9-33
+18    <uses-feature
+18-->/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/android-native/app/src/main/AndroidManifest.xml:12:5-14:36
+19        android:name="android.software.live_tv"
+19-->/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/android-native/app/src/main/AndroidManifest.xml:13:9-48
+20        android:required="false" />
+20-->/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/android-native/app/src/main/AndroidManifest.xml:14:9-33
+21
+22    <!-- Permissions -->
+23    <uses-permission android:name="android.permission.INTERNET" />
+23-->/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/android-native/app/src/main/AndroidManifest.xml:17:5-67
+23-->/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/android-native/app/src/main/AndroidManifest.xml:17:22-64
+24    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+24-->/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/android-native/app/src/main/AndroidManifest.xml:18:5-79
+24-->/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/android-native/app/src/main/AndroidManifest.xml:18:22-76
+25    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+25-->/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/android-native/app/src/main/AndroidManifest.xml:19:5-76
+25-->/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/android-native/app/src/main/AndroidManifest.xml:19:22-73
+26    <uses-permission android:name="android.permission.WAKE_LOCK" />
+26-->/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/android-native/app/src/main/AndroidManifest.xml:20:5-68
+26-->/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/android-native/app/src/main/AndroidManifest.xml:20:22-65
+27    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+27-->/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/android-native/app/src/main/AndroidManifest.xml:21:5-77
+27-->/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/android-native/app/src/main/AndroidManifest.xml:21:22-74
+28    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+28-->/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/android-native/app/src/main/AndroidManifest.xml:22:5-81
+28-->/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/android-native/app/src/main/AndroidManifest.xml:22:22-78
+29    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+29-->/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/android-native/app/src/main/AndroidManifest.xml:23:5-71
+29-->/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/android-native/app/src/main/AndroidManifest.xml:23:22-68
+30    <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
+30-->/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/android-native/app/src/main/AndroidManifest.xml:24:5-86
+30-->/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/android-native/app/src/main/AndroidManifest.xml:24:22-83
+31
+32    <!-- EPG Data Access -->
+33    <uses-permission android:name="com.android.providers.tv.permission.READ_EPG_DATA" />
+33-->/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/android-native/app/src/main/AndroidManifest.xml:27:5-89
+33-->/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/android-native/app/src/main/AndroidManifest.xml:27:22-86
+34    <uses-permission android:name="com.android.providers.tv.permission.WRITE_EPG_DATA" />
+34-->/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/android-native/app/src/main/AndroidManifest.xml:28:5-90
+34-->/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/android-native/app/src/main/AndroidManifest.xml:28:22-87
+35
+36    <permission
+36-->[androidx.core:core:1.12.0] /Users/georgeszulc/.gradle/caches/transforms-3/911b074fc794e41960195c5c2aa39344/transformed/core-1.12.0/AndroidManifest.xml:22:5-24:47
+37        android:name="com.openflix.tv.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
+37-->[androidx.core:core:1.12.0] /Users/georgeszulc/.gradle/caches/transforms-3/911b074fc794e41960195c5c2aa39344/transformed/core-1.12.0/AndroidManifest.xml:23:9-81
+38        android:protectionLevel="signature" />
+38-->[androidx.core:core:1.12.0] /Users/georgeszulc/.gradle/caches/transforms-3/911b074fc794e41960195c5c2aa39344/transformed/core-1.12.0/AndroidManifest.xml:24:9-44
+39
+40    <uses-permission android:name="com.openflix.tv.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" />
+40-->[androidx.core:core:1.12.0] /Users/georgeszulc/.gradle/caches/transforms-3/911b074fc794e41960195c5c2aa39344/transformed/core-1.12.0/AndroidManifest.xml:26:5-97
+40-->[androidx.core:core:1.12.0] /Users/georgeszulc/.gradle/caches/transforms-3/911b074fc794e41960195c5c2aa39344/transformed/core-1.12.0/AndroidManifest.xml:26:22-94
+41
+42    <application
+42-->/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/android-native/app/src/main/AndroidManifest.xml:30:5-108:19
+43        android:name="com.openflix.OpenFlixApp"
+43-->/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/android-native/app/src/main/AndroidManifest.xml:31:9-36
+44        android:allowBackup="true"
+44-->/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/android-native/app/src/main/AndroidManifest.xml:32:9-35
+45        android:appComponentFactory="androidx.core.app.CoreComponentFactory"
+45-->[androidx.core:core:1.12.0] /Users/georgeszulc/.gradle/caches/transforms-3/911b074fc794e41960195c5c2aa39344/transformed/core-1.12.0/AndroidManifest.xml:28:18-86
+46        android:banner="@drawable/tv_banner"
+46-->/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/android-native/app/src/main/AndroidManifest.xml:33:9-45
+47        android:debuggable="true"
+48        android:extractNativeLibs="false"
+49        android:icon="@mipmap/ic_launcher"
+49-->/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/android-native/app/src/main/AndroidManifest.xml:34:9-43
+50        android:isGame="true"
+50-->/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/android-native/app/src/main/AndroidManifest.xml:35:9-30
+51        android:label="@string/app_name"
+51-->/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/android-native/app/src/main/AndroidManifest.xml:36:9-41
+52        android:largeHeap="true"
+52-->/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/android-native/app/src/main/AndroidManifest.xml:37:9-33
+53        android:supportsRtl="true"
+53-->/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/android-native/app/src/main/AndroidManifest.xml:38:9-35
+54        android:theme="@style/Theme.OpenFlix"
+54-->/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/android-native/app/src/main/AndroidManifest.xml:39:9-46
+55        android:usesCleartextTraffic="true" >
+55-->/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/android-native/app/src/main/AndroidManifest.xml:40:9-44
+56
+57        <!-- Enable 4K UI rendering -->
+58        <meta-data
+58-->/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/android-native/app/src/main/AndroidManifest.xml:44:9-46:36
+59            android:name="com.google.android.tv.home.surfaceSharing"
+59-->/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/android-native/app/src/main/AndroidManifest.xml:45:13-69
+60            android:value="true" />
+60-->/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/android-native/app/src/main/AndroidManifest.xml:46:13-33
+61
+62        <!-- Main Activity -->
+63        <activity
+63-->/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/android-native/app/src/main/AndroidManifest.xml:49:9-81:20
+64            android:name="com.openflix.MainActivity"
+64-->/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/android-native/app/src/main/AndroidManifest.xml:50:13-41
+65            android:configChanges="keyboard|keyboardHidden|orientation|screenLayout|screenSize|smallestScreenSize"
+65-->/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/android-native/app/src/main/AndroidManifest.xml:51:13-115
+66            android:exported="true"
+66-->/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/android-native/app/src/main/AndroidManifest.xml:52:13-36
+67            android:launchMode="singleTask"
+67-->/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/android-native/app/src/main/AndroidManifest.xml:53:13-44
+68            android:resizeableActivity="true"
+68-->/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/android-native/app/src/main/AndroidManifest.xml:54:13-46
+69            android:supportsPictureInPicture="true"
+69-->/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/android-native/app/src/main/AndroidManifest.xml:55:13-52
+70            android:theme="@style/Theme.OpenFlix.Splash" >
+70-->/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/android-native/app/src/main/AndroidManifest.xml:56:13-57
+71
+72            <!-- TV Launcher -->
+73            <intent-filter>
+73-->/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/android-native/app/src/main/AndroidManifest.xml:59:13-62:29
+74                <action android:name="android.intent.action.MAIN" />
+74-->/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/android-native/app/src/main/AndroidManifest.xml:60:17-69
+74-->/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/android-native/app/src/main/AndroidManifest.xml:60:25-66
+75
+76                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+76-->/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/android-native/app/src/main/AndroidManifest.xml:61:17-86
+76-->/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/android-native/app/src/main/AndroidManifest.xml:61:27-83
+77            </intent-filter>
+78
+79            <!-- Deep links -->
+80            <intent-filter>
+80-->/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/android-native/app/src/main/AndroidManifest.xml:65:13-72:29
+81                <action android:name="android.intent.action.VIEW" />
+81-->/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/android-native/app/src/main/AndroidManifest.xml:66:17-69
+81-->/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/android-native/app/src/main/AndroidManifest.xml:66:25-66
+82
+83                <category android:name="android.intent.category.BROWSABLE" />
+83-->/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/android-native/app/src/main/AndroidManifest.xml:67:17-78
+83-->/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/android-native/app/src/main/AndroidManifest.xml:67:27-75
+84                <category android:name="android.intent.category.DEFAULT" />
+84-->/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/android-native/app/src/main/AndroidManifest.xml:68:17-76
+84-->/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/android-native/app/src/main/AndroidManifest.xml:68:27-73
+85
+86                <data
+86-->/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/android-native/app/src/main/AndroidManifest.xml:69:17-71:49
+87                    android:host="openflix"
+87-->/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/android-native/app/src/main/AndroidManifest.xml:70:21-44
+88                    android:scheme="openflix" />
+88-->/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/android-native/app/src/main/AndroidManifest.xml:71:21-46
+89            </intent-filter>
+90
+91            <!-- Voice search -->
+92            <intent-filter>
+92-->/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/android-native/app/src/main/AndroidManifest.xml:75:13-77:29
+93                <action android:name="android.intent.action.SEARCH" />
+93-->/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/android-native/app/src/main/AndroidManifest.xml:76:17-71
+93-->/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/android-native/app/src/main/AndroidManifest.xml:76:25-68
+94            </intent-filter>
+95
+96            <meta-data
+96-->/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/android-native/app/src/main/AndroidManifest.xml:78:13-80:54
+97                android:name="android.app.searchable"
+97-->/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/android-native/app/src/main/AndroidManifest.xml:79:17-54
+98                android:resource="@xml/searchable" />
+98-->/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/android-native/app/src/main/AndroidManifest.xml:80:17-51
+99        </activity>
+100
+101        <!-- Player Activity (separate for PiP support) -->
+102        <activity
+102-->/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/android-native/app/src/main/AndroidManifest.xml:84:9-91:60
+103            android:name="com.openflix.presentation.screens.player.PlayerActivity"
+103-->/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/android-native/app/src/main/AndroidManifest.xml:85:13-71
+104            android:configChanges="keyboard|keyboardHidden|orientation|screenLayout|screenSize|smallestScreenSize"
+104-->/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/android-native/app/src/main/AndroidManifest.xml:86:13-115
+105            android:exported="false"
+105-->/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/android-native/app/src/main/AndroidManifest.xml:87:13-37
+106            android:launchMode="singleTask"
+106-->/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/android-native/app/src/main/AndroidManifest.xml:88:13-44
+107            android:resizeableActivity="true"
+107-->/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/android-native/app/src/main/AndroidManifest.xml:89:13-46
+108            android:supportsPictureInPicture="true"
+108-->/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/android-native/app/src/main/AndroidManifest.xml:90:13-52
+109            android:theme="@style/Theme.OpenFlix.Player" />
+109-->/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/android-native/app/src/main/AndroidManifest.xml:91:13-57
+110
+111        <!-- Boot Receiver for background services -->
+112        <receiver
+112-->/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/android-native/app/src/main/AndroidManifest.xml:94:9-101:20
+113            android:name="com.openflix.BootReceiver"
+113-->/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/android-native/app/src/main/AndroidManifest.xml:95:13-41
+114            android:exported="false" >
+114-->/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/android-native/app/src/main/AndroidManifest.xml:96:13-37
+115            <intent-filter>
+115-->/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/android-native/app/src/main/AndroidManifest.xml:97:13-100:29
+116                <action android:name="android.intent.action.BOOT_COMPLETED" />
+116-->/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/android-native/app/src/main/AndroidManifest.xml:98:17-79
+116-->/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/android-native/app/src/main/AndroidManifest.xml:98:25-76
+117                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+117-->/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/android-native/app/src/main/AndroidManifest.xml:99:17-84
+117-->/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/android-native/app/src/main/AndroidManifest.xml:99:25-81
+118            </intent-filter>
+119        </receiver>
+120
+121        <!-- Sentry disabled by default -->
+122        <meta-data
+122-->/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/android-native/app/src/main/AndroidManifest.xml:104:9-106:37
+123            android:name="io.sentry.auto-init"
+123-->/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/android-native/app/src/main/AndroidManifest.xml:105:13-47
+124            android:value="false" />
+124-->/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/android-native/app/src/main/AndroidManifest.xml:106:13-34
+125
+126        <activity
+126-->[androidx.compose.ui:ui-test-manifest:1.6.0] /Users/georgeszulc/.gradle/caches/transforms-3/d7b4a3ae7daf2bc4929379c5231e110f/transformed/ui-test-manifest-1.6.0/AndroidManifest.xml:23:9-25:39
+127            android:name="androidx.activity.ComponentActivity"
+127-->[androidx.compose.ui:ui-test-manifest:1.6.0] /Users/georgeszulc/.gradle/caches/transforms-3/d7b4a3ae7daf2bc4929379c5231e110f/transformed/ui-test-manifest-1.6.0/AndroidManifest.xml:24:13-63
+128            android:exported="true" />
+128-->[androidx.compose.ui:ui-test-manifest:1.6.0] /Users/georgeszulc/.gradle/caches/transforms-3/d7b4a3ae7daf2bc4929379c5231e110f/transformed/ui-test-manifest-1.6.0/AndroidManifest.xml:25:13-36
+129        <activity
+129-->[androidx.compose.ui:ui-tooling-android:1.6.0] /Users/georgeszulc/.gradle/caches/transforms-3/bdcb5ef705ecb322fd2a1bf258b9610e/transformed/ui-tooling-release/AndroidManifest.xml:23:9-25:39
+130            android:name="androidx.compose.ui.tooling.PreviewActivity"
+130-->[androidx.compose.ui:ui-tooling-android:1.6.0] /Users/georgeszulc/.gradle/caches/transforms-3/bdcb5ef705ecb322fd2a1bf258b9610e/transformed/ui-tooling-release/AndroidManifest.xml:24:13-71
+131            android:exported="true" />
+131-->[androidx.compose.ui:ui-tooling-android:1.6.0] /Users/georgeszulc/.gradle/caches/transforms-3/bdcb5ef705ecb322fd2a1bf258b9610e/transformed/ui-tooling-release/AndroidManifest.xml:25:13-36
+132
+133        <provider
+133-->[androidx.emoji2:emoji2:1.3.0] /Users/georgeszulc/.gradle/caches/transforms-3/f1b0b83b5694d993e2f4356328bcc0f5/transformed/emoji2-1.3.0/AndroidManifest.xml:24:9-32:20
+134            android:name="androidx.startup.InitializationProvider"
+134-->[androidx.emoji2:emoji2:1.3.0] /Users/georgeszulc/.gradle/caches/transforms-3/f1b0b83b5694d993e2f4356328bcc0f5/transformed/emoji2-1.3.0/AndroidManifest.xml:25:13-67
+135            android:authorities="com.openflix.tv.androidx-startup"
+135-->[androidx.emoji2:emoji2:1.3.0] /Users/georgeszulc/.gradle/caches/transforms-3/f1b0b83b5694d993e2f4356328bcc0f5/transformed/emoji2-1.3.0/AndroidManifest.xml:26:13-68
+136            android:exported="false" >
+136-->[androidx.emoji2:emoji2:1.3.0] /Users/georgeszulc/.gradle/caches/transforms-3/f1b0b83b5694d993e2f4356328bcc0f5/transformed/emoji2-1.3.0/AndroidManifest.xml:27:13-37
+137            <meta-data
+137-->[androidx.emoji2:emoji2:1.3.0] /Users/georgeszulc/.gradle/caches/transforms-3/f1b0b83b5694d993e2f4356328bcc0f5/transformed/emoji2-1.3.0/AndroidManifest.xml:29:13-31:52
+138                android:name="androidx.emoji2.text.EmojiCompatInitializer"
+138-->[androidx.emoji2:emoji2:1.3.0] /Users/georgeszulc/.gradle/caches/transforms-3/f1b0b83b5694d993e2f4356328bcc0f5/transformed/emoji2-1.3.0/AndroidManifest.xml:30:17-75
+139                android:value="androidx.startup" />
+139-->[androidx.emoji2:emoji2:1.3.0] /Users/georgeszulc/.gradle/caches/transforms-3/f1b0b83b5694d993e2f4356328bcc0f5/transformed/emoji2-1.3.0/AndroidManifest.xml:31:17-49
+140            <meta-data
+140-->[androidx.lifecycle:lifecycle-process:2.7.0] /Users/georgeszulc/.gradle/caches/transforms-3/aba76e8b4d9a80e4c0d101d14e852005/transformed/lifecycle-process-2.7.0/AndroidManifest.xml:29:13-31:52
+141                android:name="androidx.lifecycle.ProcessLifecycleInitializer"
+141-->[androidx.lifecycle:lifecycle-process:2.7.0] /Users/georgeszulc/.gradle/caches/transforms-3/aba76e8b4d9a80e4c0d101d14e852005/transformed/lifecycle-process-2.7.0/AndroidManifest.xml:30:17-78
+142                android:value="androidx.startup" />
+142-->[androidx.lifecycle:lifecycle-process:2.7.0] /Users/georgeszulc/.gradle/caches/transforms-3/aba76e8b4d9a80e4c0d101d14e852005/transformed/lifecycle-process-2.7.0/AndroidManifest.xml:31:17-49
+143            <meta-data
+143-->[androidx.profileinstaller:profileinstaller:1.3.1] /Users/georgeszulc/.gradle/caches/transforms-3/5c0a9242b50bd8115eca46a6e4ebd9cb/transformed/profileinstaller-1.3.1/AndroidManifest.xml:29:13-31:52
+144                android:name="androidx.profileinstaller.ProfileInstallerInitializer"
+144-->[androidx.profileinstaller:profileinstaller:1.3.1] /Users/georgeszulc/.gradle/caches/transforms-3/5c0a9242b50bd8115eca46a6e4ebd9cb/transformed/profileinstaller-1.3.1/AndroidManifest.xml:30:17-85
+145                android:value="androidx.startup" />
+145-->[androidx.profileinstaller:profileinstaller:1.3.1] /Users/georgeszulc/.gradle/caches/transforms-3/5c0a9242b50bd8115eca46a6e4ebd9cb/transformed/profileinstaller-1.3.1/AndroidManifest.xml:31:17-49
+146        </provider>
+147
+148        <service
+148-->[androidx.room:room-runtime:2.6.1] /Users/georgeszulc/.gradle/caches/transforms-3/c827d87005ad785f71f928c93378ccb2/transformed/room-runtime-2.6.1/AndroidManifest.xml:24:9-28:63
+149            android:name="androidx.room.MultiInstanceInvalidationService"
+149-->[androidx.room:room-runtime:2.6.1] /Users/georgeszulc/.gradle/caches/transforms-3/c827d87005ad785f71f928c93378ccb2/transformed/room-runtime-2.6.1/AndroidManifest.xml:25:13-74
+150            android:directBootAware="true"
+150-->[androidx.room:room-runtime:2.6.1] /Users/georgeszulc/.gradle/caches/transforms-3/c827d87005ad785f71f928c93378ccb2/transformed/room-runtime-2.6.1/AndroidManifest.xml:26:13-43
+151            android:exported="false" />
+151-->[androidx.room:room-runtime:2.6.1] /Users/georgeszulc/.gradle/caches/transforms-3/c827d87005ad785f71f928c93378ccb2/transformed/room-runtime-2.6.1/AndroidManifest.xml:27:13-37
+152
+153        <receiver
+153-->[androidx.profileinstaller:profileinstaller:1.3.1] /Users/georgeszulc/.gradle/caches/transforms-3/5c0a9242b50bd8115eca46a6e4ebd9cb/transformed/profileinstaller-1.3.1/AndroidManifest.xml:34:9-52:20
+154            android:name="androidx.profileinstaller.ProfileInstallReceiver"
+154-->[androidx.profileinstaller:profileinstaller:1.3.1] /Users/georgeszulc/.gradle/caches/transforms-3/5c0a9242b50bd8115eca46a6e4ebd9cb/transformed/profileinstaller-1.3.1/AndroidManifest.xml:35:13-76
+155            android:directBootAware="false"
+155-->[androidx.profileinstaller:profileinstaller:1.3.1] /Users/georgeszulc/.gradle/caches/transforms-3/5c0a9242b50bd8115eca46a6e4ebd9cb/transformed/profileinstaller-1.3.1/AndroidManifest.xml:36:13-44
+156            android:enabled="true"
+156-->[androidx.profileinstaller:profileinstaller:1.3.1] /Users/georgeszulc/.gradle/caches/transforms-3/5c0a9242b50bd8115eca46a6e4ebd9cb/transformed/profileinstaller-1.3.1/AndroidManifest.xml:37:13-35
+157            android:exported="true"
+157-->[androidx.profileinstaller:profileinstaller:1.3.1] /Users/georgeszulc/.gradle/caches/transforms-3/5c0a9242b50bd8115eca46a6e4ebd9cb/transformed/profileinstaller-1.3.1/AndroidManifest.xml:38:13-36
+158            android:permission="android.permission.DUMP" >
+158-->[androidx.profileinstaller:profileinstaller:1.3.1] /Users/georgeszulc/.gradle/caches/transforms-3/5c0a9242b50bd8115eca46a6e4ebd9cb/transformed/profileinstaller-1.3.1/AndroidManifest.xml:39:13-57
+159            <intent-filter>
+159-->[androidx.profileinstaller:profileinstaller:1.3.1] /Users/georgeszulc/.gradle/caches/transforms-3/5c0a9242b50bd8115eca46a6e4ebd9cb/transformed/profileinstaller-1.3.1/AndroidManifest.xml:40:13-42:29
+160                <action android:name="androidx.profileinstaller.action.INSTALL_PROFILE" />
+160-->[androidx.profileinstaller:profileinstaller:1.3.1] /Users/georgeszulc/.gradle/caches/transforms-3/5c0a9242b50bd8115eca46a6e4ebd9cb/transformed/profileinstaller-1.3.1/AndroidManifest.xml:41:17-91
+160-->[androidx.profileinstaller:profileinstaller:1.3.1] /Users/georgeszulc/.gradle/caches/transforms-3/5c0a9242b50bd8115eca46a6e4ebd9cb/transformed/profileinstaller-1.3.1/AndroidManifest.xml:41:25-88
+161            </intent-filter>
+162            <intent-filter>
+162-->[androidx.profileinstaller:profileinstaller:1.3.1] /Users/georgeszulc/.gradle/caches/transforms-3/5c0a9242b50bd8115eca46a6e4ebd9cb/transformed/profileinstaller-1.3.1/AndroidManifest.xml:43:13-45:29
+163                <action android:name="androidx.profileinstaller.action.SKIP_FILE" />
+163-->[androidx.profileinstaller:profileinstaller:1.3.1] /Users/georgeszulc/.gradle/caches/transforms-3/5c0a9242b50bd8115eca46a6e4ebd9cb/transformed/profileinstaller-1.3.1/AndroidManifest.xml:44:17-85
+163-->[androidx.profileinstaller:profileinstaller:1.3.1] /Users/georgeszulc/.gradle/caches/transforms-3/5c0a9242b50bd8115eca46a6e4ebd9cb/transformed/profileinstaller-1.3.1/AndroidManifest.xml:44:25-82
+164            </intent-filter>
+165            <intent-filter>
+165-->[androidx.profileinstaller:profileinstaller:1.3.1] /Users/georgeszulc/.gradle/caches/transforms-3/5c0a9242b50bd8115eca46a6e4ebd9cb/transformed/profileinstaller-1.3.1/AndroidManifest.xml:46:13-48:29
+166                <action android:name="androidx.profileinstaller.action.SAVE_PROFILE" />
+166-->[androidx.profileinstaller:profileinstaller:1.3.1] /Users/georgeszulc/.gradle/caches/transforms-3/5c0a9242b50bd8115eca46a6e4ebd9cb/transformed/profileinstaller-1.3.1/AndroidManifest.xml:47:17-88
+166-->[androidx.profileinstaller:profileinstaller:1.3.1] /Users/georgeszulc/.gradle/caches/transforms-3/5c0a9242b50bd8115eca46a6e4ebd9cb/transformed/profileinstaller-1.3.1/AndroidManifest.xml:47:25-85
+167            </intent-filter>
+168            <intent-filter>
+168-->[androidx.profileinstaller:profileinstaller:1.3.1] /Users/georgeszulc/.gradle/caches/transforms-3/5c0a9242b50bd8115eca46a6e4ebd9cb/transformed/profileinstaller-1.3.1/AndroidManifest.xml:49:13-51:29
+169                <action android:name="androidx.profileinstaller.action.BENCHMARK_OPERATION" />
+169-->[androidx.profileinstaller:profileinstaller:1.3.1] /Users/georgeszulc/.gradle/caches/transforms-3/5c0a9242b50bd8115eca46a6e4ebd9cb/transformed/profileinstaller-1.3.1/AndroidManifest.xml:50:17-95
+169-->[androidx.profileinstaller:profileinstaller:1.3.1] /Users/georgeszulc/.gradle/caches/transforms-3/5c0a9242b50bd8115eca46a6e4ebd9cb/transformed/profileinstaller-1.3.1/AndroidManifest.xml:50:25-92
+170            </intent-filter>
+171        </receiver>
+172    </application>
+173
+174</manifest>

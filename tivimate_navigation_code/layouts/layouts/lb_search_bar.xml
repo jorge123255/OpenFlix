@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<merge
+  xmlns:android="http://schemas.android.com/apk/res/android">
+    <androidx.leanback.widget.SpeechOrbView android:id="@id/6j3" android:focusable="true" android:focusableInTouchMode="true" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_centerVertical="true" android:layout_marginStart="@dimen/l9">
+        <requestFocus />
+    </androidx.leanback.widget.SpeechOrbView>
+    <RelativeLayout android:id="@id/2f3" android:background="@null" android:layout_width="@dimen/5kq" android:layout_height="@dimen/33o" android:layout_marginTop="@dimen/475" android:layout_marginBottom="@dimen/3r8" android:layout_centerVertical="true" android:layout_marginStart="@dimen/2dj" android:layout_toEndOf="@id/6j3">
+        <ImageView android:layout_gravity="start|center" android:id="@id/17s" android:visibility="gone" android:layout_width="@dimen/3r" android:layout_height="@dimen/3t0" android:src="@null" android:layout_centerVertical="true" android:layout_marginStart="@dimen/pc" style="?3eo" />
+        <androidx.leanback.widget.SearchEditText android:textSize="@dimen/77d" android:textColor="@color/749" android:textColorHint="@color/1kf" android:layout_gravity="start|center" android:id="@id/3pq" android:background="@null" android:focusable="true" android:focusableInTouchMode="true" android:layout_width="fill_parent" android:layout_height="wrap_content" android:hint="@string/lb_search_bar_hint" android:cursorVisible="true" android:singleLine="true" android:editable="true" android:layout_centerVertical="true" android:inputType="textAutoComplete" android:imeOptions="actionSearch|flagNoExtractUi" android:textCursorDrawable="@null" android:fontFamily="sans-serif" android:textAlignment="viewStart" android:layout_marginStart="@dimen/2d3" android:layout_toEndOf="@id/17s" />
+    </RelativeLayout>
+</merge>

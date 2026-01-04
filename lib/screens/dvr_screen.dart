@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import '../i18n/strings.g.dart';
 import '../models/dvr.dart';
 import '../models/livetv_channel.dart';
 import '../providers/media_client_provider.dart';
@@ -75,16 +76,16 @@ class _DVRScreenState extends State<DVRScreen> with SingleTickerProviderStateMix
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Recording?'),
-        content: Text('Delete "${recording.title}"?'),
+        title: Text(t.dvr.deleteRecording),
+        content: Text('${t.common.delete} "${recording.title}"?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            child: Text(t.common.cancel),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Delete'),
+            child: Text(t.common.delete),
           ),
         ],
       ),
@@ -106,16 +107,16 @@ class _DVRScreenState extends State<DVRScreen> with SingleTickerProviderStateMix
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Series Rule?'),
-        content: Text('Delete rule for "${rule.title}"?'),
+        title: Text(t.dvr.deleteRule),
+        content: Text('${t.common.delete} "${rule.title}"?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            child: Text(t.common.cancel),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Delete'),
+            child: Text(t.common.delete),
           ),
         ],
       ),
@@ -145,17 +146,18 @@ class _DVRScreenState extends State<DVRScreen> with SingleTickerProviderStateMix
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('DVR'),
+        title: Text(t.dvr.title),
         bottom: TabBar(
           controller: _tabController,
-          tabs: const [
-            Tab(text: 'Recordings', icon: Icon(Icons.fiber_manual_record)),
-            Tab(text: 'Series Rules', icon: Icon(Icons.repeat)),
+          tabs: [
+            Tab(text: t.dvr.recordings, icon: const Icon(Icons.fiber_manual_record)),
+            Tab(text: t.dvr.seriesRules, icon: const Icon(Icons.repeat)),
           ],
         ),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
+            tooltip: t.liveTV.refresh,
             onPressed: _loadData,
           ),
         ],
@@ -174,7 +176,7 @@ class _DVRScreenState extends State<DVRScreen> with SingleTickerProviderStateMix
                       ElevatedButton.icon(
                         onPressed: _loadData,
                         icon: const Icon(Icons.refresh),
-                        label: const Text('Retry'),
+                        label: Text(t.common.retry),
                       ),
                     ],
                   ),
@@ -190,21 +192,27 @@ class _DVRScreenState extends State<DVRScreen> with SingleTickerProviderStateMix
   }
 
   Widget _buildRecordingsList() {
+    final theme = Theme.of(context);
+
     if (_recordings.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.videocam_off, size: 64, color: Colors.grey[400]),
+            Icon(Icons.videocam_off, size: 64, color: theme.colorScheme.outline),
             const SizedBox(height: 16),
             Text(
-              'No recordings',
-              style: TextStyle(color: Colors.grey[600], fontSize: 18),
+              t.dvr.noRecordings,
+              style: theme.textTheme.titleMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
             ),
             const SizedBox(height: 8),
             Text(
-              'Schedule recordings from the Live TV guide',
-              style: TextStyle(color: Colors.grey[500], fontSize: 14),
+              t.dvr.scheduleFromGuide,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.outline,
+              ),
             ),
           ],
         ),
@@ -250,16 +258,16 @@ class _DVRScreenState extends State<DVRScreen> with SingleTickerProviderStateMix
                   padding: const EdgeInsets.all(12.0),
                   child: Row(
                     children: [
-                      const Icon(Icons.storage, size: 20),
+                      Icon(Icons.storage, size: 20, color: theme.colorScheme.primary),
                       const SizedBox(width: 8),
                       Text(
-                        'Storage: ${totalSizeMB.toStringAsFixed(1)} MB',
+                        '${t.dvr.storage}: ${totalSizeMB.toStringAsFixed(1)} MB',
                         style: const TextStyle(fontWeight: FontWeight.w500),
                       ),
                       const Spacer(),
                       Text(
-                        '${_recordings.length} recordings',
-                        style: TextStyle(color: Colors.grey[600]),
+                        t.dvr.recordingsCount(count: _recordings.length.toString()),
+                        style: TextStyle(color: theme.colorScheme.onSurfaceVariant),
                       ),
                     ],
                   ),
@@ -274,18 +282,18 @@ class _DVRScreenState extends State<DVRScreen> with SingleTickerProviderStateMix
                       scrollDirection: Axis.horizontal,
                       child: Row(
                         children: [
-                          _buildFilterChip('All', 'all'),
-                          _buildFilterChip('Scheduled', 'scheduled'),
-                          _buildFilterChip('Recording', 'recording'),
-                          _buildFilterChip('Completed', 'completed'),
-                          _buildFilterChip('Failed', 'failed'),
+                          _buildFilterChip(t.dvr.all, 'all'),
+                          _buildFilterChip(t.dvr.scheduled, 'scheduled'),
+                          _buildFilterChip(t.liveTV.recording, 'recording'),
+                          _buildFilterChip(t.dvr.completed, 'completed'),
+                          _buildFilterChip(t.dvr.failed, 'failed'),
                         ],
                       ),
                     ),
                   ),
                   PopupMenuButton<String>(
                     icon: const Icon(Icons.sort),
-                    tooltip: 'Sort by',
+                    tooltip: t.libraries.sort,
                     onSelected: (value) {
                       setState(() => _sortBy = value);
                     },
@@ -297,7 +305,7 @@ class _DVRScreenState extends State<DVRScreen> with SingleTickerProviderStateMix
                             if (_sortBy == 'date') const Icon(Icons.check, size: 18),
                             if (_sortBy != 'date') const SizedBox(width: 18),
                             const SizedBox(width: 8),
-                            const Text('Date'),
+                            Text(t.dvr.sortByDate),
                           ],
                         ),
                       ),
@@ -308,7 +316,7 @@ class _DVRScreenState extends State<DVRScreen> with SingleTickerProviderStateMix
                             if (_sortBy == 'title') const Icon(Icons.check, size: 18),
                             if (_sortBy != 'title') const SizedBox(width: 18),
                             const SizedBox(width: 8),
-                            const Text('Title'),
+                            Text(t.dvr.sortByTitle),
                           ],
                         ),
                       ),
@@ -319,7 +327,7 @@ class _DVRScreenState extends State<DVRScreen> with SingleTickerProviderStateMix
                             if (_sortBy == 'size') const Icon(Icons.check, size: 18),
                             if (_sortBy != 'size') const SizedBox(width: 18),
                             const SizedBox(width: 8),
-                            const Text('Size'),
+                            Text(t.dvr.sortBySize),
                           ],
                         ),
                       ),
@@ -424,7 +432,7 @@ class _DVRScreenState extends State<DVRScreen> with SingleTickerProviderStateMix
                     IconButton(
                       icon: const Icon(Icons.play_arrow),
                       onPressed: () => _playRecording(recording),
-                      tooltip: 'Play recording',
+                      tooltip: t.dvr.playRecording,
                     ),
                   IconButton(
                     icon: const Icon(Icons.delete_outline),
@@ -469,21 +477,27 @@ class _DVRScreenState extends State<DVRScreen> with SingleTickerProviderStateMix
   }
 
   Widget _buildRulesList() {
+    final theme = Theme.of(context);
+
     if (_rules.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.repeat, size: 64, color: Colors.grey[400]),
+            Icon(Icons.repeat, size: 64, color: theme.colorScheme.outline),
             const SizedBox(height: 16),
             Text(
-              'No series rules',
-              style: TextStyle(color: Colors.grey[600], fontSize: 18),
+              t.dvr.noRules,
+              style: theme.textTheme.titleMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
             ),
             const SizedBox(height: 8),
             Text(
-              'Create rules to auto-record series',
-              style: TextStyle(color: Colors.grey[500], fontSize: 14),
+              t.dvr.createRulesHint,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.outline,
+              ),
             ),
           ],
         ),
@@ -631,7 +645,7 @@ class _ScheduleRecordingDialogState extends State<ScheduleRecordingDialog> {
     final timeFormat = DateFormat.jm();
 
     return AlertDialog(
-      title: const Text('Schedule Recording'),
+      title: Text(t.dvr.scheduleRecordingTitle),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -662,7 +676,7 @@ class _ScheduleRecordingDialogState extends State<ScheduleRecordingDialog> {
       actions: [
         TextButton(
           onPressed: _isSubmitting ? null : () => Navigator.pop(context, false),
-          child: const Text('Cancel'),
+          child: Text(t.dvr.cancel),
         ),
         ElevatedButton(
           onPressed: _isSubmitting ? null : _submit,
@@ -672,7 +686,7 @@ class _ScheduleRecordingDialogState extends State<ScheduleRecordingDialog> {
                   height: 20,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
-              : const Text('Schedule'),
+              : Text(t.dvr.schedule),
         ),
       ],
     );

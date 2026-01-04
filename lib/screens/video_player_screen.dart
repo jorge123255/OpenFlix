@@ -44,6 +44,7 @@ class VideoPlayerScreen extends StatefulWidget {
   final SubtitleTrack? preferredSubtitleTrack;
   final double? preferredPlaybackRate;
   final int selectedMediaIndex;
+  final String? offlinePath;
 
   const VideoPlayerScreen({
     super.key,
@@ -52,6 +53,7 @@ class VideoPlayerScreen extends StatefulWidget {
     this.preferredSubtitleTrack,
     this.preferredPlaybackRate,
     this.selectedMediaIndex = 0,
+    this.offlinePath,
   });
 
   @override
@@ -66,6 +68,8 @@ class VideoPlayerScreenState extends State<VideoPlayerScreen>
   MediaItem? _previousEpisode;
   bool _isLoadingNext = false;
   bool _showPlayNextDialog = false;
+  Timer? _autoPlayTimer;
+  int _autoPlayCountdown = 10; // Seconds until auto-play
   bool _isPhone = false;
   List<MediaVersion> _availableVersions = [];
   MediaInfo? _currentMediaInfo;
@@ -309,6 +313,12 @@ class VideoPlayerScreenState extends State<VideoPlayerScreen>
         'stream-lavf-o',
         'reconnect=1,reconnect_streamed=1,reconnect_delay_max=2',
       );
+
+      // Configure video upscaling for better quality on large screens
+      final videoUpscaler = settingsService.getVideoUpscaler();
+      await player!.setProperty('scale', videoUpscaler);
+      await player!.setProperty('cscale', videoUpscaler);
+      await player!.setProperty('dscale', 'mitchell'); // Good downscaler
 
       // Subtitle styling
       await player!.setProperty(
@@ -626,6 +636,29 @@ class VideoPlayerScreenState extends State<VideoPlayerScreen>
     if (!mounted) return;
 
     try {
+      // Check if playing offline content
+      if (widget.offlinePath != null) {
+        final resumePosition = widget.metadata.viewOffset != null
+            ? Duration(milliseconds: widget.metadata.viewOffset!)
+            : null;
+
+        await player!.open(
+          Media(
+            widget.offlinePath!,
+            start: resumePosition,
+          ),
+        );
+
+        // For offline content, we don't have server-side versions
+        if (mounted) {
+          setState(() {
+            _availableVersions = [];
+            _currentMediaInfo = null;
+          });
+        }
+        return;
+      }
+
       // Use server-specific client for this metadata
       final client = _getClientForMetadata(context);
 
@@ -705,7 +738,7 @@ class VideoPlayerScreenState extends State<VideoPlayerScreen>
         showDialog(
           context: context,
           builder: (context) => AlertDialog(
-            title: const Text('Playback Error'),
+            title: Text(t.player.playbackError),
             content: Text(e.message == t.messages.fileInfoNotAvailable
                 ? 'This media file is not available. The library may need to be scanned to index media files.\n\nGo to Settings > Libraries in the web admin and click "Scan" on each library.'
                 : e.message),
@@ -715,7 +748,7 @@ class VideoPlayerScreenState extends State<VideoPlayerScreen>
                   Navigator.of(context).pop(); // Close dialog
                   Navigator.of(context).pop(); // Go back to previous screen
                 },
-                child: const Text('OK'),
+                child: Text(t.player.ok),
               ),
             ],
           ),
@@ -727,15 +760,15 @@ class VideoPlayerScreenState extends State<VideoPlayerScreen>
         showDialog(
           context: context,
           builder: (context) => AlertDialog(
-            title: const Text('Error'),
-            content: Text('Failed to start playback:\n${e.toString()}'),
+            title: Text(t.player.error),
+            content: Text(t.player.failedToStartPlayback(error: e.toString())),
             actions: [
               TextButton(
                 onPressed: () {
                   Navigator.of(context).pop(); // Close dialog
                   Navigator.of(context).pop(); // Go back to previous screen
                 },
-                child: const Text('OK'),
+                child: Text(t.player.ok),
               ),
             ],
           ),
@@ -762,6 +795,9 @@ class VideoPlayerScreenState extends State<VideoPlayerScreen>
   void dispose() {
     // Unregister app lifecycle observer
     WidgetsBinding.instance.removeObserver(this);
+
+    // Cancel auto-play timer
+    _autoPlayTimer?.cancel();
 
     // Dispose value notifiers
     _isBuffering.dispose();
@@ -842,8 +878,32 @@ class VideoPlayerScreenState extends State<VideoPlayerScreen>
     if (completed && _nextEpisode != null && !_showPlayNextDialog) {
       setState(() {
         _showPlayNextDialog = true;
+        _autoPlayCountdown = 10;
       });
+      _startAutoPlayCountdown();
     }
+  }
+
+  void _startAutoPlayCountdown() {
+    _autoPlayTimer?.cancel();
+    _autoPlayTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      setState(() {
+        _autoPlayCountdown--;
+      });
+      if (_autoPlayCountdown <= 0) {
+        timer.cancel();
+        _playNext();
+      }
+    });
+  }
+
+  void _cancelAutoPlayCountdown() {
+    _autoPlayTimer?.cancel();
+    _autoPlayTimer = null;
   }
 
   void _onPlayerLog(PlayerLog log) {
@@ -1220,7 +1280,8 @@ class VideoPlayerScreenState extends State<VideoPlayerScreen>
     // Show loading indicator while player initializes
     if (!_isPlayerInitialized || player == null) {
       return Scaffold(
-        backgroundColor: Platform.isMacOS ? Colors.transparent : Colors.black,
+        // On Android/macOS, video is rendered behind Flutter - need transparency
+        backgroundColor: (Platform.isAndroid || Platform.isMacOS) ? Colors.transparent : Colors.black,
         body: const Center(
           child: CircularProgressIndicator(color: Colors.white),
         ),
@@ -1326,35 +1387,65 @@ class VideoPlayerScreenState extends State<VideoPlayerScreen>
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(
-                              Icons.play_circle_outline,
-                              size: 64,
-                              color: Colors.white,
+                            Stack(
+                              alignment: Alignment.center,
+                              children: [
+                                SizedBox(
+                                  width: 72,
+                                  height: 72,
+                                  child: CircularProgressIndicator(
+                                    value: _autoPlayCountdown / 10,
+                                    strokeWidth: 4,
+                                    backgroundColor: Colors.white24,
+                                    valueColor: const AlwaysStoppedAnimation<Color>(
+                                      Colors.white,
+                                    ),
+                                  ),
+                                ),
+                                const Icon(
+                                  Icons.play_arrow,
+                                  size: 40,
+                                  color: Colors.white,
+                                ),
+                              ],
                             ),
                             const SizedBox(height: 24),
                             Consumer<PlaybackStateProvider>(
                               builder: (context, playbackState, child) {
                                 final isShuffleActive =
                                     playbackState.isShuffleActive;
-                                return Row(
+                                return Column(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    const Text(
-                                      'Up Next',
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 24,
-                                        fontWeight: FontWeight.bold,
+                                    Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        const Text(
+                                          'Up Next',
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 24,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        if (isShuffleActive) ...[
+                                          const SizedBox(width: 8),
+                                          const Icon(
+                                            Icons.shuffle,
+                                            size: 20,
+                                            color: Colors.white70,
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      'Playing in $_autoPlayCountdown seconds...',
+                                      style: const TextStyle(
+                                        color: Colors.white70,
+                                        fontSize: 14,
                                       ),
                                     ),
-                                    if (isShuffleActive) ...[
-                                      const SizedBox(width: 8),
-                                      const Icon(
-                                        Icons.shuffle,
-                                        size: 20,
-                                        color: Colors.white70,
-                                      ),
-                                    ],
                                   ],
                                 );
                               },
@@ -1386,6 +1477,7 @@ class VideoPlayerScreenState extends State<VideoPlayerScreen>
                               children: [
                                 OutlinedButton(
                                   onPressed: () {
+                                    _cancelAutoPlayCountdown();
                                     setState(() {
                                       _showPlayNextDialog = false;
                                     });

@@ -27,9 +27,11 @@ class TrackChapterControls extends StatelessWidget {
   final int subtitleSyncOffset;
   final bool isRotationLocked;
   final bool isFullscreen;
+  final bool isScreenLocked;
   final VoidCallback? onCycleBoxFitMode;
   final VoidCallback? onToggleRotationLock;
   final VoidCallback? onToggleFullscreen;
+  final VoidCallback? onToggleScreenLock;
   final Function(int)? onSwitchVersion;
   final Function(AudioTrack)? onAudioTrackChanged;
   final Function(SubtitleTrack)? onSubtitleTrackChanged;
@@ -51,9 +53,11 @@ class TrackChapterControls extends StatelessWidget {
     required this.isRotationLocked,
     required this.isFullscreen,
     required this.serverId,
+    this.isScreenLocked = false,
     this.onCycleBoxFitMode,
     this.onToggleRotationLock,
     this.onToggleFullscreen,
+    this.onToggleScreenLock,
     this.onSwitchVersion,
     this.onAudioTrackChanged,
     this.onSubtitleTrackChanged,
@@ -160,6 +164,16 @@ class TrackChapterControls extends StatelessWidget {
                   tooltip: _getBoxFitTooltip(boxFitMode),
                   semanticLabel: t.videoControls.aspectRatioButton,
                   onPressed: onCycleBoxFitMode,
+                ),
+              // Screen lock toggle (mobile only)
+              if (PlatformDetector.isMobile(context) && onToggleScreenLock != null)
+                VideoControlButton(
+                  icon: isScreenLocked ? Icons.lock : Icons.lock_open,
+                  tooltip: isScreenLocked
+                      ? t.videoControls.unlockScreen
+                      : t.videoControls.lockScreen,
+                  semanticLabel: t.videoControls.screenLockButton,
+                  onPressed: onToggleScreenLock,
                 ),
               // Rotation lock toggle (mobile only)
               if (PlatformDetector.isMobile(context))
