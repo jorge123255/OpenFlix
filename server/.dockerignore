@@ -1,0 +1,50 @@
+# Git
+.git
+.gitignore
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+
+# Build artifacts
+openflix
+openflix-server
+*.exe
+
+# Database files (will be created in volume)
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+
+# Logs
+*.log
+logs/
+
+# Temp files
+transcode/
+recordings/
+.DS_Store
+
+# Node modules (for web UI dev)
+node_modules/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Test files
+*_test.go
+test/
+tests/
+
+# Documentation
+*.md
+!README.md
+
+# Screenshots and debug files
+epg_screenshots/
+explore_epg_ui.js

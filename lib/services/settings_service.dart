@@ -46,6 +46,24 @@ class SettingsService {
   static const String _keyAutoSkipDelay = 'auto_skip_delay';
   static const String _keyTmdbApiKey = 'tmdb_api_key';
   static const String _keyStatsOverlayEnabled = 'stats_overlay_enabled';
+  static const String _keyScreensaverEnabled = 'screensaver_enabled';
+  static const String _keyScreensaverIdleMinutes = 'screensaver_idle_minutes';
+  static const String _keyRecentSearches = 'recent_searches';
+  static const String _keyParentalControlsEnabled = 'parental_controls_enabled';
+  static const String _keyParentalControlsPin = 'parental_controls_pin';
+  static const String _keyMaxMovieRating = 'max_movie_rating';
+  static const String _keyMaxTvRating = 'max_tv_rating';
+  static const String _keyRestrictedContentUnlocked = 'restricted_content_unlocked';
+  static const String _keyVideoUpscaler = 'video_upscaler';
+  static const String _keyKidsModeEnabled = 'kids_mode_enabled';
+  static const String _keyVirtualChannels = 'virtual_channels';
+  static const String _keyStartupBehavior = 'startup_behavior';
+  static const String _keyDockedPlayerEnabled = 'docked_player_enabled';
+  static const String _keyDockedPlayerAutoMute = 'docked_player_auto_mute';
+
+  // Startup behavior options
+  static const String startupBehaviorHome = 'home';
+  static const String startupBehaviorLastChannel = 'last_channel';
 
   static SettingsService? _instance;
   late SharedPreferences _prefs;
@@ -105,6 +123,16 @@ class SettingsService {
   bool getEnableHardwareDecoding() {
     return _prefs.getBool(_keyEnableHardwareDecoding) ??
         true; // Default enabled
+  }
+
+  // Video Upscaler (for Android TV video quality enhancement)
+  // Options: 'bilinear' (fast), 'bicubic' (balanced), 'spline36' (quality), 'ewa_lanczos' (best quality, slower)
+  Future<void> setVideoUpscaler(String scaler) async {
+    await _prefs.setString(_keyVideoUpscaler, scaler);
+  }
+
+  String getVideoUpscaler() {
+    return _prefs.getString(_keyVideoUpscaler) ?? 'spline36'; // Good balance of quality and performance
   }
 
   // Preferred Video Codec
@@ -867,6 +895,141 @@ class SettingsService {
     return _prefs.getString(_keyTmdbApiKey);
   }
 
+  // Screensaver Settings
+  Future<void> setScreensaverEnabled(bool enabled) async {
+    await _prefs.setBool(_keyScreensaverEnabled, enabled);
+  }
+
+  bool getScreensaverEnabled() {
+    return _prefs.getBool(_keyScreensaverEnabled) ?? true; // Default: enabled
+  }
+
+  Future<void> setScreensaverIdleMinutes(int minutes) async {
+    await _prefs.setInt(_keyScreensaverIdleMinutes, minutes);
+  }
+
+  int getScreensaverIdleMinutes() {
+    return _prefs.getInt(_keyScreensaverIdleMinutes) ?? 5; // Default: 5 minutes
+  }
+
+  // Recent Searches
+  Future<void> setRecentSearches(List<String> searches) async {
+    await _prefs.setStringList(_keyRecentSearches, searches);
+  }
+
+  List<String> getRecentSearches() {
+    return _prefs.getStringList(_keyRecentSearches) ?? [];
+  }
+
+  // Parental Controls
+  Future<void> setParentalControlsEnabled(bool enabled) async {
+    await _prefs.setBool(_keyParentalControlsEnabled, enabled);
+  }
+
+  bool getParentalControlsEnabled() {
+    return _prefs.getBool(_keyParentalControlsEnabled) ?? false;
+  }
+
+  Future<void> setParentalControlsPin(String? pin) async {
+    if (pin == null || pin.isEmpty) {
+      await _prefs.remove(_keyParentalControlsPin);
+    } else {
+      await _prefs.setString(_keyParentalControlsPin, pin);
+    }
+  }
+
+  String? getParentalControlsPin() {
+    return _prefs.getString(_keyParentalControlsPin);
+  }
+
+  bool verifyParentalPin(String pin) {
+    final savedPin = getParentalControlsPin();
+    return savedPin != null && savedPin == pin;
+  }
+
+  Future<void> setMaxMovieRating(String rating) async {
+    await _prefs.setString(_keyMaxMovieRating, rating);
+  }
+
+  String getMaxMovieRating() {
+    return _prefs.getString(_keyMaxMovieRating) ?? 'NC-17'; // Default: all allowed
+  }
+
+  Future<void> setMaxTvRating(String rating) async {
+    await _prefs.setString(_keyMaxTvRating, rating);
+  }
+
+  String getMaxTvRating() {
+    return _prefs.getString(_keyMaxTvRating) ?? 'TV-MA'; // Default: all allowed
+  }
+
+  // Temporary unlock for restricted content (resets on app restart)
+  bool _restrictedContentUnlocked = false;
+
+  void unlockRestrictedContent() {
+    _restrictedContentUnlocked = true;
+  }
+
+  void lockRestrictedContent() {
+    _restrictedContentUnlocked = false;
+  }
+
+  bool isRestrictedContentUnlocked() {
+    return _restrictedContentUnlocked;
+  }
+
+  // Kids Mode - simplified parental control mode
+  Future<void> setKidsModeEnabled(bool enabled) async {
+    await _prefs.setBool(_keyKidsModeEnabled, enabled);
+    if (enabled) {
+      // Auto-set kid-friendly ratings when Kids Mode is enabled
+      await setMaxMovieRating('PG');
+      await setMaxTvRating('TV-Y7');
+    }
+  }
+
+  bool getKidsModeEnabled() {
+    return _prefs.getBool(_keyKidsModeEnabled) ?? false;
+  }
+
+  // Virtual Channels - custom 24/7 playlists
+  Future<void> setVirtualChannels(List<Map<String, dynamic>> channels) async {
+    final jsonString = json.encode(channels);
+    await _prefs.setString(_keyVirtualChannels, jsonString);
+  }
+
+  List<Map<String, dynamic>> getVirtualChannels() {
+    final jsonString = _prefs.getString(_keyVirtualChannels);
+    if (jsonString == null) return [];
+    try {
+      final List<dynamic> decoded = json.decode(jsonString);
+      return decoded.cast<Map<String, dynamic>>();
+    } catch (e) {
+      return [];
+    }
+  }
+
+  Future<void> addVirtualChannel(Map<String, dynamic> channel) async {
+    final channels = getVirtualChannels();
+    channels.add(channel);
+    await setVirtualChannels(channels);
+  }
+
+  Future<void> updateVirtualChannel(String id, Map<String, dynamic> channel) async {
+    final channels = getVirtualChannels();
+    final index = channels.indexWhere((c) => c['id'] == id);
+    if (index >= 0) {
+      channels[index] = channel;
+      await setVirtualChannels(channels);
+    }
+  }
+
+  Future<void> deleteVirtualChannel(String id) async {
+    final channels = getVirtualChannels();
+    channels.removeWhere((c) => c['id'] == id);
+    await setVirtualChannels(channels);
+  }
+
   // Reset all settings to defaults
   Future<void> resetAllSettings() async {
     await Future.wait([
@@ -898,6 +1061,12 @@ class SettingsService {
       _prefs.remove(_keyAppLocale),
       _prefs.remove(_keyRememberTrackSelections),
       _prefs.remove(_keyTmdbApiKey),
+      _prefs.remove(_keyScreensaverEnabled),
+      _prefs.remove(_keyScreensaverIdleMinutes),
+      _prefs.remove(_keyParentalControlsEnabled),
+      _prefs.remove(_keyParentalControlsPin),
+      _prefs.remove(_keyMaxMovieRating),
+      _prefs.remove(_keyMaxTvRating),
     ]);
   }
 
@@ -908,6 +1077,36 @@ class SettingsService {
     await Future.wait([
       // Add cache clearing logic here
     ]);
+  }
+
+  // Home Screen / Startup Behavior
+  Future<void> setStartupBehavior(String behavior) async {
+    await _prefs.setString(_keyStartupBehavior, behavior);
+  }
+
+  String getStartupBehavior() {
+    return _prefs.getString(_keyStartupBehavior) ?? startupBehaviorHome;
+  }
+
+  bool shouldStartOnLastChannel() {
+    return getStartupBehavior() == startupBehaviorLastChannel;
+  }
+
+  // Docked Player
+  Future<void> setDockedPlayerEnabled(bool enabled) async {
+    await _prefs.setBool(_keyDockedPlayerEnabled, enabled);
+  }
+
+  bool getDockedPlayerEnabled() {
+    return _prefs.getBool(_keyDockedPlayerEnabled) ?? true;
+  }
+
+  Future<void> setDockedPlayerAutoMute(bool autoMute) async {
+    await _prefs.setBool(_keyDockedPlayerAutoMute, autoMute);
+  }
+
+  bool getDockedPlayerAutoMute() {
+    return _prefs.getBool(_keyDockedPlayerAutoMute) ?? true;
   }
 
   // Get all settings as a map for debugging/export

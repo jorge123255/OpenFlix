@@ -89,6 +89,14 @@ type MediaItem struct {
 	Thumb            string         `gorm:"size:500" json:"thumb,omitempty"`
 	Art              string         `gorm:"size:500" json:"art,omitempty"`
 
+	// Provider tracking (for VOD content)
+	ProviderType     string `gorm:"size:20;index" json:"providerType,omitempty"`   // local, m3u, xtream
+	ProviderSourceID *uint  `gorm:"index" json:"providerSourceId,omitempty"`       // XtreamSource or M3USource ID
+	ProviderName     string `gorm:"size:255" json:"providerName,omitempty"`        // Source name for display
+	StreamURL        string `gorm:"size:2000" json:"streamUrl,omitempty"`          // Remote stream URL for VOD
+	XtreamVODID      *int   `gorm:"index" json:"xtreamVodId,omitempty"`            // Xtream VOD stream ID
+	XtreamSeriesID   *int   `gorm:"index" json:"xtreamSeriesId,omitempty"`         // Xtream series ID
+
 	// Hierarchy (for episodes/seasons)
 	ParentID            *uint  `gorm:"index" json:"parentRatingKey,omitempty"`
 	GrandparentID       *uint  `gorm:"index" json:"grandparentRatingKey,omitempty"`
@@ -117,12 +125,13 @@ type MediaItem struct {
 	Cast       []CastMember `gorm:"foreignKey:MediaItemID" json:"Role,omitempty"`
 }
 
-// MediaFile represents a physical media file
+// MediaFile represents a physical media file or remote stream
 type MediaFile struct {
 	ID          uint   `gorm:"primaryKey" json:"id"`
 	MediaItemID uint   `gorm:"index" json:"mediaItemId"`
-	FilePath    string `gorm:"size:2000" json:"file"`
+	FilePath    string `gorm:"size:2000;uniqueIndex" json:"file"`
 	FileSize    int64  `json:"size"`
+	FileModTime time.Time `json:"fileModTime"` // File modification time on disk
 	Container   string `gorm:"size:20" json:"container"`
 	Duration    int64  `json:"duration"` // milliseconds
 	Bitrate     int    `json:"bitrate"`
@@ -134,6 +143,11 @@ type MediaFile struct {
 	VideoFrameRate string `gorm:"size:20" json:"videoFrameRate,omitempty"`
 	AudioCodec  string `gorm:"size:50" json:"audioCodec"`
 	AudioChannels int   `json:"audioChannels"`
+
+	// Remote stream support (for VOD)
+	IsRemote        bool   `gorm:"default:false" json:"isRemote"`                   // True for VOD streams
+	RemoteURL       string `gorm:"size:2000" json:"remoteUrl,omitempty"`            // Stream URL
+	RemoteExtension string `gorm:"size:20" json:"remoteExtension,omitempty"`        // File extension (mp4, mkv, etc.)
 
 	// Streams
 	Streams []MediaStream `gorm:"foreignKey:MediaFileID" json:"Part,omitempty"`
@@ -192,13 +206,13 @@ type CastMember struct {
 // WatchHistory tracks what users have watched
 type WatchHistory struct {
 	ID          uint      `gorm:"primaryKey" json:"id"`
-	UserID      uint      `gorm:"index" json:"userId"`
-	ProfileID   uint      `gorm:"index" json:"profileId"`
-	MediaItemID uint      `gorm:"index" json:"ratingKey"`
+	UserID      uint      `gorm:"index:idx_watch_user_profile;index:idx_watch_user_item" json:"userId"`
+	ProfileID   uint      `gorm:"index:idx_watch_user_profile" json:"profileId"`
+	MediaItemID uint      `gorm:"index:idx_watch_user_item" json:"ratingKey"`
 	ViewOffset  int64     `json:"viewOffset"` // milliseconds
 	ViewCount   int       `json:"viewCount"`
-	LastViewedAt time.Time `json:"lastViewedAt"`
-	Completed   bool      `json:"completed"`
+	LastViewedAt time.Time `gorm:"index" json:"lastViewedAt"`
+	Completed   bool      `gorm:"index" json:"completed"`
 	UpdatedAt   time.Time
 }
 
@@ -263,8 +277,43 @@ type M3USource struct {
 	EPGUrl      string     `gorm:"size:2000" json:"epgUrl,omitempty"`
 	Enabled     bool       `gorm:"default:true" json:"enabled"`
 	LastFetched *time.Time `json:"lastFetched,omitempty"`
-	CreatedAt   time.Time  `json:"createdAt"`
-	UpdatedAt   time.Time  `json:"updatedAt"`
+	// HTTP caching headers for conditional EPG requests
+	EPGETag         string `gorm:"size:255" json:"epgETag,omitempty"`
+	EPGLastModified string `gorm:"size:100" json:"epgLastModified,omitempty"`
+	// VOD import settings
+	ImportVOD       bool  `gorm:"default:false" json:"importVod"`
+	ImportSeries    bool  `gorm:"default:false" json:"importSeries"`
+	VODLibraryID    *uint `json:"vodLibraryId,omitempty"`
+	SeriesLibraryID *uint `json:"seriesLibraryId,omitempty"`
+	CreatedAt       time.Time `json:"createdAt"`
+	UpdatedAt       time.Time `json:"updatedAt"`
+}
+
+// XtreamSource represents an Xtream Codes API source
+type XtreamSource struct {
+	ID             uint       `gorm:"primaryKey" json:"id"`
+	Name           string     `gorm:"size:255" json:"name"`
+	ServerURL      string     `gorm:"size:2000" json:"serverUrl"`       // Base server URL (http://server:port)
+	Username       string     `gorm:"size:255" json:"username"`
+	Password       string     `gorm:"size:255" json:"-"`                // Not exposed in JSON
+	Enabled        bool       `gorm:"default:true" json:"enabled"`
+	LastFetched    *time.Time `json:"lastFetched,omitempty"`
+	LastError      string     `gorm:"type:text" json:"lastError,omitempty"`
+	ExpirationDate *time.Time `json:"expirationDate,omitempty"`         // From Xtream auth response
+	MaxConnections int        `json:"maxConnections,omitempty"`
+	ActiveConns    int        `json:"activeConns,omitempty"`
+	// Import settings
+	ImportLive      bool  `gorm:"default:true" json:"importLive"`
+	ImportVOD       bool  `gorm:"default:false" json:"importVod"`
+	ImportSeries    bool  `gorm:"default:false" json:"importSeries"`
+	VODLibraryID    *uint `json:"vodLibraryId,omitempty"`              // Target movie library
+	SeriesLibraryID *uint `json:"seriesLibraryId,omitempty"`           // Target TV library
+	// Stats
+	ChannelCount int `json:"channelCount"`
+	VODCount     int `json:"vodCount"`
+	SeriesCount  int `json:"seriesCount"`
+	CreatedAt    time.Time `json:"createdAt"`
+	UpdatedAt    time.Time `json:"updatedAt"`
 }
 
 // EPGSource represents a standalone XMLTV EPG source
@@ -282,10 +331,14 @@ type EPGSource struct {
 	GracenoteHours       int    `gorm:"default:6" json:"gracenoteHours,omitempty"`     // Hours to fetch
 
 	Enabled       bool       `gorm:"default:true" json:"enabled"`
+	Priority      int        `gorm:"default:0" json:"priority"` // Lower is higher priority for fallback
 	LastFetched   *time.Time `json:"lastFetched,omitempty"`
 	LastError     string     `gorm:"type:text" json:"lastError,omitempty"`
 	ProgramCount  int        `json:"programCount"`
 	ChannelCount  int        `json:"channelCount"`
+	// HTTP caching headers for conditional requests
+	ETag         string `gorm:"size:255" json:"eTag,omitempty"`
+	LastModified string `gorm:"size:100" json:"lastModified,omitempty"`
 	CreatedAt     time.Time  `json:"createdAt"`
 	UpdatedAt     time.Time  `json:"updatedAt"`
 }
@@ -303,6 +356,29 @@ type Channel struct {
 	StreamURL   string `gorm:"size:2000" json:"streamUrl"`
 	Enabled     bool   `gorm:"default:true" json:"enabled"`
 	IsFavorite  bool   `gorm:"default:false" json:"isFavorite"`
+
+	// Source tracking (for provider display)
+	SourceType string `gorm:"size:20;default:m3u" json:"sourceType"` // m3u or xtream
+	SourceName string `gorm:"size:255" json:"sourceName,omitempty"`  // Name of the source for display
+
+	// Xtream-specific fields
+	XtreamSourceID   *uint `gorm:"index" json:"xtreamSourceId,omitempty"`   // Alternative to M3USourceID
+	XtreamStreamID   *int  `json:"xtreamStreamId,omitempty"`                 // Xtream stream ID
+	XtreamCategoryID *int  `json:"xtreamCategoryId,omitempty"`               // Xtream category ID
+
+	// Auto-detection fields
+	TVGId           string  `gorm:"size:255;index" json:"tvgId,omitempty"`         // Original tvg-id from M3U
+	EPGCallSign     string  `gorm:"size:50" json:"epgCallSign,omitempty"`          // Matched EPG call sign
+	EPGChannelNo    string  `gorm:"size:20" json:"epgChannelNo,omitempty"`         // Matched EPG channel number
+	EPGAffiliate    string  `gorm:"size:100" json:"epgAffiliate,omitempty"`        // Matched EPG network/affiliate
+	MatchConfidence float64 `gorm:"default:0" json:"matchConfidence"`              // Auto-detection confidence (0-1)
+	MatchStrategy   string  `gorm:"size:50" json:"matchStrategy,omitempty"`        // How match was made
+	AutoDetected    bool    `gorm:"default:false" json:"autoDetected"`             // Was this auto-detected?
+
+	// Archive/Catch-up settings
+	ArchiveEnabled bool `gorm:"default:false" json:"archiveEnabled"` // Enable continuous recording for catch-up
+	ArchiveDays    int  `gorm:"default:7" json:"archiveDays"`        // How many days to keep archived content
+
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
 }
@@ -310,16 +386,16 @@ type Channel struct {
 // Program represents an EPG program entry
 type Program struct {
 	ID           uint      `gorm:"primaryKey" json:"id"`
-	ChannelID    string    `gorm:"size:255;index" json:"channelId"`
+	ChannelID    string    `gorm:"size:255;index:idx_program_channel_time" json:"channelId"`
 	CallSign     string    `gorm:"size:50" json:"callSign,omitempty"`     // Station call letters (e.g., "WMAQ", "WBBM")
 	ChannelNo    string    `gorm:"size:20" json:"channelNo,omitempty"`     // Channel number (e.g., "5", "7.1")
 	AffiliateName string   `gorm:"size:100" json:"affiliateName,omitempty"` // Network name (e.g., "NBC", "CBS")
-	Title        string    `gorm:"size:500" json:"title"`
+	Title        string    `gorm:"size:500;index" json:"title"`
 	Description  string    `gorm:"type:text" json:"description,omitempty"`
-	Start        time.Time `gorm:"index" json:"start"`
-	End          time.Time `gorm:"index" json:"end"`
+	Start        time.Time `gorm:"index:idx_program_channel_time;index:idx_program_time_range" json:"start"`
+	End          time.Time `gorm:"index:idx_program_time_range" json:"end"`
 	Icon         string    `gorm:"size:2000" json:"icon,omitempty"`
-	Category     string    `gorm:"size:100" json:"category,omitempty"`
+	Category     string    `gorm:"size:100;index" json:"category,omitempty"`
 	EpisodeNum   string    `gorm:"size:50" json:"episodeNum,omitempty"`
 	CreatedAt    time.Time
 }
@@ -328,20 +404,24 @@ type Program struct {
 
 // Recording represents a DVR recording
 type Recording struct {
-	ID          uint       `gorm:"primaryKey" json:"id"`
-	UserID      uint       `gorm:"index" json:"userId"`
-	ChannelID   uint       `gorm:"index" json:"channelId"`
-	ProgramID   *uint      `gorm:"index" json:"programId,omitempty"`
-	Title       string     `gorm:"size:500" json:"title"`
-	Description string     `gorm:"type:text" json:"description,omitempty"`
-	StartTime   time.Time  `json:"startTime"`
-	EndTime     time.Time  `json:"endTime"`
-	Status      string     `gorm:"size:20;index" json:"status"` // scheduled, recording, completed, failed
-	FilePath    string     `gorm:"size:2000" json:"filePath,omitempty"`
-	FileSize    int64      `json:"fileSize,omitempty"`
-	SeriesRuleID *uint     `gorm:"index" json:"seriesRuleId,omitempty"`
-	CreatedAt   time.Time  `json:"createdAt"`
-	UpdatedAt   time.Time  `json:"updatedAt"`
+	ID             uint       `gorm:"primaryKey" json:"id"`
+	UserID         uint       `gorm:"index" json:"userId"`
+	ChannelID      uint       `gorm:"index" json:"channelId"`
+	ProgramID      *uint      `gorm:"index" json:"programId,omitempty"`
+	Title          string     `gorm:"size:500" json:"title"`
+	Description    string     `gorm:"type:text" json:"description,omitempty"`
+	StartTime      time.Time  `json:"startTime"`
+	EndTime        time.Time  `json:"endTime"`
+	Status         string     `gorm:"size:20;index" json:"status"` // scheduled, recording, completed, failed
+	FilePath       string     `gorm:"size:2000" json:"filePath,omitempty"`
+	FileSize       int64      `json:"fileSize,omitempty"`
+	SeriesRuleID   *uint      `gorm:"index" json:"seriesRuleId,omitempty"`
+	SeriesRecord   bool       `gorm:"default:false" json:"seriesRecord"`
+	SeriesParentID *uint      `gorm:"index" json:"seriesParentId,omitempty"`
+	Category       string     `gorm:"size:100" json:"category,omitempty"`
+	EpisodeNum     string     `gorm:"size:50" json:"episodeNum,omitempty"`
+	CreatedAt      time.Time  `json:"createdAt"`
+	UpdatedAt      time.Time  `json:"updatedAt"`
 }
 
 // SeriesRule represents a series recording rule
@@ -371,6 +451,33 @@ type CommercialSegment struct {
 	CreatedAt   time.Time
 }
 
+// ========== Archive/Catch-up Models ==========
+
+// ArchiveProgram represents an archived program available for catch-up playback
+type ArchiveProgram struct {
+	ID          uint      `gorm:"primaryKey" json:"id"`
+	ChannelID   uint      `gorm:"index:idx_archive_channel_time" json:"channelId"`
+	ProgramID   *uint     `gorm:"index" json:"programId,omitempty"` // Link to EPG Program if matched
+	Title       string    `gorm:"size:500" json:"title"`
+	Description string    `gorm:"type:text" json:"description,omitempty"`
+	StartTime   time.Time `gorm:"index:idx_archive_channel_time" json:"startTime"`
+	EndTime     time.Time `json:"endTime"`
+	Duration    int       `json:"duration"` // seconds
+	Icon        string    `gorm:"size:2000" json:"icon,omitempty"`
+	Category    string    `gorm:"size:100" json:"category,omitempty"`
+
+	// Archive storage info
+	ArchiveDir       string `gorm:"size:2000" json:"archiveDir"`                // Directory containing segments
+	StartSegmentIdx  int    `json:"startSegmentIdx"`                            // First segment index
+	EndSegmentIdx    int    `json:"endSegmentIdx"`                              // Last segment index
+	SegmentDuration  int    `json:"segmentDuration"`                            // Segment length in seconds
+	Status           string `gorm:"size:20;default:available" json:"status"`    // available, recording, expired
+	FileSize         int64  `json:"fileSize,omitempty"`                         // Approximate total size
+
+	CreatedAt time.Time `json:"createdAt"`
+	ExpiresAt time.Time `gorm:"index" json:"expiresAt"` // When this archive will be deleted
+}
+
 // ========== Play Queue Models ==========
 
 // PlayQueue represents a play queue session
@@ -394,4 +501,33 @@ type PlayQueueItem struct {
 	PlayQueueID uint `gorm:"index" json:"playQueueId"`
 	MediaItemID uint `gorm:"index" json:"ratingKey"`
 	Order       int  `json:"order"`
+}
+
+// ========== Playback Session Models ==========
+
+// PlaybackSession represents an active playback session
+type PlaybackSession struct {
+	ID              string    `gorm:"primaryKey;size:36" json:"sessionKey"`
+	UserID          uint      `gorm:"index" json:"userId"`
+	ProfileID       *uint     `gorm:"index" json:"profileId,omitempty"`
+	MediaItemID     uint      `gorm:"index" json:"ratingKey"`
+	MediaFileID     uint      `json:"mediaFileId"`
+	State           string    `gorm:"size:20;default:'playing'" json:"state"` // playing, paused, buffering, stopped
+	ViewOffset      int64     `json:"viewOffset"`                              // Current position in ms
+	Duration        int64     `json:"duration"`                                // Total duration in ms
+	Progress        float64   `json:"progress"`                                // 0.0 - 1.0
+	Transcoding     bool      `json:"transcoding"`
+	TranscodeSession string   `gorm:"size:100" json:"transcodeSession,omitempty"`
+	Quality         string    `gorm:"size:20" json:"quality,omitempty"`
+	ClientName      string    `gorm:"size:100" json:"player,omitempty"`
+	ClientPlatform  string    `gorm:"size:50" json:"platform,omitempty"`
+	ClientAddress   string    `gorm:"size:50" json:"address,omitempty"`
+	StartedAt       time.Time `json:"startedAt"`
+	LastActiveAt    time.Time `json:"lastActiveAt"`
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
+
+	// Relations (not loaded by default)
+	User      *User      `gorm:"foreignKey:UserID" json:"-"`
+	MediaItem *MediaItem `gorm:"foreignKey:MediaItemID" json:"-"`
 }

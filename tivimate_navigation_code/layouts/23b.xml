@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout android:id="@id/2lk" android:layout_width="fill_parent" android:layout_height="fill_parent"
+  xmlns:android="http://schemas.android.com/apk/res/android">
+    <androidx.leanback.widget.BrowseFrameLayout android:id="@id/3be" android:focusable="true" android:focusableInTouchMode="true" android:descendantFocusability="afterDescendants" android:layout_width="fill_parent" android:layout_height="fill_parent">
+        <FrameLayout android:id="@id/1gm" android:layout_width="fill_parent" android:layout_height="fill_parent" />
+    </androidx.leanback.widget.BrowseFrameLayout>
+</FrameLayout>

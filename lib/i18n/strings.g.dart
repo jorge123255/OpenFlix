@@ -4,9 +4,9 @@
 /// To regenerate, run: `dart run slang`
 ///
 /// Locales: 6
-/// Strings: 2950 (491 per locale)
+/// Strings: 4603 (767 per locale)
 ///
-/// Built on 2025-12-12 at 19:25 UTC
+/// Built on 2026-01-04 at 20:19 UTC
 
 // coverage:ignore-file
 // ignore_for_file: type=lint
@@ -173,15 +173,28 @@ class Translations implements BaseTranslations<AppLocale, Translations> {
 	late final _StringsDialogEn dialog = _StringsDialogEn._(_root);
 	late final _StringsDiscoverEn discover = _StringsDiscoverEn._(_root);
 	late final _StringsErrorsEn errors = _StringsErrorsEn._(_root);
+	late final _StringsVoiceEn voice = _StringsVoiceEn._(_root);
 	late final _StringsLibrariesEn libraries = _StringsLibrariesEn._(_root);
 	late final _StringsAboutEn about = _StringsAboutEn._(_root);
 	late final _StringsServerSelectionEn serverSelection = _StringsServerSelectionEn._(_root);
 	late final _StringsHubDetailEn hubDetail = _StringsHubDetailEn._(_root);
 	late final _StringsLogsEn logs = _StringsLogsEn._(_root);
+	late final _StringsStatsEn stats = _StringsStatsEn._(_root);
 	late final _StringsLicensesEn licenses = _StringsLicensesEn._(_root);
 	late final _StringsNavigationEn navigation = _StringsNavigationEn._(_root);
 	late final _StringsCollectionsEn collections = _StringsCollectionsEn._(_root);
 	late final _StringsPlaylistsEn playlists = _StringsPlaylistsEn._(_root);
+	late final _StringsWatchPartyEn watchParty = _StringsWatchPartyEn._(_root);
+	late final _StringsCatchUpEn catchUp = _StringsCatchUpEn._(_root);
+	late final _StringsWatchlistEn watchlist = _StringsWatchlistEn._(_root);
+	late final _StringsLiveTVEn liveTV = _StringsLiveTVEn._(_root);
+	late final _StringsDvrEn dvr = _StringsDvrEn._(_root);
+	late final _StringsEpgEn epg = _StringsEpgEn._(_root);
+	late final _StringsChannelSurfingEn channelSurfing = _StringsChannelSurfingEn._(_root);
+	late final _StringsVirtualChannelsEn virtualChannels = _StringsVirtualChannelsEn._(_root);
+	late final _StringsMultiviewEn multiview = _StringsMultiviewEn._(_root);
+	late final _StringsPlayerEn player = _StringsPlayerEn._(_root);
+	late final _StringsDownloadsEn downloads = _StringsDownloadsEn._(_root);
 }
 
 // Path: app
@@ -244,6 +257,19 @@ class _StringsAuthEn {
 	String get passwordTooShort => 'Password must be at least 6 characters';
 	String get invalidEmail => 'Please enter a valid email address';
 	String get firstUserNote => 'First user will be the admin';
+	String get howConnecting => 'How are you connecting?';
+	String get atHome => 'At Home';
+	String get atHomeDescription => 'Auto-detect server on your local network';
+	String get awayFromHome => 'Away from Home';
+	String get awayFromHomeDescription => 'Enter server address manually';
+	String get findYourServer => 'Find Your Server';
+	String get searching => 'Searching...';
+	String get checkingNetwork => 'Checking network...';
+	String get serversFound => 'Servers Found';
+	String get scanAgain => 'Scan Again';
+	String get enterManually => 'Enter Manually';
+	String get noServersFound => 'No servers found on your network. Make sure your OpenFlix server is running.';
+	String discoveryFailed({required Object error}) => 'Discovery failed: ${error}';
 }
 
 // Path: common
@@ -277,6 +303,12 @@ class _StringsCommonEn {
 	String get delete => 'Delete';
 	String get shuffle => 'Shuffle';
 	String get addTo => 'Add to...';
+	String get remove => 'Remove';
+	String get play => 'Play';
+	String get details => 'Details';
+	String get seeAll => 'See All';
+	String get live => 'LIVE';
+	String get newLabel => 'NEW';
 }
 
 // Path: screens
@@ -317,6 +349,13 @@ class _StringsSettingsEn {
 
 	// Translations
 	String get title => 'Settings';
+	String get profile => 'Profile';
+	String get noProfileSelected => 'No profile selected';
+	String get kidsMode => 'Kids Mode';
+	String get switchProfile => 'Switch Profile';
+	String get switchProfileDescription => 'Change to a different profile';
+	String get manageProfiles => 'Manage Profiles';
+	String get manageProfilesDescription => 'Add, edit, or delete profiles';
 	String get language => 'Language';
 	String get theme => 'Theme';
 	String get appearance => 'Appearance';
@@ -406,6 +445,35 @@ class _StringsSettingsEn {
 	String get apiKey => 'API Key';
 	String get tmdbApiKeySaved => 'TMDB API key saved';
 	String get tmdbApiKeyCleared => 'TMDB API key cleared';
+	String get parentalControls => 'Parental Controls';
+	String get kidsModeDescription => 'Show only kid-friendly content (G, PG, TV-Y7)';
+	String get enableParentalControls => 'Enable Parental Controls';
+	String get enableParentalControlsDescription => 'Restrict content based on age ratings';
+	String get setPin => 'Set PIN';
+	String get setPinDescription => 'Enter a 4-digit PIN to protect parental settings';
+	String get confirmPin => 'Confirm PIN';
+	String get confirmPinDescription => 'Enter the PIN again to confirm';
+	String get enterPin => 'Enter PIN';
+	String get enterPinDescription => 'Enter your parental control PIN';
+	String get changePin => 'Change PIN';
+	String get changePinDescription => 'Change your parental control PIN';
+	String get pinSet => 'Parental control PIN set successfully';
+	String get pinMismatch => 'PINs do not match. Please try again.';
+	String get incorrectPin => 'Incorrect PIN. Please try again.';
+	String get maxMovieRating => 'Maximum Movie Rating';
+	String get maxTvRating => 'Maximum TV Rating';
+	String get remoteAccess => 'Remote Access';
+	String get tailscaleStatus => 'Tailscale Status';
+	String get remoteAccessCheckingStatus => 'Checking status...';
+	String get refreshStatus => 'Refresh Status';
+	String get remoteUrl => 'Remote URL';
+	String get copyUrl => 'Copy URL';
+	String get urlCopied => 'URL copied to clipboard';
+	String get tailscaleIp => 'Tailscale IP';
+	String get tailscaleNotInstalled => 'Tailscale is not installed on the server.';
+	String get tailscaleDescription => 'Install Tailscale on your server to enable secure remote access from anywhere.';
+	String get tailscaleNeedsLogin => 'Login Required';
+	String get tailscaleNeedsLoginDescription => 'Tailscale requires authentication. Log in on the server.';
 }
 
 // Path: search
@@ -419,6 +487,15 @@ class _StringsSearchEn {
 	String get tryDifferentTerm => 'Try a different search term';
 	String get searchYourMedia => 'Search your media';
 	String get enterTitleActorOrKeyword => 'Enter a title, actor, or keyword';
+	String get recentSearches => 'Recent Searches';
+	String get clear => 'Clear';
+	String get voiceSearch => 'Voice Search';
+	String get listening => 'Listening...';
+	String get speakNow => 'Speak now';
+	String get all => 'All';
+	String get movies => 'Movies';
+	String get tvShows => 'TV Shows';
+	String get music => 'Music';
 }
 
 // Path: hotkeys
@@ -541,6 +618,11 @@ class _StringsVideoControlsEn {
 	String get stretch => 'Stretch';
 	String get lockRotation => 'Lock rotation';
 	String get unlockRotation => 'Unlock rotation';
+	String get lockScreen => 'Lock screen';
+	String get unlockScreen => 'Unlock screen';
+	String get screenLockButton => 'Screen lock';
+	String get screenLocked => 'Screen locked';
+	String get tapToUnlock => 'Tap to unlock';
 	String get sleepTimer => 'Sleep Timer';
 	String get timerActive => 'Timer Active';
 	String playbackWillPauseIn({required Object duration}) => 'Playback will pause in ${duration}';
@@ -691,6 +773,30 @@ class _StringsDiscoverEn {
 	String get movie => 'Movie';
 	String get tvShow => 'TV Show';
 	String minutesLeft({required Object minutes}) => '${minutes} min left';
+	String get whatsOnNow => 'What\'s On Now';
+	String get channelGuide => 'Channel Guide';
+	String get liveNow => 'Live Now';
+	String get topTen => 'Top 10';
+	String get newBadge => 'NEW';
+	String get liveBadge => 'LIVE';
+	String get goodMorning => 'Good morning';
+	String get goodAfternoon => 'Good afternoon';
+	String get goodEvening => 'Good evening';
+	String get defaultUser => 'Guest';
+	String get yourNextWatch => 'Your Next Watch';
+	String pickedForYou({required Object name}) => 'Picked just for you, ${name}';
+	String get surpriseMe => 'Surprise Me';
+	String get randomPicker => 'Random Movie Picker';
+	String get noMoviesFound => 'No movies found in your library';
+	String get spinning => 'Picking something great...';
+	String get spinAgain => 'Spin Again';
+	String get loadingMovies => 'Loading your movies...';
+	String get calendar => 'Calendar';
+	String get today => 'Today';
+	String get item => 'item';
+	String get items => 'items';
+	String get noContentOnDate => 'No content added on this date';
+	String get noEpgData => 'No program info';
 }
 
 // Path: errors
@@ -712,6 +818,18 @@ class _StringsErrorsEn {
 	String failedToVerifyToken({required Object error}) => 'Failed to verify token: ${error}';
 	String failedToSwitchProfile({required Object displayName}) => 'Failed to switch to ${displayName}';
 	String get connectionFailedGeneric => 'Connection failed';
+	String failedToRemove({required Object error}) => 'Failed to remove: ${error}';
+}
+
+// Path: voice
+class _StringsVoiceEn {
+	_StringsVoiceEn._(this._root);
+
+	final Translations _root; // ignore: unused_field
+
+	// Translations
+	String get notAvailable => 'Voice control is not available';
+	String commandNotRecognized({required Object command}) => 'Command not recognized: "${command}"';
 }
 
 // Path: libraries
@@ -832,6 +950,25 @@ class _StringsLogsEn {
 	String get stackTrace => 'Stack Trace:';
 }
 
+// Path: stats
+class _StringsStatsEn {
+	_StringsStatsEn._(this._root);
+
+	final Translations _root; // ignore: unused_field
+
+	// Translations
+	String get title => 'Watch Statistics';
+	String get totalWatchTime => 'Total Watch Time';
+	String get moviesWatched => 'Movies Watched';
+	String get episodesWatched => 'Episodes Watched';
+	String get avgPerDay => 'Avg Per Day';
+	String get topGenres => 'Top Genres';
+	String get monthlyActivity => 'Monthly Activity';
+	String get noData => 'No watch history yet';
+	String get startWatching => 'Start watching to see your stats';
+	String get days => 'days';
+}
+
 // Path: licenses
 class _StringsLicensesEn {
 	_StringsLicensesEn._(this._root);
@@ -853,6 +990,8 @@ class _StringsNavigationEn {
 
 	// Translations
 	String get home => 'Home';
+	String get movies => 'Movies';
+	String get tvShows => 'TV Shows';
 	String get search => 'Search';
 	String get libraries => 'Libraries';
 	String get livetv => 'Live TV';
@@ -936,6 +1075,300 @@ class _StringsPlaylistsEn {
 	String get errorRemoving => 'Failed to remove from playlist';
 }
 
+// Path: watchParty
+class _StringsWatchPartyEn {
+	_StringsWatchPartyEn._(this._root);
+
+	final Translations _root; // ignore: unused_field
+
+	// Translations
+	String get title => 'Watch Party';
+	String get startParty => 'Start Watch Party';
+	String get joinParty => 'Join Party';
+	String get enterCode => 'Enter party code';
+	String get shareCode => 'Share this code';
+	String get friendsCanJoin => 'Friends can join using this code';
+	String get participants => 'Participants';
+	String get host => 'Host';
+	String get endParty => 'End Party';
+	String get leaveParty => 'Leave Party';
+	String get partyEnded => 'Watch Party ended';
+	String get chat => 'Chat';
+	String get typeMessage => 'Type a message...';
+	String joined({required Object name}) => '${name} joined';
+	String left({required Object name}) => '${name} left';
+	String get syncedPlayback => 'Playback is synced with party';
+	String get hostControls => 'Only the host can control playback';
+	String get creating => 'Creating party...';
+	String get joining => 'Joining party...';
+	String get createFailed => 'Failed to create party';
+	String get joinFailed => 'Failed to join party';
+	String get invalidCode => 'Invalid party code';
+	String get gotIt => 'Got it';
+}
+
+// Path: catchUp
+class _StringsCatchUpEn {
+	_StringsCatchUpEn._(this._root);
+
+	final Translations _root; // ignore: unused_field
+
+	// Translations
+	String get title => 'Catch Up TV';
+	String get startOver => 'Start Over';
+	String get startOverDescription => 'Watch from the beginning';
+	String get watchFromBeginning => 'Watch from the beginning?';
+	String alreadyStarted({required Object title}) => '"${title}" has already started. You can start from the beginning.';
+	String get watchLive => 'Watch Live';
+	String get programsAvailable => 'Programs Available';
+	String get noProgramsAvailable => 'No catch-up programs available';
+	String get programsWillAppear => 'Programs will appear here as they air';
+	String get unavailable => 'Unavailable';
+	String get bufferNotReady => 'Buffer not ready yet';
+	String get rewind => 'Rewind';
+	String get timeshiftEnabled => 'Time-shift enabled';
+	String goBackTo({required Object time}) => 'Go back to ${time}';
+}
+
+// Path: watchlist
+class _StringsWatchlistEn {
+	_StringsWatchlistEn._(this._root);
+
+	final Translations _root; // ignore: unused_field
+
+	// Translations
+	String get title => 'My Watchlist';
+	String get all => 'All';
+	String get movies => 'Movies';
+	String get shows => 'TV Shows';
+	String get episodes => 'Episodes';
+	String get empty => 'Your watchlist is empty';
+	String get emptyHint => 'Add movies and shows to your watchlist from their detail pages';
+	String get noItemsFiltered => 'No items match this filter';
+	String get removeTitle => 'Remove from Watchlist';
+	String removeConfirm({required Object title}) => 'Remove "${title}" from your watchlist?';
+	String get remove => 'Remove';
+	String get clearAllTitle => 'Clear Watchlist';
+	String clearAllConfirm({required Object count}) => 'Remove all ${count} items from your watchlist?';
+	String get clearAll => 'Clear All';
+	String get addedToday => 'Added today';
+	String get addedYesterday => 'Added yesterday';
+	String addedDaysAgo({required Object days}) => 'Added ${days} days ago';
+	String addedOn({required Object date}) => 'Added on ${date}';
+	String get addToWatchlist => 'Add to Watchlist';
+	String get removeFromWatchlist => 'Remove from Watchlist';
+	String get addedToWatchlist => 'Added to watchlist';
+	String get removedFromWatchlist => 'Removed from watchlist';
+}
+
+// Path: liveTV
+class _StringsLiveTVEn {
+	_StringsLiveTVEn._(this._root);
+
+	final Translations _root; // ignore: unused_field
+
+	// Translations
+	String get title => 'Live TV';
+	String get guide => 'Guide';
+	String get dvr => 'DVR';
+	String get multiview => 'Multiview';
+	String get allChannels => 'All Channels';
+	String get favorites => 'Favorites';
+	String get noChannels => 'No channels available';
+	String get addM3USource => 'Add an M3U source in server settings';
+	String get recording => 'Recording';
+	String get recordingNow => 'Recording Now';
+	String get upNext => 'Up Next';
+	String get noProgram => 'No program info';
+	String get filterByGroup => 'Filter by group';
+	String get refresh => 'Refresh';
+	String channelCount({required Object count}) => '${count} channels';
+	String get nowPlaying => 'Now Playing';
+	String get scheduleRecording => 'Schedule Recording';
+	String get onNow => 'On Now';
+	String endsAt({required Object time}) => 'Ends at ${time}';
+	String startsAt({required Object time}) => 'Starts at ${time}';
+	String playbackError({required Object error}) => 'Playback error: ${error}';
+	String get noPreviousChannel => 'No previous channel';
+	String switchedTo({required Object channel}) => 'Switched to: ${channel}';
+	String get startingFromBeginning => 'Starting program from beginning...';
+	String failedToStartOver({required Object error}) => 'Failed to start over: ${error}';
+	String playingProgram({required Object title}) => 'Playing: ${title}';
+	String failedToPlayProgram({required Object error}) => 'Failed to play program: ${error}';
+	String get addedToFavorites => 'Added to favorites';
+	String get removedFromFavorites => 'Removed from favorites';
+	String failedToUpdateFavorite({required Object error}) => 'Failed to update favorite: ${error}';
+	String get pipNotSupported => 'Picture-in-Picture not supported on this platform';
+	String get enteredPipMode => 'Entered Picture-in-Picture mode';
+	String get exitedPipMode => 'Exited Picture-in-Picture mode';
+	String aspectRatioChanged({required Object mode}) => 'Aspect Ratio: ${mode}';
+	String get tune => 'Tune';
+	String get retry => 'Retry';
+	String get noChannelsMatchFilter => 'No channels match filter';
+	String get skipCommercial => 'Skip Commercial';
+}
+
+// Path: dvr
+class _StringsDvrEn {
+	_StringsDvrEn._(this._root);
+
+	final Translations _root; // ignore: unused_field
+
+	// Translations
+	String get title => 'DVR';
+	String get recordings => 'Recordings';
+	String get seriesRules => 'Series Rules';
+	String get noRecordings => 'No recordings';
+	String get noRules => 'No series rules';
+	String get scheduleFromGuide => 'Schedule recordings from the Live TV guide';
+	String get createRulesHint => 'Create rules to auto-record series';
+	String get storage => 'Storage';
+	String recordingsCount({required Object count}) => '${count} recordings';
+	String get all => 'All';
+	String get scheduled => 'Scheduled';
+	String get completed => 'Completed';
+	String get failed => 'Failed';
+	String get deleteRecording => 'Delete Recording?';
+	String get deleteRule => 'Delete Series Rule?';
+	String get sortByDate => 'Date';
+	String get sortByTitle => 'Title';
+	String get sortBySize => 'Size';
+	String get playRecording => 'Play recording';
+	String keepPolicy({required Object count}) => 'Keep ${count} episodes';
+	String get keepAll => 'Keep all';
+	String get recordingScheduled => 'Recording scheduled';
+	String get scheduleRecordingTitle => 'Schedule Recording';
+	String get schedule => 'Schedule';
+	String get cancel => 'Cancel';
+}
+
+// Path: epg
+class _StringsEpgEn {
+	_StringsEpgEn._(this._root);
+
+	final Translations _root; // ignore: unused_field
+
+	// Translations
+	String get title => 'TV Guide';
+	String get now => 'Now';
+	String get today => 'Today';
+	String get tomorrow => 'Tomorrow';
+	String get noPrograms => 'No program information available';
+	String get loading => 'Loading guide...';
+	String get record => 'Record';
+	String get reminder => 'Set Reminder';
+	String get moreInfo => 'More Info';
+	String get toggleView => 'Toggle view';
+	String get gridView => 'Grid view';
+	String get nowNextView => 'Now/Next view';
+}
+
+// Path: channelSurfing
+class _StringsChannelSurfingEn {
+	_StringsChannelSurfingEn._(this._root);
+
+	final Translations _root; // ignore: unused_field
+
+	// Translations
+	String get title => 'Channel Surfing';
+	String get kidsMode => 'Kids Mode';
+	String get loading => 'Loading channel surfing...';
+	String get failedToLoad => 'Failed to load content';
+	String get retry => 'Retry';
+	String get noContent => 'No content available';
+	String itemsAvailable({required Object count}) => '${count} items available';
+	String get startSurfing => 'Start Surfing';
+	String get pressBackToExit => 'Press back to exit';
+	String get description => 'Watch random movies and shows continuously';
+	String get noServers => 'No servers available';
+}
+
+// Path: virtualChannels
+class _StringsVirtualChannelsEn {
+	_StringsVirtualChannelsEn._(this._root);
+
+	final Translations _root; // ignore: unused_field
+
+	// Translations
+	String get title => 'Virtual Channels';
+	String get createChannel => 'Create Channel';
+	String get editChannel => 'Edit Channel';
+	String get deleteChannel => 'Delete Channel';
+	String get channelName => 'Channel Name';
+	String get channelNameHint => 'Enter channel name';
+	String get selectContent => 'Select Content';
+	String get noChannels => 'No virtual channels yet';
+	String get createFirst => 'Create your first virtual channel';
+	String get description => 'Create custom 24/7 channels from your media library';
+	String get shuffle => 'Shuffle Playback';
+	String get loop => 'Loop Playlist';
+	String get nowPlaying => 'Now Playing';
+	String get upNext => 'Up Next';
+	String get addMedia => 'Add Media';
+	String get removeMedia => 'Remove';
+	String get reorderMedia => 'Reorder';
+	String get confirmDelete => 'Are you sure you want to delete this channel?';
+	String get channelCreated => 'Channel created';
+	String get channelUpdated => 'Channel updated';
+	String get channelDeleted => 'Channel deleted';
+}
+
+// Path: multiview
+class _StringsMultiviewEn {
+	_StringsMultiviewEn._(this._root);
+
+	final Translations _root; // ignore: unused_field
+
+	// Translations
+	String get title => 'Multi-View';
+	String get changeLayout => 'Change Layout (L)';
+	String get addChannel => 'Add Channel (A)';
+	String get removeChannel => 'Remove Channel (R)';
+	String get swapChannel => 'Change Channel';
+	String get toggleMute => 'Toggle Mute (M)';
+	String get selectChannel => 'Select Channel';
+	String get searchChannels => 'Search channels...';
+	String get cancel => 'Cancel';
+	String channelNumber({required Object number}) => 'Ch. ${number}';
+}
+
+// Path: player
+class _StringsPlayerEn {
+	_StringsPlayerEn._(this._root);
+
+	final Translations _root; // ignore: unused_field
+
+	// Translations
+	String get playbackError => 'Playback Error';
+	String get error => 'Error';
+	String failedToStartPlayback({required Object error}) => 'Failed to start playback:\n${error}';
+	String get ok => 'OK';
+}
+
+// Path: downloads
+class _StringsDownloadsEn {
+	_StringsDownloadsEn._(this._root);
+
+	final Translations _root; // ignore: unused_field
+
+	// Translations
+	String get title => 'Downloads';
+	String get deleteAll => 'Delete All';
+	String get deleteAllTitle => 'Delete All Downloads?';
+	String deleteAllMessage({required Object count, required Object size}) => 'This will delete all ${count} downloads and free up ${size} of storage.';
+	String storageUsed({required Object size}) => 'Storage Used: ${size}';
+	String downloading({required Object count}) => 'Downloading (${count})';
+	String downloaded({required Object count}) => 'Downloaded (${count})';
+	String get noDownloads => 'No Downloads';
+	String get noDownloadsHint => 'Download movies and shows to watch offline';
+	String get deleteDownloadTitle => 'Delete Download?';
+	String deleteDownloadMessage({required Object title}) => 'Delete "${title}"?';
+	String get delete => 'Delete';
+	String get cancel => 'Cancel';
+	String get downloadFailed => 'Download failed';
+	String get paused => 'Paused';
+}
+
 // Path: libraries.tabs
 class _StringsLibrariesTabsEn {
 	_StringsLibrariesTabsEn._(this._root);
@@ -965,7 +1398,7 @@ class _StringsLibrariesGroupingsEn {
 }
 
 // Path: <root>
-class _StringsDe implements Translations {
+class _StringsDe extends Translations {
 	/// You can call this constructor and build your own translation instance of this locale.
 	/// Constructing via the enum [AppLocale.build] is preferred.
 	_StringsDe.build({Map<String, Node>? overrides, PluralResolver? cardinalResolver, PluralResolver? ordinalResolver})
@@ -975,7 +1408,9 @@ class _StringsDe implements Translations {
 		    overrides: overrides ?? {},
 		    cardinalResolver: cardinalResolver,
 		    ordinalResolver: ordinalResolver,
-		  ) {
+		  ),
+		  super.build(cardinalResolver: cardinalResolver, ordinalResolver: ordinalResolver) {
+		super.$meta.setFlatMapFunction($meta.getTranslation); // copy base translations to super.$meta
 		$meta.setFlatMapFunction(_flatMapFunction);
 	}
 
@@ -983,7 +1418,7 @@ class _StringsDe implements Translations {
 	@override final TranslationMetadata<AppLocale, Translations> $meta;
 
 	/// Access flat map
-	@override dynamic operator[](String key) => $meta.getTranslation(key);
+	@override dynamic operator[](String key) => $meta.getTranslation(key) ?? super.$meta.getTranslation(key);
 
 	@override late final _StringsDe _root = this; // ignore: unused_field
 
@@ -1009,20 +1444,32 @@ class _StringsDe implements Translations {
 	@override late final _StringsDialogDe dialog = _StringsDialogDe._(_root);
 	@override late final _StringsDiscoverDe discover = _StringsDiscoverDe._(_root);
 	@override late final _StringsErrorsDe errors = _StringsErrorsDe._(_root);
+	@override late final _StringsVoiceDe voice = _StringsVoiceDe._(_root);
 	@override late final _StringsLibrariesDe libraries = _StringsLibrariesDe._(_root);
 	@override late final _StringsAboutDe about = _StringsAboutDe._(_root);
 	@override late final _StringsServerSelectionDe serverSelection = _StringsServerSelectionDe._(_root);
 	@override late final _StringsHubDetailDe hubDetail = _StringsHubDetailDe._(_root);
 	@override late final _StringsLogsDe logs = _StringsLogsDe._(_root);
+	@override late final _StringsStatsDe stats = _StringsStatsDe._(_root);
 	@override late final _StringsLicensesDe licenses = _StringsLicensesDe._(_root);
 	@override late final _StringsNavigationDe navigation = _StringsNavigationDe._(_root);
 	@override late final _StringsPlaylistsDe playlists = _StringsPlaylistsDe._(_root);
 	@override late final _StringsCollectionsDe collections = _StringsCollectionsDe._(_root);
+	@override late final _StringsWatchPartyDe watchParty = _StringsWatchPartyDe._(_root);
+	@override late final _StringsCatchUpDe catchUp = _StringsCatchUpDe._(_root);
+	@override late final _StringsWatchlistDe watchlist = _StringsWatchlistDe._(_root);
+	@override late final _StringsLiveTVDe liveTV = _StringsLiveTVDe._(_root);
+	@override late final _StringsDvrDe dvr = _StringsDvrDe._(_root);
+	@override late final _StringsEpgDe epg = _StringsEpgDe._(_root);
+	@override late final _StringsChannelSurfingDe channelSurfing = _StringsChannelSurfingDe._(_root);
+	@override late final _StringsMultiviewDe multiview = _StringsMultiviewDe._(_root);
+	@override late final _StringsPlayerDe player = _StringsPlayerDe._(_root);
+	@override late final _StringsDownloadsDe downloads = _StringsDownloadsDe._(_root);
 }
 
 // Path: app
-class _StringsAppDe implements _StringsAppEn {
-	_StringsAppDe._(this._root);
+class _StringsAppDe extends _StringsAppEn {
+	_StringsAppDe._(_StringsDe root) : this._root = root, super._(root);
 
 	@override final _StringsDe _root; // ignore: unused_field
 
@@ -1032,8 +1479,8 @@ class _StringsAppDe implements _StringsAppEn {
 }
 
 // Path: auth
-class _StringsAuthDe implements _StringsAuthEn {
-	_StringsAuthDe._(this._root);
+class _StringsAuthDe extends _StringsAuthEn {
+	_StringsAuthDe._(_StringsDe root) : this._root = root, super._(root);
 
 	@override final _StringsDe _root; // ignore: unused_field
 
@@ -1080,11 +1527,24 @@ class _StringsAuthDe implements _StringsAuthEn {
 	@override String get passwordTooShort => 'Passwort muss mindestens 6 Zeichen haben';
 	@override String get invalidEmail => 'Bitte gültige E-Mail-Adresse eingeben';
 	@override String get firstUserNote => 'Erster Benutzer wird Administrator';
+	@override String get howConnecting => 'Wie möchten Sie sich verbinden?';
+	@override String get atHome => 'Zu Hause';
+	@override String get atHomeDescription => 'Server im lokalen Netzwerk automatisch erkennen';
+	@override String get awayFromHome => 'Unterwegs';
+	@override String get awayFromHomeDescription => 'Serveradresse manuell eingeben';
+	@override String get findYourServer => 'Server finden';
+	@override String get searching => 'Suche...';
+	@override String get checkingNetwork => 'Netzwerk wird überprüft...';
+	@override String get serversFound => 'Server gefunden';
+	@override String get scanAgain => 'Erneut suchen';
+	@override String get enterManually => 'Manuell eingeben';
+	@override String get noServersFound => 'Keine Server in Ihrem Netzwerk gefunden. Stellen Sie sicher, dass Ihr OpenFlix-Server läuft.';
+	@override String discoveryFailed({required Object error}) => 'Suche fehlgeschlagen: ${error}';
 }
 
 // Path: common
-class _StringsCommonDe implements _StringsCommonEn {
-	_StringsCommonDe._(this._root);
+class _StringsCommonDe extends _StringsCommonEn {
+	_StringsCommonDe._(_StringsDe root) : this._root = root, super._(root);
 
 	@override final _StringsDe _root; // ignore: unused_field
 
@@ -1113,11 +1573,17 @@ class _StringsCommonDe implements _StringsCommonEn {
 	@override String get delete => 'Löschen';
 	@override String get shuffle => 'Zufall';
 	@override String get addTo => 'Hinzufügen zu...';
+	@override String get remove => 'Remove';
+	@override String get play => 'Play';
+	@override String get details => 'Details';
+	@override String get seeAll => 'See All';
+	@override String get live => 'LIVE';
+	@override String get newLabel => 'NEU';
 }
 
 // Path: screens
-class _StringsScreensDe implements _StringsScreensEn {
-	_StringsScreensDe._(this._root);
+class _StringsScreensDe extends _StringsScreensEn {
+	_StringsScreensDe._(_StringsDe root) : this._root = root, super._(root);
 
 	@override final _StringsDe _root; // ignore: unused_field
 
@@ -1131,8 +1597,8 @@ class _StringsScreensDe implements _StringsScreensEn {
 }
 
 // Path: update
-class _StringsUpdateDe implements _StringsUpdateEn {
-	_StringsUpdateDe._(this._root);
+class _StringsUpdateDe extends _StringsUpdateEn {
+	_StringsUpdateDe._(_StringsDe root) : this._root = root, super._(root);
 
 	@override final _StringsDe _root; // ignore: unused_field
 
@@ -1147,13 +1613,20 @@ class _StringsUpdateDe implements _StringsUpdateEn {
 }
 
 // Path: settings
-class _StringsSettingsDe implements _StringsSettingsEn {
-	_StringsSettingsDe._(this._root);
+class _StringsSettingsDe extends _StringsSettingsEn {
+	_StringsSettingsDe._(_StringsDe root) : this._root = root, super._(root);
 
 	@override final _StringsDe _root; // ignore: unused_field
 
 	// Translations
 	@override String get title => 'Einstellungen';
+	@override String get profile => 'Profil';
+	@override String get noProfileSelected => 'Kein Profil ausgewählt';
+	@override String get kidsMode => 'Kindermodus';
+	@override String get switchProfile => 'Profil wechseln';
+	@override String get switchProfileDescription => 'Zu einem anderen Profil wechseln';
+	@override String get manageProfiles => 'Profile verwalten';
+	@override String get manageProfilesDescription => 'Profile hinzufügen, bearbeiten oder löschen';
 	@override String get language => 'Sprache';
 	@override String get theme => 'Design';
 	@override String get appearance => 'Darstellung';
@@ -1243,24 +1716,49 @@ class _StringsSettingsDe implements _StringsSettingsEn {
 	@override String get apiKey => 'API-Schlüssel';
 	@override String get tmdbApiKeySaved => 'TMDB-API-Schlüssel gespeichert';
 	@override String get tmdbApiKeyCleared => 'TMDB-API-Schlüssel gelöscht';
+	@override String get parentalControls => 'Kindersicherung';
+	@override String get enableParentalControls => 'Kindersicherung aktivieren';
+	@override String get enableParentalControlsDescription => 'Inhalte basierend auf Altersfreigaben einschränken';
+	@override String get setPin => 'PIN festlegen';
+	@override String get setPinDescription => 'Geben Sie eine 4-stellige PIN zum Schutz der Kindersicherung ein';
+	@override String get confirmPin => 'PIN bestätigen';
+	@override String get confirmPinDescription => 'Geben Sie die PIN zur Bestätigung erneut ein';
+	@override String get enterPin => 'PIN eingeben';
+	@override String get enterPinDescription => 'Geben Sie Ihre Kindersicherungs-PIN ein';
+	@override String get changePin => 'PIN ändern';
+	@override String get changePinDescription => 'Ändern Sie Ihre Kindersicherungs-PIN';
+	@override String get pinSet => 'Kindersicherungs-PIN erfolgreich festgelegt';
+	@override String get pinMismatch => 'PINs stimmen nicht überein. Bitte versuchen Sie es erneut.';
+	@override String get incorrectPin => 'Falsche PIN. Bitte versuchen Sie es erneut.';
+	@override String get maxMovieRating => 'Maximale Filmfreigabe';
+	@override String get maxTvRating => 'Maximale TV-Freigabe';
 }
 
 // Path: search
-class _StringsSearchDe implements _StringsSearchEn {
-	_StringsSearchDe._(this._root);
+class _StringsSearchDe extends _StringsSearchEn {
+	_StringsSearchDe._(_StringsDe root) : this._root = root, super._(root);
 
 	@override final _StringsDe _root; // ignore: unused_field
 
 	// Translations
 	@override String get hint => 'Filme, Serien, Musik suchen...';
 	@override String get tryDifferentTerm => 'Anderen Suchbegriff versuchen';
-	@override String get searchYourMedia => 'In den eigenen Medien suchen';
+	@override String get searchYourMedia => 'Medien durchsuchen';
 	@override String get enterTitleActorOrKeyword => 'Titel, Schauspieler oder Stichwort eingeben';
+	@override String get recentSearches => 'Letzte Suchen';
+	@override String get clear => 'Löschen';
+	@override String get voiceSearch => 'Sprachsuche';
+	@override String get listening => 'Höre zu...';
+	@override String get speakNow => 'Jetzt sprechen';
+	@override String get all => 'Alle';
+	@override String get movies => 'Filme';
+	@override String get tvShows => 'Serien';
+	@override String get music => 'Musik';
 }
 
 // Path: hotkeys
-class _StringsHotkeysDe implements _StringsHotkeysEn {
-	_StringsHotkeysDe._(this._root);
+class _StringsHotkeysDe extends _StringsHotkeysEn {
+	_StringsHotkeysDe._(_StringsDe root) : this._root = root, super._(root);
 
 	@override final _StringsDe _root; // ignore: unused_field
 
@@ -1270,8 +1768,8 @@ class _StringsHotkeysDe implements _StringsHotkeysEn {
 }
 
 // Path: pinEntry
-class _StringsPinEntryDe implements _StringsPinEntryEn {
-	_StringsPinEntryDe._(this._root);
+class _StringsPinEntryDe extends _StringsPinEntryEn {
+	_StringsPinEntryDe._(_StringsDe root) : this._root = root, super._(root);
 
 	@override final _StringsDe _root; // ignore: unused_field
 
@@ -1282,8 +1780,8 @@ class _StringsPinEntryDe implements _StringsPinEntryEn {
 }
 
 // Path: fileInfo
-class _StringsFileInfoDe implements _StringsFileInfoEn {
-	_StringsFileInfoDe._(this._root);
+class _StringsFileInfoDe extends _StringsFileInfoEn {
+	_StringsFileInfoDe._(_StringsDe root) : this._root = root, super._(root);
 
 	@override final _StringsDe _root; // ignore: unused_field
 
@@ -1314,8 +1812,8 @@ class _StringsFileInfoDe implements _StringsFileInfoEn {
 }
 
 // Path: mediaMenu
-class _StringsMediaMenuDe implements _StringsMediaMenuEn {
-	_StringsMediaMenuDe._(this._root);
+class _StringsMediaMenuDe extends _StringsMediaMenuEn {
+	_StringsMediaMenuDe._(_StringsDe root) : this._root = root, super._(root);
 
 	@override final _StringsDe _root; // ignore: unused_field
 
@@ -1330,8 +1828,8 @@ class _StringsMediaMenuDe implements _StringsMediaMenuEn {
 }
 
 // Path: accessibility
-class _StringsAccessibilityDe implements _StringsAccessibilityEn {
-	_StringsAccessibilityDe._(this._root);
+class _StringsAccessibilityDe extends _StringsAccessibilityEn {
+	_StringsAccessibilityDe._(_StringsDe root) : this._root = root, super._(root);
 
 	@override final _StringsDe _root; // ignore: unused_field
 
@@ -1347,8 +1845,8 @@ class _StringsAccessibilityDe implements _StringsAccessibilityEn {
 }
 
 // Path: tooltips
-class _StringsTooltipsDe implements _StringsTooltipsEn {
-	_StringsTooltipsDe._(this._root);
+class _StringsTooltipsDe extends _StringsTooltipsEn {
+	_StringsTooltipsDe._(_StringsDe root) : this._root = root, super._(root);
 
 	@override final _StringsDe _root; // ignore: unused_field
 
@@ -1359,8 +1857,8 @@ class _StringsTooltipsDe implements _StringsTooltipsEn {
 }
 
 // Path: videoControls
-class _StringsVideoControlsDe implements _StringsVideoControlsEn {
-	_StringsVideoControlsDe._(this._root);
+class _StringsVideoControlsDe extends _StringsVideoControlsEn {
+	_StringsVideoControlsDe._(_StringsDe root) : this._root = root, super._(root);
 
 	@override final _StringsDe _root; // ignore: unused_field
 
@@ -1378,6 +1876,11 @@ class _StringsVideoControlsDe implements _StringsVideoControlsEn {
 	@override String get stretch => 'Strecken';
 	@override String get lockRotation => 'Rotation sperren';
 	@override String get unlockRotation => 'Rotation entsperren';
+	@override String get lockScreen => 'Bildschirm sperren';
+	@override String get unlockScreen => 'Bildschirm entsperren';
+	@override String get screenLockButton => 'Bildschirmsperre';
+	@override String get screenLocked => 'Bildschirm gesperrt';
+	@override String get tapToUnlock => 'Zum Entsperren tippen';
 	@override String get sleepTimer => 'Schlaftimer';
 	@override String get timerActive => 'Schlaftimer aktiv';
 	@override String playbackWillPauseIn({required Object duration}) => 'Wiedergabe wird in ${duration} pausiert';
@@ -1408,8 +1911,8 @@ class _StringsVideoControlsDe implements _StringsVideoControlsEn {
 }
 
 // Path: userStatus
-class _StringsUserStatusDe implements _StringsUserStatusEn {
-	_StringsUserStatusDe._(this._root);
+class _StringsUserStatusDe extends _StringsUserStatusEn {
+	_StringsUserStatusDe._(_StringsDe root) : this._root = root, super._(root);
 
 	@override final _StringsDe _root; // ignore: unused_field
 
@@ -1421,8 +1924,8 @@ class _StringsUserStatusDe implements _StringsUserStatusEn {
 }
 
 // Path: messages
-class _StringsMessagesDe implements _StringsMessagesEn {
-	_StringsMessagesDe._(this._root);
+class _StringsMessagesDe extends _StringsMessagesEn {
+	_StringsMessagesDe._(_StringsDe root) : this._root = root, super._(root);
 
 	@override final _StringsDe _root; // ignore: unused_field
 
@@ -1460,8 +1963,8 @@ class _StringsMessagesDe implements _StringsMessagesEn {
 }
 
 // Path: profile
-class _StringsProfileDe implements _StringsProfileEn {
-	_StringsProfileDe._(this._root);
+class _StringsProfileDe extends _StringsProfileEn {
+	_StringsProfileDe._(_StringsDe root) : this._root = root, super._(root);
 
 	@override final _StringsDe _root; // ignore: unused_field
 
@@ -1470,8 +1973,8 @@ class _StringsProfileDe implements _StringsProfileEn {
 }
 
 // Path: subtitlingStyling
-class _StringsSubtitlingStylingDe implements _StringsSubtitlingStylingEn {
-	_StringsSubtitlingStylingDe._(this._root);
+class _StringsSubtitlingStylingDe extends _StringsSubtitlingStylingEn {
+	_StringsSubtitlingStylingDe._(_StringsDe root) : this._root = root, super._(root);
 
 	@override final _StringsDe _root; // ignore: unused_field
 
@@ -1486,8 +1989,8 @@ class _StringsSubtitlingStylingDe implements _StringsSubtitlingStylingEn {
 }
 
 // Path: dialog
-class _StringsDialogDe implements _StringsDialogEn {
-	_StringsDialogDe._(this._root);
+class _StringsDialogDe extends _StringsDialogEn {
+	_StringsDialogDe._(_StringsDe root) : this._root = root, super._(root);
 
 	@override final _StringsDe _root; // ignore: unused_field
 
@@ -1499,8 +2002,8 @@ class _StringsDialogDe implements _StringsDialogEn {
 }
 
 // Path: discover
-class _StringsDiscoverDe implements _StringsDiscoverEn {
-	_StringsDiscoverDe._(this._root);
+class _StringsDiscoverDe extends _StringsDiscoverEn {
+	_StringsDiscoverDe._(_StringsDe root) : this._root = root, super._(root);
 
 	@override final _StringsDe _root; // ignore: unused_field
 
@@ -1529,11 +2032,35 @@ class _StringsDiscoverDe implements _StringsDiscoverEn {
 	@override String get movie => 'Film';
 	@override String get tvShow => 'Serie';
 	@override String minutesLeft({required Object minutes}) => '${minutes} Min übrig';
+	@override String get whatsOnNow => 'Jetzt läuft';
+	@override String get channelGuide => 'Programmführer';
+	@override String get liveNow => 'Jetzt Live';
+	@override String get topTen => 'Top 10';
+	@override String get newBadge => 'NEU';
+	@override String get liveBadge => 'LIVE';
+	@override String get goodMorning => 'Good morning';
+	@override String get goodAfternoon => 'Good afternoon';
+	@override String get goodEvening => 'Good evening';
+	@override String get defaultUser => 'Guest';
+	@override String get yourNextWatch => 'Your Next Watch';
+	@override String pickedForYou({required Object name}) => 'Picked just for you, ${name}';
+	@override String get surpriseMe => 'Surprise Me';
+	@override String get randomPicker => 'Random Movie Picker';
+	@override String get noMoviesFound => 'No movies found in your library';
+	@override String get spinning => 'Picking something great...';
+	@override String get spinAgain => 'Spin Again';
+	@override String get calendar => 'Calendar';
+	@override String get today => 'Today';
+	@override String get item => 'item';
+	@override String get items => 'items';
+	@override String get loadingMovies => 'Lade deine Filme...';
+	@override String get noContentOnDate => 'No content added on this date';
+	@override String get noEpgData => 'Keine Programminformationen';
 }
 
 // Path: errors
-class _StringsErrorsDe implements _StringsErrorsEn {
-	_StringsErrorsDe._(this._root);
+class _StringsErrorsDe extends _StringsErrorsEn {
+	_StringsErrorsDe._(_StringsDe root) : this._root = root, super._(root);
 
 	@override final _StringsDe _root; // ignore: unused_field
 
@@ -1550,11 +2077,23 @@ class _StringsErrorsDe implements _StringsErrorsEn {
 	@override String failedToVerifyToken({required Object error}) => 'Token-Verifizierung fehlgeschlagen: ${error}';
 	@override String failedToSwitchProfile({required Object displayName}) => 'Profilwechsel zu ${displayName} fehlgeschlagen';
 	@override String get connectionFailedGeneric => 'Verbindung fehlgeschlagen';
+	@override String failedToRemove({required Object error}) => 'Entfernen fehlgeschlagen: ${error}';
+}
+
+// Path: voice
+class _StringsVoiceDe extends _StringsVoiceEn {
+	_StringsVoiceDe._(_StringsDe root) : this._root = root, super._(root);
+
+	@override final _StringsDe _root; // ignore: unused_field
+
+	// Translations
+	@override String get notAvailable => 'Sprachsteuerung ist nicht verfügbar';
+	@override String commandNotRecognized({required Object command}) => 'Befehl nicht erkannt: "${command}"';
 }
 
 // Path: libraries
-class _StringsLibrariesDe implements _StringsLibrariesEn {
-	_StringsLibrariesDe._(this._root);
+class _StringsLibrariesDe extends _StringsLibrariesEn {
+	_StringsLibrariesDe._(_StringsDe root) : this._root = root, super._(root);
 
 	@override final _StringsDe _root; // ignore: unused_field
 
@@ -1601,8 +2140,8 @@ class _StringsLibrariesDe implements _StringsLibrariesEn {
 }
 
 // Path: about
-class _StringsAboutDe implements _StringsAboutEn {
-	_StringsAboutDe._(this._root);
+class _StringsAboutDe extends _StringsAboutEn {
+	_StringsAboutDe._(_StringsDe root) : this._root = root, super._(root);
 
 	@override final _StringsDe _root; // ignore: unused_field
 
@@ -1615,8 +2154,8 @@ class _StringsAboutDe implements _StringsAboutEn {
 }
 
 // Path: serverSelection
-class _StringsServerSelectionDe implements _StringsServerSelectionEn {
-	_StringsServerSelectionDe._(this._root);
+class _StringsServerSelectionDe extends _StringsServerSelectionEn {
+	_StringsServerSelectionDe._(_StringsDe root) : this._root = root, super._(root);
 
 	@override final _StringsDe _root; // ignore: unused_field
 
@@ -1641,8 +2180,8 @@ class _StringsServerSelectionDe implements _StringsServerSelectionEn {
 }
 
 // Path: hubDetail
-class _StringsHubDetailDe implements _StringsHubDetailEn {
-	_StringsHubDetailDe._(this._root);
+class _StringsHubDetailDe extends _StringsHubDetailEn {
+	_StringsHubDetailDe._(_StringsDe root) : this._root = root, super._(root);
 
 	@override final _StringsDe _root; // ignore: unused_field
 
@@ -1655,8 +2194,8 @@ class _StringsHubDetailDe implements _StringsHubDetailEn {
 }
 
 // Path: logs
-class _StringsLogsDe implements _StringsLogsEn {
-	_StringsLogsDe._(this._root);
+class _StringsLogsDe extends _StringsLogsEn {
+	_StringsLogsDe._(_StringsDe root) : this._root = root, super._(root);
 
 	@override final _StringsDe _root; // ignore: unused_field
 
@@ -1670,9 +2209,28 @@ class _StringsLogsDe implements _StringsLogsEn {
 	@override String get stackTrace => 'Stacktrace:';
 }
 
+// Path: stats
+class _StringsStatsDe extends _StringsStatsEn {
+	_StringsStatsDe._(_StringsDe root) : this._root = root, super._(root);
+
+	@override final _StringsDe _root; // ignore: unused_field
+
+	// Translations
+	@override String get title => 'Wiedergabestatistik';
+	@override String get totalWatchTime => 'Gesamte Wiedergabezeit';
+	@override String get moviesWatched => 'Filme gesehen';
+	@override String get episodesWatched => 'Episoden gesehen';
+	@override String get avgPerDay => 'Durchschnitt pro Tag';
+	@override String get topGenres => 'Top-Genres';
+	@override String get monthlyActivity => 'Monatliche Aktivität';
+	@override String get noData => 'Noch kein Wiedergabeverlauf';
+	@override String get startWatching => 'Schauen Sie etwas, um Ihre Statistiken zu sehen';
+	@override String get days => 'Tage';
+}
+
 // Path: licenses
-class _StringsLicensesDe implements _StringsLicensesEn {
-	_StringsLicensesDe._(this._root);
+class _StringsLicensesDe extends _StringsLicensesEn {
+	_StringsLicensesDe._(_StringsDe root) : this._root = root, super._(root);
 
 	@override final _StringsDe _root; // ignore: unused_field
 
@@ -1684,8 +2242,8 @@ class _StringsLicensesDe implements _StringsLicensesEn {
 }
 
 // Path: navigation
-class _StringsNavigationDe implements _StringsNavigationEn {
-	_StringsNavigationDe._(this._root);
+class _StringsNavigationDe extends _StringsNavigationEn {
+	_StringsNavigationDe._(_StringsDe root) : this._root = root, super._(root);
 
 	@override final _StringsDe _root; // ignore: unused_field
 
@@ -1698,8 +2256,8 @@ class _StringsNavigationDe implements _StringsNavigationEn {
 }
 
 // Path: playlists
-class _StringsPlaylistsDe implements _StringsPlaylistsEn {
-	_StringsPlaylistsDe._(this._root);
+class _StringsPlaylistsDe extends _StringsPlaylistsEn {
+	_StringsPlaylistsDe._(_StringsDe root) : this._root = root, super._(root);
 
 	@override final _StringsDe _root; // ignore: unused_field
 
@@ -1742,8 +2300,8 @@ class _StringsPlaylistsDe implements _StringsPlaylistsEn {
 }
 
 // Path: collections
-class _StringsCollectionsDe implements _StringsCollectionsEn {
-	_StringsCollectionsDe._(this._root);
+class _StringsCollectionsDe extends _StringsCollectionsEn {
+	_StringsCollectionsDe._(_StringsDe root) : this._root = root, super._(root);
 
 	@override final _StringsDe _root; // ignore: unused_field
 
@@ -1774,9 +2332,276 @@ class _StringsCollectionsDe implements _StringsCollectionsEn {
 	@override String removeFromCollectionError({required Object error}) => 'Fehler beim Entfernen aus der Sammlung: ${error}';
 }
 
+// Path: watchParty
+class _StringsWatchPartyDe extends _StringsWatchPartyEn {
+	_StringsWatchPartyDe._(_StringsDe root) : this._root = root, super._(root);
+
+	@override final _StringsDe _root; // ignore: unused_field
+
+	// Translations
+	@override String get title => 'Watch Party';
+	@override String get startParty => 'Watch Party starten';
+	@override String get joinParty => 'Party beitreten';
+	@override String get enterCode => 'Party-Code eingeben';
+	@override String get shareCode => 'Diesen Code teilen';
+	@override String get friendsCanJoin => 'Freunde können mit diesem Code beitreten';
+	@override String get participants => 'Teilnehmer';
+	@override String get host => 'Host';
+	@override String get endParty => 'Party beenden';
+	@override String get leaveParty => 'Party verlassen';
+	@override String get partyEnded => 'Watch Party beendet';
+	@override String get chat => 'Chat';
+	@override String get typeMessage => 'Nachricht eingeben...';
+	@override String joined({required Object name}) => '${name} ist beigetreten';
+	@override String left({required Object name}) => '${name} hat verlassen';
+	@override String get syncedPlayback => 'Wiedergabe ist mit der Party synchronisiert';
+	@override String get hostControls => 'Nur der Host kann die Wiedergabe steuern';
+	@override String get creating => 'Party wird erstellt...';
+	@override String get joining => 'Beitritt zur Party...';
+	@override String get createFailed => 'Party konnte nicht erstellt werden';
+	@override String get joinFailed => 'Beitritt zur Party fehlgeschlagen';
+	@override String get invalidCode => 'Ungültiger Party-Code';
+	@override String get gotIt => 'Verstanden';
+}
+
+// Path: catchUp
+class _StringsCatchUpDe extends _StringsCatchUpEn {
+	_StringsCatchUpDe._(_StringsDe root) : this._root = root, super._(root);
+
+	@override final _StringsDe _root; // ignore: unused_field
+
+	// Translations
+	@override String get title => 'Catch Up TV';
+	@override String get startOver => 'Von Anfang an';
+	@override String get startOverDescription => 'Von Anfang an schauen';
+	@override String get watchFromBeginning => 'Von Anfang an schauen?';
+	@override String alreadyStarted({required Object title}) => '"${title}" hat bereits begonnen. Sie können von Anfang an schauen.';
+	@override String get watchLive => 'Live schauen';
+	@override String get programsAvailable => 'Verfügbare Sendungen';
+	@override String get noProgramsAvailable => 'Keine Catch-up Sendungen verfügbar';
+	@override String get programsWillAppear => 'Sendungen erscheinen hier, wenn sie ausgestrahlt werden';
+	@override String get unavailable => 'Nicht verfügbar';
+	@override String get bufferNotReady => 'Puffer noch nicht bereit';
+	@override String get rewind => 'Zurückspulen';
+	@override String get timeshiftEnabled => 'Timeshift aktiviert';
+	@override String goBackTo({required Object time}) => 'Zurück zu ${time}';
+}
+
+// Path: watchlist
+class _StringsWatchlistDe extends _StringsWatchlistEn {
+	_StringsWatchlistDe._(_StringsDe root) : this._root = root, super._(root);
+
+	@override final _StringsDe _root; // ignore: unused_field
+
+	// Translations
+	@override String get title => 'Meine Merkliste';
+	@override String get all => 'Alle';
+	@override String get movies => 'Filme';
+	@override String get shows => 'Serien';
+	@override String get episodes => 'Episoden';
+	@override String get empty => 'Ihre Merkliste ist leer';
+	@override String get emptyHint => 'Fügen Sie Filme und Serien zu Ihrer Merkliste hinzu';
+	@override String get noItemsFiltered => 'Keine Elemente entsprechen diesem Filter';
+	@override String get removeTitle => 'Von Merkliste entfernen';
+	@override String removeConfirm({required Object title}) => '"${title}" von Ihrer Merkliste entfernen?';
+	@override String get remove => 'Remove';
+	@override String get play => 'Play';
+	@override String get details => 'Details';
+	@override String get seeAll => 'See All';
+	@override String get clearAllTitle => 'Merkliste leeren';
+	@override String clearAllConfirm({required Object count}) => 'Alle ${count} Elemente von Ihrer Merkliste entfernen?';
+	@override String get clearAll => 'Alle löschen';
+	@override String get addedToday => 'Heute hinzugefügt';
+	@override String get addedYesterday => 'Gestern hinzugefügt';
+	@override String addedDaysAgo({required Object days}) => 'Vor ${days} Tagen hinzugefügt';
+	@override String addedOn({required Object date}) => 'Hinzugefügt am ${date}';
+	@override String get addToWatchlist => 'Zur Merkliste hinzufügen';
+	@override String get removeFromWatchlist => 'Von Merkliste entfernen';
+	@override String get addedToWatchlist => 'Zur Merkliste hinzugefügt';
+	@override String get removedFromWatchlist => 'Von Merkliste entfernt';
+}
+
+// Path: liveTV
+class _StringsLiveTVDe extends _StringsLiveTVEn {
+	_StringsLiveTVDe._(_StringsDe root) : this._root = root, super._(root);
+
+	@override final _StringsDe _root; // ignore: unused_field
+
+	// Translations
+	@override String get title => 'Live TV';
+	@override String get guide => 'Guide';
+	@override String get dvr => 'DVR';
+	@override String get multiview => 'Multiview';
+	@override String get allChannels => 'Alle Kanäle';
+	@override String get favorites => 'Favoriten';
+	@override String get noChannels => 'Keine Kanäle verfügbar';
+	@override String get addM3USource => 'M3U-Quelle in Server-Einstellungen hinzufügen';
+	@override String get recording => 'Aufnahme';
+	@override String get recordingNow => 'Jetzt aufnehmen';
+	@override String get upNext => 'Als nächstes';
+	@override String get noProgram => 'Keine Programminfo';
+	@override String get filterByGroup => 'Nach Gruppe filtern';
+	@override String get refresh => 'Aktualisieren';
+	@override String channelCount({required Object count}) => '${count} Kanäle';
+	@override String get nowPlaying => 'Läuft gerade';
+	@override String get scheduleRecording => 'Aufnahme planen';
+	@override String get onNow => 'Jetzt';
+	@override String endsAt({required Object time}) => 'Endet um ${time}';
+	@override String startsAt({required Object time}) => 'Beginnt um ${time}';
+	@override String playbackError({required Object error}) => 'Wiedergabefehler: ${error}';
+	@override String get noPreviousChannel => 'Kein vorheriger Sender';
+	@override String switchedTo({required Object channel}) => 'Gewechselt zu: ${channel}';
+	@override String get startingFromBeginning => 'Starte Sendung von Anfang...';
+	@override String failedToStartOver({required Object error}) => 'Neustart fehlgeschlagen: ${error}';
+	@override String playingProgram({required Object title}) => 'Wiedergabe: ${title}';
+	@override String failedToPlayProgram({required Object error}) => 'Sendung abspielen fehlgeschlagen: ${error}';
+	@override String get addedToFavorites => 'Zu Favoriten hinzugefügt';
+	@override String get removedFromFavorites => 'Aus Favoriten entfernt';
+	@override String failedToUpdateFavorite({required Object error}) => 'Favorit aktualisieren fehlgeschlagen: ${error}';
+	@override String get pipNotSupported => 'Bild-in-Bild wird auf dieser Plattform nicht unterstützt';
+	@override String get enteredPipMode => 'Bild-in-Bild-Modus aktiviert';
+	@override String get exitedPipMode => 'Bild-in-Bild-Modus beendet';
+	@override String aspectRatioChanged({required Object mode}) => 'Seitenverhältnis: ${mode}';
+	@override String get tune => 'Einschalten';
+	@override String get retry => 'Wiederholen';
+	@override String get noChannelsMatchFilter => 'Keine Sender entsprechen dem Filter';
+	@override String get skipCommercial => 'Werbung überspringen';
+}
+
+// Path: dvr
+class _StringsDvrDe extends _StringsDvrEn {
+	_StringsDvrDe._(_StringsDe root) : this._root = root, super._(root);
+
+	@override final _StringsDe _root; // ignore: unused_field
+
+	// Translations
+	@override String get title => 'DVR';
+	@override String get recordings => 'Aufnahmen';
+	@override String get seriesRules => 'Serienregeln';
+	@override String get noRecordings => 'Keine Aufnahmen';
+	@override String get noRules => 'Keine Serienregeln';
+	@override String get scheduleFromGuide => 'Aufnahmen vom TV-Guide planen';
+	@override String get createRulesHint => 'Regeln für Auto-Aufnahme erstellen';
+	@override String get storage => 'Speicher';
+	@override String recordingsCount({required Object count}) => '${count} Aufnahmen';
+	@override String get all => 'Alle';
+	@override String get scheduled => 'Geplant';
+	@override String get completed => 'Fertig';
+	@override String get failed => 'Fehlgeschlagen';
+	@override String get deleteRecording => 'Aufnahme löschen?';
+	@override String get deleteRule => 'Serienregel löschen?';
+	@override String get sortByDate => 'Datum';
+	@override String get sortByTitle => 'Titel';
+	@override String get sortBySize => 'Größe';
+	@override String get playRecording => 'Aufnahme abspielen';
+	@override String keepPolicy({required Object count}) => '${count} Folgen behalten';
+	@override String get keepAll => 'Alle behalten';
+	@override String get recordingScheduled => 'Aufnahme geplant';
+	@override String get scheduleRecordingTitle => 'Aufnahme planen';
+	@override String get schedule => 'Planen';
+	@override String get cancel => 'Abbrechen';
+}
+
+// Path: epg
+class _StringsEpgDe extends _StringsEpgEn {
+	_StringsEpgDe._(_StringsDe root) : this._root = root, super._(root);
+
+	@override final _StringsDe _root; // ignore: unused_field
+
+	// Translations
+	@override String get title => 'TV Guide';
+	@override String get now => 'Jetzt';
+	@override String get today => 'Heute';
+	@override String get tomorrow => 'Morgen';
+	@override String get noPrograms => 'Keine Programminfos verfügbar';
+	@override String get loading => 'Guide wird geladen...';
+	@override String get record => 'Aufnehmen';
+	@override String get reminder => 'Erinnerung setzen';
+	@override String get moreInfo => 'Mehr Info';
+	@override String get toggleView => 'Ansicht wechseln';
+	@override String get gridView => 'Rasteransicht';
+	@override String get nowNextView => 'Jetzt/Gleich Ansicht';
+}
+
+// Path: channelSurfing
+class _StringsChannelSurfingDe extends _StringsChannelSurfingEn {
+	_StringsChannelSurfingDe._(_StringsDe root) : this._root = root, super._(root);
+
+	@override final _StringsDe _root; // ignore: unused_field
+
+	// Translations
+	@override String get title => 'Zufallswiedergabe';
+	@override String get kidsMode => 'Kindermodus';
+	@override String get loading => 'Zufallswiedergabe wird geladen...';
+	@override String get failedToLoad => 'Inhalt konnte nicht geladen werden';
+	@override String get retry => 'Erneut versuchen';
+	@override String get noContent => 'Kein Inhalt verfügbar';
+	@override String itemsAvailable({required Object count}) => '${count} Elemente verfügbar';
+	@override String get startSurfing => 'Starten';
+	@override String get pressBackToExit => 'Zurück zum Beenden';
+	@override String get description => 'Zufällige Filme und Serien durchgehend abspielen';
+	@override String get noServers => 'Keine Server verfügbar';
+}
+
+// Path: multiview
+class _StringsMultiviewDe extends _StringsMultiviewEn {
+	_StringsMultiviewDe._(_StringsDe root) : this._root = root, super._(root);
+
+	@override final _StringsDe _root; // ignore: unused_field
+
+	// Translations
+	@override String get title => 'Multi-Ansicht';
+	@override String get changeLayout => 'Layout ändern (L)';
+	@override String get addChannel => 'Kanal hinzufügen (A)';
+	@override String get removeChannel => 'Kanal entfernen (R)';
+	@override String get swapChannel => 'Kanal wechseln';
+	@override String get toggleMute => 'Stumm schalten (M)';
+	@override String get selectChannel => 'Kanal auswählen';
+	@override String get searchChannels => 'Kanäle suchen...';
+	@override String get cancel => 'Abbrechen';
+	@override String channelNumber({required Object number}) => 'K. ${number}';
+}
+
+// Path: player
+class _StringsPlayerDe extends _StringsPlayerEn {
+	_StringsPlayerDe._(_StringsDe root) : this._root = root, super._(root);
+
+	@override final _StringsDe _root; // ignore: unused_field
+
+	// Translations
+	@override String get playbackError => 'Wiedergabefehler';
+	@override String get error => 'Fehler';
+	@override String failedToStartPlayback({required Object error}) => 'Wiedergabe konnte nicht gestartet werden:\n${error}';
+	@override String get ok => 'OK';
+}
+
+// Path: downloads
+class _StringsDownloadsDe extends _StringsDownloadsEn {
+	_StringsDownloadsDe._(_StringsDe root) : this._root = root, super._(root);
+
+	@override final _StringsDe _root; // ignore: unused_field
+
+	// Translations
+	@override String get title => 'Downloads';
+	@override String get deleteAll => 'Alle löschen';
+	@override String get deleteAllTitle => 'Alle Downloads löschen?';
+	@override String deleteAllMessage({required Object count, required Object size}) => 'Dies löscht alle ${count} Downloads und gibt ${size} Speicherplatz frei.';
+	@override String storageUsed({required Object size}) => 'Speicher belegt: ${size}';
+	@override String downloading({required Object count}) => 'Wird heruntergeladen (${count})';
+	@override String downloaded({required Object count}) => 'Heruntergeladen (${count})';
+	@override String get noDownloads => 'Keine Downloads';
+	@override String get noDownloadsHint => 'Laden Sie Filme und Serien herunter, um sie offline anzusehen';
+	@override String get deleteDownloadTitle => 'Download löschen?';
+	@override String deleteDownloadMessage({required Object title}) => '"${title}" löschen?';
+	@override String get delete => 'Löschen';
+	@override String get cancel => 'Abbrechen';
+	@override String get downloadFailed => 'Download fehlgeschlagen';
+	@override String get paused => 'Pausiert';
+}
+
 // Path: libraries.tabs
-class _StringsLibrariesTabsDe implements _StringsLibrariesTabsEn {
-	_StringsLibrariesTabsDe._(this._root);
+class _StringsLibrariesTabsDe extends _StringsLibrariesTabsEn {
+	_StringsLibrariesTabsDe._(_StringsDe root) : this._root = root, super._(root);
 
 	@override final _StringsDe _root; // ignore: unused_field
 
@@ -1788,8 +2613,8 @@ class _StringsLibrariesTabsDe implements _StringsLibrariesTabsEn {
 }
 
 // Path: libraries.groupings
-class _StringsLibrariesGroupingsDe implements _StringsLibrariesGroupingsEn {
-	_StringsLibrariesGroupingsDe._(this._root);
+class _StringsLibrariesGroupingsDe extends _StringsLibrariesGroupingsEn {
+	_StringsLibrariesGroupingsDe._(_StringsDe root) : this._root = root, super._(root);
 
 	@override final _StringsDe _root; // ignore: unused_field
 
@@ -1803,7 +2628,7 @@ class _StringsLibrariesGroupingsDe implements _StringsLibrariesGroupingsEn {
 }
 
 // Path: <root>
-class _StringsIt implements Translations {
+class _StringsIt extends Translations {
 	/// You can call this constructor and build your own translation instance of this locale.
 	/// Constructing via the enum [AppLocale.build] is preferred.
 	_StringsIt.build({Map<String, Node>? overrides, PluralResolver? cardinalResolver, PluralResolver? ordinalResolver})
@@ -1813,7 +2638,9 @@ class _StringsIt implements Translations {
 		    overrides: overrides ?? {},
 		    cardinalResolver: cardinalResolver,
 		    ordinalResolver: ordinalResolver,
-		  ) {
+		  ),
+		  super.build(cardinalResolver: cardinalResolver, ordinalResolver: ordinalResolver) {
+		super.$meta.setFlatMapFunction($meta.getTranslation); // copy base translations to super.$meta
 		$meta.setFlatMapFunction(_flatMapFunction);
 	}
 
@@ -1821,7 +2648,7 @@ class _StringsIt implements Translations {
 	@override final TranslationMetadata<AppLocale, Translations> $meta;
 
 	/// Access flat map
-	@override dynamic operator[](String key) => $meta.getTranslation(key);
+	@override dynamic operator[](String key) => $meta.getTranslation(key) ?? super.$meta.getTranslation(key);
 
 	@override late final _StringsIt _root = this; // ignore: unused_field
 
@@ -1847,20 +2674,32 @@ class _StringsIt implements Translations {
 	@override late final _StringsDialogIt dialog = _StringsDialogIt._(_root);
 	@override late final _StringsDiscoverIt discover = _StringsDiscoverIt._(_root);
 	@override late final _StringsErrorsIt errors = _StringsErrorsIt._(_root);
+	@override late final _StringsVoiceIt voice = _StringsVoiceIt._(_root);
 	@override late final _StringsLibrariesIt libraries = _StringsLibrariesIt._(_root);
 	@override late final _StringsAboutIt about = _StringsAboutIt._(_root);
 	@override late final _StringsServerSelectionIt serverSelection = _StringsServerSelectionIt._(_root);
 	@override late final _StringsHubDetailIt hubDetail = _StringsHubDetailIt._(_root);
 	@override late final _StringsLogsIt logs = _StringsLogsIt._(_root);
+	@override late final _StringsStatsIt stats = _StringsStatsIt._(_root);
 	@override late final _StringsLicensesIt licenses = _StringsLicensesIt._(_root);
 	@override late final _StringsNavigationIt navigation = _StringsNavigationIt._(_root);
 	@override late final _StringsPlaylistsIt playlists = _StringsPlaylistsIt._(_root);
 	@override late final _StringsCollectionsIt collections = _StringsCollectionsIt._(_root);
+	@override late final _StringsWatchPartyIt watchParty = _StringsWatchPartyIt._(_root);
+	@override late final _StringsCatchUpIt catchUp = _StringsCatchUpIt._(_root);
+	@override late final _StringsWatchlistIt watchlist = _StringsWatchlistIt._(_root);
+	@override late final _StringsLiveTVIt liveTV = _StringsLiveTVIt._(_root);
+	@override late final _StringsDvrIt dvr = _StringsDvrIt._(_root);
+	@override late final _StringsEpgIt epg = _StringsEpgIt._(_root);
+	@override late final _StringsChannelSurfingIt channelSurfing = _StringsChannelSurfingIt._(_root);
+	@override late final _StringsMultiviewIt multiview = _StringsMultiviewIt._(_root);
+	@override late final _StringsPlayerIt player = _StringsPlayerIt._(_root);
+	@override late final _StringsDownloadsIt downloads = _StringsDownloadsIt._(_root);
 }
 
 // Path: app
-class _StringsAppIt implements _StringsAppEn {
-	_StringsAppIt._(this._root);
+class _StringsAppIt extends _StringsAppEn {
+	_StringsAppIt._(_StringsIt root) : this._root = root, super._(root);
 
 	@override final _StringsIt _root; // ignore: unused_field
 
@@ -1870,8 +2709,8 @@ class _StringsAppIt implements _StringsAppEn {
 }
 
 // Path: auth
-class _StringsAuthIt implements _StringsAuthEn {
-	_StringsAuthIt._(this._root);
+class _StringsAuthIt extends _StringsAuthEn {
+	_StringsAuthIt._(_StringsIt root) : this._root = root, super._(root);
 
 	@override final _StringsIt _root; // ignore: unused_field
 
@@ -1918,11 +2757,24 @@ class _StringsAuthIt implements _StringsAuthEn {
 	@override String get passwordTooShort => 'La password deve avere almeno 6 caratteri';
 	@override String get invalidEmail => 'Inserisci un indirizzo email valido';
 	@override String get firstUserNote => 'Il primo utente sarà l\'amministratore';
+	@override String get howConnecting => 'Come ti stai connettendo?';
+	@override String get atHome => 'A casa';
+	@override String get atHomeDescription => 'Rileva automaticamente il server sulla rete locale';
+	@override String get awayFromHome => 'Fuori casa';
+	@override String get awayFromHomeDescription => 'Inserisci l\'indirizzo del server manualmente';
+	@override String get findYourServer => 'Trova il tuo server';
+	@override String get searching => 'Ricerca...';
+	@override String get checkingNetwork => 'Controllo rete...';
+	@override String get serversFound => 'Server trovati';
+	@override String get scanAgain => 'Cerca di nuovo';
+	@override String get enterManually => 'Inserisci manualmente';
+	@override String get noServersFound => 'Nessun server trovato nella tua rete. Assicurati che il server OpenFlix sia in esecuzione.';
+	@override String discoveryFailed({required Object error}) => 'Ricerca fallita: ${error}';
 }
 
 // Path: common
-class _StringsCommonIt implements _StringsCommonEn {
-	_StringsCommonIt._(this._root);
+class _StringsCommonIt extends _StringsCommonEn {
+	_StringsCommonIt._(_StringsIt root) : this._root = root, super._(root);
 
 	@override final _StringsIt _root; // ignore: unused_field
 
@@ -1951,11 +2803,17 @@ class _StringsCommonIt implements _StringsCommonEn {
 	@override String get delete => 'Elimina';
 	@override String get shuffle => 'Casuale';
 	@override String get addTo => 'Aggiungi a...';
+	@override String get remove => 'Remove';
+	@override String get play => 'Play';
+	@override String get details => 'Details';
+	@override String get seeAll => 'See All';
+	@override String get live => 'LIVE';
+	@override String get newLabel => 'NUOVO';
 }
 
 // Path: screens
-class _StringsScreensIt implements _StringsScreensEn {
-	_StringsScreensIt._(this._root);
+class _StringsScreensIt extends _StringsScreensEn {
+	_StringsScreensIt._(_StringsIt root) : this._root = root, super._(root);
 
 	@override final _StringsIt _root; // ignore: unused_field
 
@@ -1969,8 +2827,8 @@ class _StringsScreensIt implements _StringsScreensEn {
 }
 
 // Path: update
-class _StringsUpdateIt implements _StringsUpdateEn {
-	_StringsUpdateIt._(this._root);
+class _StringsUpdateIt extends _StringsUpdateEn {
+	_StringsUpdateIt._(_StringsIt root) : this._root = root, super._(root);
 
 	@override final _StringsIt _root; // ignore: unused_field
 
@@ -1985,13 +2843,20 @@ class _StringsUpdateIt implements _StringsUpdateEn {
 }
 
 // Path: settings
-class _StringsSettingsIt implements _StringsSettingsEn {
-	_StringsSettingsIt._(this._root);
+class _StringsSettingsIt extends _StringsSettingsEn {
+	_StringsSettingsIt._(_StringsIt root) : this._root = root, super._(root);
 
 	@override final _StringsIt _root; // ignore: unused_field
 
 	// Translations
 	@override String get title => 'Impostazioni';
+	@override String get profile => 'Profilo';
+	@override String get noProfileSelected => 'Nessun profilo selezionato';
+	@override String get kidsMode => 'Modalità bambini';
+	@override String get switchProfile => 'Cambia profilo';
+	@override String get switchProfileDescription => 'Passa a un altro profilo';
+	@override String get manageProfiles => 'Gestisci profili';
+	@override String get manageProfilesDescription => 'Aggiungi, modifica o elimina profili';
 	@override String get language => 'Lingua';
 	@override String get theme => 'Tema';
 	@override String get appearance => 'Aspetto';
@@ -2081,24 +2946,49 @@ class _StringsSettingsIt implements _StringsSettingsEn {
 	@override String get apiKey => 'Chiave API';
 	@override String get tmdbApiKeySaved => 'Chiave API TMDB salvata';
 	@override String get tmdbApiKeyCleared => 'Chiave API TMDB eliminata';
+	@override String get parentalControls => 'Controllo Genitori';
+	@override String get enableParentalControls => 'Abilita Controllo Genitori';
+	@override String get enableParentalControlsDescription => 'Limita i contenuti in base alle classificazioni per età';
+	@override String get setPin => 'Imposta PIN';
+	@override String get setPinDescription => 'Inserisci un PIN a 4 cifre per proteggere le impostazioni';
+	@override String get confirmPin => 'Conferma PIN';
+	@override String get confirmPinDescription => 'Inserisci nuovamente il PIN per confermare';
+	@override String get enterPin => 'Inserisci PIN';
+	@override String get enterPinDescription => 'Inserisci il tuo PIN di controllo genitori';
+	@override String get changePin => 'Cambia PIN';
+	@override String get changePinDescription => 'Cambia il tuo PIN di controllo genitori';
+	@override String get pinSet => 'PIN di controllo genitori impostato con successo';
+	@override String get pinMismatch => 'I PIN non corrispondono. Riprova.';
+	@override String get incorrectPin => 'PIN errato. Riprova.';
+	@override String get maxMovieRating => 'Classificazione Film Massima';
+	@override String get maxTvRating => 'Classificazione TV Massima';
 }
 
 // Path: search
-class _StringsSearchIt implements _StringsSearchEn {
-	_StringsSearchIt._(this._root);
+class _StringsSearchIt extends _StringsSearchEn {
+	_StringsSearchIt._(_StringsIt root) : this._root = root, super._(root);
 
 	@override final _StringsIt _root; // ignore: unused_field
 
 	// Translations
-	@override String get hint => 'Cerca film. spettacoli, musica...';
+	@override String get hint => 'Cerca film, serie, musica...';
 	@override String get tryDifferentTerm => 'Prova altri termini di ricerca';
 	@override String get searchYourMedia => 'Cerca nei tuoi media';
 	@override String get enterTitleActorOrKeyword => 'Inserisci un titolo, attore o parola chiave';
+	@override String get recentSearches => 'Ricerche recenti';
+	@override String get clear => 'Cancella';
+	@override String get voiceSearch => 'Ricerca vocale';
+	@override String get listening => 'In ascolto...';
+	@override String get speakNow => 'Parla ora';
+	@override String get all => 'Tutto';
+	@override String get movies => 'Film';
+	@override String get tvShows => 'Serie TV';
+	@override String get music => 'Musica';
 }
 
 // Path: hotkeys
-class _StringsHotkeysIt implements _StringsHotkeysEn {
-	_StringsHotkeysIt._(this._root);
+class _StringsHotkeysIt extends _StringsHotkeysEn {
+	_StringsHotkeysIt._(_StringsIt root) : this._root = root, super._(root);
 
 	@override final _StringsIt _root; // ignore: unused_field
 
@@ -2108,8 +2998,8 @@ class _StringsHotkeysIt implements _StringsHotkeysEn {
 }
 
 // Path: pinEntry
-class _StringsPinEntryIt implements _StringsPinEntryEn {
-	_StringsPinEntryIt._(this._root);
+class _StringsPinEntryIt extends _StringsPinEntryEn {
+	_StringsPinEntryIt._(_StringsIt root) : this._root = root, super._(root);
 
 	@override final _StringsIt _root; // ignore: unused_field
 
@@ -2120,8 +3010,8 @@ class _StringsPinEntryIt implements _StringsPinEntryEn {
 }
 
 // Path: fileInfo
-class _StringsFileInfoIt implements _StringsFileInfoEn {
-	_StringsFileInfoIt._(this._root);
+class _StringsFileInfoIt extends _StringsFileInfoEn {
+	_StringsFileInfoIt._(_StringsIt root) : this._root = root, super._(root);
 
 	@override final _StringsIt _root; // ignore: unused_field
 
@@ -2152,8 +3042,8 @@ class _StringsFileInfoIt implements _StringsFileInfoEn {
 }
 
 // Path: mediaMenu
-class _StringsMediaMenuIt implements _StringsMediaMenuEn {
-	_StringsMediaMenuIt._(this._root);
+class _StringsMediaMenuIt extends _StringsMediaMenuEn {
+	_StringsMediaMenuIt._(_StringsIt root) : this._root = root, super._(root);
 
 	@override final _StringsIt _root; // ignore: unused_field
 
@@ -2168,8 +3058,8 @@ class _StringsMediaMenuIt implements _StringsMediaMenuEn {
 }
 
 // Path: accessibility
-class _StringsAccessibilityIt implements _StringsAccessibilityEn {
-	_StringsAccessibilityIt._(this._root);
+class _StringsAccessibilityIt extends _StringsAccessibilityEn {
+	_StringsAccessibilityIt._(_StringsIt root) : this._root = root, super._(root);
 
 	@override final _StringsIt _root; // ignore: unused_field
 
@@ -2185,8 +3075,8 @@ class _StringsAccessibilityIt implements _StringsAccessibilityEn {
 }
 
 // Path: tooltips
-class _StringsTooltipsIt implements _StringsTooltipsEn {
-	_StringsTooltipsIt._(this._root);
+class _StringsTooltipsIt extends _StringsTooltipsEn {
+	_StringsTooltipsIt._(_StringsIt root) : this._root = root, super._(root);
 
 	@override final _StringsIt _root; // ignore: unused_field
 
@@ -2197,8 +3087,8 @@ class _StringsTooltipsIt implements _StringsTooltipsEn {
 }
 
 // Path: videoControls
-class _StringsVideoControlsIt implements _StringsVideoControlsEn {
-	_StringsVideoControlsIt._(this._root);
+class _StringsVideoControlsIt extends _StringsVideoControlsEn {
+	_StringsVideoControlsIt._(_StringsIt root) : this._root = root, super._(root);
 
 	@override final _StringsIt _root; // ignore: unused_field
 
@@ -2216,6 +3106,11 @@ class _StringsVideoControlsIt implements _StringsVideoControlsEn {
 	@override String get stretch => 'Allunga';
 	@override String get lockRotation => 'Blocca rotazione';
 	@override String get unlockRotation => 'Sblocca rotazione';
+	@override String get lockScreen => 'Blocca schermo';
+	@override String get unlockScreen => 'Sblocca schermo';
+	@override String get screenLockButton => 'Blocco schermo';
+	@override String get screenLocked => 'Schermo bloccato';
+	@override String get tapToUnlock => 'Tocca per sbloccare';
 	@override String get sleepTimer => 'Timer di spegnimento';
 	@override String get timerActive => 'Timer attivo';
 	@override String playbackWillPauseIn({required Object duration}) => 'La riproduzione si interromperà tra ${duration}';
@@ -2246,8 +3141,8 @@ class _StringsVideoControlsIt implements _StringsVideoControlsEn {
 }
 
 // Path: userStatus
-class _StringsUserStatusIt implements _StringsUserStatusEn {
-	_StringsUserStatusIt._(this._root);
+class _StringsUserStatusIt extends _StringsUserStatusEn {
+	_StringsUserStatusIt._(_StringsIt root) : this._root = root, super._(root);
 
 	@override final _StringsIt _root; // ignore: unused_field
 
@@ -2259,8 +3154,8 @@ class _StringsUserStatusIt implements _StringsUserStatusEn {
 }
 
 // Path: messages
-class _StringsMessagesIt implements _StringsMessagesEn {
-	_StringsMessagesIt._(this._root);
+class _StringsMessagesIt extends _StringsMessagesEn {
+	_StringsMessagesIt._(_StringsIt root) : this._root = root, super._(root);
 
 	@override final _StringsIt _root; // ignore: unused_field
 
@@ -2298,8 +3193,8 @@ class _StringsMessagesIt implements _StringsMessagesEn {
 }
 
 // Path: profile
-class _StringsProfileIt implements _StringsProfileEn {
-	_StringsProfileIt._(this._root);
+class _StringsProfileIt extends _StringsProfileEn {
+	_StringsProfileIt._(_StringsIt root) : this._root = root, super._(root);
 
 	@override final _StringsIt _root; // ignore: unused_field
 
@@ -2308,8 +3203,8 @@ class _StringsProfileIt implements _StringsProfileEn {
 }
 
 // Path: subtitlingStyling
-class _StringsSubtitlingStylingIt implements _StringsSubtitlingStylingEn {
-	_StringsSubtitlingStylingIt._(this._root);
+class _StringsSubtitlingStylingIt extends _StringsSubtitlingStylingEn {
+	_StringsSubtitlingStylingIt._(_StringsIt root) : this._root = root, super._(root);
 
 	@override final _StringsIt _root; // ignore: unused_field
 
@@ -2324,8 +3219,8 @@ class _StringsSubtitlingStylingIt implements _StringsSubtitlingStylingEn {
 }
 
 // Path: dialog
-class _StringsDialogIt implements _StringsDialogEn {
-	_StringsDialogIt._(this._root);
+class _StringsDialogIt extends _StringsDialogEn {
+	_StringsDialogIt._(_StringsIt root) : this._root = root, super._(root);
 
 	@override final _StringsIt _root; // ignore: unused_field
 
@@ -2337,8 +3232,8 @@ class _StringsDialogIt implements _StringsDialogEn {
 }
 
 // Path: discover
-class _StringsDiscoverIt implements _StringsDiscoverEn {
-	_StringsDiscoverIt._(this._root);
+class _StringsDiscoverIt extends _StringsDiscoverEn {
+	_StringsDiscoverIt._(_StringsIt root) : this._root = root, super._(root);
 
 	@override final _StringsIt _root; // ignore: unused_field
 
@@ -2367,11 +3262,35 @@ class _StringsDiscoverIt implements _StringsDiscoverEn {
 	@override String get movie => 'Film';
 	@override String get tvShow => 'Serie TV';
 	@override String minutesLeft({required Object minutes}) => '${minutes} minuti rimanenti';
+	@override String get whatsOnNow => 'In onda ora';
+	@override String get channelGuide => 'Guida TV';
+	@override String get liveNow => 'In diretta';
+	@override String get topTen => 'Top 10';
+	@override String get newBadge => 'NUOVO';
+	@override String get liveBadge => 'LIVE';
+	@override String get goodMorning => 'Good morning';
+	@override String get goodAfternoon => 'Good afternoon';
+	@override String get goodEvening => 'Good evening';
+	@override String get defaultUser => 'Guest';
+	@override String get yourNextWatch => 'Your Next Watch';
+	@override String pickedForYou({required Object name}) => 'Picked just for you, ${name}';
+	@override String get surpriseMe => 'Surprise Me';
+	@override String get randomPicker => 'Random Movie Picker';
+	@override String get noMoviesFound => 'No movies found in your library';
+	@override String get spinning => 'Picking something great...';
+	@override String get spinAgain => 'Spin Again';
+	@override String get calendar => 'Calendar';
+	@override String get today => 'Today';
+	@override String get item => 'item';
+	@override String get items => 'items';
+	@override String get loadingMovies => 'Caricamento dei tuoi film...';
+	@override String get noContentOnDate => 'No content added on this date';
+	@override String get noEpgData => 'Nessuna informazione programma';
 }
 
 // Path: errors
-class _StringsErrorsIt implements _StringsErrorsEn {
-	_StringsErrorsIt._(this._root);
+class _StringsErrorsIt extends _StringsErrorsEn {
+	_StringsErrorsIt._(_StringsIt root) : this._root = root, super._(root);
 
 	@override final _StringsIt _root; // ignore: unused_field
 
@@ -2388,11 +3307,23 @@ class _StringsErrorsIt implements _StringsErrorsEn {
 	@override String failedToVerifyToken({required Object error}) => 'Verifica token fallita: ${error}';
 	@override String failedToSwitchProfile({required Object displayName}) => 'Impossibile passare a ${displayName}';
 	@override String get connectionFailedGeneric => 'Connessione fallita';
+	@override String failedToRemove({required Object error}) => 'Rimozione fallita: ${error}';
+}
+
+// Path: voice
+class _StringsVoiceIt extends _StringsVoiceEn {
+	_StringsVoiceIt._(_StringsIt root) : this._root = root, super._(root);
+
+	@override final _StringsIt _root; // ignore: unused_field
+
+	// Translations
+	@override String get notAvailable => 'Il controllo vocale non è disponibile';
+	@override String commandNotRecognized({required Object command}) => 'Comando non riconosciuto: "${command}"';
 }
 
 // Path: libraries
-class _StringsLibrariesIt implements _StringsLibrariesEn {
-	_StringsLibrariesIt._(this._root);
+class _StringsLibrariesIt extends _StringsLibrariesEn {
+	_StringsLibrariesIt._(_StringsIt root) : this._root = root, super._(root);
 
 	@override final _StringsIt _root; // ignore: unused_field
 
@@ -2439,8 +3370,8 @@ class _StringsLibrariesIt implements _StringsLibrariesEn {
 }
 
 // Path: about
-class _StringsAboutIt implements _StringsAboutEn {
-	_StringsAboutIt._(this._root);
+class _StringsAboutIt extends _StringsAboutEn {
+	_StringsAboutIt._(_StringsIt root) : this._root = root, super._(root);
 
 	@override final _StringsIt _root; // ignore: unused_field
 
@@ -2453,8 +3384,8 @@ class _StringsAboutIt implements _StringsAboutEn {
 }
 
 // Path: serverSelection
-class _StringsServerSelectionIt implements _StringsServerSelectionEn {
-	_StringsServerSelectionIt._(this._root);
+class _StringsServerSelectionIt extends _StringsServerSelectionEn {
+	_StringsServerSelectionIt._(_StringsIt root) : this._root = root, super._(root);
 
 	@override final _StringsIt _root; // ignore: unused_field
 
@@ -2479,8 +3410,8 @@ class _StringsServerSelectionIt implements _StringsServerSelectionEn {
 }
 
 // Path: hubDetail
-class _StringsHubDetailIt implements _StringsHubDetailEn {
-	_StringsHubDetailIt._(this._root);
+class _StringsHubDetailIt extends _StringsHubDetailEn {
+	_StringsHubDetailIt._(_StringsIt root) : this._root = root, super._(root);
 
 	@override final _StringsIt _root; // ignore: unused_field
 
@@ -2493,8 +3424,8 @@ class _StringsHubDetailIt implements _StringsHubDetailEn {
 }
 
 // Path: logs
-class _StringsLogsIt implements _StringsLogsEn {
-	_StringsLogsIt._(this._root);
+class _StringsLogsIt extends _StringsLogsEn {
+	_StringsLogsIt._(_StringsIt root) : this._root = root, super._(root);
 
 	@override final _StringsIt _root; // ignore: unused_field
 
@@ -2508,9 +3439,28 @@ class _StringsLogsIt implements _StringsLogsEn {
 	@override String get stackTrace => 'Traccia dello stack:';
 }
 
+// Path: stats
+class _StringsStatsIt extends _StringsStatsEn {
+	_StringsStatsIt._(_StringsIt root) : this._root = root, super._(root);
+
+	@override final _StringsIt _root; // ignore: unused_field
+
+	// Translations
+	@override String get title => 'Statistiche di Visione';
+	@override String get totalWatchTime => 'Tempo di Visione Totale';
+	@override String get moviesWatched => 'Film Visti';
+	@override String get episodesWatched => 'Episodi Visti';
+	@override String get avgPerDay => 'Media al Giorno';
+	@override String get topGenres => 'Generi Preferiti';
+	@override String get monthlyActivity => 'Attività Mensile';
+	@override String get noData => 'Nessuna cronologia di visione';
+	@override String get startWatching => 'Inizia a guardare per vedere le tue statistiche';
+	@override String get days => 'giorni';
+}
+
 // Path: licenses
-class _StringsLicensesIt implements _StringsLicensesEn {
-	_StringsLicensesIt._(this._root);
+class _StringsLicensesIt extends _StringsLicensesEn {
+	_StringsLicensesIt._(_StringsIt root) : this._root = root, super._(root);
 
 	@override final _StringsIt _root; // ignore: unused_field
 
@@ -2522,8 +3472,8 @@ class _StringsLicensesIt implements _StringsLicensesEn {
 }
 
 // Path: navigation
-class _StringsNavigationIt implements _StringsNavigationEn {
-	_StringsNavigationIt._(this._root);
+class _StringsNavigationIt extends _StringsNavigationEn {
+	_StringsNavigationIt._(_StringsIt root) : this._root = root, super._(root);
 
 	@override final _StringsIt _root; // ignore: unused_field
 
@@ -2536,8 +3486,8 @@ class _StringsNavigationIt implements _StringsNavigationEn {
 }
 
 // Path: playlists
-class _StringsPlaylistsIt implements _StringsPlaylistsEn {
-	_StringsPlaylistsIt._(this._root);
+class _StringsPlaylistsIt extends _StringsPlaylistsEn {
+	_StringsPlaylistsIt._(_StringsIt root) : this._root = root, super._(root);
 
 	@override final _StringsIt _root; // ignore: unused_field
 
@@ -2580,8 +3530,8 @@ class _StringsPlaylistsIt implements _StringsPlaylistsEn {
 }
 
 // Path: collections
-class _StringsCollectionsIt implements _StringsCollectionsEn {
-	_StringsCollectionsIt._(this._root);
+class _StringsCollectionsIt extends _StringsCollectionsEn {
+	_StringsCollectionsIt._(_StringsIt root) : this._root = root, super._(root);
 
 	@override final _StringsIt _root; // ignore: unused_field
 
@@ -2612,9 +3562,276 @@ class _StringsCollectionsIt implements _StringsCollectionsEn {
 	@override String removeFromCollectionError({required Object error}) => 'Errore durante la rimozione dalla raccolta: ${error}';
 }
 
+// Path: watchParty
+class _StringsWatchPartyIt extends _StringsWatchPartyEn {
+	_StringsWatchPartyIt._(_StringsIt root) : this._root = root, super._(root);
+
+	@override final _StringsIt _root; // ignore: unused_field
+
+	// Translations
+	@override String get title => 'Watch Party';
+	@override String get startParty => 'Avvia Watch Party';
+	@override String get joinParty => 'Unisciti alla Party';
+	@override String get enterCode => 'Inserisci codice party';
+	@override String get shareCode => 'Condividi questo codice';
+	@override String get friendsCanJoin => 'Gli amici possono unirsi usando questo codice';
+	@override String get participants => 'Partecipanti';
+	@override String get host => 'Host';
+	@override String get endParty => 'Termina Party';
+	@override String get leaveParty => 'Lascia Party';
+	@override String get partyEnded => 'Watch Party terminata';
+	@override String get chat => 'Chat';
+	@override String get typeMessage => 'Scrivi un messaggio...';
+	@override String joined({required Object name}) => '${name} si è unito';
+	@override String left({required Object name}) => '${name} ha lasciato';
+	@override String get syncedPlayback => 'Riproduzione sincronizzata con la party';
+	@override String get hostControls => 'Solo l\'host può controllare la riproduzione';
+	@override String get creating => 'Creazione party...';
+	@override String get joining => 'Accesso alla party...';
+	@override String get createFailed => 'Creazione party fallita';
+	@override String get joinFailed => 'Accesso alla party fallito';
+	@override String get invalidCode => 'Codice party non valido';
+	@override String get gotIt => 'Capito';
+}
+
+// Path: catchUp
+class _StringsCatchUpIt extends _StringsCatchUpEn {
+	_StringsCatchUpIt._(_StringsIt root) : this._root = root, super._(root);
+
+	@override final _StringsIt _root; // ignore: unused_field
+
+	// Translations
+	@override String get title => 'Catch Up TV';
+	@override String get startOver => 'Ricomincia';
+	@override String get startOverDescription => 'Guarda dall\'inizio';
+	@override String get watchFromBeginning => 'Guardare dall\'inizio?';
+	@override String alreadyStarted({required Object title}) => '"${title}" è già iniziato. Puoi guardare dall\'inizio.';
+	@override String get watchLive => 'Guarda in diretta';
+	@override String get programsAvailable => 'Programmi disponibili';
+	@override String get noProgramsAvailable => 'Nessun programma catch-up disponibile';
+	@override String get programsWillAppear => 'I programmi appariranno qui man mano che vengono trasmessi';
+	@override String get unavailable => 'Non disponibile';
+	@override String get bufferNotReady => 'Buffer non ancora pronto';
+	@override String get rewind => 'Riavvolgi';
+	@override String get timeshiftEnabled => 'Time-shift abilitato';
+	@override String goBackTo({required Object time}) => 'Torna a ${time}';
+}
+
+// Path: watchlist
+class _StringsWatchlistIt extends _StringsWatchlistEn {
+	_StringsWatchlistIt._(_StringsIt root) : this._root = root, super._(root);
+
+	@override final _StringsIt _root; // ignore: unused_field
+
+	// Translations
+	@override String get title => 'La mia lista';
+	@override String get all => 'Tutti';
+	@override String get movies => 'Film';
+	@override String get shows => 'Serie TV';
+	@override String get episodes => 'Episodi';
+	@override String get empty => 'La tua lista è vuota';
+	@override String get emptyHint => 'Aggiungi film e serie alla tua lista dalle loro pagine';
+	@override String get noItemsFiltered => 'Nessun elemento corrisponde a questo filtro';
+	@override String get removeTitle => 'Rimuovi dalla lista';
+	@override String removeConfirm({required Object title}) => 'Rimuovere "${title}" dalla tua lista?';
+	@override String get remove => 'Remove';
+	@override String get play => 'Play';
+	@override String get details => 'Details';
+	@override String get seeAll => 'See All';
+	@override String get clearAllTitle => 'Svuota lista';
+	@override String clearAllConfirm({required Object count}) => 'Rimuovere tutti i ${count} elementi dalla tua lista?';
+	@override String get clearAll => 'Svuota tutto';
+	@override String get addedToday => 'Aggiunto oggi';
+	@override String get addedYesterday => 'Aggiunto ieri';
+	@override String addedDaysAgo({required Object days}) => 'Aggiunto ${days} giorni fa';
+	@override String addedOn({required Object date}) => 'Aggiunto il ${date}';
+	@override String get addToWatchlist => 'Aggiungi alla lista';
+	@override String get removeFromWatchlist => 'Rimuovi dalla lista';
+	@override String get addedToWatchlist => 'Aggiunto alla lista';
+	@override String get removedFromWatchlist => 'Rimosso dalla lista';
+}
+
+// Path: liveTV
+class _StringsLiveTVIt extends _StringsLiveTVEn {
+	_StringsLiveTVIt._(_StringsIt root) : this._root = root, super._(root);
+
+	@override final _StringsIt _root; // ignore: unused_field
+
+	// Translations
+	@override String get title => 'TV in diretta';
+	@override String get guide => 'Guida';
+	@override String get dvr => 'DVR';
+	@override String get multiview => 'Multiview';
+	@override String get allChannels => 'Tutti i canali';
+	@override String get favorites => 'Preferiti';
+	@override String get noChannels => 'Nessun canale disponibile';
+	@override String get addM3USource => 'Aggiungi una sorgente M3U nelle impostazioni del server';
+	@override String get recording => 'Registrazione';
+	@override String get recordingNow => 'In registrazione ora';
+	@override String get upNext => 'Prossimamente';
+	@override String get noProgram => 'Nessuna info programma';
+	@override String get filterByGroup => 'Filtra per gruppo';
+	@override String get refresh => 'Aggiorna';
+	@override String channelCount({required Object count}) => '${count} canali';
+	@override String get nowPlaying => 'In onda ora';
+	@override String get scheduleRecording => 'Programma registrazione';
+	@override String get onNow => 'In onda adesso';
+	@override String endsAt({required Object time}) => 'Finisce alle ${time}';
+	@override String startsAt({required Object time}) => 'Inizia alle ${time}';
+	@override String playbackError({required Object error}) => 'Errore di riproduzione: ${error}';
+	@override String get noPreviousChannel => 'Nessun canale precedente';
+	@override String switchedTo({required Object channel}) => 'Passato a: ${channel}';
+	@override String get startingFromBeginning => 'Avvio del programma dall\'inizio...';
+	@override String failedToStartOver({required Object error}) => 'Impossibile riavviare: ${error}';
+	@override String playingProgram({required Object title}) => 'In riproduzione: ${title}';
+	@override String failedToPlayProgram({required Object error}) => 'Impossibile riprodurre il programma: ${error}';
+	@override String get addedToFavorites => 'Aggiunto ai preferiti';
+	@override String get removedFromFavorites => 'Rimosso dai preferiti';
+	@override String failedToUpdateFavorite({required Object error}) => 'Impossibile aggiornare preferito: ${error}';
+	@override String get pipNotSupported => 'Picture-in-Picture non supportato su questa piattaforma';
+	@override String get enteredPipMode => 'Modalità Picture-in-Picture attivata';
+	@override String get exitedPipMode => 'Modalità Picture-in-Picture disattivata';
+	@override String aspectRatioChanged({required Object mode}) => 'Rapporto aspetto: ${mode}';
+	@override String get tune => 'Sintonizza';
+	@override String get retry => 'Riprova';
+	@override String get noChannelsMatchFilter => 'Nessun canale corrisponde al filtro';
+	@override String get skipCommercial => 'Salta pubblicità';
+}
+
+// Path: dvr
+class _StringsDvrIt extends _StringsDvrEn {
+	_StringsDvrIt._(_StringsIt root) : this._root = root, super._(root);
+
+	@override final _StringsIt _root; // ignore: unused_field
+
+	// Translations
+	@override String get title => 'DVR';
+	@override String get recordings => 'Registrazioni';
+	@override String get seriesRules => 'Regole serie';
+	@override String get noRecordings => 'Nessuna registrazione';
+	@override String get noRules => 'Nessuna regola serie';
+	@override String get scheduleFromGuide => 'Programma registrazioni dalla guida TV';
+	@override String get createRulesHint => 'Crea regole per registrare serie automaticamente';
+	@override String get storage => 'Spazio di archiviazione';
+	@override String recordingsCount({required Object count}) => '${count} registrazioni';
+	@override String get all => 'Tutte';
+	@override String get scheduled => 'Programmate';
+	@override String get completed => 'Completate';
+	@override String get failed => 'Non riuscite';
+	@override String get deleteRecording => 'Eliminare registrazione?';
+	@override String get deleteRule => 'Eliminare regola serie?';
+	@override String get sortByDate => 'Data';
+	@override String get sortByTitle => 'Titolo';
+	@override String get sortBySize => 'Dimensione';
+	@override String get playRecording => 'Riproduci registrazione';
+	@override String keepPolicy({required Object count}) => 'Mantieni ${count} episodi';
+	@override String get keepAll => 'Mantieni tutti';
+	@override String get recordingScheduled => 'Registrazione programmata';
+	@override String get scheduleRecordingTitle => 'Programma registrazione';
+	@override String get schedule => 'Programma';
+	@override String get cancel => 'Annulla';
+}
+
+// Path: epg
+class _StringsEpgIt extends _StringsEpgEn {
+	_StringsEpgIt._(_StringsIt root) : this._root = root, super._(root);
+
+	@override final _StringsIt _root; // ignore: unused_field
+
+	// Translations
+	@override String get title => 'Guida TV';
+	@override String get now => 'Adesso';
+	@override String get today => 'Oggi';
+	@override String get tomorrow => 'Domani';
+	@override String get noPrograms => 'Nessun programma disponibile';
+	@override String get loading => 'Caricamento guida...';
+	@override String get record => 'Registra';
+	@override String get reminder => 'Imposta promemoria';
+	@override String get moreInfo => 'Altre info';
+	@override String get toggleView => 'Cambia vista';
+	@override String get gridView => 'Vista a griglia';
+	@override String get nowNextView => 'Vista ora/prossimo';
+}
+
+// Path: channelSurfing
+class _StringsChannelSurfingIt extends _StringsChannelSurfingEn {
+	_StringsChannelSurfingIt._(_StringsIt root) : this._root = root, super._(root);
+
+	@override final _StringsIt _root; // ignore: unused_field
+
+	// Translations
+	@override String get title => 'Zapping casuale';
+	@override String get kidsMode => 'Modalità bambini';
+	@override String get loading => 'Caricamento zapping casuale...';
+	@override String get failedToLoad => 'Impossibile caricare il contenuto';
+	@override String get retry => 'Riprova';
+	@override String get noContent => 'Nessun contenuto disponibile';
+	@override String itemsAvailable({required Object count}) => '${count} elementi disponibili';
+	@override String get startSurfing => 'Inizia';
+	@override String get pressBackToExit => 'Premi indietro per uscire';
+	@override String get description => 'Guarda film e serie casuali in modo continuo';
+	@override String get noServers => 'Nessun server disponibile';
+}
+
+// Path: multiview
+class _StringsMultiviewIt extends _StringsMultiviewEn {
+	_StringsMultiviewIt._(_StringsIt root) : this._root = root, super._(root);
+
+	@override final _StringsIt _root; // ignore: unused_field
+
+	// Translations
+	@override String get title => 'Multi-Vista';
+	@override String get changeLayout => 'Cambia layout (L)';
+	@override String get addChannel => 'Aggiungi canale (A)';
+	@override String get removeChannel => 'Rimuovi canale (R)';
+	@override String get swapChannel => 'Cambia canale';
+	@override String get toggleMute => 'Attiva/Disattiva audio (M)';
+	@override String get selectChannel => 'Seleziona canale';
+	@override String get searchChannels => 'Cerca canali...';
+	@override String get cancel => 'Annulla';
+	@override String channelNumber({required Object number}) => 'Can. ${number}';
+}
+
+// Path: player
+class _StringsPlayerIt extends _StringsPlayerEn {
+	_StringsPlayerIt._(_StringsIt root) : this._root = root, super._(root);
+
+	@override final _StringsIt _root; // ignore: unused_field
+
+	// Translations
+	@override String get playbackError => 'Errore di riproduzione';
+	@override String get error => 'Errore';
+	@override String failedToStartPlayback({required Object error}) => 'Impossibile avviare la riproduzione:\n${error}';
+	@override String get ok => 'OK';
+}
+
+// Path: downloads
+class _StringsDownloadsIt extends _StringsDownloadsEn {
+	_StringsDownloadsIt._(_StringsIt root) : this._root = root, super._(root);
+
+	@override final _StringsIt _root; // ignore: unused_field
+
+	// Translations
+	@override String get title => 'Download';
+	@override String get deleteAll => 'Elimina tutto';
+	@override String get deleteAllTitle => 'Eliminare tutti i download?';
+	@override String deleteAllMessage({required Object count, required Object size}) => 'Questo eliminerà tutti i ${count} download e libererà ${size} di spazio.';
+	@override String storageUsed({required Object size}) => 'Spazio utilizzato: ${size}';
+	@override String downloading({required Object count}) => 'In download (${count})';
+	@override String downloaded({required Object count}) => 'Scaricati (${count})';
+	@override String get noDownloads => 'Nessun download';
+	@override String get noDownloadsHint => 'Scarica film e serie per guardarli offline';
+	@override String get deleteDownloadTitle => 'Eliminare il download?';
+	@override String deleteDownloadMessage({required Object title}) => 'Eliminare "${title}"?';
+	@override String get delete => 'Elimina';
+	@override String get cancel => 'Annulla';
+	@override String get downloadFailed => 'Download fallito';
+	@override String get paused => 'In pausa';
+}
+
 // Path: libraries.tabs
-class _StringsLibrariesTabsIt implements _StringsLibrariesTabsEn {
-	_StringsLibrariesTabsIt._(this._root);
+class _StringsLibrariesTabsIt extends _StringsLibrariesTabsEn {
+	_StringsLibrariesTabsIt._(_StringsIt root) : this._root = root, super._(root);
 
 	@override final _StringsIt _root; // ignore: unused_field
 
@@ -2626,8 +3843,8 @@ class _StringsLibrariesTabsIt implements _StringsLibrariesTabsEn {
 }
 
 // Path: libraries.groupings
-class _StringsLibrariesGroupingsIt implements _StringsLibrariesGroupingsEn {
-	_StringsLibrariesGroupingsIt._(this._root);
+class _StringsLibrariesGroupingsIt extends _StringsLibrariesGroupingsEn {
+	_StringsLibrariesGroupingsIt._(_StringsIt root) : this._root = root, super._(root);
 
 	@override final _StringsIt _root; // ignore: unused_field
 
@@ -2641,7 +3858,7 @@ class _StringsLibrariesGroupingsIt implements _StringsLibrariesGroupingsEn {
 }
 
 // Path: <root>
-class _StringsNl implements Translations {
+class _StringsNl extends Translations {
 	/// You can call this constructor and build your own translation instance of this locale.
 	/// Constructing via the enum [AppLocale.build] is preferred.
 	_StringsNl.build({Map<String, Node>? overrides, PluralResolver? cardinalResolver, PluralResolver? ordinalResolver})
@@ -2651,7 +3868,9 @@ class _StringsNl implements Translations {
 		    overrides: overrides ?? {},
 		    cardinalResolver: cardinalResolver,
 		    ordinalResolver: ordinalResolver,
-		  ) {
+		  ),
+		  super.build(cardinalResolver: cardinalResolver, ordinalResolver: ordinalResolver) {
+		super.$meta.setFlatMapFunction($meta.getTranslation); // copy base translations to super.$meta
 		$meta.setFlatMapFunction(_flatMapFunction);
 	}
 
@@ -2659,7 +3878,7 @@ class _StringsNl implements Translations {
 	@override final TranslationMetadata<AppLocale, Translations> $meta;
 
 	/// Access flat map
-	@override dynamic operator[](String key) => $meta.getTranslation(key);
+	@override dynamic operator[](String key) => $meta.getTranslation(key) ?? super.$meta.getTranslation(key);
 
 	@override late final _StringsNl _root = this; // ignore: unused_field
 
@@ -2685,20 +3904,32 @@ class _StringsNl implements Translations {
 	@override late final _StringsDialogNl dialog = _StringsDialogNl._(_root);
 	@override late final _StringsDiscoverNl discover = _StringsDiscoverNl._(_root);
 	@override late final _StringsErrorsNl errors = _StringsErrorsNl._(_root);
+	@override late final _StringsVoiceNl voice = _StringsVoiceNl._(_root);
 	@override late final _StringsLibrariesNl libraries = _StringsLibrariesNl._(_root);
 	@override late final _StringsAboutNl about = _StringsAboutNl._(_root);
 	@override late final _StringsServerSelectionNl serverSelection = _StringsServerSelectionNl._(_root);
 	@override late final _StringsHubDetailNl hubDetail = _StringsHubDetailNl._(_root);
 	@override late final _StringsLogsNl logs = _StringsLogsNl._(_root);
+	@override late final _StringsStatsNl stats = _StringsStatsNl._(_root);
 	@override late final _StringsLicensesNl licenses = _StringsLicensesNl._(_root);
 	@override late final _StringsNavigationNl navigation = _StringsNavigationNl._(_root);
 	@override late final _StringsPlaylistsNl playlists = _StringsPlaylistsNl._(_root);
 	@override late final _StringsCollectionsNl collections = _StringsCollectionsNl._(_root);
+	@override late final _StringsWatchPartyNl watchParty = _StringsWatchPartyNl._(_root);
+	@override late final _StringsCatchUpNl catchUp = _StringsCatchUpNl._(_root);
+	@override late final _StringsWatchlistNl watchlist = _StringsWatchlistNl._(_root);
+	@override late final _StringsLiveTVNl liveTV = _StringsLiveTVNl._(_root);
+	@override late final _StringsDvrNl dvr = _StringsDvrNl._(_root);
+	@override late final _StringsEpgNl epg = _StringsEpgNl._(_root);
+	@override late final _StringsChannelSurfingNl channelSurfing = _StringsChannelSurfingNl._(_root);
+	@override late final _StringsMultiviewNl multiview = _StringsMultiviewNl._(_root);
+	@override late final _StringsPlayerNl player = _StringsPlayerNl._(_root);
+	@override late final _StringsDownloadsNl downloads = _StringsDownloadsNl._(_root);
 }
 
 // Path: app
-class _StringsAppNl implements _StringsAppEn {
-	_StringsAppNl._(this._root);
+class _StringsAppNl extends _StringsAppEn {
+	_StringsAppNl._(_StringsNl root) : this._root = root, super._(root);
 
 	@override final _StringsNl _root; // ignore: unused_field
 
@@ -2708,8 +3939,8 @@ class _StringsAppNl implements _StringsAppEn {
 }
 
 // Path: auth
-class _StringsAuthNl implements _StringsAuthEn {
-	_StringsAuthNl._(this._root);
+class _StringsAuthNl extends _StringsAuthEn {
+	_StringsAuthNl._(_StringsNl root) : this._root = root, super._(root);
 
 	@override final _StringsNl _root; // ignore: unused_field
 
@@ -2756,11 +3987,24 @@ class _StringsAuthNl implements _StringsAuthEn {
 	@override String get passwordTooShort => 'Wachtwoord moet minimaal 6 tekens zijn';
 	@override String get invalidEmail => 'Voer een geldig e-mailadres in';
 	@override String get firstUserNote => 'Eerste gebruiker wordt beheerder';
+	@override String get howConnecting => 'Hoe maak je verbinding?';
+	@override String get atHome => 'Thuis';
+	@override String get atHomeDescription => 'Detecteer server automatisch op je lokale netwerk';
+	@override String get awayFromHome => 'Onderweg';
+	@override String get awayFromHomeDescription => 'Voer serveradres handmatig in';
+	@override String get findYourServer => 'Vind je server';
+	@override String get searching => 'Zoeken...';
+	@override String get checkingNetwork => 'Netwerk controleren...';
+	@override String get serversFound => 'Servers gevonden';
+	@override String get scanAgain => 'Opnieuw zoeken';
+	@override String get enterManually => 'Handmatig invoeren';
+	@override String get noServersFound => 'Geen servers gevonden op je netwerk. Zorg ervoor dat je OpenFlix-server draait.';
+	@override String discoveryFailed({required Object error}) => 'Zoeken mislukt: ${error}';
 }
 
 // Path: common
-class _StringsCommonNl implements _StringsCommonEn {
-	_StringsCommonNl._(this._root);
+class _StringsCommonNl extends _StringsCommonEn {
+	_StringsCommonNl._(_StringsNl root) : this._root = root, super._(root);
 
 	@override final _StringsNl _root; // ignore: unused_field
 
@@ -2789,11 +4033,17 @@ class _StringsCommonNl implements _StringsCommonEn {
 	@override String get delete => 'Verwijderen';
 	@override String get shuffle => 'Willekeurig';
 	@override String get addTo => 'Toevoegen aan...';
+	@override String get remove => 'Remove';
+	@override String get play => 'Play';
+	@override String get details => 'Details';
+	@override String get seeAll => 'See All';
+	@override String get live => 'LIVE';
+	@override String get newLabel => 'NIEUW';
 }
 
 // Path: screens
-class _StringsScreensNl implements _StringsScreensEn {
-	_StringsScreensNl._(this._root);
+class _StringsScreensNl extends _StringsScreensEn {
+	_StringsScreensNl._(_StringsNl root) : this._root = root, super._(root);
 
 	@override final _StringsNl _root; // ignore: unused_field
 
@@ -2807,8 +4057,8 @@ class _StringsScreensNl implements _StringsScreensEn {
 }
 
 // Path: update
-class _StringsUpdateNl implements _StringsUpdateEn {
-	_StringsUpdateNl._(this._root);
+class _StringsUpdateNl extends _StringsUpdateEn {
+	_StringsUpdateNl._(_StringsNl root) : this._root = root, super._(root);
 
 	@override final _StringsNl _root; // ignore: unused_field
 
@@ -2823,13 +4073,20 @@ class _StringsUpdateNl implements _StringsUpdateEn {
 }
 
 // Path: settings
-class _StringsSettingsNl implements _StringsSettingsEn {
-	_StringsSettingsNl._(this._root);
+class _StringsSettingsNl extends _StringsSettingsEn {
+	_StringsSettingsNl._(_StringsNl root) : this._root = root, super._(root);
 
 	@override final _StringsNl _root; // ignore: unused_field
 
 	// Translations
 	@override String get title => 'Instellingen';
+	@override String get profile => 'Profiel';
+	@override String get noProfileSelected => 'Geen profiel geselecteerd';
+	@override String get kidsMode => 'Kindermodus';
+	@override String get switchProfile => 'Profiel wisselen';
+	@override String get switchProfileDescription => 'Wissel naar een ander profiel';
+	@override String get manageProfiles => 'Profielen beheren';
+	@override String get manageProfilesDescription => 'Profielen toevoegen, bewerken of verwijderen';
 	@override String get language => 'Taal';
 	@override String get theme => 'Thema';
 	@override String get appearance => 'Uiterlijk';
@@ -2919,11 +4176,27 @@ class _StringsSettingsNl implements _StringsSettingsEn {
 	@override String get apiKey => 'API-sleutel';
 	@override String get tmdbApiKeySaved => 'TMDB API-sleutel opgeslagen';
 	@override String get tmdbApiKeyCleared => 'TMDB API-sleutel verwijderd';
+	@override String get parentalControls => 'Ouderlijk Toezicht';
+	@override String get enableParentalControls => 'Ouderlijk Toezicht Inschakelen';
+	@override String get enableParentalControlsDescription => 'Beperk content op basis van leeftijdsclassificaties';
+	@override String get setPin => 'PIN Instellen';
+	@override String get setPinDescription => 'Voer een 4-cijferige PIN in om de instellingen te beschermen';
+	@override String get confirmPin => 'PIN Bevestigen';
+	@override String get confirmPinDescription => 'Voer de PIN nogmaals in ter bevestiging';
+	@override String get enterPin => 'PIN Invoeren';
+	@override String get enterPinDescription => 'Voer je ouderlijk toezicht PIN in';
+	@override String get changePin => 'PIN Wijzigen';
+	@override String get changePinDescription => 'Wijzig je ouderlijk toezicht PIN';
+	@override String get pinSet => 'Ouderlijk toezicht PIN succesvol ingesteld';
+	@override String get pinMismatch => 'PIN-codes komen niet overeen. Probeer opnieuw.';
+	@override String get incorrectPin => 'Onjuiste PIN. Probeer opnieuw.';
+	@override String get maxMovieRating => 'Maximale Filmclassificatie';
+	@override String get maxTvRating => 'Maximale TV-classificatie';
 }
 
 // Path: search
-class _StringsSearchNl implements _StringsSearchEn {
-	_StringsSearchNl._(this._root);
+class _StringsSearchNl extends _StringsSearchEn {
+	_StringsSearchNl._(_StringsNl root) : this._root = root, super._(root);
 
 	@override final _StringsNl _root; // ignore: unused_field
 
@@ -2932,11 +4205,20 @@ class _StringsSearchNl implements _StringsSearchEn {
 	@override String get tryDifferentTerm => 'Probeer een andere zoekterm';
 	@override String get searchYourMedia => 'Zoek in je media';
 	@override String get enterTitleActorOrKeyword => 'Voer een titel, acteur of trefwoord in';
+	@override String get recentSearches => 'Recente zoekopdrachten';
+	@override String get clear => 'Wissen';
+	@override String get voiceSearch => 'Spraakzoeken';
+	@override String get listening => 'Luisteren...';
+	@override String get speakNow => 'Spreek nu';
+	@override String get all => 'Alle';
+	@override String get movies => 'Films';
+	@override String get tvShows => 'Series';
+	@override String get music => 'Muziek';
 }
 
 // Path: hotkeys
-class _StringsHotkeysNl implements _StringsHotkeysEn {
-	_StringsHotkeysNl._(this._root);
+class _StringsHotkeysNl extends _StringsHotkeysEn {
+	_StringsHotkeysNl._(_StringsNl root) : this._root = root, super._(root);
 
 	@override final _StringsNl _root; // ignore: unused_field
 
@@ -2946,8 +4228,8 @@ class _StringsHotkeysNl implements _StringsHotkeysEn {
 }
 
 // Path: pinEntry
-class _StringsPinEntryNl implements _StringsPinEntryEn {
-	_StringsPinEntryNl._(this._root);
+class _StringsPinEntryNl extends _StringsPinEntryEn {
+	_StringsPinEntryNl._(_StringsNl root) : this._root = root, super._(root);
 
 	@override final _StringsNl _root; // ignore: unused_field
 
@@ -2958,8 +4240,8 @@ class _StringsPinEntryNl implements _StringsPinEntryEn {
 }
 
 // Path: fileInfo
-class _StringsFileInfoNl implements _StringsFileInfoEn {
-	_StringsFileInfoNl._(this._root);
+class _StringsFileInfoNl extends _StringsFileInfoEn {
+	_StringsFileInfoNl._(_StringsNl root) : this._root = root, super._(root);
 
 	@override final _StringsNl _root; // ignore: unused_field
 
@@ -2990,8 +4272,8 @@ class _StringsFileInfoNl implements _StringsFileInfoEn {
 }
 
 // Path: mediaMenu
-class _StringsMediaMenuNl implements _StringsMediaMenuEn {
-	_StringsMediaMenuNl._(this._root);
+class _StringsMediaMenuNl extends _StringsMediaMenuEn {
+	_StringsMediaMenuNl._(_StringsNl root) : this._root = root, super._(root);
 
 	@override final _StringsNl _root; // ignore: unused_field
 
@@ -3006,8 +4288,8 @@ class _StringsMediaMenuNl implements _StringsMediaMenuEn {
 }
 
 // Path: accessibility
-class _StringsAccessibilityNl implements _StringsAccessibilityEn {
-	_StringsAccessibilityNl._(this._root);
+class _StringsAccessibilityNl extends _StringsAccessibilityEn {
+	_StringsAccessibilityNl._(_StringsNl root) : this._root = root, super._(root);
 
 	@override final _StringsNl _root; // ignore: unused_field
 
@@ -3023,8 +4305,8 @@ class _StringsAccessibilityNl implements _StringsAccessibilityEn {
 }
 
 // Path: tooltips
-class _StringsTooltipsNl implements _StringsTooltipsEn {
-	_StringsTooltipsNl._(this._root);
+class _StringsTooltipsNl extends _StringsTooltipsEn {
+	_StringsTooltipsNl._(_StringsNl root) : this._root = root, super._(root);
 
 	@override final _StringsNl _root; // ignore: unused_field
 
@@ -3035,8 +4317,8 @@ class _StringsTooltipsNl implements _StringsTooltipsEn {
 }
 
 // Path: videoControls
-class _StringsVideoControlsNl implements _StringsVideoControlsEn {
-	_StringsVideoControlsNl._(this._root);
+class _StringsVideoControlsNl extends _StringsVideoControlsEn {
+	_StringsVideoControlsNl._(_StringsNl root) : this._root = root, super._(root);
 
 	@override final _StringsNl _root; // ignore: unused_field
 
@@ -3054,6 +4336,11 @@ class _StringsVideoControlsNl implements _StringsVideoControlsEn {
 	@override String get stretch => 'Uitrekken';
 	@override String get lockRotation => 'Vergrendel rotatie';
 	@override String get unlockRotation => 'Ontgrendel rotatie';
+	@override String get lockScreen => 'Vergrendel scherm';
+	@override String get unlockScreen => 'Ontgrendel scherm';
+	@override String get screenLockButton => 'Schermvergrendeling';
+	@override String get screenLocked => 'Scherm vergrendeld';
+	@override String get tapToUnlock => 'Tik om te ontgrendelen';
 	@override String get sleepTimer => 'Slaaptimer';
 	@override String get timerActive => 'Timer actief';
 	@override String playbackWillPauseIn({required Object duration}) => 'Afspelen wordt gepauzeerd over ${duration}';
@@ -3084,8 +4371,8 @@ class _StringsVideoControlsNl implements _StringsVideoControlsEn {
 }
 
 // Path: userStatus
-class _StringsUserStatusNl implements _StringsUserStatusEn {
-	_StringsUserStatusNl._(this._root);
+class _StringsUserStatusNl extends _StringsUserStatusEn {
+	_StringsUserStatusNl._(_StringsNl root) : this._root = root, super._(root);
 
 	@override final _StringsNl _root; // ignore: unused_field
 
@@ -3097,8 +4384,8 @@ class _StringsUserStatusNl implements _StringsUserStatusEn {
 }
 
 // Path: messages
-class _StringsMessagesNl implements _StringsMessagesEn {
-	_StringsMessagesNl._(this._root);
+class _StringsMessagesNl extends _StringsMessagesEn {
+	_StringsMessagesNl._(_StringsNl root) : this._root = root, super._(root);
 
 	@override final _StringsNl _root; // ignore: unused_field
 
@@ -3136,8 +4423,8 @@ class _StringsMessagesNl implements _StringsMessagesEn {
 }
 
 // Path: profile
-class _StringsProfileNl implements _StringsProfileEn {
-	_StringsProfileNl._(this._root);
+class _StringsProfileNl extends _StringsProfileEn {
+	_StringsProfileNl._(_StringsNl root) : this._root = root, super._(root);
 
 	@override final _StringsNl _root; // ignore: unused_field
 
@@ -3146,8 +4433,8 @@ class _StringsProfileNl implements _StringsProfileEn {
 }
 
 // Path: subtitlingStyling
-class _StringsSubtitlingStylingNl implements _StringsSubtitlingStylingEn {
-	_StringsSubtitlingStylingNl._(this._root);
+class _StringsSubtitlingStylingNl extends _StringsSubtitlingStylingEn {
+	_StringsSubtitlingStylingNl._(_StringsNl root) : this._root = root, super._(root);
 
 	@override final _StringsNl _root; // ignore: unused_field
 
@@ -3162,8 +4449,8 @@ class _StringsSubtitlingStylingNl implements _StringsSubtitlingStylingEn {
 }
 
 // Path: dialog
-class _StringsDialogNl implements _StringsDialogEn {
-	_StringsDialogNl._(this._root);
+class _StringsDialogNl extends _StringsDialogEn {
+	_StringsDialogNl._(_StringsNl root) : this._root = root, super._(root);
 
 	@override final _StringsNl _root; // ignore: unused_field
 
@@ -3175,8 +4462,8 @@ class _StringsDialogNl implements _StringsDialogEn {
 }
 
 // Path: discover
-class _StringsDiscoverNl implements _StringsDiscoverEn {
-	_StringsDiscoverNl._(this._root);
+class _StringsDiscoverNl extends _StringsDiscoverEn {
+	_StringsDiscoverNl._(_StringsNl root) : this._root = root, super._(root);
 
 	@override final _StringsNl _root; // ignore: unused_field
 
@@ -3205,11 +4492,35 @@ class _StringsDiscoverNl implements _StringsDiscoverEn {
 	@override String get movie => 'Film';
 	@override String get tvShow => 'TV Serie';
 	@override String minutesLeft({required Object minutes}) => '${minutes} min over';
+	@override String get whatsOnNow => 'Nu op TV';
+	@override String get channelGuide => 'TV Gids';
+	@override String get liveNow => 'Nu Live';
+	@override String get topTen => 'Top 10';
+	@override String get newBadge => 'NIEUW';
+	@override String get liveBadge => 'LIVE';
+	@override String get goodMorning => 'Good morning';
+	@override String get goodAfternoon => 'Good afternoon';
+	@override String get goodEvening => 'Good evening';
+	@override String get defaultUser => 'Guest';
+	@override String get yourNextWatch => 'Your Next Watch';
+	@override String pickedForYou({required Object name}) => 'Picked just for you, ${name}';
+	@override String get surpriseMe => 'Surprise Me';
+	@override String get randomPicker => 'Random Movie Picker';
+	@override String get noMoviesFound => 'No movies found in your library';
+	@override String get spinning => 'Picking something great...';
+	@override String get spinAgain => 'Spin Again';
+	@override String get calendar => 'Calendar';
+	@override String get today => 'Today';
+	@override String get item => 'item';
+	@override String get items => 'items';
+	@override String get loadingMovies => 'Je films laden...';
+	@override String get noContentOnDate => 'No content added on this date';
+	@override String get noEpgData => 'Geen programma-informatie';
 }
 
 // Path: errors
-class _StringsErrorsNl implements _StringsErrorsEn {
-	_StringsErrorsNl._(this._root);
+class _StringsErrorsNl extends _StringsErrorsEn {
+	_StringsErrorsNl._(_StringsNl root) : this._root = root, super._(root);
 
 	@override final _StringsNl _root; // ignore: unused_field
 
@@ -3226,11 +4537,23 @@ class _StringsErrorsNl implements _StringsErrorsEn {
 	@override String failedToVerifyToken({required Object error}) => 'Kon token niet verifiëren: ${error}';
 	@override String failedToSwitchProfile({required Object displayName}) => 'Kon niet wisselen naar ${displayName}';
 	@override String get connectionFailedGeneric => 'Verbinding mislukt';
+	@override String failedToRemove({required Object error}) => 'Verwijderen mislukt: ${error}';
+}
+
+// Path: voice
+class _StringsVoiceNl extends _StringsVoiceEn {
+	_StringsVoiceNl._(_StringsNl root) : this._root = root, super._(root);
+
+	@override final _StringsNl _root; // ignore: unused_field
+
+	// Translations
+	@override String get notAvailable => 'Spraakbesturing is niet beschikbaar';
+	@override String commandNotRecognized({required Object command}) => 'Commando niet herkend: "${command}"';
 }
 
 // Path: libraries
-class _StringsLibrariesNl implements _StringsLibrariesEn {
-	_StringsLibrariesNl._(this._root);
+class _StringsLibrariesNl extends _StringsLibrariesEn {
+	_StringsLibrariesNl._(_StringsNl root) : this._root = root, super._(root);
 
 	@override final _StringsNl _root; // ignore: unused_field
 
@@ -3277,8 +4600,8 @@ class _StringsLibrariesNl implements _StringsLibrariesEn {
 }
 
 // Path: about
-class _StringsAboutNl implements _StringsAboutEn {
-	_StringsAboutNl._(this._root);
+class _StringsAboutNl extends _StringsAboutEn {
+	_StringsAboutNl._(_StringsNl root) : this._root = root, super._(root);
 
 	@override final _StringsNl _root; // ignore: unused_field
 
@@ -3291,8 +4614,8 @@ class _StringsAboutNl implements _StringsAboutEn {
 }
 
 // Path: serverSelection
-class _StringsServerSelectionNl implements _StringsServerSelectionEn {
-	_StringsServerSelectionNl._(this._root);
+class _StringsServerSelectionNl extends _StringsServerSelectionEn {
+	_StringsServerSelectionNl._(_StringsNl root) : this._root = root, super._(root);
 
 	@override final _StringsNl _root; // ignore: unused_field
 
@@ -3317,8 +4640,8 @@ class _StringsServerSelectionNl implements _StringsServerSelectionEn {
 }
 
 // Path: hubDetail
-class _StringsHubDetailNl implements _StringsHubDetailEn {
-	_StringsHubDetailNl._(this._root);
+class _StringsHubDetailNl extends _StringsHubDetailEn {
+	_StringsHubDetailNl._(_StringsNl root) : this._root = root, super._(root);
 
 	@override final _StringsNl _root; // ignore: unused_field
 
@@ -3331,8 +4654,8 @@ class _StringsHubDetailNl implements _StringsHubDetailEn {
 }
 
 // Path: logs
-class _StringsLogsNl implements _StringsLogsEn {
-	_StringsLogsNl._(this._root);
+class _StringsLogsNl extends _StringsLogsEn {
+	_StringsLogsNl._(_StringsNl root) : this._root = root, super._(root);
 
 	@override final _StringsNl _root; // ignore: unused_field
 
@@ -3346,9 +4669,28 @@ class _StringsLogsNl implements _StringsLogsEn {
 	@override String get stackTrace => 'Stacktracering:';
 }
 
+// Path: stats
+class _StringsStatsNl extends _StringsStatsEn {
+	_StringsStatsNl._(_StringsNl root) : this._root = root, super._(root);
+
+	@override final _StringsNl _root; // ignore: unused_field
+
+	// Translations
+	@override String get title => 'Kijkstatistieken';
+	@override String get totalWatchTime => 'Totale Kijktijd';
+	@override String get moviesWatched => 'Films Bekeken';
+	@override String get episodesWatched => 'Afleveringen Bekeken';
+	@override String get avgPerDay => 'Gemiddeld per Dag';
+	@override String get topGenres => 'Favoriete Genres';
+	@override String get monthlyActivity => 'Maandelijkse Activiteit';
+	@override String get noData => 'Nog geen kijkgeschiedenis';
+	@override String get startWatching => 'Begin met kijken om je statistieken te zien';
+	@override String get days => 'dagen';
+}
+
 // Path: licenses
-class _StringsLicensesNl implements _StringsLicensesEn {
-	_StringsLicensesNl._(this._root);
+class _StringsLicensesNl extends _StringsLicensesEn {
+	_StringsLicensesNl._(_StringsNl root) : this._root = root, super._(root);
 
 	@override final _StringsNl _root; // ignore: unused_field
 
@@ -3360,8 +4702,8 @@ class _StringsLicensesNl implements _StringsLicensesEn {
 }
 
 // Path: navigation
-class _StringsNavigationNl implements _StringsNavigationEn {
-	_StringsNavigationNl._(this._root);
+class _StringsNavigationNl extends _StringsNavigationEn {
+	_StringsNavigationNl._(_StringsNl root) : this._root = root, super._(root);
 
 	@override final _StringsNl _root; // ignore: unused_field
 
@@ -3374,8 +4716,8 @@ class _StringsNavigationNl implements _StringsNavigationEn {
 }
 
 // Path: playlists
-class _StringsPlaylistsNl implements _StringsPlaylistsEn {
-	_StringsPlaylistsNl._(this._root);
+class _StringsPlaylistsNl extends _StringsPlaylistsEn {
+	_StringsPlaylistsNl._(_StringsNl root) : this._root = root, super._(root);
 
 	@override final _StringsNl _root; // ignore: unused_field
 
@@ -3418,8 +4760,8 @@ class _StringsPlaylistsNl implements _StringsPlaylistsEn {
 }
 
 // Path: collections
-class _StringsCollectionsNl implements _StringsCollectionsEn {
-	_StringsCollectionsNl._(this._root);
+class _StringsCollectionsNl extends _StringsCollectionsEn {
+	_StringsCollectionsNl._(_StringsNl root) : this._root = root, super._(root);
 
 	@override final _StringsNl _root; // ignore: unused_field
 
@@ -3450,9 +4792,276 @@ class _StringsCollectionsNl implements _StringsCollectionsEn {
 	@override String removeFromCollectionError({required Object error}) => 'Fout bij verwijderen uit collectie: ${error}';
 }
 
+// Path: watchParty
+class _StringsWatchPartyNl extends _StringsWatchPartyEn {
+	_StringsWatchPartyNl._(_StringsNl root) : this._root = root, super._(root);
+
+	@override final _StringsNl _root; // ignore: unused_field
+
+	// Translations
+	@override String get title => 'Watch Party';
+	@override String get startParty => 'Watch Party starten';
+	@override String get joinParty => 'Deelnemen aan Party';
+	@override String get enterCode => 'Voer party code in';
+	@override String get shareCode => 'Deel deze code';
+	@override String get friendsCanJoin => 'Vrienden kunnen deelnemen met deze code';
+	@override String get participants => 'Deelnemers';
+	@override String get host => 'Host';
+	@override String get endParty => 'Party beëindigen';
+	@override String get leaveParty => 'Party verlaten';
+	@override String get partyEnded => 'Watch Party beëindigd';
+	@override String get chat => 'Chat';
+	@override String get typeMessage => 'Typ een bericht...';
+	@override String joined({required Object name}) => '${name} is toegetreden';
+	@override String left({required Object name}) => '${name} is vertrokken';
+	@override String get syncedPlayback => 'Afspelen is gesynchroniseerd met party';
+	@override String get hostControls => 'Alleen de host kan het afspelen bedienen';
+	@override String get creating => 'Party wordt aangemaakt...';
+	@override String get joining => 'Deelnemen aan party...';
+	@override String get createFailed => 'Party aanmaken mislukt';
+	@override String get joinFailed => 'Deelnemen aan party mislukt';
+	@override String get invalidCode => 'Ongeldige party code';
+	@override String get gotIt => 'Begrepen';
+}
+
+// Path: catchUp
+class _StringsCatchUpNl extends _StringsCatchUpEn {
+	_StringsCatchUpNl._(_StringsNl root) : this._root = root, super._(root);
+
+	@override final _StringsNl _root; // ignore: unused_field
+
+	// Translations
+	@override String get title => 'Catch Up TV';
+	@override String get startOver => 'Opnieuw beginnen';
+	@override String get startOverDescription => 'Vanaf het begin kijken';
+	@override String get watchFromBeginning => 'Vanaf het begin kijken?';
+	@override String alreadyStarted({required Object title}) => '"${title}" is al begonnen. Je kunt vanaf het begin kijken.';
+	@override String get watchLive => 'Live kijken';
+	@override String get programsAvailable => 'Beschikbare programma\'s';
+	@override String get noProgramsAvailable => 'Geen catch-up programma\'s beschikbaar';
+	@override String get programsWillAppear => 'Programma\'s verschijnen hier naarmate ze worden uitgezonden';
+	@override String get unavailable => 'Niet beschikbaar';
+	@override String get bufferNotReady => 'Buffer nog niet klaar';
+	@override String get rewind => 'Terugspoelen';
+	@override String get timeshiftEnabled => 'Time-shift ingeschakeld';
+	@override String goBackTo({required Object time}) => 'Ga terug naar ${time}';
+}
+
+// Path: watchlist
+class _StringsWatchlistNl extends _StringsWatchlistEn {
+	_StringsWatchlistNl._(_StringsNl root) : this._root = root, super._(root);
+
+	@override final _StringsNl _root; // ignore: unused_field
+
+	// Translations
+	@override String get title => 'Mijn kijklijst';
+	@override String get all => 'Alle';
+	@override String get movies => 'Films';
+	@override String get shows => 'Series';
+	@override String get episodes => 'Afleveringen';
+	@override String get empty => 'Je kijklijst is leeg';
+	@override String get emptyHint => 'Voeg films en series toe aan je kijklijst';
+	@override String get noItemsFiltered => 'Geen items komen overeen met dit filter';
+	@override String get removeTitle => 'Verwijder van kijklijst';
+	@override String removeConfirm({required Object title}) => '"${title}" van je kijklijst verwijderen?';
+	@override String get remove => 'Remove';
+	@override String get play => 'Play';
+	@override String get details => 'Details';
+	@override String get seeAll => 'See All';
+	@override String get clearAllTitle => 'Kijklijst wissen';
+	@override String clearAllConfirm({required Object count}) => 'Alle ${count} items van je kijklijst verwijderen?';
+	@override String get clearAll => 'Alles wissen';
+	@override String get addedToday => 'Vandaag toegevoegd';
+	@override String get addedYesterday => 'Gisteren toegevoegd';
+	@override String addedDaysAgo({required Object days}) => '${days} dagen geleden toegevoegd';
+	@override String addedOn({required Object date}) => 'Toegevoegd op ${date}';
+	@override String get addToWatchlist => 'Toevoegen aan kijklijst';
+	@override String get removeFromWatchlist => 'Verwijderen van kijklijst';
+	@override String get addedToWatchlist => 'Toegevoegd aan kijklijst';
+	@override String get removedFromWatchlist => 'Verwijderd van kijklijst';
+}
+
+// Path: liveTV
+class _StringsLiveTVNl extends _StringsLiveTVEn {
+	_StringsLiveTVNl._(_StringsNl root) : this._root = root, super._(root);
+
+	@override final _StringsNl _root; // ignore: unused_field
+
+	// Translations
+	@override String get title => 'Live TV';
+	@override String get guide => 'Gids';
+	@override String get dvr => 'DVR';
+	@override String get multiview => 'Multiview';
+	@override String get allChannels => 'Alle zenders';
+	@override String get favorites => 'Favorieten';
+	@override String get noChannels => 'Geen zenders beschikbaar';
+	@override String get addM3USource => 'Voeg een M3U-bron toe in serverinstellingen';
+	@override String get recording => 'Opnemen';
+	@override String get recordingNow => 'Nu opnemen';
+	@override String get upNext => 'Hierna';
+	@override String get noProgram => 'Geen programma-info';
+	@override String get filterByGroup => 'Filter op groep';
+	@override String get refresh => 'Vernieuwen';
+	@override String channelCount({required Object count}) => '${count} zenders';
+	@override String get nowPlaying => 'Nu op TV';
+	@override String get scheduleRecording => 'Opname plannen';
+	@override String get onNow => 'Nu te zien';
+	@override String endsAt({required Object time}) => 'Eindigt om ${time}';
+	@override String startsAt({required Object time}) => 'Start om ${time}';
+	@override String playbackError({required Object error}) => 'Afspeelfout: ${error}';
+	@override String get noPreviousChannel => 'Geen vorig kanaal';
+	@override String switchedTo({required Object channel}) => 'Gewisseld naar: ${channel}';
+	@override String get startingFromBeginning => 'Programma vanaf begin starten...';
+	@override String failedToStartOver({required Object error}) => 'Opnieuw starten mislukt: ${error}';
+	@override String playingProgram({required Object title}) => 'Afspelen: ${title}';
+	@override String failedToPlayProgram({required Object error}) => 'Programma afspelen mislukt: ${error}';
+	@override String get addedToFavorites => 'Toegevoegd aan favorieten';
+	@override String get removedFromFavorites => 'Verwijderd uit favorieten';
+	@override String failedToUpdateFavorite({required Object error}) => 'Favoriet bijwerken mislukt: ${error}';
+	@override String get pipNotSupported => 'Picture-in-Picture niet ondersteund op dit platform';
+	@override String get enteredPipMode => 'Picture-in-Picture modus geactiveerd';
+	@override String get exitedPipMode => 'Picture-in-Picture modus beëindigd';
+	@override String aspectRatioChanged({required Object mode}) => 'Beeldverhouding: ${mode}';
+	@override String get tune => 'Afstemmen';
+	@override String get retry => 'Opnieuw proberen';
+	@override String get noChannelsMatchFilter => 'Geen kanalen komen overeen met filter';
+	@override String get skipCommercial => 'Reclame overslaan';
+}
+
+// Path: dvr
+class _StringsDvrNl extends _StringsDvrEn {
+	_StringsDvrNl._(_StringsNl root) : this._root = root, super._(root);
+
+	@override final _StringsNl _root; // ignore: unused_field
+
+	// Translations
+	@override String get title => 'DVR';
+	@override String get recordings => 'Opnames';
+	@override String get seriesRules => 'Serie regels';
+	@override String get noRecordings => 'Geen opnames';
+	@override String get noRules => 'Geen serie regels';
+	@override String get scheduleFromGuide => 'Plan opnames vanuit de Live TV gids';
+	@override String get createRulesHint => 'Maak regels om series automatisch op te nemen';
+	@override String get storage => 'Opslag';
+	@override String recordingsCount({required Object count}) => '${count} opnames';
+	@override String get all => 'Alle';
+	@override String get scheduled => 'Gepland';
+	@override String get completed => 'Voltooid';
+	@override String get failed => 'Mislukt';
+	@override String get deleteRecording => 'Opname verwijderen?';
+	@override String get deleteRule => 'Serie regel verwijderen?';
+	@override String get sortByDate => 'Datum';
+	@override String get sortByTitle => 'Titel';
+	@override String get sortBySize => 'Grootte';
+	@override String get playRecording => 'Opname afspelen';
+	@override String keepPolicy({required Object count}) => 'Bewaar ${count} afleveringen';
+	@override String get keepAll => 'Alles bewaren';
+	@override String get recordingScheduled => 'Opname gepland';
+	@override String get scheduleRecordingTitle => 'Opname plannen';
+	@override String get schedule => 'Plannen';
+	@override String get cancel => 'Annuleren';
+}
+
+// Path: epg
+class _StringsEpgNl extends _StringsEpgEn {
+	_StringsEpgNl._(_StringsNl root) : this._root = root, super._(root);
+
+	@override final _StringsNl _root; // ignore: unused_field
+
+	// Translations
+	@override String get title => 'TV Gids';
+	@override String get now => 'Nu';
+	@override String get today => 'Vandaag';
+	@override String get tomorrow => 'Morgen';
+	@override String get noPrograms => 'Geen programma-informatie beschikbaar';
+	@override String get loading => 'Gids laden...';
+	@override String get record => 'Opnemen';
+	@override String get reminder => 'Herinnering instellen';
+	@override String get moreInfo => 'Meer info';
+	@override String get toggleView => 'Wissel weergave';
+	@override String get gridView => 'Rasterweergave';
+	@override String get nowNextView => 'Nu/Straks weergave';
+}
+
+// Path: channelSurfing
+class _StringsChannelSurfingNl extends _StringsChannelSurfingEn {
+	_StringsChannelSurfingNl._(_StringsNl root) : this._root = root, super._(root);
+
+	@override final _StringsNl _root; // ignore: unused_field
+
+	// Translations
+	@override String get title => 'Willekeurig kijken';
+	@override String get kidsMode => 'Kindermodus';
+	@override String get loading => 'Willekeurig kijken laden...';
+	@override String get failedToLoad => 'Inhoud kon niet worden geladen';
+	@override String get retry => 'Opnieuw proberen';
+	@override String get noContent => 'Geen inhoud beschikbaar';
+	@override String itemsAvailable({required Object count}) => '${count} items beschikbaar';
+	@override String get startSurfing => 'Starten';
+	@override String get pressBackToExit => 'Druk terug om af te sluiten';
+	@override String get description => 'Kijk willekeurige films en series doorlopend';
+	@override String get noServers => 'Geen servers beschikbaar';
+}
+
+// Path: multiview
+class _StringsMultiviewNl extends _StringsMultiviewEn {
+	_StringsMultiviewNl._(_StringsNl root) : this._root = root, super._(root);
+
+	@override final _StringsNl _root; // ignore: unused_field
+
+	// Translations
+	@override String get title => 'Multi-View';
+	@override String get changeLayout => 'Layout wijzigen (L)';
+	@override String get addChannel => 'Zender toevoegen (A)';
+	@override String get removeChannel => 'Zender verwijderen (R)';
+	@override String get swapChannel => 'Zender wijzigen';
+	@override String get toggleMute => 'Geluid aan/uit (M)';
+	@override String get selectChannel => 'Zender selecteren';
+	@override String get searchChannels => 'Zenders zoeken...';
+	@override String get cancel => 'Annuleren';
+	@override String channelNumber({required Object number}) => 'Z. ${number}';
+}
+
+// Path: player
+class _StringsPlayerNl extends _StringsPlayerEn {
+	_StringsPlayerNl._(_StringsNl root) : this._root = root, super._(root);
+
+	@override final _StringsNl _root; // ignore: unused_field
+
+	// Translations
+	@override String get playbackError => 'Afspeelfout';
+	@override String get error => 'Fout';
+	@override String failedToStartPlayback({required Object error}) => 'Kan afspelen niet starten:\n${error}';
+	@override String get ok => 'OK';
+}
+
+// Path: downloads
+class _StringsDownloadsNl extends _StringsDownloadsEn {
+	_StringsDownloadsNl._(_StringsNl root) : this._root = root, super._(root);
+
+	@override final _StringsNl _root; // ignore: unused_field
+
+	// Translations
+	@override String get title => 'Downloads';
+	@override String get deleteAll => 'Alles verwijderen';
+	@override String get deleteAllTitle => 'Alle downloads verwijderen?';
+	@override String deleteAllMessage({required Object count, required Object size}) => 'Dit verwijdert alle ${count} downloads en maakt ${size} opslagruimte vrij.';
+	@override String storageUsed({required Object size}) => 'Opslag gebruikt: ${size}';
+	@override String downloading({required Object count}) => 'Downloaden (${count})';
+	@override String downloaded({required Object count}) => 'Gedownload (${count})';
+	@override String get noDownloads => 'Geen downloads';
+	@override String get noDownloadsHint => 'Download films en series om offline te bekijken';
+	@override String get deleteDownloadTitle => 'Download verwijderen?';
+	@override String deleteDownloadMessage({required Object title}) => '"${title}" verwijderen?';
+	@override String get delete => 'Verwijderen';
+	@override String get cancel => 'Annuleren';
+	@override String get downloadFailed => 'Download mislukt';
+	@override String get paused => 'Gepauzeerd';
+}
+
 // Path: libraries.tabs
-class _StringsLibrariesTabsNl implements _StringsLibrariesTabsEn {
-	_StringsLibrariesTabsNl._(this._root);
+class _StringsLibrariesTabsNl extends _StringsLibrariesTabsEn {
+	_StringsLibrariesTabsNl._(_StringsNl root) : this._root = root, super._(root);
 
 	@override final _StringsNl _root; // ignore: unused_field
 
@@ -3464,8 +5073,8 @@ class _StringsLibrariesTabsNl implements _StringsLibrariesTabsEn {
 }
 
 // Path: libraries.groupings
-class _StringsLibrariesGroupingsNl implements _StringsLibrariesGroupingsEn {
-	_StringsLibrariesGroupingsNl._(this._root);
+class _StringsLibrariesGroupingsNl extends _StringsLibrariesGroupingsEn {
+	_StringsLibrariesGroupingsNl._(_StringsNl root) : this._root = root, super._(root);
 
 	@override final _StringsNl _root; // ignore: unused_field
 
@@ -3479,7 +5088,7 @@ class _StringsLibrariesGroupingsNl implements _StringsLibrariesGroupingsEn {
 }
 
 // Path: <root>
-class _StringsSv implements Translations {
+class _StringsSv extends Translations {
 	/// You can call this constructor and build your own translation instance of this locale.
 	/// Constructing via the enum [AppLocale.build] is preferred.
 	_StringsSv.build({Map<String, Node>? overrides, PluralResolver? cardinalResolver, PluralResolver? ordinalResolver})
@@ -3489,7 +5098,9 @@ class _StringsSv implements Translations {
 		    overrides: overrides ?? {},
 		    cardinalResolver: cardinalResolver,
 		    ordinalResolver: ordinalResolver,
-		  ) {
+		  ),
+		  super.build(cardinalResolver: cardinalResolver, ordinalResolver: ordinalResolver) {
+		super.$meta.setFlatMapFunction($meta.getTranslation); // copy base translations to super.$meta
 		$meta.setFlatMapFunction(_flatMapFunction);
 	}
 
@@ -3497,7 +5108,7 @@ class _StringsSv implements Translations {
 	@override final TranslationMetadata<AppLocale, Translations> $meta;
 
 	/// Access flat map
-	@override dynamic operator[](String key) => $meta.getTranslation(key);
+	@override dynamic operator[](String key) => $meta.getTranslation(key) ?? super.$meta.getTranslation(key);
 
 	@override late final _StringsSv _root = this; // ignore: unused_field
 
@@ -3523,20 +5134,32 @@ class _StringsSv implements Translations {
 	@override late final _StringsDialogSv dialog = _StringsDialogSv._(_root);
 	@override late final _StringsDiscoverSv discover = _StringsDiscoverSv._(_root);
 	@override late final _StringsErrorsSv errors = _StringsErrorsSv._(_root);
+	@override late final _StringsVoiceSv voice = _StringsVoiceSv._(_root);
 	@override late final _StringsLibrariesSv libraries = _StringsLibrariesSv._(_root);
 	@override late final _StringsAboutSv about = _StringsAboutSv._(_root);
 	@override late final _StringsServerSelectionSv serverSelection = _StringsServerSelectionSv._(_root);
 	@override late final _StringsHubDetailSv hubDetail = _StringsHubDetailSv._(_root);
 	@override late final _StringsLogsSv logs = _StringsLogsSv._(_root);
+	@override late final _StringsStatsSv stats = _StringsStatsSv._(_root);
 	@override late final _StringsLicensesSv licenses = _StringsLicensesSv._(_root);
 	@override late final _StringsNavigationSv navigation = _StringsNavigationSv._(_root);
 	@override late final _StringsPlaylistsSv playlists = _StringsPlaylistsSv._(_root);
 	@override late final _StringsCollectionsSv collections = _StringsCollectionsSv._(_root);
+	@override late final _StringsWatchPartySv watchParty = _StringsWatchPartySv._(_root);
+	@override late final _StringsCatchUpSv catchUp = _StringsCatchUpSv._(_root);
+	@override late final _StringsWatchlistSv watchlist = _StringsWatchlistSv._(_root);
+	@override late final _StringsLiveTVSv liveTV = _StringsLiveTVSv._(_root);
+	@override late final _StringsDvrSv dvr = _StringsDvrSv._(_root);
+	@override late final _StringsEpgSv epg = _StringsEpgSv._(_root);
+	@override late final _StringsChannelSurfingSv channelSurfing = _StringsChannelSurfingSv._(_root);
+	@override late final _StringsMultiviewSv multiview = _StringsMultiviewSv._(_root);
+	@override late final _StringsPlayerSv player = _StringsPlayerSv._(_root);
+	@override late final _StringsDownloadsSv downloads = _StringsDownloadsSv._(_root);
 }
 
 // Path: app
-class _StringsAppSv implements _StringsAppEn {
-	_StringsAppSv._(this._root);
+class _StringsAppSv extends _StringsAppEn {
+	_StringsAppSv._(_StringsSv root) : this._root = root, super._(root);
 
 	@override final _StringsSv _root; // ignore: unused_field
 
@@ -3546,8 +5169,8 @@ class _StringsAppSv implements _StringsAppEn {
 }
 
 // Path: auth
-class _StringsAuthSv implements _StringsAuthEn {
-	_StringsAuthSv._(this._root);
+class _StringsAuthSv extends _StringsAuthEn {
+	_StringsAuthSv._(_StringsSv root) : this._root = root, super._(root);
 
 	@override final _StringsSv _root; // ignore: unused_field
 
@@ -3594,11 +5217,24 @@ class _StringsAuthSv implements _StringsAuthEn {
 	@override String get passwordTooShort => 'Lösenordet måste vara minst 6 tecken';
 	@override String get invalidEmail => 'Ange en giltig e-postadress';
 	@override String get firstUserNote => 'Första användaren blir administratör';
+	@override String get howConnecting => 'Hur ansluter du?';
+	@override String get atHome => 'Hemma';
+	@override String get atHomeDescription => 'Upptäck server automatiskt på ditt lokala nätverk';
+	@override String get awayFromHome => 'Utanför hemmet';
+	@override String get awayFromHomeDescription => 'Ange serveradress manuellt';
+	@override String get findYourServer => 'Hitta din server';
+	@override String get searching => 'Söker...';
+	@override String get checkingNetwork => 'Kontrollerar nätverk...';
+	@override String get serversFound => 'Servrar hittade';
+	@override String get scanAgain => 'Sök igen';
+	@override String get enterManually => 'Ange manuellt';
+	@override String get noServersFound => 'Inga servrar hittades på ditt nätverk. Se till att din OpenFlix-server körs.';
+	@override String discoveryFailed({required Object error}) => 'Sökning misslyckades: ${error}';
 }
 
 // Path: common
-class _StringsCommonSv implements _StringsCommonEn {
-	_StringsCommonSv._(this._root);
+class _StringsCommonSv extends _StringsCommonEn {
+	_StringsCommonSv._(_StringsSv root) : this._root = root, super._(root);
 
 	@override final _StringsSv _root; // ignore: unused_field
 
@@ -3627,11 +5263,17 @@ class _StringsCommonSv implements _StringsCommonEn {
 	@override String get delete => 'Ta bort';
 	@override String get shuffle => 'Blanda';
 	@override String get addTo => 'Lägg till i...';
+	@override String get remove => 'Remove';
+	@override String get play => 'Play';
+	@override String get details => 'Details';
+	@override String get seeAll => 'See All';
+	@override String get live => 'LIVE';
+	@override String get newLabel => 'NY';
 }
 
 // Path: screens
-class _StringsScreensSv implements _StringsScreensEn {
-	_StringsScreensSv._(this._root);
+class _StringsScreensSv extends _StringsScreensEn {
+	_StringsScreensSv._(_StringsSv root) : this._root = root, super._(root);
 
 	@override final _StringsSv _root; // ignore: unused_field
 
@@ -3645,8 +5287,8 @@ class _StringsScreensSv implements _StringsScreensEn {
 }
 
 // Path: update
-class _StringsUpdateSv implements _StringsUpdateEn {
-	_StringsUpdateSv._(this._root);
+class _StringsUpdateSv extends _StringsUpdateEn {
+	_StringsUpdateSv._(_StringsSv root) : this._root = root, super._(root);
 
 	@override final _StringsSv _root; // ignore: unused_field
 
@@ -3661,13 +5303,20 @@ class _StringsUpdateSv implements _StringsUpdateEn {
 }
 
 // Path: settings
-class _StringsSettingsSv implements _StringsSettingsEn {
-	_StringsSettingsSv._(this._root);
+class _StringsSettingsSv extends _StringsSettingsEn {
+	_StringsSettingsSv._(_StringsSv root) : this._root = root, super._(root);
 
 	@override final _StringsSv _root; // ignore: unused_field
 
 	// Translations
 	@override String get title => 'Inställningar';
+	@override String get profile => 'Profil';
+	@override String get noProfileSelected => 'Ingen profil vald';
+	@override String get kidsMode => 'Barnläge';
+	@override String get switchProfile => 'Byt profil';
+	@override String get switchProfileDescription => 'Byt till en annan profil';
+	@override String get manageProfiles => 'Hantera profiler';
+	@override String get manageProfilesDescription => 'Lägg till, redigera eller ta bort profiler';
 	@override String get language => 'Språk';
 	@override String get theme => 'Tema';
 	@override String get appearance => 'Utseende';
@@ -3757,11 +5406,27 @@ class _StringsSettingsSv implements _StringsSettingsEn {
 	@override String get apiKey => 'API-nyckel';
 	@override String get tmdbApiKeySaved => 'TMDB API-nyckel sparad';
 	@override String get tmdbApiKeyCleared => 'TMDB API-nyckel raderad';
+	@override String get parentalControls => 'Föräldrakontroll';
+	@override String get enableParentalControls => 'Aktivera Föräldrakontroll';
+	@override String get enableParentalControlsDescription => 'Begränsa innehåll baserat på åldersgränser';
+	@override String get setPin => 'Ställ in PIN';
+	@override String get setPinDescription => 'Ange en 4-siffrig PIN för att skydda inställningarna';
+	@override String get confirmPin => 'Bekräfta PIN';
+	@override String get confirmPinDescription => 'Ange PIN igen för att bekräfta';
+	@override String get enterPin => 'Ange PIN';
+	@override String get enterPinDescription => 'Ange din föräldrakontroll-PIN';
+	@override String get changePin => 'Ändra PIN';
+	@override String get changePinDescription => 'Ändra din föräldrakontroll-PIN';
+	@override String get pinSet => 'Föräldrakontroll-PIN har ställts in';
+	@override String get pinMismatch => 'PIN-koderna matchar inte. Försök igen.';
+	@override String get incorrectPin => 'Felaktig PIN. Försök igen.';
+	@override String get maxMovieRating => 'Maximal Filmklassificering';
+	@override String get maxTvRating => 'Maximal TV-klassificering';
 }
 
 // Path: search
-class _StringsSearchSv implements _StringsSearchEn {
-	_StringsSearchSv._(this._root);
+class _StringsSearchSv extends _StringsSearchEn {
+	_StringsSearchSv._(_StringsSv root) : this._root = root, super._(root);
 
 	@override final _StringsSv _root; // ignore: unused_field
 
@@ -3770,11 +5435,20 @@ class _StringsSearchSv implements _StringsSearchEn {
 	@override String get tryDifferentTerm => 'Prova en annan sökterm';
 	@override String get searchYourMedia => 'Sök i dina media';
 	@override String get enterTitleActorOrKeyword => 'Ange en titel, skådespelare eller nyckelord';
+	@override String get recentSearches => 'Senaste sökningar';
+	@override String get clear => 'Rensa';
+	@override String get voiceSearch => 'Röstsökning';
+	@override String get listening => 'Lyssnar...';
+	@override String get speakNow => 'Tala nu';
+	@override String get all => 'Alla';
+	@override String get movies => 'Filmer';
+	@override String get tvShows => 'TV-serier';
+	@override String get music => 'Musik';
 }
 
 // Path: hotkeys
-class _StringsHotkeysSv implements _StringsHotkeysEn {
-	_StringsHotkeysSv._(this._root);
+class _StringsHotkeysSv extends _StringsHotkeysEn {
+	_StringsHotkeysSv._(_StringsSv root) : this._root = root, super._(root);
 
 	@override final _StringsSv _root; // ignore: unused_field
 
@@ -3784,8 +5458,8 @@ class _StringsHotkeysSv implements _StringsHotkeysEn {
 }
 
 // Path: pinEntry
-class _StringsPinEntrySv implements _StringsPinEntryEn {
-	_StringsPinEntrySv._(this._root);
+class _StringsPinEntrySv extends _StringsPinEntryEn {
+	_StringsPinEntrySv._(_StringsSv root) : this._root = root, super._(root);
 
 	@override final _StringsSv _root; // ignore: unused_field
 
@@ -3796,8 +5470,8 @@ class _StringsPinEntrySv implements _StringsPinEntryEn {
 }
 
 // Path: fileInfo
-class _StringsFileInfoSv implements _StringsFileInfoEn {
-	_StringsFileInfoSv._(this._root);
+class _StringsFileInfoSv extends _StringsFileInfoEn {
+	_StringsFileInfoSv._(_StringsSv root) : this._root = root, super._(root);
 
 	@override final _StringsSv _root; // ignore: unused_field
 
@@ -3828,8 +5502,8 @@ class _StringsFileInfoSv implements _StringsFileInfoEn {
 }
 
 // Path: mediaMenu
-class _StringsMediaMenuSv implements _StringsMediaMenuEn {
-	_StringsMediaMenuSv._(this._root);
+class _StringsMediaMenuSv extends _StringsMediaMenuEn {
+	_StringsMediaMenuSv._(_StringsSv root) : this._root = root, super._(root);
 
 	@override final _StringsSv _root; // ignore: unused_field
 
@@ -3844,8 +5518,8 @@ class _StringsMediaMenuSv implements _StringsMediaMenuEn {
 }
 
 // Path: accessibility
-class _StringsAccessibilitySv implements _StringsAccessibilityEn {
-	_StringsAccessibilitySv._(this._root);
+class _StringsAccessibilitySv extends _StringsAccessibilityEn {
+	_StringsAccessibilitySv._(_StringsSv root) : this._root = root, super._(root);
 
 	@override final _StringsSv _root; // ignore: unused_field
 
@@ -3861,8 +5535,8 @@ class _StringsAccessibilitySv implements _StringsAccessibilityEn {
 }
 
 // Path: tooltips
-class _StringsTooltipsSv implements _StringsTooltipsEn {
-	_StringsTooltipsSv._(this._root);
+class _StringsTooltipsSv extends _StringsTooltipsEn {
+	_StringsTooltipsSv._(_StringsSv root) : this._root = root, super._(root);
 
 	@override final _StringsSv _root; // ignore: unused_field
 
@@ -3873,8 +5547,8 @@ class _StringsTooltipsSv implements _StringsTooltipsEn {
 }
 
 // Path: videoControls
-class _StringsVideoControlsSv implements _StringsVideoControlsEn {
-	_StringsVideoControlsSv._(this._root);
+class _StringsVideoControlsSv extends _StringsVideoControlsEn {
+	_StringsVideoControlsSv._(_StringsSv root) : this._root = root, super._(root);
 
 	@override final _StringsSv _root; // ignore: unused_field
 
@@ -3892,6 +5566,11 @@ class _StringsVideoControlsSv implements _StringsVideoControlsEn {
 	@override String get stretch => 'Sträck';
 	@override String get lockRotation => 'Lås rotation';
 	@override String get unlockRotation => 'Lås upp rotation';
+	@override String get lockScreen => 'Lås skärm';
+	@override String get unlockScreen => 'Lås upp skärm';
+	@override String get screenLockButton => 'Skärmlås';
+	@override String get screenLocked => 'Skärmen låst';
+	@override String get tapToUnlock => 'Tryck för att låsa upp';
 	@override String get sleepTimer => 'Sovtimer';
 	@override String get timerActive => 'Timer aktiv';
 	@override String playbackWillPauseIn({required Object duration}) => 'Uppspelningen pausas om ${duration}';
@@ -3922,8 +5601,8 @@ class _StringsVideoControlsSv implements _StringsVideoControlsEn {
 }
 
 // Path: userStatus
-class _StringsUserStatusSv implements _StringsUserStatusEn {
-	_StringsUserStatusSv._(this._root);
+class _StringsUserStatusSv extends _StringsUserStatusEn {
+	_StringsUserStatusSv._(_StringsSv root) : this._root = root, super._(root);
 
 	@override final _StringsSv _root; // ignore: unused_field
 
@@ -3935,8 +5614,8 @@ class _StringsUserStatusSv implements _StringsUserStatusEn {
 }
 
 // Path: messages
-class _StringsMessagesSv implements _StringsMessagesEn {
-	_StringsMessagesSv._(this._root);
+class _StringsMessagesSv extends _StringsMessagesEn {
+	_StringsMessagesSv._(_StringsSv root) : this._root = root, super._(root);
 
 	@override final _StringsSv _root; // ignore: unused_field
 
@@ -3974,8 +5653,8 @@ class _StringsMessagesSv implements _StringsMessagesEn {
 }
 
 // Path: profile
-class _StringsProfileSv implements _StringsProfileEn {
-	_StringsProfileSv._(this._root);
+class _StringsProfileSv extends _StringsProfileEn {
+	_StringsProfileSv._(_StringsSv root) : this._root = root, super._(root);
 
 	@override final _StringsSv _root; // ignore: unused_field
 
@@ -3984,8 +5663,8 @@ class _StringsProfileSv implements _StringsProfileEn {
 }
 
 // Path: subtitlingStyling
-class _StringsSubtitlingStylingSv implements _StringsSubtitlingStylingEn {
-	_StringsSubtitlingStylingSv._(this._root);
+class _StringsSubtitlingStylingSv extends _StringsSubtitlingStylingEn {
+	_StringsSubtitlingStylingSv._(_StringsSv root) : this._root = root, super._(root);
 
 	@override final _StringsSv _root; // ignore: unused_field
 
@@ -4000,8 +5679,8 @@ class _StringsSubtitlingStylingSv implements _StringsSubtitlingStylingEn {
 }
 
 // Path: dialog
-class _StringsDialogSv implements _StringsDialogEn {
-	_StringsDialogSv._(this._root);
+class _StringsDialogSv extends _StringsDialogEn {
+	_StringsDialogSv._(_StringsSv root) : this._root = root, super._(root);
 
 	@override final _StringsSv _root; // ignore: unused_field
 
@@ -4013,8 +5692,8 @@ class _StringsDialogSv implements _StringsDialogEn {
 }
 
 // Path: discover
-class _StringsDiscoverSv implements _StringsDiscoverEn {
-	_StringsDiscoverSv._(this._root);
+class _StringsDiscoverSv extends _StringsDiscoverEn {
+	_StringsDiscoverSv._(_StringsSv root) : this._root = root, super._(root);
 
 	@override final _StringsSv _root; // ignore: unused_field
 
@@ -4043,11 +5722,35 @@ class _StringsDiscoverSv implements _StringsDiscoverEn {
 	@override String get movie => 'Film';
 	@override String get tvShow => 'TV-serie';
 	@override String minutesLeft({required Object minutes}) => '${minutes} min kvar';
+	@override String get whatsOnNow => 'Sänds nu';
+	@override String get channelGuide => 'TV-guide';
+	@override String get liveNow => 'Live nu';
+	@override String get topTen => 'Topp 10';
+	@override String get newBadge => 'NY';
+	@override String get liveBadge => 'LIVE';
+	@override String get goodMorning => 'Good morning';
+	@override String get goodAfternoon => 'Good afternoon';
+	@override String get goodEvening => 'Good evening';
+	@override String get defaultUser => 'Guest';
+	@override String get yourNextWatch => 'Your Next Watch';
+	@override String pickedForYou({required Object name}) => 'Picked just for you, ${name}';
+	@override String get surpriseMe => 'Surprise Me';
+	@override String get randomPicker => 'Random Movie Picker';
+	@override String get noMoviesFound => 'No movies found in your library';
+	@override String get spinning => 'Picking something great...';
+	@override String get spinAgain => 'Spin Again';
+	@override String get calendar => 'Calendar';
+	@override String get today => 'Today';
+	@override String get item => 'item';
+	@override String get items => 'items';
+	@override String get loadingMovies => 'Laddar dina filmer...';
+	@override String get noContentOnDate => 'No content added on this date';
+	@override String get noEpgData => 'Ingen programinformation';
 }
 
 // Path: errors
-class _StringsErrorsSv implements _StringsErrorsEn {
-	_StringsErrorsSv._(this._root);
+class _StringsErrorsSv extends _StringsErrorsEn {
+	_StringsErrorsSv._(_StringsSv root) : this._root = root, super._(root);
 
 	@override final _StringsSv _root; // ignore: unused_field
 
@@ -4064,11 +5767,23 @@ class _StringsErrorsSv implements _StringsErrorsEn {
 	@override String failedToVerifyToken({required Object error}) => 'Misslyckades att verifiera token: ${error}';
 	@override String failedToSwitchProfile({required Object displayName}) => 'Misslyckades att byta till ${displayName}';
 	@override String get connectionFailedGeneric => 'Anslutning misslyckades';
+	@override String failedToRemove({required Object error}) => 'Misslyckades att ta bort: ${error}';
+}
+
+// Path: voice
+class _StringsVoiceSv extends _StringsVoiceEn {
+	_StringsVoiceSv._(_StringsSv root) : this._root = root, super._(root);
+
+	@override final _StringsSv _root; // ignore: unused_field
+
+	// Translations
+	@override String get notAvailable => 'Röststyrning är inte tillgänglig';
+	@override String commandNotRecognized({required Object command}) => 'Kommando inte igenkänt: "${command}"';
 }
 
 // Path: libraries
-class _StringsLibrariesSv implements _StringsLibrariesEn {
-	_StringsLibrariesSv._(this._root);
+class _StringsLibrariesSv extends _StringsLibrariesEn {
+	_StringsLibrariesSv._(_StringsSv root) : this._root = root, super._(root);
 
 	@override final _StringsSv _root; // ignore: unused_field
 
@@ -4115,8 +5830,8 @@ class _StringsLibrariesSv implements _StringsLibrariesEn {
 }
 
 // Path: about
-class _StringsAboutSv implements _StringsAboutEn {
-	_StringsAboutSv._(this._root);
+class _StringsAboutSv extends _StringsAboutEn {
+	_StringsAboutSv._(_StringsSv root) : this._root = root, super._(root);
 
 	@override final _StringsSv _root; // ignore: unused_field
 
@@ -4129,8 +5844,8 @@ class _StringsAboutSv implements _StringsAboutEn {
 }
 
 // Path: serverSelection
-class _StringsServerSelectionSv implements _StringsServerSelectionEn {
-	_StringsServerSelectionSv._(this._root);
+class _StringsServerSelectionSv extends _StringsServerSelectionEn {
+	_StringsServerSelectionSv._(_StringsSv root) : this._root = root, super._(root);
 
 	@override final _StringsSv _root; // ignore: unused_field
 
@@ -4155,8 +5870,8 @@ class _StringsServerSelectionSv implements _StringsServerSelectionEn {
 }
 
 // Path: hubDetail
-class _StringsHubDetailSv implements _StringsHubDetailEn {
-	_StringsHubDetailSv._(this._root);
+class _StringsHubDetailSv extends _StringsHubDetailEn {
+	_StringsHubDetailSv._(_StringsSv root) : this._root = root, super._(root);
 
 	@override final _StringsSv _root; // ignore: unused_field
 
@@ -4169,8 +5884,8 @@ class _StringsHubDetailSv implements _StringsHubDetailEn {
 }
 
 // Path: logs
-class _StringsLogsSv implements _StringsLogsEn {
-	_StringsLogsSv._(this._root);
+class _StringsLogsSv extends _StringsLogsEn {
+	_StringsLogsSv._(_StringsSv root) : this._root = root, super._(root);
 
 	@override final _StringsSv _root; // ignore: unused_field
 
@@ -4184,9 +5899,28 @@ class _StringsLogsSv implements _StringsLogsEn {
 	@override String get stackTrace => 'Stack trace:';
 }
 
+// Path: stats
+class _StringsStatsSv extends _StringsStatsEn {
+	_StringsStatsSv._(_StringsSv root) : this._root = root, super._(root);
+
+	@override final _StringsSv _root; // ignore: unused_field
+
+	// Translations
+	@override String get title => 'Tittarstatistik';
+	@override String get totalWatchTime => 'Total Tittartid';
+	@override String get moviesWatched => 'Filmer Sedda';
+	@override String get episodesWatched => 'Avsnitt Sedda';
+	@override String get avgPerDay => 'Genomsnitt per Dag';
+	@override String get topGenres => 'Favoritgenrer';
+	@override String get monthlyActivity => 'Månadsaktivitet';
+	@override String get noData => 'Ingen tittarhistorik ännu';
+	@override String get startWatching => 'Börja titta för att se din statistik';
+	@override String get days => 'dagar';
+}
+
 // Path: licenses
-class _StringsLicensesSv implements _StringsLicensesEn {
-	_StringsLicensesSv._(this._root);
+class _StringsLicensesSv extends _StringsLicensesEn {
+	_StringsLicensesSv._(_StringsSv root) : this._root = root, super._(root);
 
 	@override final _StringsSv _root; // ignore: unused_field
 
@@ -4198,8 +5932,8 @@ class _StringsLicensesSv implements _StringsLicensesEn {
 }
 
 // Path: navigation
-class _StringsNavigationSv implements _StringsNavigationEn {
-	_StringsNavigationSv._(this._root);
+class _StringsNavigationSv extends _StringsNavigationEn {
+	_StringsNavigationSv._(_StringsSv root) : this._root = root, super._(root);
 
 	@override final _StringsSv _root; // ignore: unused_field
 
@@ -4212,8 +5946,8 @@ class _StringsNavigationSv implements _StringsNavigationEn {
 }
 
 // Path: playlists
-class _StringsPlaylistsSv implements _StringsPlaylistsEn {
-	_StringsPlaylistsSv._(this._root);
+class _StringsPlaylistsSv extends _StringsPlaylistsEn {
+	_StringsPlaylistsSv._(_StringsSv root) : this._root = root, super._(root);
 
 	@override final _StringsSv _root; // ignore: unused_field
 
@@ -4256,8 +5990,8 @@ class _StringsPlaylistsSv implements _StringsPlaylistsEn {
 }
 
 // Path: collections
-class _StringsCollectionsSv implements _StringsCollectionsEn {
-	_StringsCollectionsSv._(this._root);
+class _StringsCollectionsSv extends _StringsCollectionsEn {
+	_StringsCollectionsSv._(_StringsSv root) : this._root = root, super._(root);
 
 	@override final _StringsSv _root; // ignore: unused_field
 
@@ -4288,9 +6022,276 @@ class _StringsCollectionsSv implements _StringsCollectionsEn {
 	@override String removeFromCollectionError({required Object error}) => 'Fel vid borttagning från samling: ${error}';
 }
 
+// Path: watchParty
+class _StringsWatchPartySv extends _StringsWatchPartyEn {
+	_StringsWatchPartySv._(_StringsSv root) : this._root = root, super._(root);
+
+	@override final _StringsSv _root; // ignore: unused_field
+
+	// Translations
+	@override String get title => 'Watch Party';
+	@override String get startParty => 'Starta Watch Party';
+	@override String get joinParty => 'Gå med i Party';
+	@override String get enterCode => 'Ange party-kod';
+	@override String get shareCode => 'Dela denna kod';
+	@override String get friendsCanJoin => 'Vänner kan gå med med denna kod';
+	@override String get participants => 'Deltagare';
+	@override String get host => 'Värd';
+	@override String get endParty => 'Avsluta Party';
+	@override String get leaveParty => 'Lämna Party';
+	@override String get partyEnded => 'Watch Party avslutad';
+	@override String get chat => 'Chatt';
+	@override String get typeMessage => 'Skriv ett meddelande...';
+	@override String joined({required Object name}) => '${name} gick med';
+	@override String left({required Object name}) => '${name} lämnade';
+	@override String get syncedPlayback => 'Uppspelning är synkroniserad med party';
+	@override String get hostControls => 'Endast värden kan styra uppspelningen';
+	@override String get creating => 'Skapar party...';
+	@override String get joining => 'Går med i party...';
+	@override String get createFailed => 'Misslyckades att skapa party';
+	@override String get joinFailed => 'Misslyckades att gå med i party';
+	@override String get invalidCode => 'Ogiltig party-kod';
+	@override String get gotIt => 'Uppfattat';
+}
+
+// Path: catchUp
+class _StringsCatchUpSv extends _StringsCatchUpEn {
+	_StringsCatchUpSv._(_StringsSv root) : this._root = root, super._(root);
+
+	@override final _StringsSv _root; // ignore: unused_field
+
+	// Translations
+	@override String get title => 'Catch Up TV';
+	@override String get startOver => 'Börja om';
+	@override String get startOverDescription => 'Se från början';
+	@override String get watchFromBeginning => 'Se från början?';
+	@override String alreadyStarted({required Object title}) => '"${title}" har redan börjat. Du kan se från början.';
+	@override String get watchLive => 'Se Live';
+	@override String get programsAvailable => 'Tillgängliga program';
+	@override String get noProgramsAvailable => 'Inga catch-up program tillgängliga';
+	@override String get programsWillAppear => 'Program visas här efterhand som de sänds';
+	@override String get unavailable => 'Inte tillgänglig';
+	@override String get bufferNotReady => 'Buffer inte redo än';
+	@override String get rewind => 'Spola tillbaka';
+	@override String get timeshiftEnabled => 'Time-shift aktiverad';
+	@override String goBackTo({required Object time}) => 'Gå tillbaka till ${time}';
+}
+
+// Path: watchlist
+class _StringsWatchlistSv extends _StringsWatchlistEn {
+	_StringsWatchlistSv._(_StringsSv root) : this._root = root, super._(root);
+
+	@override final _StringsSv _root; // ignore: unused_field
+
+	// Translations
+	@override String get title => 'Min bevakningslista';
+	@override String get all => 'Alla';
+	@override String get movies => 'Filmer';
+	@override String get shows => 'TV-serier';
+	@override String get episodes => 'Avsnitt';
+	@override String get empty => 'Din bevakningslista är tom';
+	@override String get emptyHint => 'Lägg till filmer och serier till din bevakningslista';
+	@override String get noItemsFiltered => 'Inga objekt matchar detta filter';
+	@override String get removeTitle => 'Ta bort från bevakningslista';
+	@override String removeConfirm({required Object title}) => 'Ta bort "${title}" från din bevakningslista?';
+	@override String get remove => 'Remove';
+	@override String get play => 'Play';
+	@override String get details => 'Details';
+	@override String get seeAll => 'See All';
+	@override String get clearAllTitle => 'Rensa bevakningslista';
+	@override String clearAllConfirm({required Object count}) => 'Ta bort alla ${count} objekt från din bevakningslista?';
+	@override String get clearAll => 'Rensa allt';
+	@override String get addedToday => 'Tillagd idag';
+	@override String get addedYesterday => 'Tillagd igår';
+	@override String addedDaysAgo({required Object days}) => 'Tillagd för ${days} dagar sedan';
+	@override String addedOn({required Object date}) => 'Tillagd den ${date}';
+	@override String get addToWatchlist => 'Lägg till i bevakningslista';
+	@override String get removeFromWatchlist => 'Ta bort från bevakningslista';
+	@override String get addedToWatchlist => 'Tillagd i bevakningslista';
+	@override String get removedFromWatchlist => 'Borttagen från bevakningslista';
+}
+
+// Path: liveTV
+class _StringsLiveTVSv extends _StringsLiveTVEn {
+	_StringsLiveTVSv._(_StringsSv root) : this._root = root, super._(root);
+
+	@override final _StringsSv _root; // ignore: unused_field
+
+	// Translations
+	@override String get title => 'Live TV';
+	@override String get guide => 'Guide';
+	@override String get dvr => 'DVR';
+	@override String get multiview => 'Multivy';
+	@override String get allChannels => 'Alla kanaler';
+	@override String get favorites => 'Favoriter';
+	@override String get noChannels => 'Inga kanaler tillgängliga';
+	@override String get addM3USource => 'Lägg till en M3U-källa i serverinställningarna';
+	@override String get recording => 'Spelar in';
+	@override String get recordingNow => 'Spelar in nu';
+	@override String get upNext => 'Nästa';
+	@override String get noProgram => 'Ingen programinfo';
+	@override String get filterByGroup => 'Filtrera efter grupp';
+	@override String get refresh => 'Uppdatera';
+	@override String channelCount({required Object count}) => '${count} kanaler';
+	@override String get nowPlaying => 'Sänds nu';
+	@override String get scheduleRecording => 'Schemalägg inspelning';
+	@override String get onNow => 'Sänds nu';
+	@override String endsAt({required Object time}) => 'Slutar ${time}';
+	@override String startsAt({required Object time}) => 'Börjar ${time}';
+	@override String playbackError({required Object error}) => 'Uppspelningsfel: ${error}';
+	@override String get noPreviousChannel => 'Ingen föregående kanal';
+	@override String switchedTo({required Object channel}) => 'Bytte till: ${channel}';
+	@override String get startingFromBeginning => 'Startar program från början...';
+	@override String failedToStartOver({required Object error}) => 'Kunde inte starta om: ${error}';
+	@override String playingProgram({required Object title}) => 'Spelar: ${title}';
+	@override String failedToPlayProgram({required Object error}) => 'Kunde inte spela program: ${error}';
+	@override String get addedToFavorites => 'Tillagd i favoriter';
+	@override String get removedFromFavorites => 'Borttagen från favoriter';
+	@override String failedToUpdateFavorite({required Object error}) => 'Kunde inte uppdatera favorit: ${error}';
+	@override String get pipNotSupported => 'Bild-i-bild stöds inte på denna plattform';
+	@override String get enteredPipMode => 'Bild-i-bild-läge aktiverat';
+	@override String get exitedPipMode => 'Bild-i-bild-läge avslutat';
+	@override String aspectRatioChanged({required Object mode}) => 'Bildförhållande: ${mode}';
+	@override String get tune => 'Ställ in';
+	@override String get retry => 'Försök igen';
+	@override String get noChannelsMatchFilter => 'Inga kanaler matchar filtret';
+	@override String get skipCommercial => 'Hoppa över reklam';
+}
+
+// Path: dvr
+class _StringsDvrSv extends _StringsDvrEn {
+	_StringsDvrSv._(_StringsSv root) : this._root = root, super._(root);
+
+	@override final _StringsSv _root; // ignore: unused_field
+
+	// Translations
+	@override String get title => 'DVR';
+	@override String get recordings => 'Inspelningar';
+	@override String get seriesRules => 'Serieregler';
+	@override String get noRecordings => 'Inga inspelningar';
+	@override String get noRules => 'Inga serieregler';
+	@override String get scheduleFromGuide => 'Schemalägg inspelningar från Live TV-guiden';
+	@override String get createRulesHint => 'Skapa regler för att spela in serier automatiskt';
+	@override String get storage => 'Lagring';
+	@override String recordingsCount({required Object count}) => '${count} inspelningar';
+	@override String get all => 'Alla';
+	@override String get scheduled => 'Schemalagda';
+	@override String get completed => 'Slutförda';
+	@override String get failed => 'Misslyckade';
+	@override String get deleteRecording => 'Ta bort inspelning?';
+	@override String get deleteRule => 'Ta bort serieregel?';
+	@override String get sortByDate => 'Datum';
+	@override String get sortByTitle => 'Titel';
+	@override String get sortBySize => 'Storlek';
+	@override String get playRecording => 'Spela inspelning';
+	@override String keepPolicy({required Object count}) => 'Behåll ${count} avsnitt';
+	@override String get keepAll => 'Behåll alla';
+	@override String get recordingScheduled => 'Inspelning schemalagd';
+	@override String get scheduleRecordingTitle => 'Schemalägg inspelning';
+	@override String get schedule => 'Schemalägg';
+	@override String get cancel => 'Avbryt';
+}
+
+// Path: epg
+class _StringsEpgSv extends _StringsEpgEn {
+	_StringsEpgSv._(_StringsSv root) : this._root = root, super._(root);
+
+	@override final _StringsSv _root; // ignore: unused_field
+
+	// Translations
+	@override String get title => 'TV-guide';
+	@override String get now => 'Nu';
+	@override String get today => 'Idag';
+	@override String get tomorrow => 'Imorgon';
+	@override String get noPrograms => 'Ingen programinformation tillgänglig';
+	@override String get loading => 'Laddar guide...';
+	@override String get record => 'Spela in';
+	@override String get reminder => 'Ställ in påminnelse';
+	@override String get moreInfo => 'Mer info';
+	@override String get toggleView => 'Byt vy';
+	@override String get gridView => 'Rutnätsvy';
+	@override String get nowNextView => 'Nu/Nästa vy';
+}
+
+// Path: channelSurfing
+class _StringsChannelSurfingSv extends _StringsChannelSurfingEn {
+	_StringsChannelSurfingSv._(_StringsSv root) : this._root = root, super._(root);
+
+	@override final _StringsSv _root; // ignore: unused_field
+
+	// Translations
+	@override String get title => 'Slumpmässig visning';
+	@override String get kidsMode => 'Barnläge';
+	@override String get loading => 'Laddar slumpmässig visning...';
+	@override String get failedToLoad => 'Kunde inte ladda innehåll';
+	@override String get retry => 'Försök igen';
+	@override String get noContent => 'Inget innehåll tillgängligt';
+	@override String itemsAvailable({required Object count}) => '${count} objekt tillgängliga';
+	@override String get startSurfing => 'Starta';
+	@override String get pressBackToExit => 'Tryck bakåt för att avsluta';
+	@override String get description => 'Se slumpmässiga filmer och serier kontinuerligt';
+	@override String get noServers => 'Inga servrar tillgängliga';
+}
+
+// Path: multiview
+class _StringsMultiviewSv extends _StringsMultiviewEn {
+	_StringsMultiviewSv._(_StringsSv root) : this._root = root, super._(root);
+
+	@override final _StringsSv _root; // ignore: unused_field
+
+	// Translations
+	@override String get title => 'Multi-Vy';
+	@override String get changeLayout => 'Ändra layout (L)';
+	@override String get addChannel => 'Lägg till kanal (A)';
+	@override String get removeChannel => 'Ta bort kanal (R)';
+	@override String get swapChannel => 'Byt kanal';
+	@override String get toggleMute => 'Ljud av/på (M)';
+	@override String get selectChannel => 'Välj kanal';
+	@override String get searchChannels => 'Sök kanaler...';
+	@override String get cancel => 'Avbryt';
+	@override String channelNumber({required Object number}) => 'K. ${number}';
+}
+
+// Path: player
+class _StringsPlayerSv extends _StringsPlayerEn {
+	_StringsPlayerSv._(_StringsSv root) : this._root = root, super._(root);
+
+	@override final _StringsSv _root; // ignore: unused_field
+
+	// Translations
+	@override String get playbackError => 'Uppspelningsfel';
+	@override String get error => 'Fel';
+	@override String failedToStartPlayback({required Object error}) => 'Kunde inte starta uppspelning:\n${error}';
+	@override String get ok => 'OK';
+}
+
+// Path: downloads
+class _StringsDownloadsSv extends _StringsDownloadsEn {
+	_StringsDownloadsSv._(_StringsSv root) : this._root = root, super._(root);
+
+	@override final _StringsSv _root; // ignore: unused_field
+
+	// Translations
+	@override String get title => 'Nedladdningar';
+	@override String get deleteAll => 'Ta bort alla';
+	@override String get deleteAllTitle => 'Ta bort alla nedladdningar?';
+	@override String deleteAllMessage({required Object count, required Object size}) => 'Detta tar bort alla ${count} nedladdningar och frigör ${size} lagringsutrymme.';
+	@override String storageUsed({required Object size}) => 'Lagring använd: ${size}';
+	@override String downloading({required Object count}) => 'Laddar ner (${count})';
+	@override String downloaded({required Object count}) => 'Nedladdat (${count})';
+	@override String get noDownloads => 'Inga nedladdningar';
+	@override String get noDownloadsHint => 'Ladda ner filmer och serier för att se offline';
+	@override String get deleteDownloadTitle => 'Ta bort nedladdning?';
+	@override String deleteDownloadMessage({required Object title}) => 'Ta bort "${title}"?';
+	@override String get delete => 'Ta bort';
+	@override String get cancel => 'Avbryt';
+	@override String get downloadFailed => 'Nedladdning misslyckades';
+	@override String get paused => 'Pausad';
+}
+
 // Path: libraries.tabs
-class _StringsLibrariesTabsSv implements _StringsLibrariesTabsEn {
-	_StringsLibrariesTabsSv._(this._root);
+class _StringsLibrariesTabsSv extends _StringsLibrariesTabsEn {
+	_StringsLibrariesTabsSv._(_StringsSv root) : this._root = root, super._(root);
 
 	@override final _StringsSv _root; // ignore: unused_field
 
@@ -4302,8 +6303,8 @@ class _StringsLibrariesTabsSv implements _StringsLibrariesTabsEn {
 }
 
 // Path: libraries.groupings
-class _StringsLibrariesGroupingsSv implements _StringsLibrariesGroupingsEn {
-	_StringsLibrariesGroupingsSv._(this._root);
+class _StringsLibrariesGroupingsSv extends _StringsLibrariesGroupingsEn {
+	_StringsLibrariesGroupingsSv._(_StringsSv root) : this._root = root, super._(root);
 
 	@override final _StringsSv _root; // ignore: unused_field
 
@@ -4317,7 +6318,7 @@ class _StringsLibrariesGroupingsSv implements _StringsLibrariesGroupingsEn {
 }
 
 // Path: <root>
-class _StringsZh implements Translations {
+class _StringsZh extends Translations {
 	/// You can call this constructor and build your own translation instance of this locale.
 	/// Constructing via the enum [AppLocale.build] is preferred.
 	_StringsZh.build({Map<String, Node>? overrides, PluralResolver? cardinalResolver, PluralResolver? ordinalResolver})
@@ -4327,7 +6328,9 @@ class _StringsZh implements Translations {
 		    overrides: overrides ?? {},
 		    cardinalResolver: cardinalResolver,
 		    ordinalResolver: ordinalResolver,
-		  ) {
+		  ),
+		  super.build(cardinalResolver: cardinalResolver, ordinalResolver: ordinalResolver) {
+		super.$meta.setFlatMapFunction($meta.getTranslation); // copy base translations to super.$meta
 		$meta.setFlatMapFunction(_flatMapFunction);
 	}
 
@@ -4335,7 +6338,7 @@ class _StringsZh implements Translations {
 	@override final TranslationMetadata<AppLocale, Translations> $meta;
 
 	/// Access flat map
-	@override dynamic operator[](String key) => $meta.getTranslation(key);
+	@override dynamic operator[](String key) => $meta.getTranslation(key) ?? super.$meta.getTranslation(key);
 
 	@override late final _StringsZh _root = this; // ignore: unused_field
 
@@ -4361,20 +6364,32 @@ class _StringsZh implements Translations {
 	@override late final _StringsDialogZh dialog = _StringsDialogZh._(_root);
 	@override late final _StringsDiscoverZh discover = _StringsDiscoverZh._(_root);
 	@override late final _StringsErrorsZh errors = _StringsErrorsZh._(_root);
+	@override late final _StringsVoiceZh voice = _StringsVoiceZh._(_root);
 	@override late final _StringsLibrariesZh libraries = _StringsLibrariesZh._(_root);
 	@override late final _StringsAboutZh about = _StringsAboutZh._(_root);
 	@override late final _StringsServerSelectionZh serverSelection = _StringsServerSelectionZh._(_root);
 	@override late final _StringsHubDetailZh hubDetail = _StringsHubDetailZh._(_root);
 	@override late final _StringsLogsZh logs = _StringsLogsZh._(_root);
+	@override late final _StringsStatsZh stats = _StringsStatsZh._(_root);
 	@override late final _StringsLicensesZh licenses = _StringsLicensesZh._(_root);
 	@override late final _StringsNavigationZh navigation = _StringsNavigationZh._(_root);
 	@override late final _StringsPlaylistsZh playlists = _StringsPlaylistsZh._(_root);
 	@override late final _StringsCollectionsZh collections = _StringsCollectionsZh._(_root);
+	@override late final _StringsWatchPartyZh watchParty = _StringsWatchPartyZh._(_root);
+	@override late final _StringsCatchUpZh catchUp = _StringsCatchUpZh._(_root);
+	@override late final _StringsWatchlistZh watchlist = _StringsWatchlistZh._(_root);
+	@override late final _StringsLiveTVZh liveTV = _StringsLiveTVZh._(_root);
+	@override late final _StringsDvrZh dvr = _StringsDvrZh._(_root);
+	@override late final _StringsEpgZh epg = _StringsEpgZh._(_root);
+	@override late final _StringsChannelSurfingZh channelSurfing = _StringsChannelSurfingZh._(_root);
+	@override late final _StringsMultiviewZh multiview = _StringsMultiviewZh._(_root);
+	@override late final _StringsPlayerZh player = _StringsPlayerZh._(_root);
+	@override late final _StringsDownloadsZh downloads = _StringsDownloadsZh._(_root);
 }
 
 // Path: app
-class _StringsAppZh implements _StringsAppEn {
-	_StringsAppZh._(this._root);
+class _StringsAppZh extends _StringsAppEn {
+	_StringsAppZh._(_StringsZh root) : this._root = root, super._(root);
 
 	@override final _StringsZh _root; // ignore: unused_field
 
@@ -4384,8 +6399,8 @@ class _StringsAppZh implements _StringsAppEn {
 }
 
 // Path: auth
-class _StringsAuthZh implements _StringsAuthEn {
-	_StringsAuthZh._(this._root);
+class _StringsAuthZh extends _StringsAuthEn {
+	_StringsAuthZh._(_StringsZh root) : this._root = root, super._(root);
 
 	@override final _StringsZh _root; // ignore: unused_field
 
@@ -4432,11 +6447,24 @@ class _StringsAuthZh implements _StringsAuthEn {
 	@override String get passwordTooShort => '密码至少需要6个字符';
 	@override String get invalidEmail => '请输入有效的电子邮件地址';
 	@override String get firstUserNote => '第一个用户将成为管理员';
+	@override String get howConnecting => '您要如何连接？';
+	@override String get atHome => '在家中';
+	@override String get atHomeDescription => '在本地网络中自动检测服务器';
+	@override String get awayFromHome => '在外出时';
+	@override String get awayFromHomeDescription => '手动输入服务器地址';
+	@override String get findYourServer => '查找您的服务器';
+	@override String get searching => '搜索中...';
+	@override String get checkingNetwork => '正在检查网络...';
+	@override String get serversFound => '找到的服务器';
+	@override String get scanAgain => '重新扫描';
+	@override String get enterManually => '手动输入';
+	@override String get noServersFound => '在您的网络中未找到服务器。请确保您的 OpenFlix 服务器正在运行。';
+	@override String discoveryFailed({required Object error}) => '搜索失败：${error}';
 }
 
 // Path: common
-class _StringsCommonZh implements _StringsCommonEn {
-	_StringsCommonZh._(this._root);
+class _StringsCommonZh extends _StringsCommonEn {
+	_StringsCommonZh._(_StringsZh root) : this._root = root, super._(root);
 
 	@override final _StringsZh _root; // ignore: unused_field
 
@@ -4465,11 +6493,17 @@ class _StringsCommonZh implements _StringsCommonEn {
 	@override String get delete => '删除';
 	@override String get shuffle => '随机播放';
 	@override String get addTo => '添加到...';
+	@override String get remove => 'Remove';
+	@override String get play => 'Play';
+	@override String get details => 'Details';
+	@override String get seeAll => 'See All';
+	@override String get live => '直播';
+	@override String get newLabel => '新';
 }
 
 // Path: screens
-class _StringsScreensZh implements _StringsScreensEn {
-	_StringsScreensZh._(this._root);
+class _StringsScreensZh extends _StringsScreensEn {
+	_StringsScreensZh._(_StringsZh root) : this._root = root, super._(root);
 
 	@override final _StringsZh _root; // ignore: unused_field
 
@@ -4483,8 +6517,8 @@ class _StringsScreensZh implements _StringsScreensEn {
 }
 
 // Path: update
-class _StringsUpdateZh implements _StringsUpdateEn {
-	_StringsUpdateZh._(this._root);
+class _StringsUpdateZh extends _StringsUpdateEn {
+	_StringsUpdateZh._(_StringsZh root) : this._root = root, super._(root);
 
 	@override final _StringsZh _root; // ignore: unused_field
 
@@ -4499,13 +6533,20 @@ class _StringsUpdateZh implements _StringsUpdateEn {
 }
 
 // Path: settings
-class _StringsSettingsZh implements _StringsSettingsEn {
-	_StringsSettingsZh._(this._root);
+class _StringsSettingsZh extends _StringsSettingsEn {
+	_StringsSettingsZh._(_StringsZh root) : this._root = root, super._(root);
 
 	@override final _StringsZh _root; // ignore: unused_field
 
 	// Translations
 	@override String get title => '设置';
+	@override String get profile => '个人资料';
+	@override String get noProfileSelected => '未选择个人资料';
+	@override String get kidsMode => '儿童模式';
+	@override String get switchProfile => '切换个人资料';
+	@override String get switchProfileDescription => '切换到其他个人资料';
+	@override String get manageProfiles => '管理个人资料';
+	@override String get manageProfilesDescription => '添加、编辑或删除个人资料';
 	@override String get language => '语言';
 	@override String get theme => '主题';
 	@override String get appearance => '外观';
@@ -4595,24 +6636,49 @@ class _StringsSettingsZh implements _StringsSettingsEn {
 	@override String get apiKey => 'API 密钥';
 	@override String get tmdbApiKeySaved => 'TMDB API 密钥已保存';
 	@override String get tmdbApiKeyCleared => 'TMDB API 密钥已清除';
+	@override String get parentalControls => '家长控制';
+	@override String get enableParentalControls => '启用家长控制';
+	@override String get enableParentalControlsDescription => '根据年龄分级限制内容';
+	@override String get setPin => '设置 PIN';
+	@override String get setPinDescription => '输入 4 位 PIN 码以保护设置';
+	@override String get confirmPin => '确认 PIN';
+	@override String get confirmPinDescription => '再次输入 PIN 码进行确认';
+	@override String get enterPin => '输入 PIN';
+	@override String get enterPinDescription => '输入您的家长控制 PIN 码';
+	@override String get changePin => '更改 PIN';
+	@override String get changePinDescription => '更改您的家长控制 PIN 码';
+	@override String get pinSet => '家长控制 PIN 码设置成功';
+	@override String get pinMismatch => 'PIN 码不匹配。请重试。';
+	@override String get incorrectPin => 'PIN 码错误。请重试。';
+	@override String get maxMovieRating => '最大电影分级';
+	@override String get maxTvRating => '最大电视分级';
 }
 
 // Path: search
-class _StringsSearchZh implements _StringsSearchEn {
-	_StringsSearchZh._(this._root);
+class _StringsSearchZh extends _StringsSearchEn {
+	_StringsSearchZh._(_StringsZh root) : this._root = root, super._(root);
 
 	@override final _StringsZh _root; // ignore: unused_field
 
 	// Translations
-	@override String get hint => '搜索电影、系列、音乐...';
+	@override String get hint => '搜索电影、剧集、音乐...';
 	@override String get tryDifferentTerm => '尝试不同的搜索词';
 	@override String get searchYourMedia => '搜索媒体';
 	@override String get enterTitleActorOrKeyword => '输入标题、演员或关键词';
+	@override String get recentSearches => '最近搜索';
+	@override String get clear => '清除';
+	@override String get voiceSearch => '语音搜索';
+	@override String get listening => '正在听取...';
+	@override String get speakNow => '请说话';
+	@override String get all => '全部';
+	@override String get movies => '电影';
+	@override String get tvShows => '电视剧';
+	@override String get music => '音乐';
 }
 
 // Path: hotkeys
-class _StringsHotkeysZh implements _StringsHotkeysEn {
-	_StringsHotkeysZh._(this._root);
+class _StringsHotkeysZh extends _StringsHotkeysEn {
+	_StringsHotkeysZh._(_StringsZh root) : this._root = root, super._(root);
 
 	@override final _StringsZh _root; // ignore: unused_field
 
@@ -4622,8 +6688,8 @@ class _StringsHotkeysZh implements _StringsHotkeysEn {
 }
 
 // Path: pinEntry
-class _StringsPinEntryZh implements _StringsPinEntryEn {
-	_StringsPinEntryZh._(this._root);
+class _StringsPinEntryZh extends _StringsPinEntryEn {
+	_StringsPinEntryZh._(_StringsZh root) : this._root = root, super._(root);
 
 	@override final _StringsZh _root; // ignore: unused_field
 
@@ -4634,8 +6700,8 @@ class _StringsPinEntryZh implements _StringsPinEntryEn {
 }
 
 // Path: fileInfo
-class _StringsFileInfoZh implements _StringsFileInfoEn {
-	_StringsFileInfoZh._(this._root);
+class _StringsFileInfoZh extends _StringsFileInfoEn {
+	_StringsFileInfoZh._(_StringsZh root) : this._root = root, super._(root);
 
 	@override final _StringsZh _root; // ignore: unused_field
 
@@ -4666,8 +6732,8 @@ class _StringsFileInfoZh implements _StringsFileInfoEn {
 }
 
 // Path: mediaMenu
-class _StringsMediaMenuZh implements _StringsMediaMenuEn {
-	_StringsMediaMenuZh._(this._root);
+class _StringsMediaMenuZh extends _StringsMediaMenuEn {
+	_StringsMediaMenuZh._(_StringsZh root) : this._root = root, super._(root);
 
 	@override final _StringsZh _root; // ignore: unused_field
 
@@ -4682,8 +6748,8 @@ class _StringsMediaMenuZh implements _StringsMediaMenuEn {
 }
 
 // Path: accessibility
-class _StringsAccessibilityZh implements _StringsAccessibilityEn {
-	_StringsAccessibilityZh._(this._root);
+class _StringsAccessibilityZh extends _StringsAccessibilityEn {
+	_StringsAccessibilityZh._(_StringsZh root) : this._root = root, super._(root);
 
 	@override final _StringsZh _root; // ignore: unused_field
 
@@ -4699,8 +6765,8 @@ class _StringsAccessibilityZh implements _StringsAccessibilityEn {
 }
 
 // Path: tooltips
-class _StringsTooltipsZh implements _StringsTooltipsEn {
-	_StringsTooltipsZh._(this._root);
+class _StringsTooltipsZh extends _StringsTooltipsEn {
+	_StringsTooltipsZh._(_StringsZh root) : this._root = root, super._(root);
 
 	@override final _StringsZh _root; // ignore: unused_field
 
@@ -4711,8 +6777,8 @@ class _StringsTooltipsZh implements _StringsTooltipsEn {
 }
 
 // Path: videoControls
-class _StringsVideoControlsZh implements _StringsVideoControlsEn {
-	_StringsVideoControlsZh._(this._root);
+class _StringsVideoControlsZh extends _StringsVideoControlsEn {
+	_StringsVideoControlsZh._(_StringsZh root) : this._root = root, super._(root);
 
 	@override final _StringsZh _root; // ignore: unused_field
 
@@ -4730,6 +6796,11 @@ class _StringsVideoControlsZh implements _StringsVideoControlsEn {
 	@override String get stretch => '拉伸';
 	@override String get lockRotation => '锁定旋转';
 	@override String get unlockRotation => '解锁旋转';
+	@override String get lockScreen => '锁定屏幕';
+	@override String get unlockScreen => '解锁屏幕';
+	@override String get screenLockButton => '屏幕锁定';
+	@override String get screenLocked => '屏幕已锁定';
+	@override String get tapToUnlock => '点击解锁';
 	@override String get sleepTimer => '睡眠定时器';
 	@override String get timerActive => '定时器已激活';
 	@override String playbackWillPauseIn({required Object duration}) => '播放将在 ${duration} 后暂停';
@@ -4760,8 +6831,8 @@ class _StringsVideoControlsZh implements _StringsVideoControlsEn {
 }
 
 // Path: userStatus
-class _StringsUserStatusZh implements _StringsUserStatusEn {
-	_StringsUserStatusZh._(this._root);
+class _StringsUserStatusZh extends _StringsUserStatusEn {
+	_StringsUserStatusZh._(_StringsZh root) : this._root = root, super._(root);
 
 	@override final _StringsZh _root; // ignore: unused_field
 
@@ -4773,8 +6844,8 @@ class _StringsUserStatusZh implements _StringsUserStatusEn {
 }
 
 // Path: messages
-class _StringsMessagesZh implements _StringsMessagesEn {
-	_StringsMessagesZh._(this._root);
+class _StringsMessagesZh extends _StringsMessagesEn {
+	_StringsMessagesZh._(_StringsZh root) : this._root = root, super._(root);
 
 	@override final _StringsZh _root; // ignore: unused_field
 
@@ -4812,8 +6883,8 @@ class _StringsMessagesZh implements _StringsMessagesEn {
 }
 
 // Path: profile
-class _StringsProfileZh implements _StringsProfileEn {
-	_StringsProfileZh._(this._root);
+class _StringsProfileZh extends _StringsProfileEn {
+	_StringsProfileZh._(_StringsZh root) : this._root = root, super._(root);
 
 	@override final _StringsZh _root; // ignore: unused_field
 
@@ -4822,8 +6893,8 @@ class _StringsProfileZh implements _StringsProfileEn {
 }
 
 // Path: subtitlingStyling
-class _StringsSubtitlingStylingZh implements _StringsSubtitlingStylingEn {
-	_StringsSubtitlingStylingZh._(this._root);
+class _StringsSubtitlingStylingZh extends _StringsSubtitlingStylingEn {
+	_StringsSubtitlingStylingZh._(_StringsZh root) : this._root = root, super._(root);
 
 	@override final _StringsZh _root; // ignore: unused_field
 
@@ -4838,8 +6909,8 @@ class _StringsSubtitlingStylingZh implements _StringsSubtitlingStylingEn {
 }
 
 // Path: dialog
-class _StringsDialogZh implements _StringsDialogEn {
-	_StringsDialogZh._(this._root);
+class _StringsDialogZh extends _StringsDialogEn {
+	_StringsDialogZh._(_StringsZh root) : this._root = root, super._(root);
 
 	@override final _StringsZh _root; // ignore: unused_field
 
@@ -4851,8 +6922,8 @@ class _StringsDialogZh implements _StringsDialogEn {
 }
 
 // Path: discover
-class _StringsDiscoverZh implements _StringsDiscoverEn {
-	_StringsDiscoverZh._(this._root);
+class _StringsDiscoverZh extends _StringsDiscoverEn {
+	_StringsDiscoverZh._(_StringsZh root) : this._root = root, super._(root);
 
 	@override final _StringsZh _root; // ignore: unused_field
 
@@ -4881,11 +6952,35 @@ class _StringsDiscoverZh implements _StringsDiscoverEn {
 	@override String get movie => '电影';
 	@override String get tvShow => '电视剧';
 	@override String minutesLeft({required Object minutes}) => '剩余 ${minutes} 分钟';
+	@override String get whatsOnNow => '正在播出';
+	@override String get channelGuide => '节目指南';
+	@override String get liveNow => '正在直播';
+	@override String get topTen => '前10名';
+	@override String get newBadge => '新';
+	@override String get liveBadge => '直播';
+	@override String get goodMorning => '早上好';
+	@override String get goodAfternoon => '下午好';
+	@override String get goodEvening => '晚上好';
+	@override String get defaultUser => 'Guest';
+	@override String get yourNextWatch => 'Your Next Watch';
+	@override String pickedForYou({required Object name}) => 'Picked just for you, ${name}';
+	@override String get surpriseMe => 'Surprise Me';
+	@override String get randomPicker => 'Random Movie Picker';
+	@override String get noMoviesFound => 'No movies found in your library';
+	@override String get spinning => 'Picking something great...';
+	@override String get spinAgain => 'Spin Again';
+	@override String get calendar => 'Calendar';
+	@override String get today => 'Today';
+	@override String get item => 'item';
+	@override String get items => 'items';
+	@override String get loadingMovies => '正在加载你的电影...';
+	@override String get noContentOnDate => 'No content added on this date';
+	@override String get noEpgData => '暂无节目信息';
 }
 
 // Path: errors
-class _StringsErrorsZh implements _StringsErrorsEn {
-	_StringsErrorsZh._(this._root);
+class _StringsErrorsZh extends _StringsErrorsEn {
+	_StringsErrorsZh._(_StringsZh root) : this._root = root, super._(root);
 
 	@override final _StringsZh _root; // ignore: unused_field
 
@@ -4902,11 +6997,23 @@ class _StringsErrorsZh implements _StringsErrorsEn {
 	@override String failedToVerifyToken({required Object error}) => '无法验证令牌: ${error}';
 	@override String failedToSwitchProfile({required Object displayName}) => '无法切换到 ${displayName}';
 	@override String get connectionFailedGeneric => '连接失败';
+	@override String failedToRemove({required Object error}) => '移除失败：${error}';
+}
+
+// Path: voice
+class _StringsVoiceZh extends _StringsVoiceEn {
+	_StringsVoiceZh._(_StringsZh root) : this._root = root, super._(root);
+
+	@override final _StringsZh _root; // ignore: unused_field
+
+	// Translations
+	@override String get notAvailable => '语音控制不可用';
+	@override String commandNotRecognized({required Object command}) => '无法识别的命令："${command}"';
 }
 
 // Path: libraries
-class _StringsLibrariesZh implements _StringsLibrariesEn {
-	_StringsLibrariesZh._(this._root);
+class _StringsLibrariesZh extends _StringsLibrariesEn {
+	_StringsLibrariesZh._(_StringsZh root) : this._root = root, super._(root);
 
 	@override final _StringsZh _root; // ignore: unused_field
 
@@ -4953,8 +7060,8 @@ class _StringsLibrariesZh implements _StringsLibrariesEn {
 }
 
 // Path: about
-class _StringsAboutZh implements _StringsAboutEn {
-	_StringsAboutZh._(this._root);
+class _StringsAboutZh extends _StringsAboutEn {
+	_StringsAboutZh._(_StringsZh root) : this._root = root, super._(root);
 
 	@override final _StringsZh _root; // ignore: unused_field
 
@@ -4967,8 +7074,8 @@ class _StringsAboutZh implements _StringsAboutEn {
 }
 
 // Path: serverSelection
-class _StringsServerSelectionZh implements _StringsServerSelectionEn {
-	_StringsServerSelectionZh._(this._root);
+class _StringsServerSelectionZh extends _StringsServerSelectionEn {
+	_StringsServerSelectionZh._(_StringsZh root) : this._root = root, super._(root);
 
 	@override final _StringsZh _root; // ignore: unused_field
 
@@ -4993,8 +7100,8 @@ class _StringsServerSelectionZh implements _StringsServerSelectionEn {
 }
 
 // Path: hubDetail
-class _StringsHubDetailZh implements _StringsHubDetailEn {
-	_StringsHubDetailZh._(this._root);
+class _StringsHubDetailZh extends _StringsHubDetailEn {
+	_StringsHubDetailZh._(_StringsZh root) : this._root = root, super._(root);
 
 	@override final _StringsZh _root; // ignore: unused_field
 
@@ -5007,8 +7114,8 @@ class _StringsHubDetailZh implements _StringsHubDetailEn {
 }
 
 // Path: logs
-class _StringsLogsZh implements _StringsLogsEn {
-	_StringsLogsZh._(this._root);
+class _StringsLogsZh extends _StringsLogsEn {
+	_StringsLogsZh._(_StringsZh root) : this._root = root, super._(root);
 
 	@override final _StringsZh _root; // ignore: unused_field
 
@@ -5022,9 +7129,28 @@ class _StringsLogsZh implements _StringsLogsEn {
 	@override String get stackTrace => '堆栈跟踪 (Stack Trace):';
 }
 
+// Path: stats
+class _StringsStatsZh extends _StringsStatsEn {
+	_StringsStatsZh._(_StringsZh root) : this._root = root, super._(root);
+
+	@override final _StringsZh _root; // ignore: unused_field
+
+	// Translations
+	@override String get title => '观看统计';
+	@override String get totalWatchTime => '总观看时长';
+	@override String get moviesWatched => '已观看电影';
+	@override String get episodesWatched => '已观看剧集';
+	@override String get avgPerDay => '每日平均';
+	@override String get topGenres => '常看类型';
+	@override String get monthlyActivity => '月度活动';
+	@override String get noData => '暂无观看记录';
+	@override String get startWatching => '开始观看以查看统计数据';
+	@override String get days => '天';
+}
+
 // Path: licenses
-class _StringsLicensesZh implements _StringsLicensesEn {
-	_StringsLicensesZh._(this._root);
+class _StringsLicensesZh extends _StringsLicensesEn {
+	_StringsLicensesZh._(_StringsZh root) : this._root = root, super._(root);
 
 	@override final _StringsZh _root; // ignore: unused_field
 
@@ -5036,8 +7162,8 @@ class _StringsLicensesZh implements _StringsLicensesEn {
 }
 
 // Path: navigation
-class _StringsNavigationZh implements _StringsNavigationEn {
-	_StringsNavigationZh._(this._root);
+class _StringsNavigationZh extends _StringsNavigationEn {
+	_StringsNavigationZh._(_StringsZh root) : this._root = root, super._(root);
 
 	@override final _StringsZh _root; // ignore: unused_field
 
@@ -5050,8 +7176,8 @@ class _StringsNavigationZh implements _StringsNavigationEn {
 }
 
 // Path: playlists
-class _StringsPlaylistsZh implements _StringsPlaylistsEn {
-	_StringsPlaylistsZh._(this._root);
+class _StringsPlaylistsZh extends _StringsPlaylistsEn {
+	_StringsPlaylistsZh._(_StringsZh root) : this._root = root, super._(root);
 
 	@override final _StringsZh _root; // ignore: unused_field
 
@@ -5094,8 +7220,8 @@ class _StringsPlaylistsZh implements _StringsPlaylistsEn {
 }
 
 // Path: collections
-class _StringsCollectionsZh implements _StringsCollectionsEn {
-	_StringsCollectionsZh._(this._root);
+class _StringsCollectionsZh extends _StringsCollectionsEn {
+	_StringsCollectionsZh._(_StringsZh root) : this._root = root, super._(root);
 
 	@override final _StringsZh _root; // ignore: unused_field
 
@@ -5126,9 +7252,276 @@ class _StringsCollectionsZh implements _StringsCollectionsEn {
 	@override String removeFromCollectionError({required Object error}) => '从合集移除时出错：${error}';
 }
 
+// Path: watchParty
+class _StringsWatchPartyZh extends _StringsWatchPartyEn {
+	_StringsWatchPartyZh._(_StringsZh root) : this._root = root, super._(root);
+
+	@override final _StringsZh _root; // ignore: unused_field
+
+	// Translations
+	@override String get title => 'Watch Party';
+	@override String get startParty => '开始 Watch Party';
+	@override String get joinParty => '加入 Party';
+	@override String get enterCode => '输入 Party 代码';
+	@override String get shareCode => '分享此代码';
+	@override String get friendsCanJoin => '朋友可以使用此代码加入';
+	@override String get participants => '参与者';
+	@override String get host => '主持人';
+	@override String get endParty => '结束 Party';
+	@override String get leaveParty => '离开 Party';
+	@override String get partyEnded => 'Watch Party 已结束';
+	@override String get chat => '聊天';
+	@override String get typeMessage => '输入消息...';
+	@override String joined({required Object name}) => '${name} 已加入';
+	@override String left({required Object name}) => '${name} 已离开';
+	@override String get syncedPlayback => '播放已与 Party 同步';
+	@override String get hostControls => '只有主持人可以控制播放';
+	@override String get creating => '正在创建 Party...';
+	@override String get joining => '正在加入 Party...';
+	@override String get createFailed => '创建 Party 失败';
+	@override String get joinFailed => '加入 Party 失败';
+	@override String get invalidCode => '无效的 Party 代码';
+	@override String get gotIt => '知道了';
+}
+
+// Path: catchUp
+class _StringsCatchUpZh extends _StringsCatchUpEn {
+	_StringsCatchUpZh._(_StringsZh root) : this._root = root, super._(root);
+
+	@override final _StringsZh _root; // ignore: unused_field
+
+	// Translations
+	@override String get title => '回看电视';
+	@override String get startOver => '重新开始';
+	@override String get startOverDescription => '从头观看';
+	@override String get watchFromBeginning => '从头开始观看？';
+	@override String alreadyStarted({required Object title}) => '"${title}" 已经开始。您可以从头开始观看。';
+	@override String get watchLive => '观看直播';
+	@override String get programsAvailable => '可用节目';
+	@override String get noProgramsAvailable => '没有可用的回看节目';
+	@override String get programsWillAppear => '节目将在播出后出现在这里';
+	@override String get unavailable => '不可用';
+	@override String get bufferNotReady => '缓冲区尚未就绪';
+	@override String get rewind => '倒带';
+	@override String get timeshiftEnabled => '时移已启用';
+	@override String goBackTo({required Object time}) => '返回到 ${time}';
+}
+
+// Path: watchlist
+class _StringsWatchlistZh extends _StringsWatchlistEn {
+	_StringsWatchlistZh._(_StringsZh root) : this._root = root, super._(root);
+
+	@override final _StringsZh _root; // ignore: unused_field
+
+	// Translations
+	@override String get title => '我的观看列表';
+	@override String get all => '全部';
+	@override String get movies => '电影';
+	@override String get shows => '电视剧';
+	@override String get episodes => '剧集';
+	@override String get empty => '您的观看列表为空';
+	@override String get emptyHint => '从详情页添加电影和剧集到您的观看列表';
+	@override String get noItemsFiltered => '没有符合此筛选条件的项目';
+	@override String get removeTitle => '从观看列表移除';
+	@override String removeConfirm({required Object title}) => '确定要将「${title}」从观看列表移除吗？';
+	@override String get remove => 'Remove';
+	@override String get play => 'Play';
+	@override String get details => 'Details';
+	@override String get seeAll => 'See All';
+	@override String get clearAllTitle => '清空观看列表';
+	@override String clearAllConfirm({required Object count}) => '确定要移除观看列表中的 ${count} 个项目吗？';
+	@override String get clearAll => '全部清除';
+	@override String get addedToday => '今天添加';
+	@override String get addedYesterday => '昨天添加';
+	@override String addedDaysAgo({required Object days}) => '${days} 天前添加';
+	@override String addedOn({required Object date}) => '添加于 ${date}';
+	@override String get addToWatchlist => '添加到观看列表';
+	@override String get removeFromWatchlist => '从观看列表移除';
+	@override String get addedToWatchlist => '已添加到观看列表';
+	@override String get removedFromWatchlist => '已从观看列表移除';
+}
+
+// Path: liveTV
+class _StringsLiveTVZh extends _StringsLiveTVEn {
+	_StringsLiveTVZh._(_StringsZh root) : this._root = root, super._(root);
+
+	@override final _StringsZh _root; // ignore: unused_field
+
+	// Translations
+	@override String get title => '电视直播';
+	@override String get guide => '节目指南';
+	@override String get dvr => 'DVR';
+	@override String get multiview => '多画面';
+	@override String get allChannels => '所有频道';
+	@override String get favorites => '收藏';
+	@override String get noChannels => '没有可用频道';
+	@override String get addM3USource => '在服务器设置中添加M3U源';
+	@override String get recording => '录制中';
+	@override String get recordingNow => '正在录制';
+	@override String get upNext => '即将播出';
+	@override String get noProgram => '没有节目信息';
+	@override String get filterByGroup => '按组筛选';
+	@override String get refresh => '刷新';
+	@override String channelCount({required Object count}) => '${count} 个频道';
+	@override String get nowPlaying => '正在播出';
+	@override String get scheduleRecording => '预约录制';
+	@override String get onNow => '正在播出';
+	@override String endsAt({required Object time}) => '结束于 ${time}';
+	@override String startsAt({required Object time}) => '开始于 ${time}';
+	@override String playbackError({required Object error}) => '播放错误：${error}';
+	@override String get noPreviousChannel => '没有上一个频道';
+	@override String switchedTo({required Object channel}) => '已切换到：${channel}';
+	@override String get startingFromBeginning => '正在从头开始播放节目...';
+	@override String failedToStartOver({required Object error}) => '重新开始失败：${error}';
+	@override String playingProgram({required Object title}) => '正在播放：${title}';
+	@override String failedToPlayProgram({required Object error}) => '播放节目失败：${error}';
+	@override String get addedToFavorites => '已添加到收藏';
+	@override String get removedFromFavorites => '已从收藏中移除';
+	@override String failedToUpdateFavorite({required Object error}) => '更新收藏失败：${error}';
+	@override String get pipNotSupported => '此平台不支持画中画';
+	@override String get enteredPipMode => '已进入画中画模式';
+	@override String get exitedPipMode => '已退出画中画模式';
+	@override String aspectRatioChanged({required Object mode}) => '画面比例：${mode}';
+	@override String get tune => '调谐';
+	@override String get retry => '重试';
+	@override String get noChannelsMatchFilter => '没有匹配筛选条件的频道';
+	@override String get skipCommercial => '跳过广告';
+}
+
+// Path: dvr
+class _StringsDvrZh extends _StringsDvrEn {
+	_StringsDvrZh._(_StringsZh root) : this._root = root, super._(root);
+
+	@override final _StringsZh _root; // ignore: unused_field
+
+	// Translations
+	@override String get title => 'DVR';
+	@override String get recordings => '录制内容';
+	@override String get seriesRules => '系列规则';
+	@override String get noRecordings => '没有录制内容';
+	@override String get noRules => '没有系列规则';
+	@override String get scheduleFromGuide => '从电视指南预约录制';
+	@override String get createRulesHint => '创建规则自动录制系列节目';
+	@override String get storage => '存储空间';
+	@override String recordingsCount({required Object count}) => '${count} 个录制';
+	@override String get all => '全部';
+	@override String get scheduled => '已预约';
+	@override String get completed => '已完成';
+	@override String get failed => '失败';
+	@override String get deleteRecording => '删除录制？';
+	@override String get deleteRule => '删除系列规则？';
+	@override String get sortByDate => '日期';
+	@override String get sortByTitle => '标题';
+	@override String get sortBySize => '大小';
+	@override String get playRecording => '播放录制';
+	@override String keepPolicy({required Object count}) => '保留 ${count} 集';
+	@override String get keepAll => '全部保留';
+	@override String get recordingScheduled => '录制已预约';
+	@override String get scheduleRecordingTitle => '预约录制';
+	@override String get schedule => '预约';
+	@override String get cancel => '取消';
+}
+
+// Path: epg
+class _StringsEpgZh extends _StringsEpgEn {
+	_StringsEpgZh._(_StringsZh root) : this._root = root, super._(root);
+
+	@override final _StringsZh _root; // ignore: unused_field
+
+	// Translations
+	@override String get title => '电视节目指南';
+	@override String get now => '现在';
+	@override String get today => '今天';
+	@override String get tomorrow => '明天';
+	@override String get noPrograms => '没有可用的节目信息';
+	@override String get loading => '正在加载节目指南...';
+	@override String get record => '录制';
+	@override String get reminder => '设置提醒';
+	@override String get moreInfo => '更多信息';
+	@override String get toggleView => '切换视图';
+	@override String get gridView => '网格视图';
+	@override String get nowNextView => '正在播出/即将播出视图';
+}
+
+// Path: channelSurfing
+class _StringsChannelSurfingZh extends _StringsChannelSurfingEn {
+	_StringsChannelSurfingZh._(_StringsZh root) : this._root = root, super._(root);
+
+	@override final _StringsZh _root; // ignore: unused_field
+
+	// Translations
+	@override String get title => '随机播放';
+	@override String get kidsMode => '儿童模式';
+	@override String get loading => '正在加载随机播放...';
+	@override String get failedToLoad => '无法加载内容';
+	@override String get retry => '重试';
+	@override String get noContent => '没有可用内容';
+	@override String itemsAvailable({required Object count}) => '${count} 个项目可用';
+	@override String get startSurfing => '开始播放';
+	@override String get pressBackToExit => '按返回键退出';
+	@override String get description => '连续观看随机电影和剧集';
+	@override String get noServers => '没有可用服务器';
+}
+
+// Path: multiview
+class _StringsMultiviewZh extends _StringsMultiviewEn {
+	_StringsMultiviewZh._(_StringsZh root) : this._root = root, super._(root);
+
+	@override final _StringsZh _root; // ignore: unused_field
+
+	// Translations
+	@override String get title => '多画面';
+	@override String get changeLayout => '更改布局 (L)';
+	@override String get addChannel => '添加频道 (A)';
+	@override String get removeChannel => '移除频道 (R)';
+	@override String get swapChannel => '切换频道';
+	@override String get toggleMute => '静音切换 (M)';
+	@override String get selectChannel => '选择频道';
+	@override String get searchChannels => '搜索频道...';
+	@override String get cancel => '取消';
+	@override String channelNumber({required Object number}) => '频道 ${number}';
+}
+
+// Path: player
+class _StringsPlayerZh extends _StringsPlayerEn {
+	_StringsPlayerZh._(_StringsZh root) : this._root = root, super._(root);
+
+	@override final _StringsZh _root; // ignore: unused_field
+
+	// Translations
+	@override String get playbackError => '播放错误';
+	@override String get error => '错误';
+	@override String failedToStartPlayback({required Object error}) => '无法开始播放：\n${error}';
+	@override String get ok => '确定';
+}
+
+// Path: downloads
+class _StringsDownloadsZh extends _StringsDownloadsEn {
+	_StringsDownloadsZh._(_StringsZh root) : this._root = root, super._(root);
+
+	@override final _StringsZh _root; // ignore: unused_field
+
+	// Translations
+	@override String get title => '下载';
+	@override String get deleteAll => '删除全部';
+	@override String get deleteAllTitle => '删除所有下载？';
+	@override String deleteAllMessage({required Object count, required Object size}) => '这将删除所有 ${count} 个下载并释放 ${size} 存储空间。';
+	@override String storageUsed({required Object size}) => '已用存储空间：${size}';
+	@override String downloading({required Object count}) => '下载中 (${count})';
+	@override String downloaded({required Object count}) => '已下载 (${count})';
+	@override String get noDownloads => '没有下载';
+	@override String get noDownloadsHint => '下载电影和剧集以便离线观看';
+	@override String get deleteDownloadTitle => '删除下载？';
+	@override String deleteDownloadMessage({required Object title}) => '删除「${title}」？';
+	@override String get delete => '删除';
+	@override String get cancel => '取消';
+	@override String get downloadFailed => '下载失败';
+	@override String get paused => '已暂停';
+}
+
 // Path: libraries.tabs
-class _StringsLibrariesTabsZh implements _StringsLibrariesTabsEn {
-	_StringsLibrariesTabsZh._(this._root);
+class _StringsLibrariesTabsZh extends _StringsLibrariesTabsEn {
+	_StringsLibrariesTabsZh._(_StringsZh root) : this._root = root, super._(root);
 
 	@override final _StringsZh _root; // ignore: unused_field
 
@@ -5140,8 +7533,8 @@ class _StringsLibrariesTabsZh implements _StringsLibrariesTabsEn {
 }
 
 // Path: libraries.groupings
-class _StringsLibrariesGroupingsZh implements _StringsLibrariesGroupingsEn {
-	_StringsLibrariesGroupingsZh._(this._root);
+class _StringsLibrariesGroupingsZh extends _StringsLibrariesGroupingsEn {
+	_StringsLibrariesGroupingsZh._(_StringsZh root) : this._root = root, super._(root);
 
 	@override final _StringsZh _root; // ignore: unused_field
 
@@ -5204,6 +7597,19 @@ extension on Translations {
 			case 'auth.passwordTooShort': return 'Password must be at least 6 characters';
 			case 'auth.invalidEmail': return 'Please enter a valid email address';
 			case 'auth.firstUserNote': return 'First user will be the admin';
+			case 'auth.howConnecting': return 'How are you connecting?';
+			case 'auth.atHome': return 'At Home';
+			case 'auth.atHomeDescription': return 'Auto-detect server on your local network';
+			case 'auth.awayFromHome': return 'Away from Home';
+			case 'auth.awayFromHomeDescription': return 'Enter server address manually';
+			case 'auth.findYourServer': return 'Find Your Server';
+			case 'auth.searching': return 'Searching...';
+			case 'auth.checkingNetwork': return 'Checking network...';
+			case 'auth.serversFound': return 'Servers Found';
+			case 'auth.scanAgain': return 'Scan Again';
+			case 'auth.enterManually': return 'Enter Manually';
+			case 'auth.noServersFound': return 'No servers found on your network. Make sure your OpenFlix server is running.';
+			case 'auth.discoveryFailed': return ({required Object error}) => 'Discovery failed: ${error}';
 			case 'common.cancel': return 'Cancel';
 			case 'common.save': return 'Save';
 			case 'common.close': return 'Close';
@@ -5228,6 +7634,12 @@ extension on Translations {
 			case 'common.delete': return 'Delete';
 			case 'common.shuffle': return 'Shuffle';
 			case 'common.addTo': return 'Add to...';
+			case 'common.remove': return 'Remove';
+			case 'common.play': return 'Play';
+			case 'common.details': return 'Details';
+			case 'common.seeAll': return 'See All';
+			case 'common.live': return 'LIVE';
+			case 'common.newLabel': return 'NEW';
 			case 'screens.licenses': return 'Licenses';
 			case 'screens.switchProfile': return 'Switch Profile';
 			case 'screens.subtitleStyling': return 'Subtitle Styling';
@@ -5241,6 +7653,13 @@ extension on Translations {
 			case 'update.latestVersion': return 'You are on the latest version';
 			case 'update.checkFailed': return 'Failed to check for updates';
 			case 'settings.title': return 'Settings';
+			case 'settings.profile': return 'Profile';
+			case 'settings.noProfileSelected': return 'No profile selected';
+			case 'settings.kidsMode': return 'Kids Mode';
+			case 'settings.switchProfile': return 'Switch Profile';
+			case 'settings.switchProfileDescription': return 'Change to a different profile';
+			case 'settings.manageProfiles': return 'Manage Profiles';
+			case 'settings.manageProfilesDescription': return 'Add, edit, or delete profiles';
 			case 'settings.language': return 'Language';
 			case 'settings.theme': return 'Theme';
 			case 'settings.appearance': return 'Appearance';
@@ -5330,10 +7749,48 @@ extension on Translations {
 			case 'settings.apiKey': return 'API Key';
 			case 'settings.tmdbApiKeySaved': return 'TMDB API key saved';
 			case 'settings.tmdbApiKeyCleared': return 'TMDB API key cleared';
+			case 'settings.parentalControls': return 'Parental Controls';
+			case 'settings.kidsModeDescription': return 'Show only kid-friendly content (G, PG, TV-Y7)';
+			case 'settings.enableParentalControls': return 'Enable Parental Controls';
+			case 'settings.enableParentalControlsDescription': return 'Restrict content based on age ratings';
+			case 'settings.setPin': return 'Set PIN';
+			case 'settings.setPinDescription': return 'Enter a 4-digit PIN to protect parental settings';
+			case 'settings.confirmPin': return 'Confirm PIN';
+			case 'settings.confirmPinDescription': return 'Enter the PIN again to confirm';
+			case 'settings.enterPin': return 'Enter PIN';
+			case 'settings.enterPinDescription': return 'Enter your parental control PIN';
+			case 'settings.changePin': return 'Change PIN';
+			case 'settings.changePinDescription': return 'Change your parental control PIN';
+			case 'settings.pinSet': return 'Parental control PIN set successfully';
+			case 'settings.pinMismatch': return 'PINs do not match. Please try again.';
+			case 'settings.incorrectPin': return 'Incorrect PIN. Please try again.';
+			case 'settings.maxMovieRating': return 'Maximum Movie Rating';
+			case 'settings.maxTvRating': return 'Maximum TV Rating';
+			case 'settings.remoteAccess': return 'Remote Access';
+			case 'settings.tailscaleStatus': return 'Tailscale Status';
+			case 'settings.remoteAccessCheckingStatus': return 'Checking status...';
+			case 'settings.refreshStatus': return 'Refresh Status';
+			case 'settings.remoteUrl': return 'Remote URL';
+			case 'settings.copyUrl': return 'Copy URL';
+			case 'settings.urlCopied': return 'URL copied to clipboard';
+			case 'settings.tailscaleIp': return 'Tailscale IP';
+			case 'settings.tailscaleNotInstalled': return 'Tailscale is not installed on the server.';
+			case 'settings.tailscaleDescription': return 'Install Tailscale on your server to enable secure remote access from anywhere.';
+			case 'settings.tailscaleNeedsLogin': return 'Login Required';
+			case 'settings.tailscaleNeedsLoginDescription': return 'Tailscale requires authentication. Log in on the server.';
 			case 'search.hint': return 'Search movies, shows, music...';
 			case 'search.tryDifferentTerm': return 'Try a different search term';
 			case 'search.searchYourMedia': return 'Search your media';
 			case 'search.enterTitleActorOrKeyword': return 'Enter a title, actor, or keyword';
+			case 'search.recentSearches': return 'Recent Searches';
+			case 'search.clear': return 'Clear';
+			case 'search.voiceSearch': return 'Voice Search';
+			case 'search.listening': return 'Listening...';
+			case 'search.speakNow': return 'Speak now';
+			case 'search.all': return 'All';
+			case 'search.movies': return 'Movies';
+			case 'search.tvShows': return 'TV Shows';
+			case 'search.music': return 'Music';
 			case 'hotkeys.setShortcutFor': return ({required Object actionName}) => 'Set Shortcut for ${actionName}';
 			case 'hotkeys.clearShortcut': return 'Clear shortcut';
 			case 'pinEntry.enterPin': return 'Enter PIN';
@@ -5393,6 +7850,11 @@ extension on Translations {
 			case 'videoControls.stretch': return 'Stretch';
 			case 'videoControls.lockRotation': return 'Lock rotation';
 			case 'videoControls.unlockRotation': return 'Unlock rotation';
+			case 'videoControls.lockScreen': return 'Lock screen';
+			case 'videoControls.unlockScreen': return 'Unlock screen';
+			case 'videoControls.screenLockButton': return 'Screen lock';
+			case 'videoControls.screenLocked': return 'Screen locked';
+			case 'videoControls.tapToUnlock': return 'Tap to unlock';
 			case 'videoControls.sleepTimer': return 'Sleep Timer';
 			case 'videoControls.timerActive': return 'Timer Active';
 			case 'videoControls.playbackWillPauseIn': return ({required Object duration}) => 'Playback will pause in ${duration}';
@@ -5489,6 +7951,30 @@ extension on Translations {
 			case 'discover.movie': return 'Movie';
 			case 'discover.tvShow': return 'TV Show';
 			case 'discover.minutesLeft': return ({required Object minutes}) => '${minutes} min left';
+			case 'discover.whatsOnNow': return 'What\'s On Now';
+			case 'discover.channelGuide': return 'Channel Guide';
+			case 'discover.liveNow': return 'Live Now';
+			case 'discover.topTen': return 'Top 10';
+			case 'discover.newBadge': return 'NEW';
+			case 'discover.liveBadge': return 'LIVE';
+			case 'discover.goodMorning': return 'Good morning';
+			case 'discover.goodAfternoon': return 'Good afternoon';
+			case 'discover.goodEvening': return 'Good evening';
+			case 'discover.defaultUser': return 'Guest';
+			case 'discover.yourNextWatch': return 'Your Next Watch';
+			case 'discover.pickedForYou': return ({required Object name}) => 'Picked just for you, ${name}';
+			case 'discover.surpriseMe': return 'Surprise Me';
+			case 'discover.randomPicker': return 'Random Movie Picker';
+			case 'discover.noMoviesFound': return 'No movies found in your library';
+			case 'discover.spinning': return 'Picking something great...';
+			case 'discover.spinAgain': return 'Spin Again';
+			case 'discover.loadingMovies': return 'Loading your movies...';
+			case 'discover.calendar': return 'Calendar';
+			case 'discover.today': return 'Today';
+			case 'discover.item': return 'item';
+			case 'discover.items': return 'items';
+			case 'discover.noContentOnDate': return 'No content added on this date';
+			case 'discover.noEpgData': return 'No program info';
 			case 'errors.searchFailed': return ({required Object error}) => 'Search failed: ${error}';
 			case 'errors.connectionTimeout': return ({required Object context}) => 'Connection timeout while loading ${context}';
 			case 'errors.connectionFailed': return 'Unable to connect to Plex server';
@@ -5501,6 +7987,9 @@ extension on Translations {
 			case 'errors.failedToVerifyToken': return ({required Object error}) => 'Failed to verify token: ${error}';
 			case 'errors.failedToSwitchProfile': return ({required Object displayName}) => 'Failed to switch to ${displayName}';
 			case 'errors.connectionFailedGeneric': return 'Connection failed';
+			case 'errors.failedToRemove': return ({required Object error}) => 'Failed to remove: ${error}';
+			case 'voice.notAvailable': return 'Voice control is not available';
+			case 'voice.commandNotRecognized': return ({required Object command}) => 'Command not recognized: "${command}"';
 			case 'libraries.title': return 'Libraries';
 			case 'libraries.scanLibraryFiles': return 'Scan Library Files';
 			case 'libraries.scanLibrary': return 'Scan Library';
@@ -5582,11 +8071,23 @@ extension on Translations {
 			case 'logs.noLogsToShow': return 'No logs to show';
 			case 'logs.error': return 'Error:';
 			case 'logs.stackTrace': return 'Stack Trace:';
+			case 'stats.title': return 'Watch Statistics';
+			case 'stats.totalWatchTime': return 'Total Watch Time';
+			case 'stats.moviesWatched': return 'Movies Watched';
+			case 'stats.episodesWatched': return 'Episodes Watched';
+			case 'stats.avgPerDay': return 'Avg Per Day';
+			case 'stats.topGenres': return 'Top Genres';
+			case 'stats.monthlyActivity': return 'Monthly Activity';
+			case 'stats.noData': return 'No watch history yet';
+			case 'stats.startWatching': return 'Start watching to see your stats';
+			case 'stats.days': return 'days';
 			case 'licenses.relatedPackages': return 'Related Packages';
 			case 'licenses.license': return 'License';
 			case 'licenses.licenseNumber': return ({required Object number}) => 'License ${number}';
 			case 'licenses.licensesCount': return ({required Object count}) => '${count} licenses';
 			case 'navigation.home': return 'Home';
+			case 'navigation.movies': return 'Movies';
+			case 'navigation.tvShows': return 'TV Shows';
 			case 'navigation.search': return 'Search';
 			case 'navigation.libraries': return 'Libraries';
 			case 'navigation.livetv': return 'Live TV';
@@ -5650,6 +8151,201 @@ extension on Translations {
 			case 'playlists.errorAdding': return 'Failed to add to playlist';
 			case 'playlists.errorReordering': return 'Failed to reorder playlist item';
 			case 'playlists.errorRemoving': return 'Failed to remove from playlist';
+			case 'watchParty.title': return 'Watch Party';
+			case 'watchParty.startParty': return 'Start Watch Party';
+			case 'watchParty.joinParty': return 'Join Party';
+			case 'watchParty.enterCode': return 'Enter party code';
+			case 'watchParty.shareCode': return 'Share this code';
+			case 'watchParty.friendsCanJoin': return 'Friends can join using this code';
+			case 'watchParty.participants': return 'Participants';
+			case 'watchParty.host': return 'Host';
+			case 'watchParty.endParty': return 'End Party';
+			case 'watchParty.leaveParty': return 'Leave Party';
+			case 'watchParty.partyEnded': return 'Watch Party ended';
+			case 'watchParty.chat': return 'Chat';
+			case 'watchParty.typeMessage': return 'Type a message...';
+			case 'watchParty.joined': return ({required Object name}) => '${name} joined';
+			case 'watchParty.left': return ({required Object name}) => '${name} left';
+			case 'watchParty.syncedPlayback': return 'Playback is synced with party';
+			case 'watchParty.hostControls': return 'Only the host can control playback';
+			case 'watchParty.creating': return 'Creating party...';
+			case 'watchParty.joining': return 'Joining party...';
+			case 'watchParty.createFailed': return 'Failed to create party';
+			case 'watchParty.joinFailed': return 'Failed to join party';
+			case 'watchParty.invalidCode': return 'Invalid party code';
+			case 'watchParty.gotIt': return 'Got it';
+			case 'catchUp.title': return 'Catch Up TV';
+			case 'catchUp.startOver': return 'Start Over';
+			case 'catchUp.startOverDescription': return 'Watch from the beginning';
+			case 'catchUp.watchFromBeginning': return 'Watch from the beginning?';
+			case 'catchUp.alreadyStarted': return ({required Object title}) => '"${title}" has already started. You can start from the beginning.';
+			case 'catchUp.watchLive': return 'Watch Live';
+			case 'catchUp.programsAvailable': return 'Programs Available';
+			case 'catchUp.noProgramsAvailable': return 'No catch-up programs available';
+			case 'catchUp.programsWillAppear': return 'Programs will appear here as they air';
+			case 'catchUp.unavailable': return 'Unavailable';
+			case 'catchUp.bufferNotReady': return 'Buffer not ready yet';
+			case 'catchUp.rewind': return 'Rewind';
+			case 'catchUp.timeshiftEnabled': return 'Time-shift enabled';
+			case 'catchUp.goBackTo': return ({required Object time}) => 'Go back to ${time}';
+			case 'watchlist.title': return 'My Watchlist';
+			case 'watchlist.all': return 'All';
+			case 'watchlist.movies': return 'Movies';
+			case 'watchlist.shows': return 'TV Shows';
+			case 'watchlist.episodes': return 'Episodes';
+			case 'watchlist.empty': return 'Your watchlist is empty';
+			case 'watchlist.emptyHint': return 'Add movies and shows to your watchlist from their detail pages';
+			case 'watchlist.noItemsFiltered': return 'No items match this filter';
+			case 'watchlist.removeTitle': return 'Remove from Watchlist';
+			case 'watchlist.removeConfirm': return ({required Object title}) => 'Remove "${title}" from your watchlist?';
+			case 'watchlist.remove': return 'Remove';
+			case 'watchlist.clearAllTitle': return 'Clear Watchlist';
+			case 'watchlist.clearAllConfirm': return ({required Object count}) => 'Remove all ${count} items from your watchlist?';
+			case 'watchlist.clearAll': return 'Clear All';
+			case 'watchlist.addedToday': return 'Added today';
+			case 'watchlist.addedYesterday': return 'Added yesterday';
+			case 'watchlist.addedDaysAgo': return ({required Object days}) => 'Added ${days} days ago';
+			case 'watchlist.addedOn': return ({required Object date}) => 'Added on ${date}';
+			case 'watchlist.addToWatchlist': return 'Add to Watchlist';
+			case 'watchlist.removeFromWatchlist': return 'Remove from Watchlist';
+			case 'watchlist.addedToWatchlist': return 'Added to watchlist';
+			case 'watchlist.removedFromWatchlist': return 'Removed from watchlist';
+			case 'liveTV.title': return 'Live TV';
+			case 'liveTV.guide': return 'Guide';
+			case 'liveTV.dvr': return 'DVR';
+			case 'liveTV.multiview': return 'Multiview';
+			case 'liveTV.allChannels': return 'All Channels';
+			case 'liveTV.favorites': return 'Favorites';
+			case 'liveTV.noChannels': return 'No channels available';
+			case 'liveTV.addM3USource': return 'Add an M3U source in server settings';
+			case 'liveTV.recording': return 'Recording';
+			case 'liveTV.recordingNow': return 'Recording Now';
+			case 'liveTV.upNext': return 'Up Next';
+			case 'liveTV.noProgram': return 'No program info';
+			case 'liveTV.filterByGroup': return 'Filter by group';
+			case 'liveTV.refresh': return 'Refresh';
+			case 'liveTV.channelCount': return ({required Object count}) => '${count} channels';
+			case 'liveTV.nowPlaying': return 'Now Playing';
+			case 'liveTV.scheduleRecording': return 'Schedule Recording';
+			case 'liveTV.onNow': return 'On Now';
+			case 'liveTV.endsAt': return ({required Object time}) => 'Ends at ${time}';
+			case 'liveTV.startsAt': return ({required Object time}) => 'Starts at ${time}';
+			case 'liveTV.playbackError': return ({required Object error}) => 'Playback error: ${error}';
+			case 'liveTV.noPreviousChannel': return 'No previous channel';
+			case 'liveTV.switchedTo': return ({required Object channel}) => 'Switched to: ${channel}';
+			case 'liveTV.startingFromBeginning': return 'Starting program from beginning...';
+			case 'liveTV.failedToStartOver': return ({required Object error}) => 'Failed to start over: ${error}';
+			case 'liveTV.playingProgram': return ({required Object title}) => 'Playing: ${title}';
+			case 'liveTV.failedToPlayProgram': return ({required Object error}) => 'Failed to play program: ${error}';
+			case 'liveTV.addedToFavorites': return 'Added to favorites';
+			case 'liveTV.removedFromFavorites': return 'Removed from favorites';
+			case 'liveTV.failedToUpdateFavorite': return ({required Object error}) => 'Failed to update favorite: ${error}';
+			case 'liveTV.pipNotSupported': return 'Picture-in-Picture not supported on this platform';
+			case 'liveTV.enteredPipMode': return 'Entered Picture-in-Picture mode';
+			case 'liveTV.exitedPipMode': return 'Exited Picture-in-Picture mode';
+			case 'liveTV.aspectRatioChanged': return ({required Object mode}) => 'Aspect Ratio: ${mode}';
+			case 'liveTV.tune': return 'Tune';
+			case 'liveTV.retry': return 'Retry';
+			case 'liveTV.noChannelsMatchFilter': return 'No channels match filter';
+			case 'liveTV.skipCommercial': return 'Skip Commercial';
+			case 'dvr.title': return 'DVR';
+			case 'dvr.recordings': return 'Recordings';
+			case 'dvr.seriesRules': return 'Series Rules';
+			case 'dvr.noRecordings': return 'No recordings';
+			case 'dvr.noRules': return 'No series rules';
+			case 'dvr.scheduleFromGuide': return 'Schedule recordings from the Live TV guide';
+			case 'dvr.createRulesHint': return 'Create rules to auto-record series';
+			case 'dvr.storage': return 'Storage';
+			case 'dvr.recordingsCount': return ({required Object count}) => '${count} recordings';
+			case 'dvr.all': return 'All';
+			case 'dvr.scheduled': return 'Scheduled';
+			case 'dvr.completed': return 'Completed';
+			case 'dvr.failed': return 'Failed';
+			case 'dvr.deleteRecording': return 'Delete Recording?';
+			case 'dvr.deleteRule': return 'Delete Series Rule?';
+			case 'dvr.sortByDate': return 'Date';
+			case 'dvr.sortByTitle': return 'Title';
+			case 'dvr.sortBySize': return 'Size';
+			case 'dvr.playRecording': return 'Play recording';
+			case 'dvr.keepPolicy': return ({required Object count}) => 'Keep ${count} episodes';
+			case 'dvr.keepAll': return 'Keep all';
+			case 'dvr.recordingScheduled': return 'Recording scheduled';
+			case 'dvr.scheduleRecordingTitle': return 'Schedule Recording';
+			case 'dvr.schedule': return 'Schedule';
+			case 'dvr.cancel': return 'Cancel';
+			case 'epg.title': return 'TV Guide';
+			case 'epg.now': return 'Now';
+			case 'epg.today': return 'Today';
+			case 'epg.tomorrow': return 'Tomorrow';
+			case 'epg.noPrograms': return 'No program information available';
+			case 'epg.loading': return 'Loading guide...';
+			case 'epg.record': return 'Record';
+			case 'epg.reminder': return 'Set Reminder';
+			case 'epg.moreInfo': return 'More Info';
+			case 'epg.toggleView': return 'Toggle view';
+			case 'epg.gridView': return 'Grid view';
+			case 'epg.nowNextView': return 'Now/Next view';
+			case 'channelSurfing.title': return 'Channel Surfing';
+			case 'channelSurfing.kidsMode': return 'Kids Mode';
+			case 'channelSurfing.loading': return 'Loading channel surfing...';
+			case 'channelSurfing.failedToLoad': return 'Failed to load content';
+			case 'channelSurfing.retry': return 'Retry';
+			case 'channelSurfing.noContent': return 'No content available';
+			case 'channelSurfing.itemsAvailable': return ({required Object count}) => '${count} items available';
+			case 'channelSurfing.startSurfing': return 'Start Surfing';
+			case 'channelSurfing.pressBackToExit': return 'Press back to exit';
+			case 'channelSurfing.description': return 'Watch random movies and shows continuously';
+			case 'channelSurfing.noServers': return 'No servers available';
+			case 'virtualChannels.title': return 'Virtual Channels';
+			case 'virtualChannels.createChannel': return 'Create Channel';
+			case 'virtualChannels.editChannel': return 'Edit Channel';
+			case 'virtualChannels.deleteChannel': return 'Delete Channel';
+			case 'virtualChannels.channelName': return 'Channel Name';
+			case 'virtualChannels.channelNameHint': return 'Enter channel name';
+			case 'virtualChannels.selectContent': return 'Select Content';
+			case 'virtualChannels.noChannels': return 'No virtual channels yet';
+			case 'virtualChannels.createFirst': return 'Create your first virtual channel';
+			case 'virtualChannels.description': return 'Create custom 24/7 channels from your media library';
+			case 'virtualChannels.shuffle': return 'Shuffle Playback';
+			case 'virtualChannels.loop': return 'Loop Playlist';
+			case 'virtualChannels.nowPlaying': return 'Now Playing';
+			case 'virtualChannels.upNext': return 'Up Next';
+			case 'virtualChannels.addMedia': return 'Add Media';
+			case 'virtualChannels.removeMedia': return 'Remove';
+			case 'virtualChannels.reorderMedia': return 'Reorder';
+			case 'virtualChannels.confirmDelete': return 'Are you sure you want to delete this channel?';
+			case 'virtualChannels.channelCreated': return 'Channel created';
+			case 'virtualChannels.channelUpdated': return 'Channel updated';
+			case 'virtualChannels.channelDeleted': return 'Channel deleted';
+			case 'multiview.title': return 'Multi-View';
+			case 'multiview.changeLayout': return 'Change Layout (L)';
+			case 'multiview.addChannel': return 'Add Channel (A)';
+			case 'multiview.removeChannel': return 'Remove Channel (R)';
+			case 'multiview.swapChannel': return 'Change Channel';
+			case 'multiview.toggleMute': return 'Toggle Mute (M)';
+			case 'multiview.selectChannel': return 'Select Channel';
+			case 'multiview.searchChannels': return 'Search channels...';
+			case 'multiview.cancel': return 'Cancel';
+			case 'multiview.channelNumber': return ({required Object number}) => 'Ch. ${number}';
+			case 'player.playbackError': return 'Playback Error';
+			case 'player.error': return 'Error';
+			case 'player.failedToStartPlayback': return ({required Object error}) => 'Failed to start playback:\n${error}';
+			case 'player.ok': return 'OK';
+			case 'downloads.title': return 'Downloads';
+			case 'downloads.deleteAll': return 'Delete All';
+			case 'downloads.deleteAllTitle': return 'Delete All Downloads?';
+			case 'downloads.deleteAllMessage': return ({required Object count, required Object size}) => 'This will delete all ${count} downloads and free up ${size} of storage.';
+			case 'downloads.storageUsed': return ({required Object size}) => 'Storage Used: ${size}';
+			case 'downloads.downloading': return ({required Object count}) => 'Downloading (${count})';
+			case 'downloads.downloaded': return ({required Object count}) => 'Downloaded (${count})';
+			case 'downloads.noDownloads': return 'No Downloads';
+			case 'downloads.noDownloadsHint': return 'Download movies and shows to watch offline';
+			case 'downloads.deleteDownloadTitle': return 'Delete Download?';
+			case 'downloads.deleteDownloadMessage': return ({required Object title}) => 'Delete "${title}"?';
+			case 'downloads.delete': return 'Delete';
+			case 'downloads.cancel': return 'Cancel';
+			case 'downloads.downloadFailed': return 'Download failed';
+			case 'downloads.paused': return 'Paused';
 			default: return null;
 		}
 	}
@@ -5702,6 +8398,19 @@ extension on _StringsDe {
 			case 'auth.passwordTooShort': return 'Passwort muss mindestens 6 Zeichen haben';
 			case 'auth.invalidEmail': return 'Bitte gültige E-Mail-Adresse eingeben';
 			case 'auth.firstUserNote': return 'Erster Benutzer wird Administrator';
+			case 'auth.howConnecting': return 'Wie möchten Sie sich verbinden?';
+			case 'auth.atHome': return 'Zu Hause';
+			case 'auth.atHomeDescription': return 'Server im lokalen Netzwerk automatisch erkennen';
+			case 'auth.awayFromHome': return 'Unterwegs';
+			case 'auth.awayFromHomeDescription': return 'Serveradresse manuell eingeben';
+			case 'auth.findYourServer': return 'Server finden';
+			case 'auth.searching': return 'Suche...';
+			case 'auth.checkingNetwork': return 'Netzwerk wird überprüft...';
+			case 'auth.serversFound': return 'Server gefunden';
+			case 'auth.scanAgain': return 'Erneut suchen';
+			case 'auth.enterManually': return 'Manuell eingeben';
+			case 'auth.noServersFound': return 'Keine Server in Ihrem Netzwerk gefunden. Stellen Sie sicher, dass Ihr OpenFlix-Server läuft.';
+			case 'auth.discoveryFailed': return ({required Object error}) => 'Suche fehlgeschlagen: ${error}';
 			case 'common.cancel': return 'Abbrechen';
 			case 'common.save': return 'Speichern';
 			case 'common.close': return 'Schließen';
@@ -5726,6 +8435,12 @@ extension on _StringsDe {
 			case 'common.delete': return 'Löschen';
 			case 'common.shuffle': return 'Zufall';
 			case 'common.addTo': return 'Hinzufügen zu...';
+			case 'common.remove': return 'Remove';
+			case 'common.play': return 'Play';
+			case 'common.details': return 'Details';
+			case 'common.seeAll': return 'See All';
+			case 'common.live': return 'LIVE';
+			case 'common.newLabel': return 'NEU';
 			case 'screens.licenses': return 'Lizenzen';
 			case 'screens.selectServer': return 'Server auswählen';
 			case 'screens.switchProfile': return 'Profil wechseln';
@@ -5740,6 +8455,13 @@ extension on _StringsDe {
 			case 'update.latestVersion': return 'Aktuellste Version installiert';
 			case 'update.checkFailed': return 'Fehler bei der Updateprüfung';
 			case 'settings.title': return 'Einstellungen';
+			case 'settings.profile': return 'Profil';
+			case 'settings.noProfileSelected': return 'Kein Profil ausgewählt';
+			case 'settings.kidsMode': return 'Kindermodus';
+			case 'settings.switchProfile': return 'Profil wechseln';
+			case 'settings.switchProfileDescription': return 'Zu einem anderen Profil wechseln';
+			case 'settings.manageProfiles': return 'Profile verwalten';
+			case 'settings.manageProfilesDescription': return 'Profile hinzufügen, bearbeiten oder löschen';
 			case 'settings.language': return 'Sprache';
 			case 'settings.theme': return 'Design';
 			case 'settings.appearance': return 'Darstellung';
@@ -5829,10 +8551,35 @@ extension on _StringsDe {
 			case 'settings.apiKey': return 'API-Schlüssel';
 			case 'settings.tmdbApiKeySaved': return 'TMDB-API-Schlüssel gespeichert';
 			case 'settings.tmdbApiKeyCleared': return 'TMDB-API-Schlüssel gelöscht';
+			case 'settings.parentalControls': return 'Kindersicherung';
+			case 'settings.enableParentalControls': return 'Kindersicherung aktivieren';
+			case 'settings.enableParentalControlsDescription': return 'Inhalte basierend auf Altersfreigaben einschränken';
+			case 'settings.setPin': return 'PIN festlegen';
+			case 'settings.setPinDescription': return 'Geben Sie eine 4-stellige PIN zum Schutz der Kindersicherung ein';
+			case 'settings.confirmPin': return 'PIN bestätigen';
+			case 'settings.confirmPinDescription': return 'Geben Sie die PIN zur Bestätigung erneut ein';
+			case 'settings.enterPin': return 'PIN eingeben';
+			case 'settings.enterPinDescription': return 'Geben Sie Ihre Kindersicherungs-PIN ein';
+			case 'settings.changePin': return 'PIN ändern';
+			case 'settings.changePinDescription': return 'Ändern Sie Ihre Kindersicherungs-PIN';
+			case 'settings.pinSet': return 'Kindersicherungs-PIN erfolgreich festgelegt';
+			case 'settings.pinMismatch': return 'PINs stimmen nicht überein. Bitte versuchen Sie es erneut.';
+			case 'settings.incorrectPin': return 'Falsche PIN. Bitte versuchen Sie es erneut.';
+			case 'settings.maxMovieRating': return 'Maximale Filmfreigabe';
+			case 'settings.maxTvRating': return 'Maximale TV-Freigabe';
 			case 'search.hint': return 'Filme, Serien, Musik suchen...';
 			case 'search.tryDifferentTerm': return 'Anderen Suchbegriff versuchen';
-			case 'search.searchYourMedia': return 'In den eigenen Medien suchen';
+			case 'search.searchYourMedia': return 'Medien durchsuchen';
 			case 'search.enterTitleActorOrKeyword': return 'Titel, Schauspieler oder Stichwort eingeben';
+			case 'search.recentSearches': return 'Letzte Suchen';
+			case 'search.clear': return 'Löschen';
+			case 'search.voiceSearch': return 'Sprachsuche';
+			case 'search.listening': return 'Höre zu...';
+			case 'search.speakNow': return 'Jetzt sprechen';
+			case 'search.all': return 'Alle';
+			case 'search.movies': return 'Filme';
+			case 'search.tvShows': return 'Serien';
+			case 'search.music': return 'Musik';
 			case 'hotkeys.setShortcutFor': return ({required Object actionName}) => 'Tastenkürzel festlegen für ${actionName}';
 			case 'hotkeys.clearShortcut': return 'Kürzel löschen';
 			case 'pinEntry.enterPin': return 'PIN eingeben';
@@ -5892,6 +8639,11 @@ extension on _StringsDe {
 			case 'videoControls.stretch': return 'Strecken';
 			case 'videoControls.lockRotation': return 'Rotation sperren';
 			case 'videoControls.unlockRotation': return 'Rotation entsperren';
+			case 'videoControls.lockScreen': return 'Bildschirm sperren';
+			case 'videoControls.unlockScreen': return 'Bildschirm entsperren';
+			case 'videoControls.screenLockButton': return 'Bildschirmsperre';
+			case 'videoControls.screenLocked': return 'Bildschirm gesperrt';
+			case 'videoControls.tapToUnlock': return 'Zum Entsperren tippen';
 			case 'videoControls.sleepTimer': return 'Schlaftimer';
 			case 'videoControls.timerActive': return 'Schlaftimer aktiv';
 			case 'videoControls.playbackWillPauseIn': return ({required Object duration}) => 'Wiedergabe wird in ${duration} pausiert';
@@ -5989,6 +8741,30 @@ extension on _StringsDe {
 			case 'discover.movie': return 'Film';
 			case 'discover.tvShow': return 'Serie';
 			case 'discover.minutesLeft': return ({required Object minutes}) => '${minutes} Min übrig';
+			case 'discover.whatsOnNow': return 'Jetzt läuft';
+			case 'discover.channelGuide': return 'Programmführer';
+			case 'discover.liveNow': return 'Jetzt Live';
+			case 'discover.topTen': return 'Top 10';
+			case 'discover.newBadge': return 'NEU';
+			case 'discover.liveBadge': return 'LIVE';
+			case 'discover.goodMorning': return 'Good morning';
+			case 'discover.goodAfternoon': return 'Good afternoon';
+			case 'discover.goodEvening': return 'Good evening';
+			case 'discover.defaultUser': return 'Guest';
+			case 'discover.yourNextWatch': return 'Your Next Watch';
+			case 'discover.pickedForYou': return ({required Object name}) => 'Picked just for you, ${name}';
+			case 'discover.surpriseMe': return 'Surprise Me';
+			case 'discover.randomPicker': return 'Random Movie Picker';
+			case 'discover.noMoviesFound': return 'No movies found in your library';
+			case 'discover.spinning': return 'Picking something great...';
+			case 'discover.spinAgain': return 'Spin Again';
+			case 'discover.calendar': return 'Calendar';
+			case 'discover.today': return 'Today';
+			case 'discover.item': return 'item';
+			case 'discover.items': return 'items';
+			case 'discover.loadingMovies': return 'Lade deine Filme...';
+			case 'discover.noContentOnDate': return 'No content added on this date';
+			case 'discover.noEpgData': return 'Keine Programminformationen';
 			case 'errors.searchFailed': return ({required Object error}) => 'Suche fehlgeschlagen: ${error}';
 			case 'errors.connectionTimeout': return ({required Object context}) => 'Zeitüberschreitung beim Laden von ${context}';
 			case 'errors.connectionFailed': return 'Verbindung zum Plex-Server fehlgeschlagen';
@@ -6001,6 +8777,9 @@ extension on _StringsDe {
 			case 'errors.failedToVerifyToken': return ({required Object error}) => 'Token-Verifizierung fehlgeschlagen: ${error}';
 			case 'errors.failedToSwitchProfile': return ({required Object displayName}) => 'Profilwechsel zu ${displayName} fehlgeschlagen';
 			case 'errors.connectionFailedGeneric': return 'Verbindung fehlgeschlagen';
+			case 'errors.failedToRemove': return ({required Object error}) => 'Entfernen fehlgeschlagen: ${error}';
+			case 'voice.notAvailable': return 'Sprachsteuerung ist nicht verfügbar';
+			case 'voice.commandNotRecognized': return ({required Object command}) => 'Befehl nicht erkannt: "${command}"';
 			case 'libraries.title': return 'Mediatheken';
 			case 'libraries.scanLibraryFiles': return 'Mediatheksdateien scannen';
 			case 'libraries.scanLibrary': return 'Mediathek scannen';
@@ -6082,6 +8861,16 @@ extension on _StringsDe {
 			case 'logs.noLogsToShow': return 'Keine Protokolle zum Anzeigen';
 			case 'logs.error': return 'Fehler:';
 			case 'logs.stackTrace': return 'Stacktrace:';
+			case 'stats.title': return 'Wiedergabestatistik';
+			case 'stats.totalWatchTime': return 'Gesamte Wiedergabezeit';
+			case 'stats.moviesWatched': return 'Filme gesehen';
+			case 'stats.episodesWatched': return 'Episoden gesehen';
+			case 'stats.avgPerDay': return 'Durchschnitt pro Tag';
+			case 'stats.topGenres': return 'Top-Genres';
+			case 'stats.monthlyActivity': return 'Monatliche Aktivität';
+			case 'stats.noData': return 'Noch kein Wiedergabeverlauf';
+			case 'stats.startWatching': return 'Schauen Sie etwas, um Ihre Statistiken zu sehen';
+			case 'stats.days': return 'Tage';
 			case 'licenses.relatedPackages': return 'Verwandte Pakete';
 			case 'licenses.license': return 'Lizenz';
 			case 'licenses.licenseNumber': return ({required Object number}) => 'Lizenz ${number}';
@@ -6150,6 +8939,183 @@ extension on _StringsDe {
 			case 'collections.removedFromCollection': return 'Aus Sammlung entfernt';
 			case 'collections.removeFromCollectionFailed': return 'Entfernen aus Sammlung fehlgeschlagen';
 			case 'collections.removeFromCollectionError': return ({required Object error}) => 'Fehler beim Entfernen aus der Sammlung: ${error}';
+			case 'watchParty.title': return 'Watch Party';
+			case 'watchParty.startParty': return 'Watch Party starten';
+			case 'watchParty.joinParty': return 'Party beitreten';
+			case 'watchParty.enterCode': return 'Party-Code eingeben';
+			case 'watchParty.shareCode': return 'Diesen Code teilen';
+			case 'watchParty.friendsCanJoin': return 'Freunde können mit diesem Code beitreten';
+			case 'watchParty.participants': return 'Teilnehmer';
+			case 'watchParty.host': return 'Host';
+			case 'watchParty.endParty': return 'Party beenden';
+			case 'watchParty.leaveParty': return 'Party verlassen';
+			case 'watchParty.partyEnded': return 'Watch Party beendet';
+			case 'watchParty.chat': return 'Chat';
+			case 'watchParty.typeMessage': return 'Nachricht eingeben...';
+			case 'watchParty.joined': return ({required Object name}) => '${name} ist beigetreten';
+			case 'watchParty.left': return ({required Object name}) => '${name} hat verlassen';
+			case 'watchParty.syncedPlayback': return 'Wiedergabe ist mit der Party synchronisiert';
+			case 'watchParty.hostControls': return 'Nur der Host kann die Wiedergabe steuern';
+			case 'watchParty.creating': return 'Party wird erstellt...';
+			case 'watchParty.joining': return 'Beitritt zur Party...';
+			case 'watchParty.createFailed': return 'Party konnte nicht erstellt werden';
+			case 'watchParty.joinFailed': return 'Beitritt zur Party fehlgeschlagen';
+			case 'watchParty.invalidCode': return 'Ungültiger Party-Code';
+			case 'watchParty.gotIt': return 'Verstanden';
+			case 'catchUp.title': return 'Catch Up TV';
+			case 'catchUp.startOver': return 'Von Anfang an';
+			case 'catchUp.startOverDescription': return 'Von Anfang an schauen';
+			case 'catchUp.watchFromBeginning': return 'Von Anfang an schauen?';
+			case 'catchUp.alreadyStarted': return ({required Object title}) => '"${title}" hat bereits begonnen. Sie können von Anfang an schauen.';
+			case 'catchUp.watchLive': return 'Live schauen';
+			case 'catchUp.programsAvailable': return 'Verfügbare Sendungen';
+			case 'catchUp.noProgramsAvailable': return 'Keine Catch-up Sendungen verfügbar';
+			case 'catchUp.programsWillAppear': return 'Sendungen erscheinen hier, wenn sie ausgestrahlt werden';
+			case 'catchUp.unavailable': return 'Nicht verfügbar';
+			case 'catchUp.bufferNotReady': return 'Puffer noch nicht bereit';
+			case 'catchUp.rewind': return 'Zurückspulen';
+			case 'catchUp.timeshiftEnabled': return 'Timeshift aktiviert';
+			case 'catchUp.goBackTo': return ({required Object time}) => 'Zurück zu ${time}';
+			case 'watchlist.title': return 'Meine Merkliste';
+			case 'watchlist.all': return 'Alle';
+			case 'watchlist.movies': return 'Filme';
+			case 'watchlist.shows': return 'Serien';
+			case 'watchlist.episodes': return 'Episoden';
+			case 'watchlist.empty': return 'Ihre Merkliste ist leer';
+			case 'watchlist.emptyHint': return 'Fügen Sie Filme und Serien zu Ihrer Merkliste hinzu';
+			case 'watchlist.noItemsFiltered': return 'Keine Elemente entsprechen diesem Filter';
+			case 'watchlist.removeTitle': return 'Von Merkliste entfernen';
+			case 'watchlist.removeConfirm': return ({required Object title}) => '"${title}" von Ihrer Merkliste entfernen?';
+			case 'watchlist.remove': return 'Remove';
+			case 'watchlist.play': return 'Play';
+			case 'watchlist.details': return 'Details';
+			case 'watchlist.seeAll': return 'See All';
+			case 'watchlist.clearAllTitle': return 'Merkliste leeren';
+			case 'watchlist.clearAllConfirm': return ({required Object count}) => 'Alle ${count} Elemente von Ihrer Merkliste entfernen?';
+			case 'watchlist.clearAll': return 'Alle löschen';
+			case 'watchlist.addedToday': return 'Heute hinzugefügt';
+			case 'watchlist.addedYesterday': return 'Gestern hinzugefügt';
+			case 'watchlist.addedDaysAgo': return ({required Object days}) => 'Vor ${days} Tagen hinzugefügt';
+			case 'watchlist.addedOn': return ({required Object date}) => 'Hinzugefügt am ${date}';
+			case 'watchlist.addToWatchlist': return 'Zur Merkliste hinzufügen';
+			case 'watchlist.removeFromWatchlist': return 'Von Merkliste entfernen';
+			case 'watchlist.addedToWatchlist': return 'Zur Merkliste hinzugefügt';
+			case 'watchlist.removedFromWatchlist': return 'Von Merkliste entfernt';
+			case 'liveTV.title': return 'Live TV';
+			case 'liveTV.guide': return 'Guide';
+			case 'liveTV.dvr': return 'DVR';
+			case 'liveTV.multiview': return 'Multiview';
+			case 'liveTV.allChannels': return 'Alle Kanäle';
+			case 'liveTV.favorites': return 'Favoriten';
+			case 'liveTV.noChannels': return 'Keine Kanäle verfügbar';
+			case 'liveTV.addM3USource': return 'M3U-Quelle in Server-Einstellungen hinzufügen';
+			case 'liveTV.recording': return 'Aufnahme';
+			case 'liveTV.recordingNow': return 'Jetzt aufnehmen';
+			case 'liveTV.upNext': return 'Als nächstes';
+			case 'liveTV.noProgram': return 'Keine Programminfo';
+			case 'liveTV.filterByGroup': return 'Nach Gruppe filtern';
+			case 'liveTV.refresh': return 'Aktualisieren';
+			case 'liveTV.channelCount': return ({required Object count}) => '${count} Kanäle';
+			case 'liveTV.nowPlaying': return 'Läuft gerade';
+			case 'liveTV.scheduleRecording': return 'Aufnahme planen';
+			case 'liveTV.onNow': return 'Jetzt';
+			case 'liveTV.endsAt': return ({required Object time}) => 'Endet um ${time}';
+			case 'liveTV.startsAt': return ({required Object time}) => 'Beginnt um ${time}';
+			case 'liveTV.playbackError': return ({required Object error}) => 'Wiedergabefehler: ${error}';
+			case 'liveTV.noPreviousChannel': return 'Kein vorheriger Sender';
+			case 'liveTV.switchedTo': return ({required Object channel}) => 'Gewechselt zu: ${channel}';
+			case 'liveTV.startingFromBeginning': return 'Starte Sendung von Anfang...';
+			case 'liveTV.failedToStartOver': return ({required Object error}) => 'Neustart fehlgeschlagen: ${error}';
+			case 'liveTV.playingProgram': return ({required Object title}) => 'Wiedergabe: ${title}';
+			case 'liveTV.failedToPlayProgram': return ({required Object error}) => 'Sendung abspielen fehlgeschlagen: ${error}';
+			case 'liveTV.addedToFavorites': return 'Zu Favoriten hinzugefügt';
+			case 'liveTV.removedFromFavorites': return 'Aus Favoriten entfernt';
+			case 'liveTV.failedToUpdateFavorite': return ({required Object error}) => 'Favorit aktualisieren fehlgeschlagen: ${error}';
+			case 'liveTV.pipNotSupported': return 'Bild-in-Bild wird auf dieser Plattform nicht unterstützt';
+			case 'liveTV.enteredPipMode': return 'Bild-in-Bild-Modus aktiviert';
+			case 'liveTV.exitedPipMode': return 'Bild-in-Bild-Modus beendet';
+			case 'liveTV.aspectRatioChanged': return ({required Object mode}) => 'Seitenverhältnis: ${mode}';
+			case 'liveTV.tune': return 'Einschalten';
+			case 'liveTV.retry': return 'Wiederholen';
+			case 'liveTV.noChannelsMatchFilter': return 'Keine Sender entsprechen dem Filter';
+			case 'liveTV.skipCommercial': return 'Werbung überspringen';
+			case 'dvr.title': return 'DVR';
+			case 'dvr.recordings': return 'Aufnahmen';
+			case 'dvr.seriesRules': return 'Serienregeln';
+			case 'dvr.noRecordings': return 'Keine Aufnahmen';
+			case 'dvr.noRules': return 'Keine Serienregeln';
+			case 'dvr.scheduleFromGuide': return 'Aufnahmen vom TV-Guide planen';
+			case 'dvr.createRulesHint': return 'Regeln für Auto-Aufnahme erstellen';
+			case 'dvr.storage': return 'Speicher';
+			case 'dvr.recordingsCount': return ({required Object count}) => '${count} Aufnahmen';
+			case 'dvr.all': return 'Alle';
+			case 'dvr.scheduled': return 'Geplant';
+			case 'dvr.completed': return 'Fertig';
+			case 'dvr.failed': return 'Fehlgeschlagen';
+			case 'dvr.deleteRecording': return 'Aufnahme löschen?';
+			case 'dvr.deleteRule': return 'Serienregel löschen?';
+			case 'dvr.sortByDate': return 'Datum';
+			case 'dvr.sortByTitle': return 'Titel';
+			case 'dvr.sortBySize': return 'Größe';
+			case 'dvr.playRecording': return 'Aufnahme abspielen';
+			case 'dvr.keepPolicy': return ({required Object count}) => '${count} Folgen behalten';
+			case 'dvr.keepAll': return 'Alle behalten';
+			case 'dvr.recordingScheduled': return 'Aufnahme geplant';
+			case 'dvr.scheduleRecordingTitle': return 'Aufnahme planen';
+			case 'dvr.schedule': return 'Planen';
+			case 'dvr.cancel': return 'Abbrechen';
+			case 'epg.title': return 'TV Guide';
+			case 'epg.now': return 'Jetzt';
+			case 'epg.today': return 'Heute';
+			case 'epg.tomorrow': return 'Morgen';
+			case 'epg.noPrograms': return 'Keine Programminfos verfügbar';
+			case 'epg.loading': return 'Guide wird geladen...';
+			case 'epg.record': return 'Aufnehmen';
+			case 'epg.reminder': return 'Erinnerung setzen';
+			case 'epg.moreInfo': return 'Mehr Info';
+			case 'epg.toggleView': return 'Ansicht wechseln';
+			case 'epg.gridView': return 'Rasteransicht';
+			case 'epg.nowNextView': return 'Jetzt/Gleich Ansicht';
+			case 'channelSurfing.title': return 'Zufallswiedergabe';
+			case 'channelSurfing.kidsMode': return 'Kindermodus';
+			case 'channelSurfing.loading': return 'Zufallswiedergabe wird geladen...';
+			case 'channelSurfing.failedToLoad': return 'Inhalt konnte nicht geladen werden';
+			case 'channelSurfing.retry': return 'Erneut versuchen';
+			case 'channelSurfing.noContent': return 'Kein Inhalt verfügbar';
+			case 'channelSurfing.itemsAvailable': return ({required Object count}) => '${count} Elemente verfügbar';
+			case 'channelSurfing.startSurfing': return 'Starten';
+			case 'channelSurfing.pressBackToExit': return 'Zurück zum Beenden';
+			case 'channelSurfing.description': return 'Zufällige Filme und Serien durchgehend abspielen';
+			case 'channelSurfing.noServers': return 'Keine Server verfügbar';
+			case 'multiview.title': return 'Multi-Ansicht';
+			case 'multiview.changeLayout': return 'Layout ändern (L)';
+			case 'multiview.addChannel': return 'Kanal hinzufügen (A)';
+			case 'multiview.removeChannel': return 'Kanal entfernen (R)';
+			case 'multiview.swapChannel': return 'Kanal wechseln';
+			case 'multiview.toggleMute': return 'Stumm schalten (M)';
+			case 'multiview.selectChannel': return 'Kanal auswählen';
+			case 'multiview.searchChannels': return 'Kanäle suchen...';
+			case 'multiview.cancel': return 'Abbrechen';
+			case 'multiview.channelNumber': return ({required Object number}) => 'K. ${number}';
+			case 'player.playbackError': return 'Wiedergabefehler';
+			case 'player.error': return 'Fehler';
+			case 'player.failedToStartPlayback': return ({required Object error}) => 'Wiedergabe konnte nicht gestartet werden:\n${error}';
+			case 'player.ok': return 'OK';
+			case 'downloads.title': return 'Downloads';
+			case 'downloads.deleteAll': return 'Alle löschen';
+			case 'downloads.deleteAllTitle': return 'Alle Downloads löschen?';
+			case 'downloads.deleteAllMessage': return ({required Object count, required Object size}) => 'Dies löscht alle ${count} Downloads und gibt ${size} Speicherplatz frei.';
+			case 'downloads.storageUsed': return ({required Object size}) => 'Speicher belegt: ${size}';
+			case 'downloads.downloading': return ({required Object count}) => 'Wird heruntergeladen (${count})';
+			case 'downloads.downloaded': return ({required Object count}) => 'Heruntergeladen (${count})';
+			case 'downloads.noDownloads': return 'Keine Downloads';
+			case 'downloads.noDownloadsHint': return 'Laden Sie Filme und Serien herunter, um sie offline anzusehen';
+			case 'downloads.deleteDownloadTitle': return 'Download löschen?';
+			case 'downloads.deleteDownloadMessage': return ({required Object title}) => '"${title}" löschen?';
+			case 'downloads.delete': return 'Löschen';
+			case 'downloads.cancel': return 'Abbrechen';
+			case 'downloads.downloadFailed': return 'Download fehlgeschlagen';
+			case 'downloads.paused': return 'Pausiert';
 			default: return null;
 		}
 	}
@@ -6202,6 +9168,19 @@ extension on _StringsIt {
 			case 'auth.passwordTooShort': return 'La password deve avere almeno 6 caratteri';
 			case 'auth.invalidEmail': return 'Inserisci un indirizzo email valido';
 			case 'auth.firstUserNote': return 'Il primo utente sarà l\'amministratore';
+			case 'auth.howConnecting': return 'Come ti stai connettendo?';
+			case 'auth.atHome': return 'A casa';
+			case 'auth.atHomeDescription': return 'Rileva automaticamente il server sulla rete locale';
+			case 'auth.awayFromHome': return 'Fuori casa';
+			case 'auth.awayFromHomeDescription': return 'Inserisci l\'indirizzo del server manualmente';
+			case 'auth.findYourServer': return 'Trova il tuo server';
+			case 'auth.searching': return 'Ricerca...';
+			case 'auth.checkingNetwork': return 'Controllo rete...';
+			case 'auth.serversFound': return 'Server trovati';
+			case 'auth.scanAgain': return 'Cerca di nuovo';
+			case 'auth.enterManually': return 'Inserisci manualmente';
+			case 'auth.noServersFound': return 'Nessun server trovato nella tua rete. Assicurati che il server OpenFlix sia in esecuzione.';
+			case 'auth.discoveryFailed': return ({required Object error}) => 'Ricerca fallita: ${error}';
 			case 'common.cancel': return 'Cancella';
 			case 'common.save': return 'Salva';
 			case 'common.close': return 'Chiudi';
@@ -6226,6 +9205,12 @@ extension on _StringsIt {
 			case 'common.delete': return 'Elimina';
 			case 'common.shuffle': return 'Casuale';
 			case 'common.addTo': return 'Aggiungi a...';
+			case 'common.remove': return 'Remove';
+			case 'common.play': return 'Play';
+			case 'common.details': return 'Details';
+			case 'common.seeAll': return 'See All';
+			case 'common.live': return 'LIVE';
+			case 'common.newLabel': return 'NUOVO';
 			case 'screens.licenses': return 'Licenze';
 			case 'screens.selectServer': return 'Seleziona server';
 			case 'screens.switchProfile': return 'Cambia profilo';
@@ -6240,6 +9225,13 @@ extension on _StringsIt {
 			case 'update.latestVersion': return 'La versione installata è l\'ultima disponibile';
 			case 'update.checkFailed': return 'Impossibile controllare gli aggiornamenti';
 			case 'settings.title': return 'Impostazioni';
+			case 'settings.profile': return 'Profilo';
+			case 'settings.noProfileSelected': return 'Nessun profilo selezionato';
+			case 'settings.kidsMode': return 'Modalità bambini';
+			case 'settings.switchProfile': return 'Cambia profilo';
+			case 'settings.switchProfileDescription': return 'Passa a un altro profilo';
+			case 'settings.manageProfiles': return 'Gestisci profili';
+			case 'settings.manageProfilesDescription': return 'Aggiungi, modifica o elimina profili';
 			case 'settings.language': return 'Lingua';
 			case 'settings.theme': return 'Tema';
 			case 'settings.appearance': return 'Aspetto';
@@ -6329,10 +9321,35 @@ extension on _StringsIt {
 			case 'settings.apiKey': return 'Chiave API';
 			case 'settings.tmdbApiKeySaved': return 'Chiave API TMDB salvata';
 			case 'settings.tmdbApiKeyCleared': return 'Chiave API TMDB eliminata';
-			case 'search.hint': return 'Cerca film. spettacoli, musica...';
+			case 'settings.parentalControls': return 'Controllo Genitori';
+			case 'settings.enableParentalControls': return 'Abilita Controllo Genitori';
+			case 'settings.enableParentalControlsDescription': return 'Limita i contenuti in base alle classificazioni per età';
+			case 'settings.setPin': return 'Imposta PIN';
+			case 'settings.setPinDescription': return 'Inserisci un PIN a 4 cifre per proteggere le impostazioni';
+			case 'settings.confirmPin': return 'Conferma PIN';
+			case 'settings.confirmPinDescription': return 'Inserisci nuovamente il PIN per confermare';
+			case 'settings.enterPin': return 'Inserisci PIN';
+			case 'settings.enterPinDescription': return 'Inserisci il tuo PIN di controllo genitori';
+			case 'settings.changePin': return 'Cambia PIN';
+			case 'settings.changePinDescription': return 'Cambia il tuo PIN di controllo genitori';
+			case 'settings.pinSet': return 'PIN di controllo genitori impostato con successo';
+			case 'settings.pinMismatch': return 'I PIN non corrispondono. Riprova.';
+			case 'settings.incorrectPin': return 'PIN errato. Riprova.';
+			case 'settings.maxMovieRating': return 'Classificazione Film Massima';
+			case 'settings.maxTvRating': return 'Classificazione TV Massima';
+			case 'search.hint': return 'Cerca film, serie, musica...';
 			case 'search.tryDifferentTerm': return 'Prova altri termini di ricerca';
 			case 'search.searchYourMedia': return 'Cerca nei tuoi media';
 			case 'search.enterTitleActorOrKeyword': return 'Inserisci un titolo, attore o parola chiave';
+			case 'search.recentSearches': return 'Ricerche recenti';
+			case 'search.clear': return 'Cancella';
+			case 'search.voiceSearch': return 'Ricerca vocale';
+			case 'search.listening': return 'In ascolto...';
+			case 'search.speakNow': return 'Parla ora';
+			case 'search.all': return 'Tutto';
+			case 'search.movies': return 'Film';
+			case 'search.tvShows': return 'Serie TV';
+			case 'search.music': return 'Musica';
 			case 'hotkeys.setShortcutFor': return ({required Object actionName}) => 'Imposta scorciatoia per ${actionName}';
 			case 'hotkeys.clearShortcut': return 'Elimina scorciatoia';
 			case 'pinEntry.enterPin': return 'Inserisci PIN';
@@ -6392,6 +9409,11 @@ extension on _StringsIt {
 			case 'videoControls.stretch': return 'Allunga';
 			case 'videoControls.lockRotation': return 'Blocca rotazione';
 			case 'videoControls.unlockRotation': return 'Sblocca rotazione';
+			case 'videoControls.lockScreen': return 'Blocca schermo';
+			case 'videoControls.unlockScreen': return 'Sblocca schermo';
+			case 'videoControls.screenLockButton': return 'Blocco schermo';
+			case 'videoControls.screenLocked': return 'Schermo bloccato';
+			case 'videoControls.tapToUnlock': return 'Tocca per sbloccare';
 			case 'videoControls.sleepTimer': return 'Timer di spegnimento';
 			case 'videoControls.timerActive': return 'Timer attivo';
 			case 'videoControls.playbackWillPauseIn': return ({required Object duration}) => 'La riproduzione si interromperà tra ${duration}';
@@ -6489,6 +9511,30 @@ extension on _StringsIt {
 			case 'discover.movie': return 'Film';
 			case 'discover.tvShow': return 'Serie TV';
 			case 'discover.minutesLeft': return ({required Object minutes}) => '${minutes} minuti rimanenti';
+			case 'discover.whatsOnNow': return 'In onda ora';
+			case 'discover.channelGuide': return 'Guida TV';
+			case 'discover.liveNow': return 'In diretta';
+			case 'discover.topTen': return 'Top 10';
+			case 'discover.newBadge': return 'NUOVO';
+			case 'discover.liveBadge': return 'LIVE';
+			case 'discover.goodMorning': return 'Good morning';
+			case 'discover.goodAfternoon': return 'Good afternoon';
+			case 'discover.goodEvening': return 'Good evening';
+			case 'discover.defaultUser': return 'Guest';
+			case 'discover.yourNextWatch': return 'Your Next Watch';
+			case 'discover.pickedForYou': return ({required Object name}) => 'Picked just for you, ${name}';
+			case 'discover.surpriseMe': return 'Surprise Me';
+			case 'discover.randomPicker': return 'Random Movie Picker';
+			case 'discover.noMoviesFound': return 'No movies found in your library';
+			case 'discover.spinning': return 'Picking something great...';
+			case 'discover.spinAgain': return 'Spin Again';
+			case 'discover.calendar': return 'Calendar';
+			case 'discover.today': return 'Today';
+			case 'discover.item': return 'item';
+			case 'discover.items': return 'items';
+			case 'discover.loadingMovies': return 'Caricamento dei tuoi film...';
+			case 'discover.noContentOnDate': return 'No content added on this date';
+			case 'discover.noEpgData': return 'Nessuna informazione programma';
 			case 'errors.searchFailed': return ({required Object error}) => 'Ricerca fallita: ${error}';
 			case 'errors.connectionTimeout': return ({required Object context}) => 'Timeout connessione durante caricamento di ${context}';
 			case 'errors.connectionFailed': return 'Impossibile connettersi al server Plex.';
@@ -6501,6 +9547,9 @@ extension on _StringsIt {
 			case 'errors.failedToVerifyToken': return ({required Object error}) => 'Verifica token fallita: ${error}';
 			case 'errors.failedToSwitchProfile': return ({required Object displayName}) => 'Impossibile passare a ${displayName}';
 			case 'errors.connectionFailedGeneric': return 'Connessione fallita';
+			case 'errors.failedToRemove': return ({required Object error}) => 'Rimozione fallita: ${error}';
+			case 'voice.notAvailable': return 'Il controllo vocale non è disponibile';
+			case 'voice.commandNotRecognized': return ({required Object command}) => 'Comando non riconosciuto: "${command}"';
 			case 'libraries.title': return 'Librerie';
 			case 'libraries.scanLibraryFiles': return 'Scansiona file libreria';
 			case 'libraries.scanLibrary': return 'Scansiona libreria';
@@ -6582,6 +9631,16 @@ extension on _StringsIt {
 			case 'logs.noLogsToShow': return 'Nessun log da mostrare';
 			case 'logs.error': return 'Errore:';
 			case 'logs.stackTrace': return 'Traccia dello stack:';
+			case 'stats.title': return 'Statistiche di Visione';
+			case 'stats.totalWatchTime': return 'Tempo di Visione Totale';
+			case 'stats.moviesWatched': return 'Film Visti';
+			case 'stats.episodesWatched': return 'Episodi Visti';
+			case 'stats.avgPerDay': return 'Media al Giorno';
+			case 'stats.topGenres': return 'Generi Preferiti';
+			case 'stats.monthlyActivity': return 'Attività Mensile';
+			case 'stats.noData': return 'Nessuna cronologia di visione';
+			case 'stats.startWatching': return 'Inizia a guardare per vedere le tue statistiche';
+			case 'stats.days': return 'giorni';
 			case 'licenses.relatedPackages': return 'Pacchetti correlati';
 			case 'licenses.license': return 'Licenza';
 			case 'licenses.licenseNumber': return ({required Object number}) => 'Licenza ${number}';
@@ -6650,6 +9709,183 @@ extension on _StringsIt {
 			case 'collections.removedFromCollection': return 'Rimosso dalla raccolta';
 			case 'collections.removeFromCollectionFailed': return 'Impossibile rimuovere dalla raccolta';
 			case 'collections.removeFromCollectionError': return ({required Object error}) => 'Errore durante la rimozione dalla raccolta: ${error}';
+			case 'watchParty.title': return 'Watch Party';
+			case 'watchParty.startParty': return 'Avvia Watch Party';
+			case 'watchParty.joinParty': return 'Unisciti alla Party';
+			case 'watchParty.enterCode': return 'Inserisci codice party';
+			case 'watchParty.shareCode': return 'Condividi questo codice';
+			case 'watchParty.friendsCanJoin': return 'Gli amici possono unirsi usando questo codice';
+			case 'watchParty.participants': return 'Partecipanti';
+			case 'watchParty.host': return 'Host';
+			case 'watchParty.endParty': return 'Termina Party';
+			case 'watchParty.leaveParty': return 'Lascia Party';
+			case 'watchParty.partyEnded': return 'Watch Party terminata';
+			case 'watchParty.chat': return 'Chat';
+			case 'watchParty.typeMessage': return 'Scrivi un messaggio...';
+			case 'watchParty.joined': return ({required Object name}) => '${name} si è unito';
+			case 'watchParty.left': return ({required Object name}) => '${name} ha lasciato';
+			case 'watchParty.syncedPlayback': return 'Riproduzione sincronizzata con la party';
+			case 'watchParty.hostControls': return 'Solo l\'host può controllare la riproduzione';
+			case 'watchParty.creating': return 'Creazione party...';
+			case 'watchParty.joining': return 'Accesso alla party...';
+			case 'watchParty.createFailed': return 'Creazione party fallita';
+			case 'watchParty.joinFailed': return 'Accesso alla party fallito';
+			case 'watchParty.invalidCode': return 'Codice party non valido';
+			case 'watchParty.gotIt': return 'Capito';
+			case 'catchUp.title': return 'Catch Up TV';
+			case 'catchUp.startOver': return 'Ricomincia';
+			case 'catchUp.startOverDescription': return 'Guarda dall\'inizio';
+			case 'catchUp.watchFromBeginning': return 'Guardare dall\'inizio?';
+			case 'catchUp.alreadyStarted': return ({required Object title}) => '"${title}" è già iniziato. Puoi guardare dall\'inizio.';
+			case 'catchUp.watchLive': return 'Guarda in diretta';
+			case 'catchUp.programsAvailable': return 'Programmi disponibili';
+			case 'catchUp.noProgramsAvailable': return 'Nessun programma catch-up disponibile';
+			case 'catchUp.programsWillAppear': return 'I programmi appariranno qui man mano che vengono trasmessi';
+			case 'catchUp.unavailable': return 'Non disponibile';
+			case 'catchUp.bufferNotReady': return 'Buffer non ancora pronto';
+			case 'catchUp.rewind': return 'Riavvolgi';
+			case 'catchUp.timeshiftEnabled': return 'Time-shift abilitato';
+			case 'catchUp.goBackTo': return ({required Object time}) => 'Torna a ${time}';
+			case 'watchlist.title': return 'La mia lista';
+			case 'watchlist.all': return 'Tutti';
+			case 'watchlist.movies': return 'Film';
+			case 'watchlist.shows': return 'Serie TV';
+			case 'watchlist.episodes': return 'Episodi';
+			case 'watchlist.empty': return 'La tua lista è vuota';
+			case 'watchlist.emptyHint': return 'Aggiungi film e serie alla tua lista dalle loro pagine';
+			case 'watchlist.noItemsFiltered': return 'Nessun elemento corrisponde a questo filtro';
+			case 'watchlist.removeTitle': return 'Rimuovi dalla lista';
+			case 'watchlist.removeConfirm': return ({required Object title}) => 'Rimuovere "${title}" dalla tua lista?';
+			case 'watchlist.remove': return 'Remove';
+			case 'watchlist.play': return 'Play';
+			case 'watchlist.details': return 'Details';
+			case 'watchlist.seeAll': return 'See All';
+			case 'watchlist.clearAllTitle': return 'Svuota lista';
+			case 'watchlist.clearAllConfirm': return ({required Object count}) => 'Rimuovere tutti i ${count} elementi dalla tua lista?';
+			case 'watchlist.clearAll': return 'Svuota tutto';
+			case 'watchlist.addedToday': return 'Aggiunto oggi';
+			case 'watchlist.addedYesterday': return 'Aggiunto ieri';
+			case 'watchlist.addedDaysAgo': return ({required Object days}) => 'Aggiunto ${days} giorni fa';
+			case 'watchlist.addedOn': return ({required Object date}) => 'Aggiunto il ${date}';
+			case 'watchlist.addToWatchlist': return 'Aggiungi alla lista';
+			case 'watchlist.removeFromWatchlist': return 'Rimuovi dalla lista';
+			case 'watchlist.addedToWatchlist': return 'Aggiunto alla lista';
+			case 'watchlist.removedFromWatchlist': return 'Rimosso dalla lista';
+			case 'liveTV.title': return 'TV in diretta';
+			case 'liveTV.guide': return 'Guida';
+			case 'liveTV.dvr': return 'DVR';
+			case 'liveTV.multiview': return 'Multiview';
+			case 'liveTV.allChannels': return 'Tutti i canali';
+			case 'liveTV.favorites': return 'Preferiti';
+			case 'liveTV.noChannels': return 'Nessun canale disponibile';
+			case 'liveTV.addM3USource': return 'Aggiungi una sorgente M3U nelle impostazioni del server';
+			case 'liveTV.recording': return 'Registrazione';
+			case 'liveTV.recordingNow': return 'In registrazione ora';
+			case 'liveTV.upNext': return 'Prossimamente';
+			case 'liveTV.noProgram': return 'Nessuna info programma';
+			case 'liveTV.filterByGroup': return 'Filtra per gruppo';
+			case 'liveTV.refresh': return 'Aggiorna';
+			case 'liveTV.channelCount': return ({required Object count}) => '${count} canali';
+			case 'liveTV.nowPlaying': return 'In onda ora';
+			case 'liveTV.scheduleRecording': return 'Programma registrazione';
+			case 'liveTV.onNow': return 'In onda adesso';
+			case 'liveTV.endsAt': return ({required Object time}) => 'Finisce alle ${time}';
+			case 'liveTV.startsAt': return ({required Object time}) => 'Inizia alle ${time}';
+			case 'liveTV.playbackError': return ({required Object error}) => 'Errore di riproduzione: ${error}';
+			case 'liveTV.noPreviousChannel': return 'Nessun canale precedente';
+			case 'liveTV.switchedTo': return ({required Object channel}) => 'Passato a: ${channel}';
+			case 'liveTV.startingFromBeginning': return 'Avvio del programma dall\'inizio...';
+			case 'liveTV.failedToStartOver': return ({required Object error}) => 'Impossibile riavviare: ${error}';
+			case 'liveTV.playingProgram': return ({required Object title}) => 'In riproduzione: ${title}';
+			case 'liveTV.failedToPlayProgram': return ({required Object error}) => 'Impossibile riprodurre il programma: ${error}';
+			case 'liveTV.addedToFavorites': return 'Aggiunto ai preferiti';
+			case 'liveTV.removedFromFavorites': return 'Rimosso dai preferiti';
+			case 'liveTV.failedToUpdateFavorite': return ({required Object error}) => 'Impossibile aggiornare preferito: ${error}';
+			case 'liveTV.pipNotSupported': return 'Picture-in-Picture non supportato su questa piattaforma';
+			case 'liveTV.enteredPipMode': return 'Modalità Picture-in-Picture attivata';
+			case 'liveTV.exitedPipMode': return 'Modalità Picture-in-Picture disattivata';
+			case 'liveTV.aspectRatioChanged': return ({required Object mode}) => 'Rapporto aspetto: ${mode}';
+			case 'liveTV.tune': return 'Sintonizza';
+			case 'liveTV.retry': return 'Riprova';
+			case 'liveTV.noChannelsMatchFilter': return 'Nessun canale corrisponde al filtro';
+			case 'liveTV.skipCommercial': return 'Salta pubblicità';
+			case 'dvr.title': return 'DVR';
+			case 'dvr.recordings': return 'Registrazioni';
+			case 'dvr.seriesRules': return 'Regole serie';
+			case 'dvr.noRecordings': return 'Nessuna registrazione';
+			case 'dvr.noRules': return 'Nessuna regola serie';
+			case 'dvr.scheduleFromGuide': return 'Programma registrazioni dalla guida TV';
+			case 'dvr.createRulesHint': return 'Crea regole per registrare serie automaticamente';
+			case 'dvr.storage': return 'Spazio di archiviazione';
+			case 'dvr.recordingsCount': return ({required Object count}) => '${count} registrazioni';
+			case 'dvr.all': return 'Tutte';
+			case 'dvr.scheduled': return 'Programmate';
+			case 'dvr.completed': return 'Completate';
+			case 'dvr.failed': return 'Non riuscite';
+			case 'dvr.deleteRecording': return 'Eliminare registrazione?';
+			case 'dvr.deleteRule': return 'Eliminare regola serie?';
+			case 'dvr.sortByDate': return 'Data';
+			case 'dvr.sortByTitle': return 'Titolo';
+			case 'dvr.sortBySize': return 'Dimensione';
+			case 'dvr.playRecording': return 'Riproduci registrazione';
+			case 'dvr.keepPolicy': return ({required Object count}) => 'Mantieni ${count} episodi';
+			case 'dvr.keepAll': return 'Mantieni tutti';
+			case 'dvr.recordingScheduled': return 'Registrazione programmata';
+			case 'dvr.scheduleRecordingTitle': return 'Programma registrazione';
+			case 'dvr.schedule': return 'Programma';
+			case 'dvr.cancel': return 'Annulla';
+			case 'epg.title': return 'Guida TV';
+			case 'epg.now': return 'Adesso';
+			case 'epg.today': return 'Oggi';
+			case 'epg.tomorrow': return 'Domani';
+			case 'epg.noPrograms': return 'Nessun programma disponibile';
+			case 'epg.loading': return 'Caricamento guida...';
+			case 'epg.record': return 'Registra';
+			case 'epg.reminder': return 'Imposta promemoria';
+			case 'epg.moreInfo': return 'Altre info';
+			case 'epg.toggleView': return 'Cambia vista';
+			case 'epg.gridView': return 'Vista a griglia';
+			case 'epg.nowNextView': return 'Vista ora/prossimo';
+			case 'channelSurfing.title': return 'Zapping casuale';
+			case 'channelSurfing.kidsMode': return 'Modalità bambini';
+			case 'channelSurfing.loading': return 'Caricamento zapping casuale...';
+			case 'channelSurfing.failedToLoad': return 'Impossibile caricare il contenuto';
+			case 'channelSurfing.retry': return 'Riprova';
+			case 'channelSurfing.noContent': return 'Nessun contenuto disponibile';
+			case 'channelSurfing.itemsAvailable': return ({required Object count}) => '${count} elementi disponibili';
+			case 'channelSurfing.startSurfing': return 'Inizia';
+			case 'channelSurfing.pressBackToExit': return 'Premi indietro per uscire';
+			case 'channelSurfing.description': return 'Guarda film e serie casuali in modo continuo';
+			case 'channelSurfing.noServers': return 'Nessun server disponibile';
+			case 'multiview.title': return 'Multi-Vista';
+			case 'multiview.changeLayout': return 'Cambia layout (L)';
+			case 'multiview.addChannel': return 'Aggiungi canale (A)';
+			case 'multiview.removeChannel': return 'Rimuovi canale (R)';
+			case 'multiview.swapChannel': return 'Cambia canale';
+			case 'multiview.toggleMute': return 'Attiva/Disattiva audio (M)';
+			case 'multiview.selectChannel': return 'Seleziona canale';
+			case 'multiview.searchChannels': return 'Cerca canali...';
+			case 'multiview.cancel': return 'Annulla';
+			case 'multiview.channelNumber': return ({required Object number}) => 'Can. ${number}';
+			case 'player.playbackError': return 'Errore di riproduzione';
+			case 'player.error': return 'Errore';
+			case 'player.failedToStartPlayback': return ({required Object error}) => 'Impossibile avviare la riproduzione:\n${error}';
+			case 'player.ok': return 'OK';
+			case 'downloads.title': return 'Download';
+			case 'downloads.deleteAll': return 'Elimina tutto';
+			case 'downloads.deleteAllTitle': return 'Eliminare tutti i download?';
+			case 'downloads.deleteAllMessage': return ({required Object count, required Object size}) => 'Questo eliminerà tutti i ${count} download e libererà ${size} di spazio.';
+			case 'downloads.storageUsed': return ({required Object size}) => 'Spazio utilizzato: ${size}';
+			case 'downloads.downloading': return ({required Object count}) => 'In download (${count})';
+			case 'downloads.downloaded': return ({required Object count}) => 'Scaricati (${count})';
+			case 'downloads.noDownloads': return 'Nessun download';
+			case 'downloads.noDownloadsHint': return 'Scarica film e serie per guardarli offline';
+			case 'downloads.deleteDownloadTitle': return 'Eliminare il download?';
+			case 'downloads.deleteDownloadMessage': return ({required Object title}) => 'Eliminare "${title}"?';
+			case 'downloads.delete': return 'Elimina';
+			case 'downloads.cancel': return 'Annulla';
+			case 'downloads.downloadFailed': return 'Download fallito';
+			case 'downloads.paused': return 'In pausa';
 			default: return null;
 		}
 	}
@@ -6702,6 +9938,19 @@ extension on _StringsNl {
 			case 'auth.passwordTooShort': return 'Wachtwoord moet minimaal 6 tekens zijn';
 			case 'auth.invalidEmail': return 'Voer een geldig e-mailadres in';
 			case 'auth.firstUserNote': return 'Eerste gebruiker wordt beheerder';
+			case 'auth.howConnecting': return 'Hoe maak je verbinding?';
+			case 'auth.atHome': return 'Thuis';
+			case 'auth.atHomeDescription': return 'Detecteer server automatisch op je lokale netwerk';
+			case 'auth.awayFromHome': return 'Onderweg';
+			case 'auth.awayFromHomeDescription': return 'Voer serveradres handmatig in';
+			case 'auth.findYourServer': return 'Vind je server';
+			case 'auth.searching': return 'Zoeken...';
+			case 'auth.checkingNetwork': return 'Netwerk controleren...';
+			case 'auth.serversFound': return 'Servers gevonden';
+			case 'auth.scanAgain': return 'Opnieuw zoeken';
+			case 'auth.enterManually': return 'Handmatig invoeren';
+			case 'auth.noServersFound': return 'Geen servers gevonden op je netwerk. Zorg ervoor dat je OpenFlix-server draait.';
+			case 'auth.discoveryFailed': return ({required Object error}) => 'Zoeken mislukt: ${error}';
 			case 'common.cancel': return 'Annuleren';
 			case 'common.save': return 'Opslaan';
 			case 'common.close': return 'Sluiten';
@@ -6726,6 +9975,12 @@ extension on _StringsNl {
 			case 'common.delete': return 'Verwijderen';
 			case 'common.shuffle': return 'Willekeurig';
 			case 'common.addTo': return 'Toevoegen aan...';
+			case 'common.remove': return 'Remove';
+			case 'common.play': return 'Play';
+			case 'common.details': return 'Details';
+			case 'common.seeAll': return 'See All';
+			case 'common.live': return 'LIVE';
+			case 'common.newLabel': return 'NIEUW';
 			case 'screens.licenses': return 'Licenties';
 			case 'screens.selectServer': return 'Selecteer server';
 			case 'screens.switchProfile': return 'Wissel van profiel';
@@ -6740,6 +9995,13 @@ extension on _StringsNl {
 			case 'update.latestVersion': return 'Je hebt de nieuwste versie';
 			case 'update.checkFailed': return 'Kon niet controleren op updates';
 			case 'settings.title': return 'Instellingen';
+			case 'settings.profile': return 'Profiel';
+			case 'settings.noProfileSelected': return 'Geen profiel geselecteerd';
+			case 'settings.kidsMode': return 'Kindermodus';
+			case 'settings.switchProfile': return 'Profiel wisselen';
+			case 'settings.switchProfileDescription': return 'Wissel naar een ander profiel';
+			case 'settings.manageProfiles': return 'Profielen beheren';
+			case 'settings.manageProfilesDescription': return 'Profielen toevoegen, bewerken of verwijderen';
 			case 'settings.language': return 'Taal';
 			case 'settings.theme': return 'Thema';
 			case 'settings.appearance': return 'Uiterlijk';
@@ -6829,10 +10091,35 @@ extension on _StringsNl {
 			case 'settings.apiKey': return 'API-sleutel';
 			case 'settings.tmdbApiKeySaved': return 'TMDB API-sleutel opgeslagen';
 			case 'settings.tmdbApiKeyCleared': return 'TMDB API-sleutel verwijderd';
+			case 'settings.parentalControls': return 'Ouderlijk Toezicht';
+			case 'settings.enableParentalControls': return 'Ouderlijk Toezicht Inschakelen';
+			case 'settings.enableParentalControlsDescription': return 'Beperk content op basis van leeftijdsclassificaties';
+			case 'settings.setPin': return 'PIN Instellen';
+			case 'settings.setPinDescription': return 'Voer een 4-cijferige PIN in om de instellingen te beschermen';
+			case 'settings.confirmPin': return 'PIN Bevestigen';
+			case 'settings.confirmPinDescription': return 'Voer de PIN nogmaals in ter bevestiging';
+			case 'settings.enterPin': return 'PIN Invoeren';
+			case 'settings.enterPinDescription': return 'Voer je ouderlijk toezicht PIN in';
+			case 'settings.changePin': return 'PIN Wijzigen';
+			case 'settings.changePinDescription': return 'Wijzig je ouderlijk toezicht PIN';
+			case 'settings.pinSet': return 'Ouderlijk toezicht PIN succesvol ingesteld';
+			case 'settings.pinMismatch': return 'PIN-codes komen niet overeen. Probeer opnieuw.';
+			case 'settings.incorrectPin': return 'Onjuiste PIN. Probeer opnieuw.';
+			case 'settings.maxMovieRating': return 'Maximale Filmclassificatie';
+			case 'settings.maxTvRating': return 'Maximale TV-classificatie';
 			case 'search.hint': return 'Zoek films, series, muziek...';
 			case 'search.tryDifferentTerm': return 'Probeer een andere zoekterm';
 			case 'search.searchYourMedia': return 'Zoek in je media';
 			case 'search.enterTitleActorOrKeyword': return 'Voer een titel, acteur of trefwoord in';
+			case 'search.recentSearches': return 'Recente zoekopdrachten';
+			case 'search.clear': return 'Wissen';
+			case 'search.voiceSearch': return 'Spraakzoeken';
+			case 'search.listening': return 'Luisteren...';
+			case 'search.speakNow': return 'Spreek nu';
+			case 'search.all': return 'Alle';
+			case 'search.movies': return 'Films';
+			case 'search.tvShows': return 'Series';
+			case 'search.music': return 'Muziek';
 			case 'hotkeys.setShortcutFor': return ({required Object actionName}) => 'Stel sneltoets in voor ${actionName}';
 			case 'hotkeys.clearShortcut': return 'Wis sneltoets';
 			case 'pinEntry.enterPin': return 'Voer PIN in';
@@ -6892,6 +10179,11 @@ extension on _StringsNl {
 			case 'videoControls.stretch': return 'Uitrekken';
 			case 'videoControls.lockRotation': return 'Vergrendel rotatie';
 			case 'videoControls.unlockRotation': return 'Ontgrendel rotatie';
+			case 'videoControls.lockScreen': return 'Vergrendel scherm';
+			case 'videoControls.unlockScreen': return 'Ontgrendel scherm';
+			case 'videoControls.screenLockButton': return 'Schermvergrendeling';
+			case 'videoControls.screenLocked': return 'Scherm vergrendeld';
+			case 'videoControls.tapToUnlock': return 'Tik om te ontgrendelen';
 			case 'videoControls.sleepTimer': return 'Slaaptimer';
 			case 'videoControls.timerActive': return 'Timer actief';
 			case 'videoControls.playbackWillPauseIn': return ({required Object duration}) => 'Afspelen wordt gepauzeerd over ${duration}';
@@ -6989,6 +10281,30 @@ extension on _StringsNl {
 			case 'discover.movie': return 'Film';
 			case 'discover.tvShow': return 'TV Serie';
 			case 'discover.minutesLeft': return ({required Object minutes}) => '${minutes} min over';
+			case 'discover.whatsOnNow': return 'Nu op TV';
+			case 'discover.channelGuide': return 'TV Gids';
+			case 'discover.liveNow': return 'Nu Live';
+			case 'discover.topTen': return 'Top 10';
+			case 'discover.newBadge': return 'NIEUW';
+			case 'discover.liveBadge': return 'LIVE';
+			case 'discover.goodMorning': return 'Good morning';
+			case 'discover.goodAfternoon': return 'Good afternoon';
+			case 'discover.goodEvening': return 'Good evening';
+			case 'discover.defaultUser': return 'Guest';
+			case 'discover.yourNextWatch': return 'Your Next Watch';
+			case 'discover.pickedForYou': return ({required Object name}) => 'Picked just for you, ${name}';
+			case 'discover.surpriseMe': return 'Surprise Me';
+			case 'discover.randomPicker': return 'Random Movie Picker';
+			case 'discover.noMoviesFound': return 'No movies found in your library';
+			case 'discover.spinning': return 'Picking something great...';
+			case 'discover.spinAgain': return 'Spin Again';
+			case 'discover.calendar': return 'Calendar';
+			case 'discover.today': return 'Today';
+			case 'discover.item': return 'item';
+			case 'discover.items': return 'items';
+			case 'discover.loadingMovies': return 'Je films laden...';
+			case 'discover.noContentOnDate': return 'No content added on this date';
+			case 'discover.noEpgData': return 'Geen programma-informatie';
 			case 'errors.searchFailed': return ({required Object error}) => 'Zoeken mislukt: ${error}';
 			case 'errors.connectionTimeout': return ({required Object context}) => 'Verbinding time-out tijdens laden ${context}';
 			case 'errors.connectionFailed': return 'Kan geen verbinding maken met Plex server';
@@ -7001,6 +10317,9 @@ extension on _StringsNl {
 			case 'errors.failedToVerifyToken': return ({required Object error}) => 'Kon token niet verifiëren: ${error}';
 			case 'errors.failedToSwitchProfile': return ({required Object displayName}) => 'Kon niet wisselen naar ${displayName}';
 			case 'errors.connectionFailedGeneric': return 'Verbinding mislukt';
+			case 'errors.failedToRemove': return ({required Object error}) => 'Verwijderen mislukt: ${error}';
+			case 'voice.notAvailable': return 'Spraakbesturing is niet beschikbaar';
+			case 'voice.commandNotRecognized': return ({required Object command}) => 'Commando niet herkend: "${command}"';
 			case 'libraries.title': return 'Bibliotheken';
 			case 'libraries.scanLibraryFiles': return 'Scan bibliotheek bestanden';
 			case 'libraries.scanLibrary': return 'Scan bibliotheek';
@@ -7082,6 +10401,16 @@ extension on _StringsNl {
 			case 'logs.noLogsToShow': return 'Geen logs om te tonen';
 			case 'logs.error': return 'Fout:';
 			case 'logs.stackTrace': return 'Stacktracering:';
+			case 'stats.title': return 'Kijkstatistieken';
+			case 'stats.totalWatchTime': return 'Totale Kijktijd';
+			case 'stats.moviesWatched': return 'Films Bekeken';
+			case 'stats.episodesWatched': return 'Afleveringen Bekeken';
+			case 'stats.avgPerDay': return 'Gemiddeld per Dag';
+			case 'stats.topGenres': return 'Favoriete Genres';
+			case 'stats.monthlyActivity': return 'Maandelijkse Activiteit';
+			case 'stats.noData': return 'Nog geen kijkgeschiedenis';
+			case 'stats.startWatching': return 'Begin met kijken om je statistieken te zien';
+			case 'stats.days': return 'dagen';
 			case 'licenses.relatedPackages': return 'Gerelateerde pakketten';
 			case 'licenses.license': return 'Licentie';
 			case 'licenses.licenseNumber': return ({required Object number}) => 'Licentie ${number}';
@@ -7150,6 +10479,183 @@ extension on _StringsNl {
 			case 'collections.removedFromCollection': return 'Uit collectie verwijderd';
 			case 'collections.removeFromCollectionFailed': return 'Verwijderen uit collectie mislukt';
 			case 'collections.removeFromCollectionError': return ({required Object error}) => 'Fout bij verwijderen uit collectie: ${error}';
+			case 'watchParty.title': return 'Watch Party';
+			case 'watchParty.startParty': return 'Watch Party starten';
+			case 'watchParty.joinParty': return 'Deelnemen aan Party';
+			case 'watchParty.enterCode': return 'Voer party code in';
+			case 'watchParty.shareCode': return 'Deel deze code';
+			case 'watchParty.friendsCanJoin': return 'Vrienden kunnen deelnemen met deze code';
+			case 'watchParty.participants': return 'Deelnemers';
+			case 'watchParty.host': return 'Host';
+			case 'watchParty.endParty': return 'Party beëindigen';
+			case 'watchParty.leaveParty': return 'Party verlaten';
+			case 'watchParty.partyEnded': return 'Watch Party beëindigd';
+			case 'watchParty.chat': return 'Chat';
+			case 'watchParty.typeMessage': return 'Typ een bericht...';
+			case 'watchParty.joined': return ({required Object name}) => '${name} is toegetreden';
+			case 'watchParty.left': return ({required Object name}) => '${name} is vertrokken';
+			case 'watchParty.syncedPlayback': return 'Afspelen is gesynchroniseerd met party';
+			case 'watchParty.hostControls': return 'Alleen de host kan het afspelen bedienen';
+			case 'watchParty.creating': return 'Party wordt aangemaakt...';
+			case 'watchParty.joining': return 'Deelnemen aan party...';
+			case 'watchParty.createFailed': return 'Party aanmaken mislukt';
+			case 'watchParty.joinFailed': return 'Deelnemen aan party mislukt';
+			case 'watchParty.invalidCode': return 'Ongeldige party code';
+			case 'watchParty.gotIt': return 'Begrepen';
+			case 'catchUp.title': return 'Catch Up TV';
+			case 'catchUp.startOver': return 'Opnieuw beginnen';
+			case 'catchUp.startOverDescription': return 'Vanaf het begin kijken';
+			case 'catchUp.watchFromBeginning': return 'Vanaf het begin kijken?';
+			case 'catchUp.alreadyStarted': return ({required Object title}) => '"${title}" is al begonnen. Je kunt vanaf het begin kijken.';
+			case 'catchUp.watchLive': return 'Live kijken';
+			case 'catchUp.programsAvailable': return 'Beschikbare programma\'s';
+			case 'catchUp.noProgramsAvailable': return 'Geen catch-up programma\'s beschikbaar';
+			case 'catchUp.programsWillAppear': return 'Programma\'s verschijnen hier naarmate ze worden uitgezonden';
+			case 'catchUp.unavailable': return 'Niet beschikbaar';
+			case 'catchUp.bufferNotReady': return 'Buffer nog niet klaar';
+			case 'catchUp.rewind': return 'Terugspoelen';
+			case 'catchUp.timeshiftEnabled': return 'Time-shift ingeschakeld';
+			case 'catchUp.goBackTo': return ({required Object time}) => 'Ga terug naar ${time}';
+			case 'watchlist.title': return 'Mijn kijklijst';
+			case 'watchlist.all': return 'Alle';
+			case 'watchlist.movies': return 'Films';
+			case 'watchlist.shows': return 'Series';
+			case 'watchlist.episodes': return 'Afleveringen';
+			case 'watchlist.empty': return 'Je kijklijst is leeg';
+			case 'watchlist.emptyHint': return 'Voeg films en series toe aan je kijklijst';
+			case 'watchlist.noItemsFiltered': return 'Geen items komen overeen met dit filter';
+			case 'watchlist.removeTitle': return 'Verwijder van kijklijst';
+			case 'watchlist.removeConfirm': return ({required Object title}) => '"${title}" van je kijklijst verwijderen?';
+			case 'watchlist.remove': return 'Remove';
+			case 'watchlist.play': return 'Play';
+			case 'watchlist.details': return 'Details';
+			case 'watchlist.seeAll': return 'See All';
+			case 'watchlist.clearAllTitle': return 'Kijklijst wissen';
+			case 'watchlist.clearAllConfirm': return ({required Object count}) => 'Alle ${count} items van je kijklijst verwijderen?';
+			case 'watchlist.clearAll': return 'Alles wissen';
+			case 'watchlist.addedToday': return 'Vandaag toegevoegd';
+			case 'watchlist.addedYesterday': return 'Gisteren toegevoegd';
+			case 'watchlist.addedDaysAgo': return ({required Object days}) => '${days} dagen geleden toegevoegd';
+			case 'watchlist.addedOn': return ({required Object date}) => 'Toegevoegd op ${date}';
+			case 'watchlist.addToWatchlist': return 'Toevoegen aan kijklijst';
+			case 'watchlist.removeFromWatchlist': return 'Verwijderen van kijklijst';
+			case 'watchlist.addedToWatchlist': return 'Toegevoegd aan kijklijst';
+			case 'watchlist.removedFromWatchlist': return 'Verwijderd van kijklijst';
+			case 'liveTV.title': return 'Live TV';
+			case 'liveTV.guide': return 'Gids';
+			case 'liveTV.dvr': return 'DVR';
+			case 'liveTV.multiview': return 'Multiview';
+			case 'liveTV.allChannels': return 'Alle zenders';
+			case 'liveTV.favorites': return 'Favorieten';
+			case 'liveTV.noChannels': return 'Geen zenders beschikbaar';
+			case 'liveTV.addM3USource': return 'Voeg een M3U-bron toe in serverinstellingen';
+			case 'liveTV.recording': return 'Opnemen';
+			case 'liveTV.recordingNow': return 'Nu opnemen';
+			case 'liveTV.upNext': return 'Hierna';
+			case 'liveTV.noProgram': return 'Geen programma-info';
+			case 'liveTV.filterByGroup': return 'Filter op groep';
+			case 'liveTV.refresh': return 'Vernieuwen';
+			case 'liveTV.channelCount': return ({required Object count}) => '${count} zenders';
+			case 'liveTV.nowPlaying': return 'Nu op TV';
+			case 'liveTV.scheduleRecording': return 'Opname plannen';
+			case 'liveTV.onNow': return 'Nu te zien';
+			case 'liveTV.endsAt': return ({required Object time}) => 'Eindigt om ${time}';
+			case 'liveTV.startsAt': return ({required Object time}) => 'Start om ${time}';
+			case 'liveTV.playbackError': return ({required Object error}) => 'Afspeelfout: ${error}';
+			case 'liveTV.noPreviousChannel': return 'Geen vorig kanaal';
+			case 'liveTV.switchedTo': return ({required Object channel}) => 'Gewisseld naar: ${channel}';
+			case 'liveTV.startingFromBeginning': return 'Programma vanaf begin starten...';
+			case 'liveTV.failedToStartOver': return ({required Object error}) => 'Opnieuw starten mislukt: ${error}';
+			case 'liveTV.playingProgram': return ({required Object title}) => 'Afspelen: ${title}';
+			case 'liveTV.failedToPlayProgram': return ({required Object error}) => 'Programma afspelen mislukt: ${error}';
+			case 'liveTV.addedToFavorites': return 'Toegevoegd aan favorieten';
+			case 'liveTV.removedFromFavorites': return 'Verwijderd uit favorieten';
+			case 'liveTV.failedToUpdateFavorite': return ({required Object error}) => 'Favoriet bijwerken mislukt: ${error}';
+			case 'liveTV.pipNotSupported': return 'Picture-in-Picture niet ondersteund op dit platform';
+			case 'liveTV.enteredPipMode': return 'Picture-in-Picture modus geactiveerd';
+			case 'liveTV.exitedPipMode': return 'Picture-in-Picture modus beëindigd';
+			case 'liveTV.aspectRatioChanged': return ({required Object mode}) => 'Beeldverhouding: ${mode}';
+			case 'liveTV.tune': return 'Afstemmen';
+			case 'liveTV.retry': return 'Opnieuw proberen';
+			case 'liveTV.noChannelsMatchFilter': return 'Geen kanalen komen overeen met filter';
+			case 'liveTV.skipCommercial': return 'Reclame overslaan';
+			case 'dvr.title': return 'DVR';
+			case 'dvr.recordings': return 'Opnames';
+			case 'dvr.seriesRules': return 'Serie regels';
+			case 'dvr.noRecordings': return 'Geen opnames';
+			case 'dvr.noRules': return 'Geen serie regels';
+			case 'dvr.scheduleFromGuide': return 'Plan opnames vanuit de Live TV gids';
+			case 'dvr.createRulesHint': return 'Maak regels om series automatisch op te nemen';
+			case 'dvr.storage': return 'Opslag';
+			case 'dvr.recordingsCount': return ({required Object count}) => '${count} opnames';
+			case 'dvr.all': return 'Alle';
+			case 'dvr.scheduled': return 'Gepland';
+			case 'dvr.completed': return 'Voltooid';
+			case 'dvr.failed': return 'Mislukt';
+			case 'dvr.deleteRecording': return 'Opname verwijderen?';
+			case 'dvr.deleteRule': return 'Serie regel verwijderen?';
+			case 'dvr.sortByDate': return 'Datum';
+			case 'dvr.sortByTitle': return 'Titel';
+			case 'dvr.sortBySize': return 'Grootte';
+			case 'dvr.playRecording': return 'Opname afspelen';
+			case 'dvr.keepPolicy': return ({required Object count}) => 'Bewaar ${count} afleveringen';
+			case 'dvr.keepAll': return 'Alles bewaren';
+			case 'dvr.recordingScheduled': return 'Opname gepland';
+			case 'dvr.scheduleRecordingTitle': return 'Opname plannen';
+			case 'dvr.schedule': return 'Plannen';
+			case 'dvr.cancel': return 'Annuleren';
+			case 'epg.title': return 'TV Gids';
+			case 'epg.now': return 'Nu';
+			case 'epg.today': return 'Vandaag';
+			case 'epg.tomorrow': return 'Morgen';
+			case 'epg.noPrograms': return 'Geen programma-informatie beschikbaar';
+			case 'epg.loading': return 'Gids laden...';
+			case 'epg.record': return 'Opnemen';
+			case 'epg.reminder': return 'Herinnering instellen';
+			case 'epg.moreInfo': return 'Meer info';
+			case 'epg.toggleView': return 'Wissel weergave';
+			case 'epg.gridView': return 'Rasterweergave';
+			case 'epg.nowNextView': return 'Nu/Straks weergave';
+			case 'channelSurfing.title': return 'Willekeurig kijken';
+			case 'channelSurfing.kidsMode': return 'Kindermodus';
+			case 'channelSurfing.loading': return 'Willekeurig kijken laden...';
+			case 'channelSurfing.failedToLoad': return 'Inhoud kon niet worden geladen';
+			case 'channelSurfing.retry': return 'Opnieuw proberen';
+			case 'channelSurfing.noContent': return 'Geen inhoud beschikbaar';
+			case 'channelSurfing.itemsAvailable': return ({required Object count}) => '${count} items beschikbaar';
+			case 'channelSurfing.startSurfing': return 'Starten';
+			case 'channelSurfing.pressBackToExit': return 'Druk terug om af te sluiten';
+			case 'channelSurfing.description': return 'Kijk willekeurige films en series doorlopend';
+			case 'channelSurfing.noServers': return 'Geen servers beschikbaar';
+			case 'multiview.title': return 'Multi-View';
+			case 'multiview.changeLayout': return 'Layout wijzigen (L)';
+			case 'multiview.addChannel': return 'Zender toevoegen (A)';
+			case 'multiview.removeChannel': return 'Zender verwijderen (R)';
+			case 'multiview.swapChannel': return 'Zender wijzigen';
+			case 'multiview.toggleMute': return 'Geluid aan/uit (M)';
+			case 'multiview.selectChannel': return 'Zender selecteren';
+			case 'multiview.searchChannels': return 'Zenders zoeken...';
+			case 'multiview.cancel': return 'Annuleren';
+			case 'multiview.channelNumber': return ({required Object number}) => 'Z. ${number}';
+			case 'player.playbackError': return 'Afspeelfout';
+			case 'player.error': return 'Fout';
+			case 'player.failedToStartPlayback': return ({required Object error}) => 'Kan afspelen niet starten:\n${error}';
+			case 'player.ok': return 'OK';
+			case 'downloads.title': return 'Downloads';
+			case 'downloads.deleteAll': return 'Alles verwijderen';
+			case 'downloads.deleteAllTitle': return 'Alle downloads verwijderen?';
+			case 'downloads.deleteAllMessage': return ({required Object count, required Object size}) => 'Dit verwijdert alle ${count} downloads en maakt ${size} opslagruimte vrij.';
+			case 'downloads.storageUsed': return ({required Object size}) => 'Opslag gebruikt: ${size}';
+			case 'downloads.downloading': return ({required Object count}) => 'Downloaden (${count})';
+			case 'downloads.downloaded': return ({required Object count}) => 'Gedownload (${count})';
+			case 'downloads.noDownloads': return 'Geen downloads';
+			case 'downloads.noDownloadsHint': return 'Download films en series om offline te bekijken';
+			case 'downloads.deleteDownloadTitle': return 'Download verwijderen?';
+			case 'downloads.deleteDownloadMessage': return ({required Object title}) => '"${title}" verwijderen?';
+			case 'downloads.delete': return 'Verwijderen';
+			case 'downloads.cancel': return 'Annuleren';
+			case 'downloads.downloadFailed': return 'Download mislukt';
+			case 'downloads.paused': return 'Gepauzeerd';
 			default: return null;
 		}
 	}
@@ -7202,6 +10708,19 @@ extension on _StringsSv {
 			case 'auth.passwordTooShort': return 'Lösenordet måste vara minst 6 tecken';
 			case 'auth.invalidEmail': return 'Ange en giltig e-postadress';
 			case 'auth.firstUserNote': return 'Första användaren blir administratör';
+			case 'auth.howConnecting': return 'Hur ansluter du?';
+			case 'auth.atHome': return 'Hemma';
+			case 'auth.atHomeDescription': return 'Upptäck server automatiskt på ditt lokala nätverk';
+			case 'auth.awayFromHome': return 'Utanför hemmet';
+			case 'auth.awayFromHomeDescription': return 'Ange serveradress manuellt';
+			case 'auth.findYourServer': return 'Hitta din server';
+			case 'auth.searching': return 'Söker...';
+			case 'auth.checkingNetwork': return 'Kontrollerar nätverk...';
+			case 'auth.serversFound': return 'Servrar hittade';
+			case 'auth.scanAgain': return 'Sök igen';
+			case 'auth.enterManually': return 'Ange manuellt';
+			case 'auth.noServersFound': return 'Inga servrar hittades på ditt nätverk. Se till att din OpenFlix-server körs.';
+			case 'auth.discoveryFailed': return ({required Object error}) => 'Sökning misslyckades: ${error}';
 			case 'common.cancel': return 'Avbryt';
 			case 'common.save': return 'Spara';
 			case 'common.close': return 'Stäng';
@@ -7226,6 +10745,12 @@ extension on _StringsSv {
 			case 'common.delete': return 'Ta bort';
 			case 'common.shuffle': return 'Blanda';
 			case 'common.addTo': return 'Lägg till i...';
+			case 'common.remove': return 'Remove';
+			case 'common.play': return 'Play';
+			case 'common.details': return 'Details';
+			case 'common.seeAll': return 'See All';
+			case 'common.live': return 'LIVE';
+			case 'common.newLabel': return 'NY';
 			case 'screens.licenses': return 'Licenser';
 			case 'screens.selectServer': return 'Välj server';
 			case 'screens.switchProfile': return 'Byt profil';
@@ -7240,6 +10765,13 @@ extension on _StringsSv {
 			case 'update.latestVersion': return 'Du har den senaste versionen';
 			case 'update.checkFailed': return 'Misslyckades att kontrollera uppdateringar';
 			case 'settings.title': return 'Inställningar';
+			case 'settings.profile': return 'Profil';
+			case 'settings.noProfileSelected': return 'Ingen profil vald';
+			case 'settings.kidsMode': return 'Barnläge';
+			case 'settings.switchProfile': return 'Byt profil';
+			case 'settings.switchProfileDescription': return 'Byt till en annan profil';
+			case 'settings.manageProfiles': return 'Hantera profiler';
+			case 'settings.manageProfilesDescription': return 'Lägg till, redigera eller ta bort profiler';
 			case 'settings.language': return 'Språk';
 			case 'settings.theme': return 'Tema';
 			case 'settings.appearance': return 'Utseende';
@@ -7329,10 +10861,35 @@ extension on _StringsSv {
 			case 'settings.apiKey': return 'API-nyckel';
 			case 'settings.tmdbApiKeySaved': return 'TMDB API-nyckel sparad';
 			case 'settings.tmdbApiKeyCleared': return 'TMDB API-nyckel raderad';
+			case 'settings.parentalControls': return 'Föräldrakontroll';
+			case 'settings.enableParentalControls': return 'Aktivera Föräldrakontroll';
+			case 'settings.enableParentalControlsDescription': return 'Begränsa innehåll baserat på åldersgränser';
+			case 'settings.setPin': return 'Ställ in PIN';
+			case 'settings.setPinDescription': return 'Ange en 4-siffrig PIN för att skydda inställningarna';
+			case 'settings.confirmPin': return 'Bekräfta PIN';
+			case 'settings.confirmPinDescription': return 'Ange PIN igen för att bekräfta';
+			case 'settings.enterPin': return 'Ange PIN';
+			case 'settings.enterPinDescription': return 'Ange din föräldrakontroll-PIN';
+			case 'settings.changePin': return 'Ändra PIN';
+			case 'settings.changePinDescription': return 'Ändra din föräldrakontroll-PIN';
+			case 'settings.pinSet': return 'Föräldrakontroll-PIN har ställts in';
+			case 'settings.pinMismatch': return 'PIN-koderna matchar inte. Försök igen.';
+			case 'settings.incorrectPin': return 'Felaktig PIN. Försök igen.';
+			case 'settings.maxMovieRating': return 'Maximal Filmklassificering';
+			case 'settings.maxTvRating': return 'Maximal TV-klassificering';
 			case 'search.hint': return 'Sök filmer, serier, musik...';
 			case 'search.tryDifferentTerm': return 'Prova en annan sökterm';
 			case 'search.searchYourMedia': return 'Sök i dina media';
 			case 'search.enterTitleActorOrKeyword': return 'Ange en titel, skådespelare eller nyckelord';
+			case 'search.recentSearches': return 'Senaste sökningar';
+			case 'search.clear': return 'Rensa';
+			case 'search.voiceSearch': return 'Röstsökning';
+			case 'search.listening': return 'Lyssnar...';
+			case 'search.speakNow': return 'Tala nu';
+			case 'search.all': return 'Alla';
+			case 'search.movies': return 'Filmer';
+			case 'search.tvShows': return 'TV-serier';
+			case 'search.music': return 'Musik';
 			case 'hotkeys.setShortcutFor': return ({required Object actionName}) => 'Sätt genväg för ${actionName}';
 			case 'hotkeys.clearShortcut': return 'Rensa genväg';
 			case 'pinEntry.enterPin': return 'Ange PIN';
@@ -7392,6 +10949,11 @@ extension on _StringsSv {
 			case 'videoControls.stretch': return 'Sträck';
 			case 'videoControls.lockRotation': return 'Lås rotation';
 			case 'videoControls.unlockRotation': return 'Lås upp rotation';
+			case 'videoControls.lockScreen': return 'Lås skärm';
+			case 'videoControls.unlockScreen': return 'Lås upp skärm';
+			case 'videoControls.screenLockButton': return 'Skärmlås';
+			case 'videoControls.screenLocked': return 'Skärmen låst';
+			case 'videoControls.tapToUnlock': return 'Tryck för att låsa upp';
 			case 'videoControls.sleepTimer': return 'Sovtimer';
 			case 'videoControls.timerActive': return 'Timer aktiv';
 			case 'videoControls.playbackWillPauseIn': return ({required Object duration}) => 'Uppspelningen pausas om ${duration}';
@@ -7489,6 +11051,30 @@ extension on _StringsSv {
 			case 'discover.movie': return 'Film';
 			case 'discover.tvShow': return 'TV-serie';
 			case 'discover.minutesLeft': return ({required Object minutes}) => '${minutes} min kvar';
+			case 'discover.whatsOnNow': return 'Sänds nu';
+			case 'discover.channelGuide': return 'TV-guide';
+			case 'discover.liveNow': return 'Live nu';
+			case 'discover.topTen': return 'Topp 10';
+			case 'discover.newBadge': return 'NY';
+			case 'discover.liveBadge': return 'LIVE';
+			case 'discover.goodMorning': return 'Good morning';
+			case 'discover.goodAfternoon': return 'Good afternoon';
+			case 'discover.goodEvening': return 'Good evening';
+			case 'discover.defaultUser': return 'Guest';
+			case 'discover.yourNextWatch': return 'Your Next Watch';
+			case 'discover.pickedForYou': return ({required Object name}) => 'Picked just for you, ${name}';
+			case 'discover.surpriseMe': return 'Surprise Me';
+			case 'discover.randomPicker': return 'Random Movie Picker';
+			case 'discover.noMoviesFound': return 'No movies found in your library';
+			case 'discover.spinning': return 'Picking something great...';
+			case 'discover.spinAgain': return 'Spin Again';
+			case 'discover.calendar': return 'Calendar';
+			case 'discover.today': return 'Today';
+			case 'discover.item': return 'item';
+			case 'discover.items': return 'items';
+			case 'discover.loadingMovies': return 'Laddar dina filmer...';
+			case 'discover.noContentOnDate': return 'No content added on this date';
+			case 'discover.noEpgData': return 'Ingen programinformation';
 			case 'errors.searchFailed': return ({required Object error}) => 'Sökning misslyckades: ${error}';
 			case 'errors.connectionTimeout': return ({required Object context}) => 'Anslutnings-timeout vid laddning ${context}';
 			case 'errors.connectionFailed': return 'Kan inte ansluta till Plex-server';
@@ -7501,6 +11087,9 @@ extension on _StringsSv {
 			case 'errors.failedToVerifyToken': return ({required Object error}) => 'Misslyckades att verifiera token: ${error}';
 			case 'errors.failedToSwitchProfile': return ({required Object displayName}) => 'Misslyckades att byta till ${displayName}';
 			case 'errors.connectionFailedGeneric': return 'Anslutning misslyckades';
+			case 'errors.failedToRemove': return ({required Object error}) => 'Misslyckades att ta bort: ${error}';
+			case 'voice.notAvailable': return 'Röststyrning är inte tillgänglig';
+			case 'voice.commandNotRecognized': return ({required Object command}) => 'Kommando inte igenkänt: "${command}"';
 			case 'libraries.title': return 'Bibliotek';
 			case 'libraries.scanLibraryFiles': return 'Skanna biblioteksfiler';
 			case 'libraries.scanLibrary': return 'Skanna bibliotek';
@@ -7582,6 +11171,16 @@ extension on _StringsSv {
 			case 'logs.noLogsToShow': return 'Inga loggar att visa';
 			case 'logs.error': return 'Fel:';
 			case 'logs.stackTrace': return 'Stack trace:';
+			case 'stats.title': return 'Tittarstatistik';
+			case 'stats.totalWatchTime': return 'Total Tittartid';
+			case 'stats.moviesWatched': return 'Filmer Sedda';
+			case 'stats.episodesWatched': return 'Avsnitt Sedda';
+			case 'stats.avgPerDay': return 'Genomsnitt per Dag';
+			case 'stats.topGenres': return 'Favoritgenrer';
+			case 'stats.monthlyActivity': return 'Månadsaktivitet';
+			case 'stats.noData': return 'Ingen tittarhistorik ännu';
+			case 'stats.startWatching': return 'Börja titta för att se din statistik';
+			case 'stats.days': return 'dagar';
 			case 'licenses.relatedPackages': return 'Relaterade paket';
 			case 'licenses.license': return 'Licens';
 			case 'licenses.licenseNumber': return ({required Object number}) => 'Licens ${number}';
@@ -7650,6 +11249,183 @@ extension on _StringsSv {
 			case 'collections.removedFromCollection': return 'Borttagen från samling';
 			case 'collections.removeFromCollectionFailed': return 'Misslyckades med att ta bort från samling';
 			case 'collections.removeFromCollectionError': return ({required Object error}) => 'Fel vid borttagning från samling: ${error}';
+			case 'watchParty.title': return 'Watch Party';
+			case 'watchParty.startParty': return 'Starta Watch Party';
+			case 'watchParty.joinParty': return 'Gå med i Party';
+			case 'watchParty.enterCode': return 'Ange party-kod';
+			case 'watchParty.shareCode': return 'Dela denna kod';
+			case 'watchParty.friendsCanJoin': return 'Vänner kan gå med med denna kod';
+			case 'watchParty.participants': return 'Deltagare';
+			case 'watchParty.host': return 'Värd';
+			case 'watchParty.endParty': return 'Avsluta Party';
+			case 'watchParty.leaveParty': return 'Lämna Party';
+			case 'watchParty.partyEnded': return 'Watch Party avslutad';
+			case 'watchParty.chat': return 'Chatt';
+			case 'watchParty.typeMessage': return 'Skriv ett meddelande...';
+			case 'watchParty.joined': return ({required Object name}) => '${name} gick med';
+			case 'watchParty.left': return ({required Object name}) => '${name} lämnade';
+			case 'watchParty.syncedPlayback': return 'Uppspelning är synkroniserad med party';
+			case 'watchParty.hostControls': return 'Endast värden kan styra uppspelningen';
+			case 'watchParty.creating': return 'Skapar party...';
+			case 'watchParty.joining': return 'Går med i party...';
+			case 'watchParty.createFailed': return 'Misslyckades att skapa party';
+			case 'watchParty.joinFailed': return 'Misslyckades att gå med i party';
+			case 'watchParty.invalidCode': return 'Ogiltig party-kod';
+			case 'watchParty.gotIt': return 'Uppfattat';
+			case 'catchUp.title': return 'Catch Up TV';
+			case 'catchUp.startOver': return 'Börja om';
+			case 'catchUp.startOverDescription': return 'Se från början';
+			case 'catchUp.watchFromBeginning': return 'Se från början?';
+			case 'catchUp.alreadyStarted': return ({required Object title}) => '"${title}" har redan börjat. Du kan se från början.';
+			case 'catchUp.watchLive': return 'Se Live';
+			case 'catchUp.programsAvailable': return 'Tillgängliga program';
+			case 'catchUp.noProgramsAvailable': return 'Inga catch-up program tillgängliga';
+			case 'catchUp.programsWillAppear': return 'Program visas här efterhand som de sänds';
+			case 'catchUp.unavailable': return 'Inte tillgänglig';
+			case 'catchUp.bufferNotReady': return 'Buffer inte redo än';
+			case 'catchUp.rewind': return 'Spola tillbaka';
+			case 'catchUp.timeshiftEnabled': return 'Time-shift aktiverad';
+			case 'catchUp.goBackTo': return ({required Object time}) => 'Gå tillbaka till ${time}';
+			case 'watchlist.title': return 'Min bevakningslista';
+			case 'watchlist.all': return 'Alla';
+			case 'watchlist.movies': return 'Filmer';
+			case 'watchlist.shows': return 'TV-serier';
+			case 'watchlist.episodes': return 'Avsnitt';
+			case 'watchlist.empty': return 'Din bevakningslista är tom';
+			case 'watchlist.emptyHint': return 'Lägg till filmer och serier till din bevakningslista';
+			case 'watchlist.noItemsFiltered': return 'Inga objekt matchar detta filter';
+			case 'watchlist.removeTitle': return 'Ta bort från bevakningslista';
+			case 'watchlist.removeConfirm': return ({required Object title}) => 'Ta bort "${title}" från din bevakningslista?';
+			case 'watchlist.remove': return 'Remove';
+			case 'watchlist.play': return 'Play';
+			case 'watchlist.details': return 'Details';
+			case 'watchlist.seeAll': return 'See All';
+			case 'watchlist.clearAllTitle': return 'Rensa bevakningslista';
+			case 'watchlist.clearAllConfirm': return ({required Object count}) => 'Ta bort alla ${count} objekt från din bevakningslista?';
+			case 'watchlist.clearAll': return 'Rensa allt';
+			case 'watchlist.addedToday': return 'Tillagd idag';
+			case 'watchlist.addedYesterday': return 'Tillagd igår';
+			case 'watchlist.addedDaysAgo': return ({required Object days}) => 'Tillagd för ${days} dagar sedan';
+			case 'watchlist.addedOn': return ({required Object date}) => 'Tillagd den ${date}';
+			case 'watchlist.addToWatchlist': return 'Lägg till i bevakningslista';
+			case 'watchlist.removeFromWatchlist': return 'Ta bort från bevakningslista';
+			case 'watchlist.addedToWatchlist': return 'Tillagd i bevakningslista';
+			case 'watchlist.removedFromWatchlist': return 'Borttagen från bevakningslista';
+			case 'liveTV.title': return 'Live TV';
+			case 'liveTV.guide': return 'Guide';
+			case 'liveTV.dvr': return 'DVR';
+			case 'liveTV.multiview': return 'Multivy';
+			case 'liveTV.allChannels': return 'Alla kanaler';
+			case 'liveTV.favorites': return 'Favoriter';
+			case 'liveTV.noChannels': return 'Inga kanaler tillgängliga';
+			case 'liveTV.addM3USource': return 'Lägg till en M3U-källa i serverinställningarna';
+			case 'liveTV.recording': return 'Spelar in';
+			case 'liveTV.recordingNow': return 'Spelar in nu';
+			case 'liveTV.upNext': return 'Nästa';
+			case 'liveTV.noProgram': return 'Ingen programinfo';
+			case 'liveTV.filterByGroup': return 'Filtrera efter grupp';
+			case 'liveTV.refresh': return 'Uppdatera';
+			case 'liveTV.channelCount': return ({required Object count}) => '${count} kanaler';
+			case 'liveTV.nowPlaying': return 'Sänds nu';
+			case 'liveTV.scheduleRecording': return 'Schemalägg inspelning';
+			case 'liveTV.onNow': return 'Sänds nu';
+			case 'liveTV.endsAt': return ({required Object time}) => 'Slutar ${time}';
+			case 'liveTV.startsAt': return ({required Object time}) => 'Börjar ${time}';
+			case 'liveTV.playbackError': return ({required Object error}) => 'Uppspelningsfel: ${error}';
+			case 'liveTV.noPreviousChannel': return 'Ingen föregående kanal';
+			case 'liveTV.switchedTo': return ({required Object channel}) => 'Bytte till: ${channel}';
+			case 'liveTV.startingFromBeginning': return 'Startar program från början...';
+			case 'liveTV.failedToStartOver': return ({required Object error}) => 'Kunde inte starta om: ${error}';
+			case 'liveTV.playingProgram': return ({required Object title}) => 'Spelar: ${title}';
+			case 'liveTV.failedToPlayProgram': return ({required Object error}) => 'Kunde inte spela program: ${error}';
+			case 'liveTV.addedToFavorites': return 'Tillagd i favoriter';
+			case 'liveTV.removedFromFavorites': return 'Borttagen från favoriter';
+			case 'liveTV.failedToUpdateFavorite': return ({required Object error}) => 'Kunde inte uppdatera favorit: ${error}';
+			case 'liveTV.pipNotSupported': return 'Bild-i-bild stöds inte på denna plattform';
+			case 'liveTV.enteredPipMode': return 'Bild-i-bild-läge aktiverat';
+			case 'liveTV.exitedPipMode': return 'Bild-i-bild-läge avslutat';
+			case 'liveTV.aspectRatioChanged': return ({required Object mode}) => 'Bildförhållande: ${mode}';
+			case 'liveTV.tune': return 'Ställ in';
+			case 'liveTV.retry': return 'Försök igen';
+			case 'liveTV.noChannelsMatchFilter': return 'Inga kanaler matchar filtret';
+			case 'liveTV.skipCommercial': return 'Hoppa över reklam';
+			case 'dvr.title': return 'DVR';
+			case 'dvr.recordings': return 'Inspelningar';
+			case 'dvr.seriesRules': return 'Serieregler';
+			case 'dvr.noRecordings': return 'Inga inspelningar';
+			case 'dvr.noRules': return 'Inga serieregler';
+			case 'dvr.scheduleFromGuide': return 'Schemalägg inspelningar från Live TV-guiden';
+			case 'dvr.createRulesHint': return 'Skapa regler för att spela in serier automatiskt';
+			case 'dvr.storage': return 'Lagring';
+			case 'dvr.recordingsCount': return ({required Object count}) => '${count} inspelningar';
+			case 'dvr.all': return 'Alla';
+			case 'dvr.scheduled': return 'Schemalagda';
+			case 'dvr.completed': return 'Slutförda';
+			case 'dvr.failed': return 'Misslyckade';
+			case 'dvr.deleteRecording': return 'Ta bort inspelning?';
+			case 'dvr.deleteRule': return 'Ta bort serieregel?';
+			case 'dvr.sortByDate': return 'Datum';
+			case 'dvr.sortByTitle': return 'Titel';
+			case 'dvr.sortBySize': return 'Storlek';
+			case 'dvr.playRecording': return 'Spela inspelning';
+			case 'dvr.keepPolicy': return ({required Object count}) => 'Behåll ${count} avsnitt';
+			case 'dvr.keepAll': return 'Behåll alla';
+			case 'dvr.recordingScheduled': return 'Inspelning schemalagd';
+			case 'dvr.scheduleRecordingTitle': return 'Schemalägg inspelning';
+			case 'dvr.schedule': return 'Schemalägg';
+			case 'dvr.cancel': return 'Avbryt';
+			case 'epg.title': return 'TV-guide';
+			case 'epg.now': return 'Nu';
+			case 'epg.today': return 'Idag';
+			case 'epg.tomorrow': return 'Imorgon';
+			case 'epg.noPrograms': return 'Ingen programinformation tillgänglig';
+			case 'epg.loading': return 'Laddar guide...';
+			case 'epg.record': return 'Spela in';
+			case 'epg.reminder': return 'Ställ in påminnelse';
+			case 'epg.moreInfo': return 'Mer info';
+			case 'epg.toggleView': return 'Byt vy';
+			case 'epg.gridView': return 'Rutnätsvy';
+			case 'epg.nowNextView': return 'Nu/Nästa vy';
+			case 'channelSurfing.title': return 'Slumpmässig visning';
+			case 'channelSurfing.kidsMode': return 'Barnläge';
+			case 'channelSurfing.loading': return 'Laddar slumpmässig visning...';
+			case 'channelSurfing.failedToLoad': return 'Kunde inte ladda innehåll';
+			case 'channelSurfing.retry': return 'Försök igen';
+			case 'channelSurfing.noContent': return 'Inget innehåll tillgängligt';
+			case 'channelSurfing.itemsAvailable': return ({required Object count}) => '${count} objekt tillgängliga';
+			case 'channelSurfing.startSurfing': return 'Starta';
+			case 'channelSurfing.pressBackToExit': return 'Tryck bakåt för att avsluta';
+			case 'channelSurfing.description': return 'Se slumpmässiga filmer och serier kontinuerligt';
+			case 'channelSurfing.noServers': return 'Inga servrar tillgängliga';
+			case 'multiview.title': return 'Multi-Vy';
+			case 'multiview.changeLayout': return 'Ändra layout (L)';
+			case 'multiview.addChannel': return 'Lägg till kanal (A)';
+			case 'multiview.removeChannel': return 'Ta bort kanal (R)';
+			case 'multiview.swapChannel': return 'Byt kanal';
+			case 'multiview.toggleMute': return 'Ljud av/på (M)';
+			case 'multiview.selectChannel': return 'Välj kanal';
+			case 'multiview.searchChannels': return 'Sök kanaler...';
+			case 'multiview.cancel': return 'Avbryt';
+			case 'multiview.channelNumber': return ({required Object number}) => 'K. ${number}';
+			case 'player.playbackError': return 'Uppspelningsfel';
+			case 'player.error': return 'Fel';
+			case 'player.failedToStartPlayback': return ({required Object error}) => 'Kunde inte starta uppspelning:\n${error}';
+			case 'player.ok': return 'OK';
+			case 'downloads.title': return 'Nedladdningar';
+			case 'downloads.deleteAll': return 'Ta bort alla';
+			case 'downloads.deleteAllTitle': return 'Ta bort alla nedladdningar?';
+			case 'downloads.deleteAllMessage': return ({required Object count, required Object size}) => 'Detta tar bort alla ${count} nedladdningar och frigör ${size} lagringsutrymme.';
+			case 'downloads.storageUsed': return ({required Object size}) => 'Lagring använd: ${size}';
+			case 'downloads.downloading': return ({required Object count}) => 'Laddar ner (${count})';
+			case 'downloads.downloaded': return ({required Object count}) => 'Nedladdat (${count})';
+			case 'downloads.noDownloads': return 'Inga nedladdningar';
+			case 'downloads.noDownloadsHint': return 'Ladda ner filmer och serier för att se offline';
+			case 'downloads.deleteDownloadTitle': return 'Ta bort nedladdning?';
+			case 'downloads.deleteDownloadMessage': return ({required Object title}) => 'Ta bort "${title}"?';
+			case 'downloads.delete': return 'Ta bort';
+			case 'downloads.cancel': return 'Avbryt';
+			case 'downloads.downloadFailed': return 'Nedladdning misslyckades';
+			case 'downloads.paused': return 'Pausad';
 			default: return null;
 		}
 	}
@@ -7702,6 +11478,19 @@ extension on _StringsZh {
 			case 'auth.passwordTooShort': return '密码至少需要6个字符';
 			case 'auth.invalidEmail': return '请输入有效的电子邮件地址';
 			case 'auth.firstUserNote': return '第一个用户将成为管理员';
+			case 'auth.howConnecting': return '您要如何连接？';
+			case 'auth.atHome': return '在家中';
+			case 'auth.atHomeDescription': return '在本地网络中自动检测服务器';
+			case 'auth.awayFromHome': return '在外出时';
+			case 'auth.awayFromHomeDescription': return '手动输入服务器地址';
+			case 'auth.findYourServer': return '查找您的服务器';
+			case 'auth.searching': return '搜索中...';
+			case 'auth.checkingNetwork': return '正在检查网络...';
+			case 'auth.serversFound': return '找到的服务器';
+			case 'auth.scanAgain': return '重新扫描';
+			case 'auth.enterManually': return '手动输入';
+			case 'auth.noServersFound': return '在您的网络中未找到服务器。请确保您的 OpenFlix 服务器正在运行。';
+			case 'auth.discoveryFailed': return ({required Object error}) => '搜索失败：${error}';
 			case 'common.cancel': return '取消';
 			case 'common.save': return '保存';
 			case 'common.close': return '关闭';
@@ -7726,6 +11515,12 @@ extension on _StringsZh {
 			case 'common.delete': return '删除';
 			case 'common.shuffle': return '随机播放';
 			case 'common.addTo': return '添加到...';
+			case 'common.remove': return 'Remove';
+			case 'common.play': return 'Play';
+			case 'common.details': return 'Details';
+			case 'common.seeAll': return 'See All';
+			case 'common.live': return '直播';
+			case 'common.newLabel': return '新';
 			case 'screens.licenses': return '许可证';
 			case 'screens.selectServer': return '选择服务器';
 			case 'screens.switchProfile': return '切换配置文件';
@@ -7740,6 +11535,13 @@ extension on _StringsZh {
 			case 'update.latestVersion': return '已安装的版本是可用的最新版本';
 			case 'update.checkFailed': return '无法检查更新';
 			case 'settings.title': return '设置';
+			case 'settings.profile': return '个人资料';
+			case 'settings.noProfileSelected': return '未选择个人资料';
+			case 'settings.kidsMode': return '儿童模式';
+			case 'settings.switchProfile': return '切换个人资料';
+			case 'settings.switchProfileDescription': return '切换到其他个人资料';
+			case 'settings.manageProfiles': return '管理个人资料';
+			case 'settings.manageProfilesDescription': return '添加、编辑或删除个人资料';
 			case 'settings.language': return '语言';
 			case 'settings.theme': return '主题';
 			case 'settings.appearance': return '外观';
@@ -7829,10 +11631,35 @@ extension on _StringsZh {
 			case 'settings.apiKey': return 'API 密钥';
 			case 'settings.tmdbApiKeySaved': return 'TMDB API 密钥已保存';
 			case 'settings.tmdbApiKeyCleared': return 'TMDB API 密钥已清除';
-			case 'search.hint': return '搜索电影、系列、音乐...';
+			case 'settings.parentalControls': return '家长控制';
+			case 'settings.enableParentalControls': return '启用家长控制';
+			case 'settings.enableParentalControlsDescription': return '根据年龄分级限制内容';
+			case 'settings.setPin': return '设置 PIN';
+			case 'settings.setPinDescription': return '输入 4 位 PIN 码以保护设置';
+			case 'settings.confirmPin': return '确认 PIN';
+			case 'settings.confirmPinDescription': return '再次输入 PIN 码进行确认';
+			case 'settings.enterPin': return '输入 PIN';
+			case 'settings.enterPinDescription': return '输入您的家长控制 PIN 码';
+			case 'settings.changePin': return '更改 PIN';
+			case 'settings.changePinDescription': return '更改您的家长控制 PIN 码';
+			case 'settings.pinSet': return '家长控制 PIN 码设置成功';
+			case 'settings.pinMismatch': return 'PIN 码不匹配。请重试。';
+			case 'settings.incorrectPin': return 'PIN 码错误。请重试。';
+			case 'settings.maxMovieRating': return '最大电影分级';
+			case 'settings.maxTvRating': return '最大电视分级';
+			case 'search.hint': return '搜索电影、剧集、音乐...';
 			case 'search.tryDifferentTerm': return '尝试不同的搜索词';
 			case 'search.searchYourMedia': return '搜索媒体';
 			case 'search.enterTitleActorOrKeyword': return '输入标题、演员或关键词';
+			case 'search.recentSearches': return '最近搜索';
+			case 'search.clear': return '清除';
+			case 'search.voiceSearch': return '语音搜索';
+			case 'search.listening': return '正在听取...';
+			case 'search.speakNow': return '请说话';
+			case 'search.all': return '全部';
+			case 'search.movies': return '电影';
+			case 'search.tvShows': return '电视剧';
+			case 'search.music': return '音乐';
 			case 'hotkeys.setShortcutFor': return ({required Object actionName}) => '为 ${actionName} 设置快捷键';
 			case 'hotkeys.clearShortcut': return '清除快捷键';
 			case 'pinEntry.enterPin': return '输入 PIN';
@@ -7892,6 +11719,11 @@ extension on _StringsZh {
 			case 'videoControls.stretch': return '拉伸';
 			case 'videoControls.lockRotation': return '锁定旋转';
 			case 'videoControls.unlockRotation': return '解锁旋转';
+			case 'videoControls.lockScreen': return '锁定屏幕';
+			case 'videoControls.unlockScreen': return '解锁屏幕';
+			case 'videoControls.screenLockButton': return '屏幕锁定';
+			case 'videoControls.screenLocked': return '屏幕已锁定';
+			case 'videoControls.tapToUnlock': return '点击解锁';
 			case 'videoControls.sleepTimer': return '睡眠定时器';
 			case 'videoControls.timerActive': return '定时器已激活';
 			case 'videoControls.playbackWillPauseIn': return ({required Object duration}) => '播放将在 ${duration} 后暂停';
@@ -7989,6 +11821,30 @@ extension on _StringsZh {
 			case 'discover.movie': return '电影';
 			case 'discover.tvShow': return '电视剧';
 			case 'discover.minutesLeft': return ({required Object minutes}) => '剩余 ${minutes} 分钟';
+			case 'discover.whatsOnNow': return '正在播出';
+			case 'discover.channelGuide': return '节目指南';
+			case 'discover.liveNow': return '正在直播';
+			case 'discover.topTen': return '前10名';
+			case 'discover.newBadge': return '新';
+			case 'discover.liveBadge': return '直播';
+			case 'discover.goodMorning': return '早上好';
+			case 'discover.goodAfternoon': return '下午好';
+			case 'discover.goodEvening': return '晚上好';
+			case 'discover.defaultUser': return 'Guest';
+			case 'discover.yourNextWatch': return 'Your Next Watch';
+			case 'discover.pickedForYou': return ({required Object name}) => 'Picked just for you, ${name}';
+			case 'discover.surpriseMe': return 'Surprise Me';
+			case 'discover.randomPicker': return 'Random Movie Picker';
+			case 'discover.noMoviesFound': return 'No movies found in your library';
+			case 'discover.spinning': return 'Picking something great...';
+			case 'discover.spinAgain': return 'Spin Again';
+			case 'discover.calendar': return 'Calendar';
+			case 'discover.today': return 'Today';
+			case 'discover.item': return 'item';
+			case 'discover.items': return 'items';
+			case 'discover.loadingMovies': return '正在加载你的电影...';
+			case 'discover.noContentOnDate': return 'No content added on this date';
+			case 'discover.noEpgData': return '暂无节目信息';
 			case 'errors.searchFailed': return ({required Object error}) => '搜索失败: ${error}';
 			case 'errors.connectionTimeout': return ({required Object context}) => '加载 ${context} 时连接超时';
 			case 'errors.connectionFailed': return '无法连接到 Plex 服务器';
@@ -8001,6 +11857,9 @@ extension on _StringsZh {
 			case 'errors.failedToVerifyToken': return ({required Object error}) => '无法验证令牌: ${error}';
 			case 'errors.failedToSwitchProfile': return ({required Object displayName}) => '无法切换到 ${displayName}';
 			case 'errors.connectionFailedGeneric': return '连接失败';
+			case 'errors.failedToRemove': return ({required Object error}) => '移除失败：${error}';
+			case 'voice.notAvailable': return '语音控制不可用';
+			case 'voice.commandNotRecognized': return ({required Object command}) => '无法识别的命令："${command}"';
 			case 'libraries.title': return '媒体库';
 			case 'libraries.scanLibraryFiles': return '扫描媒体库文件';
 			case 'libraries.scanLibrary': return '扫描媒体库';
@@ -8082,6 +11941,16 @@ extension on _StringsZh {
 			case 'logs.noLogsToShow': return '没有可显示的日志';
 			case 'logs.error': return '错误:';
 			case 'logs.stackTrace': return '堆栈跟踪 (Stack Trace):';
+			case 'stats.title': return '观看统计';
+			case 'stats.totalWatchTime': return '总观看时长';
+			case 'stats.moviesWatched': return '已观看电影';
+			case 'stats.episodesWatched': return '已观看剧集';
+			case 'stats.avgPerDay': return '每日平均';
+			case 'stats.topGenres': return '常看类型';
+			case 'stats.monthlyActivity': return '月度活动';
+			case 'stats.noData': return '暂无观看记录';
+			case 'stats.startWatching': return '开始观看以查看统计数据';
+			case 'stats.days': return '天';
 			case 'licenses.relatedPackages': return '相关软件包';
 			case 'licenses.license': return '许可证';
 			case 'licenses.licenseNumber': return ({required Object number}) => '许可证 ${number}';
@@ -8150,6 +12019,183 @@ extension on _StringsZh {
 			case 'collections.removedFromCollection': return '已从合集移除';
 			case 'collections.removeFromCollectionFailed': return '从合集移除失败';
 			case 'collections.removeFromCollectionError': return ({required Object error}) => '从合集移除时出错：${error}';
+			case 'watchParty.title': return 'Watch Party';
+			case 'watchParty.startParty': return '开始 Watch Party';
+			case 'watchParty.joinParty': return '加入 Party';
+			case 'watchParty.enterCode': return '输入 Party 代码';
+			case 'watchParty.shareCode': return '分享此代码';
+			case 'watchParty.friendsCanJoin': return '朋友可以使用此代码加入';
+			case 'watchParty.participants': return '参与者';
+			case 'watchParty.host': return '主持人';
+			case 'watchParty.endParty': return '结束 Party';
+			case 'watchParty.leaveParty': return '离开 Party';
+			case 'watchParty.partyEnded': return 'Watch Party 已结束';
+			case 'watchParty.chat': return '聊天';
+			case 'watchParty.typeMessage': return '输入消息...';
+			case 'watchParty.joined': return ({required Object name}) => '${name} 已加入';
+			case 'watchParty.left': return ({required Object name}) => '${name} 已离开';
+			case 'watchParty.syncedPlayback': return '播放已与 Party 同步';
+			case 'watchParty.hostControls': return '只有主持人可以控制播放';
+			case 'watchParty.creating': return '正在创建 Party...';
+			case 'watchParty.joining': return '正在加入 Party...';
+			case 'watchParty.createFailed': return '创建 Party 失败';
+			case 'watchParty.joinFailed': return '加入 Party 失败';
+			case 'watchParty.invalidCode': return '无效的 Party 代码';
+			case 'watchParty.gotIt': return '知道了';
+			case 'catchUp.title': return '回看电视';
+			case 'catchUp.startOver': return '重新开始';
+			case 'catchUp.startOverDescription': return '从头观看';
+			case 'catchUp.watchFromBeginning': return '从头开始观看？';
+			case 'catchUp.alreadyStarted': return ({required Object title}) => '"${title}" 已经开始。您可以从头开始观看。';
+			case 'catchUp.watchLive': return '观看直播';
+			case 'catchUp.programsAvailable': return '可用节目';
+			case 'catchUp.noProgramsAvailable': return '没有可用的回看节目';
+			case 'catchUp.programsWillAppear': return '节目将在播出后出现在这里';
+			case 'catchUp.unavailable': return '不可用';
+			case 'catchUp.bufferNotReady': return '缓冲区尚未就绪';
+			case 'catchUp.rewind': return '倒带';
+			case 'catchUp.timeshiftEnabled': return '时移已启用';
+			case 'catchUp.goBackTo': return ({required Object time}) => '返回到 ${time}';
+			case 'watchlist.title': return '我的观看列表';
+			case 'watchlist.all': return '全部';
+			case 'watchlist.movies': return '电影';
+			case 'watchlist.shows': return '电视剧';
+			case 'watchlist.episodes': return '剧集';
+			case 'watchlist.empty': return '您的观看列表为空';
+			case 'watchlist.emptyHint': return '从详情页添加电影和剧集到您的观看列表';
+			case 'watchlist.noItemsFiltered': return '没有符合此筛选条件的项目';
+			case 'watchlist.removeTitle': return '从观看列表移除';
+			case 'watchlist.removeConfirm': return ({required Object title}) => '确定要将「${title}」从观看列表移除吗？';
+			case 'watchlist.remove': return 'Remove';
+			case 'watchlist.play': return 'Play';
+			case 'watchlist.details': return 'Details';
+			case 'watchlist.seeAll': return 'See All';
+			case 'watchlist.clearAllTitle': return '清空观看列表';
+			case 'watchlist.clearAllConfirm': return ({required Object count}) => '确定要移除观看列表中的 ${count} 个项目吗？';
+			case 'watchlist.clearAll': return '全部清除';
+			case 'watchlist.addedToday': return '今天添加';
+			case 'watchlist.addedYesterday': return '昨天添加';
+			case 'watchlist.addedDaysAgo': return ({required Object days}) => '${days} 天前添加';
+			case 'watchlist.addedOn': return ({required Object date}) => '添加于 ${date}';
+			case 'watchlist.addToWatchlist': return '添加到观看列表';
+			case 'watchlist.removeFromWatchlist': return '从观看列表移除';
+			case 'watchlist.addedToWatchlist': return '已添加到观看列表';
+			case 'watchlist.removedFromWatchlist': return '已从观看列表移除';
+			case 'liveTV.title': return '电视直播';
+			case 'liveTV.guide': return '节目指南';
+			case 'liveTV.dvr': return 'DVR';
+			case 'liveTV.multiview': return '多画面';
+			case 'liveTV.allChannels': return '所有频道';
+			case 'liveTV.favorites': return '收藏';
+			case 'liveTV.noChannels': return '没有可用频道';
+			case 'liveTV.addM3USource': return '在服务器设置中添加M3U源';
+			case 'liveTV.recording': return '录制中';
+			case 'liveTV.recordingNow': return '正在录制';
+			case 'liveTV.upNext': return '即将播出';
+			case 'liveTV.noProgram': return '没有节目信息';
+			case 'liveTV.filterByGroup': return '按组筛选';
+			case 'liveTV.refresh': return '刷新';
+			case 'liveTV.channelCount': return ({required Object count}) => '${count} 个频道';
+			case 'liveTV.nowPlaying': return '正在播出';
+			case 'liveTV.scheduleRecording': return '预约录制';
+			case 'liveTV.onNow': return '正在播出';
+			case 'liveTV.endsAt': return ({required Object time}) => '结束于 ${time}';
+			case 'liveTV.startsAt': return ({required Object time}) => '开始于 ${time}';
+			case 'liveTV.playbackError': return ({required Object error}) => '播放错误：${error}';
+			case 'liveTV.noPreviousChannel': return '没有上一个频道';
+			case 'liveTV.switchedTo': return ({required Object channel}) => '已切换到：${channel}';
+			case 'liveTV.startingFromBeginning': return '正在从头开始播放节目...';
+			case 'liveTV.failedToStartOver': return ({required Object error}) => '重新开始失败：${error}';
+			case 'liveTV.playingProgram': return ({required Object title}) => '正在播放：${title}';
+			case 'liveTV.failedToPlayProgram': return ({required Object error}) => '播放节目失败：${error}';
+			case 'liveTV.addedToFavorites': return '已添加到收藏';
+			case 'liveTV.removedFromFavorites': return '已从收藏中移除';
+			case 'liveTV.failedToUpdateFavorite': return ({required Object error}) => '更新收藏失败：${error}';
+			case 'liveTV.pipNotSupported': return '此平台不支持画中画';
+			case 'liveTV.enteredPipMode': return '已进入画中画模式';
+			case 'liveTV.exitedPipMode': return '已退出画中画模式';
+			case 'liveTV.aspectRatioChanged': return ({required Object mode}) => '画面比例：${mode}';
+			case 'liveTV.tune': return '调谐';
+			case 'liveTV.retry': return '重试';
+			case 'liveTV.noChannelsMatchFilter': return '没有匹配筛选条件的频道';
+			case 'liveTV.skipCommercial': return '跳过广告';
+			case 'dvr.title': return 'DVR';
+			case 'dvr.recordings': return '录制内容';
+			case 'dvr.seriesRules': return '系列规则';
+			case 'dvr.noRecordings': return '没有录制内容';
+			case 'dvr.noRules': return '没有系列规则';
+			case 'dvr.scheduleFromGuide': return '从电视指南预约录制';
+			case 'dvr.createRulesHint': return '创建规则自动录制系列节目';
+			case 'dvr.storage': return '存储空间';
+			case 'dvr.recordingsCount': return ({required Object count}) => '${count} 个录制';
+			case 'dvr.all': return '全部';
+			case 'dvr.scheduled': return '已预约';
+			case 'dvr.completed': return '已完成';
+			case 'dvr.failed': return '失败';
+			case 'dvr.deleteRecording': return '删除录制？';
+			case 'dvr.deleteRule': return '删除系列规则？';
+			case 'dvr.sortByDate': return '日期';
+			case 'dvr.sortByTitle': return '标题';
+			case 'dvr.sortBySize': return '大小';
+			case 'dvr.playRecording': return '播放录制';
+			case 'dvr.keepPolicy': return ({required Object count}) => '保留 ${count} 集';
+			case 'dvr.keepAll': return '全部保留';
+			case 'dvr.recordingScheduled': return '录制已预约';
+			case 'dvr.scheduleRecordingTitle': return '预约录制';
+			case 'dvr.schedule': return '预约';
+			case 'dvr.cancel': return '取消';
+			case 'epg.title': return '电视节目指南';
+			case 'epg.now': return '现在';
+			case 'epg.today': return '今天';
+			case 'epg.tomorrow': return '明天';
+			case 'epg.noPrograms': return '没有可用的节目信息';
+			case 'epg.loading': return '正在加载节目指南...';
+			case 'epg.record': return '录制';
+			case 'epg.reminder': return '设置提醒';
+			case 'epg.moreInfo': return '更多信息';
+			case 'epg.toggleView': return '切换视图';
+			case 'epg.gridView': return '网格视图';
+			case 'epg.nowNextView': return '正在播出/即将播出视图';
+			case 'channelSurfing.title': return '随机播放';
+			case 'channelSurfing.kidsMode': return '儿童模式';
+			case 'channelSurfing.loading': return '正在加载随机播放...';
+			case 'channelSurfing.failedToLoad': return '无法加载内容';
+			case 'channelSurfing.retry': return '重试';
+			case 'channelSurfing.noContent': return '没有可用内容';
+			case 'channelSurfing.itemsAvailable': return ({required Object count}) => '${count} 个项目可用';
+			case 'channelSurfing.startSurfing': return '开始播放';
+			case 'channelSurfing.pressBackToExit': return '按返回键退出';
+			case 'channelSurfing.description': return '连续观看随机电影和剧集';
+			case 'channelSurfing.noServers': return '没有可用服务器';
+			case 'multiview.title': return '多画面';
+			case 'multiview.changeLayout': return '更改布局 (L)';
+			case 'multiview.addChannel': return '添加频道 (A)';
+			case 'multiview.removeChannel': return '移除频道 (R)';
+			case 'multiview.swapChannel': return '切换频道';
+			case 'multiview.toggleMute': return '静音切换 (M)';
+			case 'multiview.selectChannel': return '选择频道';
+			case 'multiview.searchChannels': return '搜索频道...';
+			case 'multiview.cancel': return '取消';
+			case 'multiview.channelNumber': return ({required Object number}) => '频道 ${number}';
+			case 'player.playbackError': return '播放错误';
+			case 'player.error': return '错误';
+			case 'player.failedToStartPlayback': return ({required Object error}) => '无法开始播放：\n${error}';
+			case 'player.ok': return '确定';
+			case 'downloads.title': return '下载';
+			case 'downloads.deleteAll': return '删除全部';
+			case 'downloads.deleteAllTitle': return '删除所有下载？';
+			case 'downloads.deleteAllMessage': return ({required Object count, required Object size}) => '这将删除所有 ${count} 个下载并释放 ${size} 存储空间。';
+			case 'downloads.storageUsed': return ({required Object size}) => '已用存储空间：${size}';
+			case 'downloads.downloading': return ({required Object count}) => '下载中 (${count})';
+			case 'downloads.downloaded': return ({required Object count}) => '已下载 (${count})';
+			case 'downloads.noDownloads': return '没有下载';
+			case 'downloads.noDownloadsHint': return '下载电影和剧集以便离线观看';
+			case 'downloads.deleteDownloadTitle': return '删除下载？';
+			case 'downloads.deleteDownloadMessage': return ({required Object title}) => '删除「${title}」？';
+			case 'downloads.delete': return '删除';
+			case 'downloads.cancel': return '取消';
+			case 'downloads.downloadFailed': return '下载失败';
+			case 'downloads.paused': return '已暂停';
 			default: return null;
 		}
 	}

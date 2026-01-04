@@ -12,6 +12,15 @@ class LiveTVChannel {
   final LiveTVProgram? nowPlaying;
   final LiveTVProgram? nextProgram;
 
+  // EPG Mapping fields
+  final String? tvgId;
+  final String? epgCallSign;
+  final String? epgChannelNo;
+  final double matchConfidence;
+  final String? matchStrategy;
+  final bool autoDetected;
+  final bool hasEpgData;
+
   LiveTVChannel({
     required this.id,
     required this.channelId,
@@ -24,6 +33,13 @@ class LiveTVChannel {
     this.isFavorite = false,
     this.nowPlaying,
     this.nextProgram,
+    this.tvgId,
+    this.epgCallSign,
+    this.epgChannelNo,
+    this.matchConfidence = 0,
+    this.matchStrategy,
+    this.autoDetected = false,
+    this.hasEpgData = false,
   });
 
   factory LiveTVChannel.fromJson(Map<String, dynamic> json) {
@@ -43,6 +59,13 @@ class LiveTVChannel {
       nextProgram: json['nextProgram'] != null
           ? LiveTVProgram.fromJson(json['nextProgram'] as Map<String, dynamic>)
           : null,
+      tvgId: json['tvgId'] as String?,
+      epgCallSign: json['epgCallSign'] as String?,
+      epgChannelNo: json['epgChannelNo'] as String?,
+      matchConfidence: (json['matchConfidence'] as num?)?.toDouble() ?? 0,
+      matchStrategy: json['matchStrategy'] as String?,
+      autoDetected: json['autoDetected'] as bool? ?? false,
+      hasEpgData: json['hasEpgData'] as bool? ?? false,
     );
   }
 
@@ -59,6 +82,13 @@ class LiveTVChannel {
       'isFavorite': isFavorite,
       'nowPlaying': nowPlaying?.toJson(),
       'nextProgram': nextProgram?.toJson(),
+      'tvgId': tvgId,
+      'epgCallSign': epgCallSign,
+      'epgChannelNo': epgChannelNo,
+      'matchConfidence': matchConfidence,
+      'matchStrategy': matchStrategy,
+      'autoDetected': autoDetected,
+      'hasEpgData': hasEpgData,
     };
   }
 
@@ -74,6 +104,13 @@ class LiveTVChannel {
     bool? isFavorite,
     LiveTVProgram? nowPlaying,
     LiveTVProgram? nextProgram,
+    String? tvgId,
+    String? epgCallSign,
+    String? epgChannelNo,
+    double? matchConfidence,
+    String? matchStrategy,
+    bool? autoDetected,
+    bool? hasEpgData,
   }) {
     return LiveTVChannel(
       id: id ?? this.id,
@@ -87,7 +124,28 @@ class LiveTVChannel {
       isFavorite: isFavorite ?? this.isFavorite,
       nowPlaying: nowPlaying ?? this.nowPlaying,
       nextProgram: nextProgram ?? this.nextProgram,
+      tvgId: tvgId ?? this.tvgId,
+      epgCallSign: epgCallSign ?? this.epgCallSign,
+      epgChannelNo: epgChannelNo ?? this.epgChannelNo,
+      matchConfidence: matchConfidence ?? this.matchConfidence,
+      matchStrategy: matchStrategy ?? this.matchStrategy,
+      autoDetected: autoDetected ?? this.autoDetected,
+      hasEpgData: hasEpgData ?? this.hasEpgData,
     );
+  }
+
+  /// Returns true if this channel has EPG mapping (either auto-detected or has epg data)
+  bool get hasMappedEpg => hasEpgData || (matchConfidence > 0);
+
+  /// Returns the mapping status text
+  String get mappingStatusText {
+    if (hasEpgData) {
+      if (autoDetected) {
+        return 'Auto-detected (${(matchConfidence * 100).toInt()}%)';
+      }
+      return 'Mapped';
+    }
+    return 'No EPG';
   }
 }
 

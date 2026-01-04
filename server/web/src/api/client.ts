@@ -3,6 +3,7 @@ import type {
   User,
   LoginRequest,
   LoginResponse,
+  RegisterRequest,
   Library,
   CreateLibraryRequest,
   LibraryStats,
@@ -14,6 +15,7 @@ import type {
   Recording,
   SeriesRule,
   ServerStatus,
+  XtreamSource,
 } from '../types'
 
 const TOKEN_KEY = 'openflix_token'
@@ -72,6 +74,11 @@ class ApiClient {
   async login(data: LoginRequest): Promise<LoginResponse> {
     const response = await this.client.post<LoginResponse>('/auth/login', data)
     this.setToken(response.data.authToken)
+    return response.data
+  }
+
+  async register(data: RegisterRequest): Promise<User> {
+    const response = await this.client.post<User>('/auth/register', data)
     return response.data
   }
 
@@ -239,6 +246,89 @@ class ApiClient {
     return response.data.channels || []
   }
 
+  async discoverProviders(postalCode: string): Promise<ProviderDiscoveryResponse> {
+    const response = await this.client.get<ProviderDiscoveryResponse>('/livetv/gracenote/providers', {
+      params: { postalCode }
+    })
+    return response.data
+  }
+
+  // Xtream Codes API endpoints
+  async getXtreamSources(): Promise<XtreamSource[]> {
+    const response = await this.client.get<{ sources: XtreamSource[] }>('/livetv/xtream/sources')
+    return response.data.sources || []
+  }
+
+  async createXtreamSource(data: {
+    name: string
+    serverUrl: string
+    username: string
+    password: string
+    enabled?: boolean
+    importLive?: boolean
+    importVod?: boolean
+    importSeries?: boolean
+    vodLibraryId?: number
+    seriesLibraryId?: number
+  }): Promise<XtreamSource> {
+    const response = await this.client.post<XtreamSource>('/livetv/xtream/sources', data)
+    return response.data
+  }
+
+  async updateXtreamSource(id: number, data: Partial<{
+    name: string
+    serverUrl: string
+    username: string
+    password: string
+    enabled: boolean
+    importLive: boolean
+    importVod: boolean
+    importSeries: boolean
+    vodLibraryId: number
+    seriesLibraryId: number
+  }>): Promise<XtreamSource> {
+    const response = await this.client.put<XtreamSource>(`/livetv/xtream/sources/${id}`, data)
+    return response.data
+  }
+
+  async deleteXtreamSource(id: number): Promise<void> {
+    await this.client.delete(`/livetv/xtream/sources/${id}`)
+  }
+
+  async testXtreamSource(id: number): Promise<XtreamTestResult> {
+    const response = await this.client.post<XtreamTestResult>(`/livetv/xtream/sources/${id}/test`)
+    return response.data
+  }
+
+  async refreshXtreamSource(id: number): Promise<{ added: number; updated: number; total: number }> {
+    const response = await this.client.post<{ added: number; updated: number; total: number }>(
+      `/livetv/xtream/sources/${id}/refresh`
+    )
+    return response.data
+  }
+
+  async parseXtreamFromM3U(url: string): Promise<XtreamParseResult> {
+    const response = await this.client.post<XtreamParseResult>('/livetv/xtream/parse-m3u', { url })
+    return response.data
+  }
+
+  async importXtreamVOD(id: number): Promise<XtreamImportResult> {
+    const response = await this.client.post<XtreamImportResult>(`/livetv/xtream/sources/${id}/import-vod`)
+    return response.data
+  }
+
+  async importXtreamSeries(id: number): Promise<XtreamImportResult> {
+    const response = await this.client.post<XtreamImportResult>(`/livetv/xtream/sources/${id}/import-series`)
+    return response.data
+  }
+
+  async importAllXtreamContent(id: number): Promise<{ vod?: XtreamImportResult; series?: XtreamImportResult }> {
+    const response = await this.client.post<{ vod?: XtreamImportResult; series?: XtreamImportResult }>(
+      `/livetv/xtream/sources/${id}/import-all`
+    )
+    return response.data
+  }
+
   // DVR endpoints
   async getRecordings(): Promise<Recording[]> {
     const response = await this.client.get<{ recordings: Recording[] }>('/dvr/recordings')
@@ -270,7 +360,7 @@ class ApiClient {
 
   // Server admin endpoints
   async getServerStatus(): Promise<ServerStatus> {
-    const response = await this.client.get<ServerStatus>('/admin/status')
+    const response = await this.client.get<ServerStatus>('/api/status')
     return response.data
   }
 
@@ -324,6 +414,27 @@ export interface ServerSettings {
   scan_interval?: number
 }
 
+// Provider discovery types
+export interface Provider {
+  headendId: string
+  name: string
+  type: string  // "Cable", "Satellite", "Antenna"
+  location: string
+  lineupId?: string
+}
+
+export interface ProviderGroup {
+  type: string
+  providers: Provider[]
+}
+
+export interface ProviderDiscoveryResponse {
+  postalCode: string
+  providers: Provider[]
+  grouped: ProviderGroup[]
+  total: number
+}
+
 // Media management types
 export interface AdminMediaItem {
   id: number
@@ -365,6 +476,46 @@ export interface TMDBSearchResult {
   poster_path?: string
   vote_average?: number
   media_type: string
+}
+
+// Xtream API types
+export interface XtreamTestResult {
+  success: boolean
+  error?: string
+  userInfo?: {
+    username: string
+    status: string
+    expDate: string
+    maxConnections: string
+    activeConns: string
+  }
+  serverInfo?: {
+    url: string
+    port: string
+    timezone: string
+  }
+}
+
+export interface XtreamParseResult {
+  success: boolean
+  error?: string
+  serverUrl?: string
+  username?: string
+  name?: string
+  userInfo?: {
+    status: string
+    expDate: string
+    maxConnections: string
+  }
+}
+
+export interface XtreamImportResult {
+  added: number
+  updated: number
+  skipped: number
+  errors: number
+  total: number
+  duration: string
 }
 
 export const api = new ApiClient()

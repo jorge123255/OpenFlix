@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { ChevronDown, ChevronRight, Save, Trash2, Search } from 'lucide-react'
+import { ChevronDown, ChevronRight, Save, Trash2, Search, X } from 'lucide-react'
 import { api } from '../api/client'
 
 interface Channel {
@@ -16,6 +16,13 @@ interface Channel {
   epgSourceId?: number
 }
 
+interface EPGChannel {
+  channelId: string
+  callSign?: string
+  channelNo?: string
+  affiliateName?: string
+  sampleTitle?: string
+}
 
 export function EPGEditorPage() {
   const queryClient = useQueryClient()
@@ -23,6 +30,8 @@ export function EPGEditorPage() {
   const [epgSourceId, setEpgSourceId] = useState<number | null>(null)
   const [epgChannelId, setEpgChannelId] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
+  const [epgSearchQuery, setEpgSearchQuery] = useState('')
+  const [showEpgDropdown, setShowEpgDropdown] = useState(false)
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set(['all']))
 
   // Fetch channels
@@ -52,6 +61,41 @@ export function EPGEditorPage() {
     queryFn: () => api.getEPGChannels(epgSourceId || undefined),
     enabled: !!epgSourceId,
   })
+
+  // Filter and group EPG channels
+  const filteredEpgChannels = useMemo(() => {
+    if (!epgChannels) return []
+
+    let filtered = epgChannels as EPGChannel[]
+
+    // Apply search filter
+    if (epgSearchQuery) {
+      const query = epgSearchQuery.toLowerCase()
+      filtered = filtered.filter(ch =>
+        ch.channelId?.toLowerCase().includes(query) ||
+        ch.callSign?.toLowerCase().includes(query) ||
+        ch.affiliateName?.toLowerCase().includes(query) ||
+        ch.sampleTitle?.toLowerCase().includes(query) ||
+        ch.channelNo?.toLowerCase().includes(query)
+      )
+    }
+
+    return filtered
+  }, [epgChannels, epgSearchQuery])
+
+  // Group EPG channels by affiliate/network
+  const groupedEpgChannels = useMemo(() => {
+    const groups: Record<string, EPGChannel[]> = {}
+
+    filteredEpgChannels.forEach(ch => {
+      const group = ch.affiliateName || ch.callSign || 'Other'
+      if (!groups[group]) groups[group] = []
+      groups[group].push(ch)
+    })
+
+    // Sort groups alphabetically
+    return Object.entries(groups).sort(([a], [b]) => a.localeCompare(b))
+  }, [filteredEpgChannels])
 
   // Fetch EPG programs for preview
   const { data: programsData } = useQuery({
@@ -255,21 +299,33 @@ export function EPGEditorPage() {
                   <>
                     <div className="mb-6">
                       <label className="block text-sm font-medium text-gray-300 mb-2">
-                        EPG Channel ID
+                        EPG Channel ({filteredEpgChannels.length} channels)
                       </label>
-                      <div className="flex gap-2">
-                        <select
-                          value={epgChannelId}
-                          onChange={(e) => setEpgChannelId(e.target.value)}
-                          className="flex-1 px-4 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white"
-                        >
-                          <option value="">Select EPG Channel...</option>
-                          {epgChannels?.map((ch) => (
-                            <option key={ch.channelId} value={ch.channelId}>
-                              {ch.channelId} - {ch.sampleTitle}
-                            </option>
-                          ))}
-                        </select>
+
+                      {/* Search + Selected Display */}
+                      <div className="flex gap-2 mb-2">
+                        <div className="flex-1 relative">
+                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                          <input
+                            type="text"
+                            placeholder="Search EPG channels..."
+                            value={epgSearchQuery}
+                            onChange={(e) => {
+                              setEpgSearchQuery(e.target.value)
+                              setShowEpgDropdown(true)
+                            }}
+                            onFocus={() => setShowEpgDropdown(true)}
+                            className="w-full pl-10 pr-10 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400"
+                          />
+                          {epgSearchQuery && (
+                            <button
+                              onClick={() => setEpgSearchQuery('')}
+                              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                          )}
+                        </div>
                         <button
                           onClick={handleSave}
                           disabled={updateChannel.isPending}
@@ -279,8 +335,75 @@ export function EPGEditorPage() {
                           Save
                         </button>
                       </div>
+
+                      {/* Selected Channel Display */}
+                      {epgChannelId && (
+                        <div className="mb-2 px-3 py-2 bg-blue-600/20 border border-blue-500/50 rounded-lg flex items-center justify-between">
+                          <span className="text-blue-300 text-sm">
+                            Selected: <span className="font-medium text-white">{epgChannelId}</span>
+                          </span>
+                          <button
+                            onClick={() => setEpgChannelId('')}
+                            className="text-blue-400 hover:text-blue-300"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+                      )}
+
+                      {/* EPG Channel List with Groups */}
+                      {showEpgDropdown && (
+                        <div className="relative">
+                          <div className="absolute top-0 left-0 right-0 z-10 max-h-80 overflow-y-auto bg-gray-800 border border-gray-600 rounded-lg shadow-xl">
+                            {groupedEpgChannels.length === 0 ? (
+                              <div className="p-4 text-center text-gray-400">
+                                {epgSearchQuery ? 'No channels match your search' : 'No EPG channels available'}
+                              </div>
+                            ) : (
+                              groupedEpgChannels.map(([group, channels]) => (
+                                <div key={group}>
+                                  <div className="sticky top-0 px-3 py-2 bg-gray-700 text-xs font-semibold text-gray-300 uppercase tracking-wider">
+                                    {group} ({channels.length})
+                                  </div>
+                                  {channels.map((ch) => (
+                                    <button
+                                      key={ch.channelId}
+                                      onClick={() => {
+                                        setEpgChannelId(ch.channelId)
+                                        setShowEpgDropdown(false)
+                                        setEpgSearchQuery('')
+                                      }}
+                                      className={`w-full px-3 py-2 text-left hover:bg-gray-700 flex items-center gap-2 ${
+                                        epgChannelId === ch.channelId ? 'bg-blue-600/30' : ''
+                                      }`}
+                                    >
+                                      <div className="flex-1 min-w-0">
+                                        <div className="text-white text-sm font-medium truncate">
+                                          {ch.callSign || ch.channelId}
+                                          {ch.channelNo && <span className="text-gray-400 ml-1">(#{ch.channelNo})</span>}
+                                        </div>
+                                        {ch.sampleTitle && (
+                                          <div className="text-gray-400 text-xs truncate">
+                                            {ch.sampleTitle}
+                                          </div>
+                                        )}
+                                      </div>
+                                    </button>
+                                  ))}
+                                </div>
+                              ))
+                            )}
+                          </div>
+                          {/* Click outside to close */}
+                          <div
+                            className="fixed inset-0 z-0"
+                            onClick={() => setShowEpgDropdown(false)}
+                          />
+                        </div>
+                      )}
+
                       <p className="text-xs text-gray-500 mt-1">
-                        Select the EPG channel that matches this stream
+                        Search and select the EPG channel that matches this stream
                       </p>
                     </div>
 

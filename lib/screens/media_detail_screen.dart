@@ -17,8 +17,12 @@ import '../utils/provider_extensions.dart';
 import '../utils/video_player_navigation.dart';
 import '../widgets/app_bar_back_button.dart';
 import '../widgets/desktop_app_bar.dart';
+import '../widgets/download_button.dart';
+import '../services/watchlist_service.dart';
 import '../widgets/horizontal_scroll_with_arrows.dart';
 import '../widgets/media_context_menu.dart';
+import '../widgets/watch_party_overlay.dart';
+import '../services/watch_party_service.dart';
 import 'season_detail_screen.dart';
 
 class MediaDetailScreen extends StatefulWidget {
@@ -39,12 +43,47 @@ class _MediaDetailScreenState extends State<MediaDetailScreen> {
   late final ScrollController _scrollController;
   bool _watchStateChanged = false;
   final FocusNode _playButtonFocusNode = FocusNode(debugLabel: 'PlayButton');
+  String? _videoUrl; // For download functionality
+  bool _isInWatchlist = false;
 
   @override
   void initState() {
     super.initState();
     _scrollController = ScrollController();
     _loadFullMetadata();
+    _checkWatchlistStatus();
+  }
+
+  Future<void> _checkWatchlistStatus() async {
+    final service = await WatchlistService.getInstance();
+    if (mounted) {
+      setState(() {
+        _isInWatchlist = service.isInWatchlist(
+          widget.metadata.ratingKey,
+          widget.metadata.serverId ?? '',
+        );
+      });
+    }
+  }
+
+  Future<void> _toggleWatchlist() async {
+    final service = await WatchlistService.getInstance();
+    final metadata = _fullMetadata ?? widget.metadata;
+    final added = await service.toggleWatchlist(metadata);
+
+    if (mounted) {
+      setState(() {
+        _isInWatchlist = added;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            added ? t.watchlist.addedToWatchlist : t.watchlist.removedFromWatchlist,
+          ),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
   }
 
   @override
@@ -100,6 +139,9 @@ class _MediaDetailScreenState extends State<MediaDetailScreen> {
         // Load seasons if it's a show
         if (metadata.type.toLowerCase() == 'show') {
           _loadSeasons();
+        } else {
+          // For movies/episodes, load video URL for download button
+          _loadVideoUrl();
         }
         return;
       }
@@ -133,6 +175,22 @@ class _MediaDetailScreenState extends State<MediaDetailScreen> {
       if (widget.metadata.type.toLowerCase() == 'show') {
         _loadSeasons();
       }
+    }
+  }
+
+  Future<void> _loadVideoUrl() async {
+    try {
+      final client = _getClientForMetadata(context);
+      final playbackData = await client.getVideoPlaybackData(
+        _fullMetadata?.ratingKey ?? widget.metadata.ratingKey,
+      );
+      if (mounted && playbackData.videoUrl != null) {
+        setState(() {
+          _videoUrl = playbackData.videoUrl;
+        });
+      }
+    } catch (e) {
+      appLogger.d('Could not load video URL for download', error: e);
     }
   }
 
@@ -797,6 +855,49 @@ class _MediaDetailScreenState extends State<MediaDetailScreen> {
                           ),
                           const SizedBox(width: 12),
                         ],
+                        // Download button (only for movies and episodes)
+                        if (metadata.type.toLowerCase() == 'movie' ||
+                            metadata.type.toLowerCase() == 'episode') ...[
+                          DownloadButton(
+                            item: metadata,
+                            videoUrl: _videoUrl,
+                            serverId: widget.metadata.serverId,
+                          ),
+                          const SizedBox(width: 12),
+                        ],
+                        // Watchlist button
+                        IconButton.filledTonal(
+                          onPressed: _toggleWatchlist,
+                          icon: Icon(
+                            _isInWatchlist
+                                ? Icons.bookmark
+                                : Icons.bookmark_border,
+                          ),
+                          tooltip: _isInWatchlist
+                              ? t.watchlist.removeFromWatchlist
+                              : t.watchlist.addToWatchlist,
+                          iconSize: 20,
+                          style: IconButton.styleFrom(
+                            minimumSize: const Size(48, 48),
+                            maximumSize: const Size(48, 48),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        // Watch Party button (for movies and episodes)
+                        if (metadata.type.toLowerCase() == 'movie' ||
+                            metadata.type.toLowerCase() == 'episode') ...[
+                          IconButton.filledTonal(
+                            onPressed: () => _showWatchPartyDialog(metadata),
+                            icon: const Icon(Icons.groups),
+                            tooltip: t.watchParty.title,
+                            iconSize: 20,
+                            style: IconButton.styleFrom(
+                              minimumSize: const Size(48, 48),
+                              maximumSize: const Size(48, 48),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                        ],
                         IconButton.filledTonal(
                           onPressed: () async {
                             try {
@@ -1125,6 +1226,34 @@ class _MediaDetailScreenState extends State<MediaDetailScreen> {
         ),
       ],
     );
+  }
+
+  Future<void> _showWatchPartyDialog(MediaItem metadata) async {
+    final result = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (context) => WatchPartyDialog(
+        mediaKey: metadata.ratingKey,
+        mediaTitle: metadata.title,
+        mediaType: metadata.type,
+      ),
+    );
+
+    if (result != null && mounted) {
+      if (result['action'] == 'created') {
+        final party = result['party'] as WatchParty;
+        // Show the party code to share
+        await showWatchPartyCodeDialog(context, party);
+        // Join the party WebSocket
+        await WatchPartyService.instance.joinParty(party.id);
+        // Navigate to video player with watch party mode
+        if (mounted) {
+          await navigateToVideoPlayer(context, metadata: metadata);
+        }
+      } else if (result['action'] == 'joined') {
+        // Navigate to video player with watch party mode
+        await navigateToVideoPlayer(context, metadata: metadata);
+      }
+    }
   }
 
   String _getPlayButtonLabel(MediaItem metadata) {

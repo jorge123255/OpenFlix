@@ -63,6 +63,7 @@ func Migrate(db *gorm.DB) error {
 
 		// Live TV
 		&models.M3USource{},
+		&models.XtreamSource{},
 		&models.EPGSource{},
 		&models.Channel{},
 		&models.Program{},
@@ -71,8 +72,14 @@ func Migrate(db *gorm.DB) error {
 		&models.Recording{},
 		&models.SeriesRule{},
 
+		// Archive/Catch-up
+		&models.ArchiveProgram{},
+
 		// Play Queues
 		&models.PlayQueue{},
 		&models.PlayQueueItem{},
+
+		// Playback Sessions
+		&models.PlaybackSession{},
 	)
 }

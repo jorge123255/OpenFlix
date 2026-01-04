@@ -1,40 +1,56 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import '../../utils/platform_detector.dart';
 
 /// A reusable focus indicator widget that wraps a child with visual feedback
 /// when focused. Provides consistent focus appearance across the app for
 /// keyboard/d-pad/controller navigation.
+///
+/// Automatically adjusts appearance for TV mode with larger, more prominent
+/// focus indicators suitable for the 10-foot viewing experience.
 class FocusIndicator extends StatelessWidget {
   final Widget child;
   final bool isFocused;
   final Color? borderColor;
-  final double borderWidth;
+  final double? borderWidth;
   final double borderRadius;
-  final double scale;
+  final double? scale;
   final Duration animationDuration;
   final Curve animationCurve;
+  final bool showGlow;
 
   const FocusIndicator({
     super.key,
     required this.child,
     required this.isFocused,
     this.borderColor,
-    this.borderWidth = 3.0,
+    this.borderWidth,
     this.borderRadius = 8.0,
-    this.scale = 1.02,
+    this.scale,
     this.animationDuration = const Duration(milliseconds: 150),
     this.animationCurve = Curves.easeOutCubic,
+    this.showGlow = true,
   });
 
   @override
   Widget build(BuildContext context) {
+    final isTV = PlatformDetector.shouldUseLargeFocusIndicators(context);
     final effectiveBorderColor =
         borderColor ?? Theme.of(context).colorScheme.primary;
+
+    // TV mode uses larger, more prominent indicators for 10-foot viewing
+    final effectiveBorderWidth = borderWidth ?? (isTV ? 4.0 : 3.0);
+    final effectiveScale = scale ?? (isTV ? 1.06 : 1.02);
+
+    // On Android, use simpler effects for better performance
+    // BoxShadow with blur is expensive on Android GPU
+    final useSimpleEffects = Platform.isAndroid;
 
     // Use AnimatedScale for the scale effect (doesn't affect layout)
     // and a positioned border overlay that also doesn't affect layout
     return AnimatedScale(
-      scale: isFocused ? scale : 1.0,
-      duration: animationDuration,
+      scale: isFocused ? effectiveScale : 1.0,
+      duration: useSimpleEffects ? const Duration(milliseconds: 100) : animationDuration,
       curve: animationCurve,
       child: Stack(
         clipBehavior: Clip.none,
@@ -44,7 +60,7 @@ class FocusIndicator extends StatelessWidget {
           Positioned.fill(
             child: IgnorePointer(
               child: AnimatedContainer(
-                duration: animationDuration,
+                duration: useSimpleEffects ? const Duration(milliseconds: 100) : animationDuration,
                 curve: animationCurve,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(borderRadius),
@@ -52,8 +68,34 @@ class FocusIndicator extends StatelessWidget {
                     color: isFocused
                         ? effectiveBorderColor
                         : Colors.transparent,
-                    width: borderWidth,
+                    width: effectiveBorderWidth,
                   ),
+                  // Skip glow effects on Android for performance
+                  // BoxShadow with blur is expensive on Android GPU
+                  boxShadow: isFocused && showGlow && !useSimpleEffects
+                      ? [
+                          if (isTV) ...[
+                            // Outer glow for TV (desktop only)
+                            BoxShadow(
+                              color: effectiveBorderColor.withValues(alpha: 0.5),
+                              blurRadius: 16,
+                              spreadRadius: 4,
+                            ),
+                            // Inner bright border
+                            BoxShadow(
+                              color: Colors.white.withValues(alpha: 0.3),
+                              blurRadius: 4,
+                              spreadRadius: 0,
+                            ),
+                          ] else
+                            // Subtle glow for desktop/mobile
+                            BoxShadow(
+                              color: effectiveBorderColor.withValues(alpha: 0.3),
+                              blurRadius: 8,
+                              spreadRadius: 1,
+                            ),
+                        ]
+                      : null,
                 ),
               ),
             ),
@@ -124,10 +166,11 @@ class _FocusableWrapperState extends State<FocusableWrapper> {
         if (widget.onScrollIntoView != null) {
           widget.onScrollIntoView!(context);
         } else {
+          // Use faster scroll on Android for better responsiveness
           Scrollable.ensureVisible(
             context,
             alignment: 0.5,
-            duration: const Duration(milliseconds: 200),
+            duration: Duration(milliseconds: Platform.isAndroid ? 100 : 200),
             curve: Curves.easeOutCubic,
           );
         }

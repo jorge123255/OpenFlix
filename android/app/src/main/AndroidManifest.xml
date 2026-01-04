@@ -3,9 +3,20 @@
     <!-- Internet access permissions -->
     <uses-permission android:name="android.permission.INTERNET"/>
 
+    <!-- Android TV Leanback support -->
+    <uses-feature
+        android:name="android.software.leanback"
+        android:required="false" />
+    <uses-feature
+        android:name="android.hardware.touchscreen"
+        android:required="false" />
+
     <!-- Media session permissions for OS media controls -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"/>
+
+    <!-- Voice control permission -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO"/>
 
     <!-- Explicitly remove media permissions that media_kit may add -->
     <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" tools:node="remove" />
@@ -14,9 +25,10 @@
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" tools:node="remove" />
 
     <application
-        android:label="Plezy"
+        android:label="OpenFlix"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:banner="@drawable/tv_banner">
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -37,6 +49,11 @@
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+            <!-- Android TV launcher support -->
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER"/>
             </intent-filter>
         </activity>
         <!-- Don't delete the meta-data below.

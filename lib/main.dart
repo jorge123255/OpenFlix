@@ -24,10 +24,14 @@ import 'services/server_registry.dart';
 import 'utils/language_codes.dart';
 import 'utils/app_logger.dart';
 import 'utils/orientation_helper.dart';
+import 'utils/platform_detector.dart';
 import 'i18n/strings.g.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize platform detection (for Android TV support)
+  await PlatformDetector.initialize();
 
   // Initialize settings first to get saved locale
   final settings = await SettingsService.getInstance();

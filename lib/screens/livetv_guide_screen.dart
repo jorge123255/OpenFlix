@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import '../i18n/strings.g.dart';
 import '../models/livetv_channel.dart';
 import '../providers/media_client_provider.dart';
 import '../services/gracenote_epg_service.dart';
@@ -282,8 +283,8 @@ class _LiveTVGuideScreenState extends State<LiveTVGuideScreen> {
 
     if (result == true && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Recording scheduled'),
+        SnackBar(
+          content: Text(t.dvr.recordingScheduled),
           backgroundColor: Colors.green,
         ),
       );
@@ -331,7 +332,7 @@ class _LiveTVGuideScreenState extends State<LiveTVGuideScreen> {
                           _tuneChannel(channel);
                         },
                         icon: const Icon(Icons.play_arrow),
-                        label: const Text('Tune'),
+                        label: Text(t.liveTV.tune),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -342,7 +343,7 @@ class _LiveTVGuideScreenState extends State<LiveTVGuideScreen> {
                           _recordProgram(channel, program);
                         },
                         icon: const Icon(Icons.fiber_manual_record),
-                        label: const Text('Record'),
+                        label: Text(t.epg.record),
                       ),
                     ),
                   ],
@@ -435,7 +436,7 @@ class _LiveTVGuideScreenState extends State<LiveTVGuideScreen> {
             ElevatedButton.icon(
               onPressed: _loadGuide,
               icon: const Icon(Icons.refresh),
-              label: const Text('Retry'),
+              label: Text(t.liveTV.retry),
             ),
           ],
         ),

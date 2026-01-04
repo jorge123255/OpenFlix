@@ -15,7 +15,9 @@ import (
 	"github.com/google/uuid"
 	"github.com/openflix/openflix-server/internal/auth"
 	"github.com/openflix/openflix-server/internal/library"
+	"github.com/openflix/openflix-server/internal/logger"
 	"github.com/openflix/openflix-server/internal/models"
+	"github.com/openflix/openflix-server/internal/transcode"
 	"gorm.io/gorm"
 )
 
@@ -68,6 +70,313 @@ func (s *Server) getServerPrefs(c *gin.Context) {
 			},
 		},
 	})
+}
+
+// getServerStatus returns comprehensive server status for the dashboard
+func (s *Server) getServerStatus(c *gin.Context) {
+	hostname, _ := os.Hostname()
+
+	// Count active sessions
+	var sessionCount int64
+	s.db.Model(&models.PlaybackSession{}).Where("state = ?", "playing").Count(&sessionCount)
+
+	// Count libraries
+	var libraryCount int64
+	s.db.Model(&models.Library{}).Count(&libraryCount)
+
+	// Count media items
+	var movieCount, showCount, episodeCount int64
+	s.db.Model(&models.MediaItem{}).Where("type = ?", "movie").Count(&movieCount)
+	s.db.Model(&models.MediaItem{}).Where("type = ?", "show").Count(&showCount)
+	s.db.Model(&models.MediaItem{}).Where("type = ?", "episode").Count(&episodeCount)
+
+	// Count channels
+	var channelCount int64
+	s.db.Model(&models.Channel{}).Count(&channelCount)
+
+	// DVR stats
+	var scheduledRecordings, activeRecordings, completedRecordings int64
+	s.db.Model(&models.Recording{}).Where("status = ?", "scheduled").Count(&scheduledRecordings)
+	s.db.Model(&models.Recording{}).Where("status = ?", "recording").Count(&activeRecordings)
+	s.db.Model(&models.Recording{}).Where("status = ?", "completed").Count(&completedRecordings)
+
+	// Timeshift buffer status
+	var timeshiftChannels []uint
+	if s.timeshiftBuffer != nil {
+		// Get list of channels being buffered
+		var channels []models.Channel
+		s.db.Find(&channels)
+		for _, ch := range channels {
+			if s.timeshiftBuffer.IsBuffering(ch.ID) {
+				timeshiftChannels = append(timeshiftChannels, ch.ID)
+			}
+		}
+	}
+
+	// System info
+	var m runtime.MemStats
+	runtime.ReadMemStats(&m)
+
+	c.JSON(http.StatusOK, gin.H{
+		"server": gin.H{
+			"name":              serverName,
+			"version":           serverVersion,
+			"hostname":          hostname,
+			"machineIdentifier": machineIdentifier,
+			"platform":          runtime.GOOS,
+			"arch":              runtime.GOARCH,
+			"goVersion":         runtime.Version(),
+			"uptime":            time.Since(serverStartTime).String(),
+		},
+		"sessions": gin.H{
+			"active": sessionCount,
+		},
+		"libraries": gin.H{
+			"count":    libraryCount,
+			"movies":   movieCount,
+			"shows":    showCount,
+			"episodes": episodeCount,
+		},
+		"livetv": gin.H{
+			"channels":          channelCount,
+			"timeshiftChannels": len(timeshiftChannels),
+			"timeshiftEnabled":  s.timeshiftBuffer != nil,
+		},
+		"dvr": gin.H{
+			"scheduled":        scheduledRecordings,
+			"recording":        activeRecordings,
+			"completed":        completedRecordings,
+			"commercialDetect": s.recorder != nil && s.recorder.IsCommercialDetectionEnabled(),
+		},
+		"system": gin.H{
+			"goroutines":   runtime.NumGoroutine(),
+			"memAllocMB":   m.Alloc / 1024 / 1024,
+			"memTotalMB":   m.TotalAlloc / 1024 / 1024,
+			"numCPU":       runtime.NumCPU(),
+		},
+		"logging": gin.H{
+			"level": s.config.Logging.Level,
+			"json":  s.config.Logging.JSON,
+		},
+		"transcode": s.getTranscodeStatusInfo(),
+	})
+}
+
+// getTranscodeStatusInfo returns transcoding status for the dashboard
+func (s *Server) getTranscodeStatusInfo() gin.H {
+	if s.transcoder == nil {
+		return gin.H{
+			"enabled":   false,
+			"hwAccel":   "none",
+			"available": false,
+		}
+	}
+
+	hwInfo := transcode.DetectHardwareInfo(s.config.Transcode.FFmpegPath)
+
+	return gin.H{
+		"enabled":         true,
+		"hwAccel":         s.transcoder.GetHardwareAccel(),
+		"hwName":          hwInfo.Name,
+		"gpuInfo":         hwInfo.GPUInfo,
+		"activeSessions":  s.transcoder.GetActiveSessions(),
+		"maxSessions":     s.config.Transcode.MaxSessions,
+		"supportsHevc":    hwInfo.SupportsHEVC,
+		"supportsAv1":     hwInfo.SupportsAV1,
+		"maxResolution":   hwInfo.MaxResolution,
+		"recommendedMode": hwInfo.RecommendedMode,
+	}
+}
+
+// getTranscodeInfo returns detailed transcoding capabilities
+func (s *Server) getTranscodeInfo(c *gin.Context) {
+	hwInfo := transcode.DetectHardwareInfo(s.config.Transcode.FFmpegPath)
+
+	transcodeEnabled := s.transcoder != nil
+	activeSessions := 0
+	var sessions []map[string]interface{}
+
+	if s.transcoder != nil {
+		activeSessions = s.transcoder.GetActiveSessions()
+		sessions = s.transcoder.GetSessionInfo()
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"config": gin.H{
+			"enabled":     transcodeEnabled,
+			"ffmpegPath":  s.config.Transcode.FFmpegPath,
+			"hwAccel":     s.config.Transcode.HardwareAccel,
+			"tempDir":     s.config.Transcode.TempDir,
+			"maxSessions": s.config.Transcode.MaxSessions,
+		},
+		"hardware": gin.H{
+			"available":       hwInfo.Available,
+			"type":            hwInfo.Type,
+			"name":            hwInfo.Name,
+			"gpuInfo":         hwInfo.GPUInfo,
+			"encoders":        hwInfo.Encoders,
+			"decoders":        hwInfo.Decoders,
+			"supportsHevc":    hwInfo.SupportsHEVC,
+			"supportsAv1":     hwInfo.SupportsAV1,
+			"maxResolution":   hwInfo.MaxResolution,
+			"recommendedMode": hwInfo.RecommendedMode,
+			"detectedGpus":    hwInfo.DetectedGPUs,
+			"missingSupport":  hwInfo.MissingSupport,
+		},
+		"sessions": gin.H{
+			"active":  activeSessions,
+			"max":     s.config.Transcode.MaxSessions,
+			"details": sessions,
+		},
+		"playbackModes": []gin.H{
+			{
+				"id":          "direct_play",
+				"name":        "Direct Play",
+				"description": "Client plays original file directly. Best quality, no server load. Requires client support for the codec.",
+			},
+			{
+				"id":          "direct_stream",
+				"name":        "Direct Stream",
+				"description": "Server remuxes without transcoding. Low server load. Audio/video unchanged.",
+			},
+			{
+				"id":          "server_transcode",
+				"name":        "Server Transcode",
+				"description": "Server transcodes to compatible format. Works with any client but uses server resources.",
+			},
+		},
+	})
+}
+
+// Track server start time for uptime
+var serverStartTime = time.Now()
+
+// ============ Logs Handlers ============
+
+// getLogs returns recent log entries
+func (s *Server) getLogs(c *gin.Context) {
+	lines := 500 // Default to last 500 lines
+	if l := c.Query("lines"); l != "" {
+		if parsed, err := strconv.Atoi(l); err == nil && parsed > 0 && parsed <= 5000 {
+			lines = parsed
+		}
+	}
+
+	logLines, err := logger.ReadLogFile(lines)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read logs: " + err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"lines":   logLines,
+		"count":   len(logLines),
+		"path":    logger.GetLogFilePath(),
+		"level":   s.config.Logging.Level,
+	})
+}
+
+// clearLogs clears the log file
+func (s *Server) clearLogs(c *gin.Context) {
+	if err := logger.ClearLogFile(); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to clear logs: " + err.Error()})
+		return
+	}
+
+	logger.Info("Logs cleared by admin")
+	c.JSON(http.StatusOK, gin.H{"message": "Logs cleared"})
+}
+
+// ============ Client Logs Handlers ============
+
+// ClientLogEntry represents a log entry from a client app
+type ClientLogEntry struct {
+	Timestamp   string `json:"timestamp"`
+	Level       string `json:"level"`
+	Message     string `json:"message"`
+	Error       string `json:"error,omitempty"`
+	StackTrace  string `json:"stackTrace,omitempty"`
+}
+
+// ClientLogSubmission represents a batch of logs from a client
+type ClientLogSubmission struct {
+	DeviceInfo  map[string]interface{} `json:"deviceInfo"`
+	AppVersion  string                 `json:"appVersion"`
+	Platform    string                 `json:"platform"`
+	Logs        []ClientLogEntry       `json:"logs"`
+	SubmittedAt time.Time              `json:"submittedAt"`
+	Username    string                 `json:"username"`
+}
+
+// In-memory storage for client logs (limited to last 100 submissions)
+var clientLogStore = struct {
+	submissions []ClientLogSubmission
+	maxSize     int
+}{
+	submissions: make([]ClientLogSubmission, 0),
+	maxSize:     100,
+}
+
+// submitClientLogs receives logs from client apps for troubleshooting
+func (s *Server) submitClientLogs(c *gin.Context) {
+	var req struct {
+		DeviceInfo map[string]interface{} `json:"deviceInfo"`
+		AppVersion string                 `json:"appVersion"`
+		Platform   string                 `json:"platform"`
+		Logs       []ClientLogEntry       `json:"logs"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request: " + err.Error()})
+		return
+	}
+
+	// Get username from token
+	username := ""
+	if user, exists := c.Get("user"); exists {
+		if u, ok := user.(map[string]interface{}); ok {
+			if name, ok := u["username"].(string); ok {
+				username = name
+			}
+		}
+	}
+
+	submission := ClientLogSubmission{
+		DeviceInfo:  req.DeviceInfo,
+		AppVersion:  req.AppVersion,
+		Platform:    req.Platform,
+		Logs:        req.Logs,
+		SubmittedAt: time.Now(),
+		Username:    username,
+	}
+
+	// Add to store (circular buffer)
+	clientLogStore.submissions = append(clientLogStore.submissions, submission)
+	if len(clientLogStore.submissions) > clientLogStore.maxSize {
+		clientLogStore.submissions = clientLogStore.submissions[1:]
+	}
+
+	logger.Infof("Received %d client logs from %s (%s/%s)", len(req.Logs), username, req.Platform, req.AppVersion)
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Logs received",
+		"count":   len(req.Logs),
+	})
+}
+
+// getClientLogs returns all stored client log submissions
+func (s *Server) getClientLogs(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{
+		"submissions": clientLogStore.submissions,
+		"count":       len(clientLogStore.submissions),
+	})
+}
+
+// clearClientLogs clears all stored client logs
+func (s *Server) clearClientLogs(c *gin.Context) {
+	clientLogStore.submissions = make([]ClientLogSubmission, 0)
+	logger.Info("Client logs cleared by admin")
+	c.JSON(http.StatusOK, gin.H{"message": "Client logs cleared"})
 }
 
 // ============ Auth Handlers ============
@@ -724,9 +1033,116 @@ func (s *Server) refreshLibrary(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"status": "scanning"})
 }
 
+// getLibraryFolders returns the folder structure for a library
 func (s *Server) getLibraryFolders(c *gin.Context) {
-	// TODO: Return folder structure
-	s.respondWithMediaContainer(c, []gin.H{}, 0, 0, 0)
+	libraryID, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid library ID"})
+		return
+	}
+
+	// Get library
+	var lib models.Library
+	if err := s.db.First(&lib, libraryID).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Library not found"})
+		return
+	}
+
+	// Get optional parent path from query
+	parentPath := c.Query("parent")
+
+	// Get library paths
+	var paths []models.LibraryPath
+	s.db.Where("library_id = ?", libraryID).Find(&paths)
+
+	if parentPath == "" {
+		// Return root folders (library paths)
+		folders := make([]gin.H, 0, len(paths))
+		for _, path := range paths {
+			folders = append(folders, gin.H{
+				"key":   fmt.Sprintf("/library/sections/%d/folder?parent=%s", libraryID, path.Path),
+				"title": filepath.Base(path.Path),
+				"path":  path.Path,
+				"type":  "folder",
+			})
+		}
+		s.respondWithMediaContainer(c, folders, len(folders), 0, 0)
+		return
+	}
+
+	// Validate that the parent path is within a library path
+	isValidPath := false
+	for _, path := range paths {
+		if strings.HasPrefix(parentPath, path.Path) {
+			isValidPath = true
+			break
+		}
+	}
+	if !isValidPath {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Path not in library"})
+		return
+	}
+
+	// Read directory contents
+	entries, err := os.ReadDir(parentPath)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read directory"})
+		return
+	}
+
+	// Build folder list
+	items := make([]gin.H, 0)
+	for _, entry := range entries {
+		fullPath := filepath.Join(parentPath, entry.Name())
+
+		if entry.IsDir() {
+			// It's a folder
+			items = append(items, gin.H{
+				"key":   fmt.Sprintf("/library/sections/%d/folder?parent=%s", libraryID, fullPath),
+				"title": entry.Name(),
+				"path":  fullPath,
+				"type":  "folder",
+			})
+		} else {
+			// Check if it's a media file that's in our database
+			ext := strings.ToLower(filepath.Ext(entry.Name()))
+			videoExts := map[string]bool{
+				".mp4": true, ".mkv": true, ".avi": true, ".mov": true,
+				".wmv": true, ".flv": true, ".webm": true, ".m4v": true,
+				".mpg": true, ".mpeg": true, ".ts": true, ".m2ts": true,
+			}
+
+			if videoExts[ext] {
+				// Look up the media file in database
+				var mediaFile models.MediaFile
+				if err := s.db.Where("file_path = ?", fullPath).First(&mediaFile).Error; err == nil {
+					// Found in database, include media item info
+					var item models.MediaItem
+					if err := s.db.First(&item, mediaFile.MediaItemID).Error; err == nil {
+						items = append(items, gin.H{
+							"ratingKey": item.ID,
+							"key":       fmt.Sprintf("/library/metadata/%d", item.ID),
+							"title":     item.Title,
+							"path":      fullPath,
+							"type":      item.Type,
+							"thumb":     item.Thumb,
+							"duration":  item.Duration,
+							"year":      item.Year,
+						})
+					}
+				} else {
+					// Not in database, show as unmatched file
+					items = append(items, gin.H{
+						"title": entry.Name(),
+						"path":  fullPath,
+						"type":  "file",
+					})
+				}
+			}
+		}
+	}
+
+	s.respondWithMediaContainer(c, items, len(items), 0, 0)
 }
 
 func (s *Server) getLibraryHubs(c *gin.Context) {
@@ -1276,13 +1692,125 @@ func (s *Server) getMetadataChildren(c *gin.Context) {
 	})
 }
 
+// setMetadataPrefs sets audio/subtitle preferences for a media item
 func (s *Server) setMetadataPrefs(c *gin.Context) {
-	// TODO: Set audio/subtitle preferences
+	key := c.Param("key")
+
+	// Parse the rating key (media item ID)
+	id, err := strconv.ParseUint(key, 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid key"})
+		return
+	}
+
+	// Get media item
+	var item models.MediaItem
+	if err := s.db.First(&item, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Media not found"})
+		return
+	}
+
+	// Get the media file(s) for this item
+	var files []models.MediaFile
+	if err := s.db.Where("media_item_id = ?", item.ID).Find(&files).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get media files"})
+		return
+	}
+
+	// Apply preferences from query params
+	audioStreamID := c.Query("audioStreamID")
+	subtitleStreamID := c.Query("subtitleStreamID")
+
+	for _, file := range files {
+		// Reset all stream selections for this file
+		s.db.Model(&models.MediaStream{}).
+			Where("media_file_id = ?", file.ID).
+			Update("selected", false)
+
+		// Select the requested audio stream
+		if audioStreamID != "" {
+			if streamID, err := strconv.ParseUint(audioStreamID, 10, 32); err == nil {
+				s.db.Model(&models.MediaStream{}).
+					Where("id = ? AND media_file_id = ? AND stream_type = 2", streamID, file.ID).
+					Update("selected", true)
+			}
+		}
+
+		// Select the requested subtitle stream (0 means none)
+		if subtitleStreamID != "" && subtitleStreamID != "0" {
+			if streamID, err := strconv.ParseUint(subtitleStreamID, 10, 32); err == nil {
+				s.db.Model(&models.MediaStream{}).
+					Where("id = ? AND media_file_id = ? AND stream_type = 3", streamID, file.ID).
+					Update("selected", true)
+			}
+		}
+	}
+
 	c.JSON(http.StatusOK, gin.H{"status": "ok"})
 }
 
+// selectStreams selects audio/subtitle streams for a media file (part)
 func (s *Server) selectStreams(c *gin.Context) {
-	// TODO: Select audio/subtitle streams
+	partID := c.Param("id")
+
+	id, err := strconv.ParseUint(partID, 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid part ID"})
+		return
+	}
+
+	// Get the media file
+	var file models.MediaFile
+	if err := s.db.First(&file, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Media file not found"})
+		return
+	}
+
+	// Parse stream selection from query params
+	audioStreamID := c.Query("audioStreamID")
+	subtitleStreamID := c.Query("subtitleStreamID")
+	allParts := c.Query("allParts") == "1" // Apply to all parts of this media item
+
+	// Get all files to update (either just this one or all parts)
+	var files []models.MediaFile
+	if allParts {
+		s.db.Where("media_item_id = ?", file.MediaItemID).Find(&files)
+	} else {
+		files = []models.MediaFile{file}
+	}
+
+	for _, f := range files {
+		// Reset audio selections for this file
+		if audioStreamID != "" {
+			s.db.Model(&models.MediaStream{}).
+				Where("media_file_id = ? AND stream_type = 2", f.ID).
+				Update("selected", false)
+
+			// Select the requested audio stream
+			if streamID, err := strconv.ParseUint(audioStreamID, 10, 32); err == nil {
+				s.db.Model(&models.MediaStream{}).
+					Where("id = ? AND media_file_id = ?", streamID, f.ID).
+					Update("selected", true)
+			}
+		}
+
+		// Reset subtitle selections
+		if subtitleStreamID != "" {
+			s.db.Model(&models.MediaStream{}).
+				Where("media_file_id = ? AND stream_type = 3", f.ID).
+				Update("selected", false)
+
+			// Select the requested subtitle stream (0 means disable subtitles)
+			if subtitleStreamID != "0" {
+				if streamID, err := strconv.ParseUint(subtitleStreamID, 10, 32); err == nil {
+					s.db.Model(&models.MediaStream{}).
+						Where("id = ? AND media_file_id = ?", streamID, f.ID).
+						Update("selected", true)
+				}
+			}
+		}
+	}
+
 	c.JSON(http.StatusOK, gin.H{"status": "ok"})
 }
 
@@ -1588,9 +2116,195 @@ func (s *Server) removeFromContinueWatching(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"status": "ok"})
 }
 
+// getSessions returns active playback sessions
 func (s *Server) getSessions(c *gin.Context) {
-	// TODO: Return active playback sessions
-	s.respondWithMediaContainer(c, []gin.H{}, 0, 0, 0)
+	// Clean up stale sessions (inactive for more than 5 minutes)
+	cutoff := time.Now().Add(-5 * time.Minute)
+	s.db.Where("last_active_at < ? OR state = 'stopped'", cutoff).Delete(&models.PlaybackSession{})
+
+	// Get active sessions with related data
+	var sessions []models.PlaybackSession
+	s.db.Where("state != 'stopped'").
+		Order("started_at DESC").
+		Find(&sessions)
+
+	// Build response with enriched data
+	metadata := make([]gin.H, 0, len(sessions))
+	for _, session := range sessions {
+		// Get user info
+		var user models.User
+		s.db.First(&user, session.UserID)
+
+		// Get media item info
+		var item models.MediaItem
+		s.db.First(&item, session.MediaItemID)
+
+		// Get media file info
+		var file models.MediaFile
+		s.db.First(&file, session.MediaFileID)
+
+		sessionData := gin.H{
+			"sessionKey":    session.ID,
+			"ratingKey":     session.MediaItemID,
+			"key":           fmt.Sprintf("/library/metadata/%d", session.MediaItemID),
+			"title":         item.Title,
+			"type":          item.Type,
+			"thumb":         item.Thumb,
+			"viewOffset":    session.ViewOffset,
+			"duration":      session.Duration,
+			"User": gin.H{
+				"id":    user.ID,
+				"title": user.DisplayName,
+				"thumb": user.Thumb,
+			},
+			"Player": gin.H{
+				"title":    session.ClientName,
+				"platform": session.ClientPlatform,
+				"address":  session.ClientAddress,
+				"state":    session.State,
+			},
+		}
+
+		// Add transcoding info if applicable
+		if session.Transcoding {
+			sessionData["TranscodeSession"] = gin.H{
+				"key":     session.TranscodeSession,
+				"quality": session.Quality,
+			}
+		}
+
+		// Add video stream info if available
+		if file.Width > 0 {
+			sessionData["Media"] = []gin.H{{
+				"width":      file.Width,
+				"height":     file.Height,
+				"videoCodec": file.VideoCodec,
+				"audioCodec": file.AudioCodec,
+				"container":  file.Container,
+				"duration":   file.Duration,
+			}}
+		}
+
+		metadata = append(metadata, sessionData)
+	}
+
+	s.respondWithMediaContainer(c, metadata, len(metadata), 0, 0)
+}
+
+// startSession starts or updates a playback session
+func (s *Server) startSession(c *gin.Context) {
+	userID := c.GetUint("userID")
+
+	var req struct {
+		RatingKey      uint   `json:"ratingKey"`
+		MediaFileID    uint   `json:"mediaFileId"`
+		ViewOffset     int64  `json:"viewOffset"`
+		State          string `json:"state"`
+		ClientName     string `json:"clientName"`
+		ClientPlatform string `json:"clientPlatform"`
+		Transcoding    bool   `json:"transcoding"`
+		TranscodeKey   string `json:"transcodeKey"`
+		Quality        string `json:"quality"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Get media item duration
+	var item models.MediaItem
+	if err := s.db.First(&item, req.RatingKey).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Media not found"})
+		return
+	}
+
+	sessionID := uuid.New().String()
+	session := models.PlaybackSession{
+		ID:               sessionID,
+		UserID:           userID,
+		MediaItemID:      req.RatingKey,
+		MediaFileID:      req.MediaFileID,
+		State:            "playing",
+		ViewOffset:       req.ViewOffset,
+		Duration:         item.Duration,
+		Progress:         float64(req.ViewOffset) / float64(item.Duration),
+		Transcoding:      req.Transcoding,
+		TranscodeSession: req.TranscodeKey,
+		Quality:          req.Quality,
+		ClientName:       req.ClientName,
+		ClientPlatform:   req.ClientPlatform,
+		ClientAddress:    c.ClientIP(),
+		StartedAt:        time.Now(),
+		LastActiveAt:     time.Now(),
+	}
+
+	if req.State != "" {
+		session.State = req.State
+	}
+
+	if err := s.db.Create(&session).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create session"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"sessionKey": sessionID,
+		"status":     "ok",
+	})
+}
+
+// updateSession updates a playback session state
+func (s *Server) updateSession(c *gin.Context) {
+	sessionID := c.Param("id")
+
+	var req struct {
+		ViewOffset int64  `json:"viewOffset"`
+		State      string `json:"state"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	var session models.PlaybackSession
+	if err := s.db.First(&session, "id = ?", sessionID).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Session not found"})
+		return
+	}
+
+	updates := map[string]interface{}{
+		"last_active_at": time.Now(),
+	}
+
+	if req.ViewOffset > 0 {
+		updates["view_offset"] = req.ViewOffset
+		if session.Duration > 0 {
+			updates["progress"] = float64(req.ViewOffset) / float64(session.Duration)
+		}
+	}
+
+	if req.State != "" {
+		updates["state"] = req.State
+	}
+
+	s.db.Model(&session).Updates(updates)
+
+	c.JSON(http.StatusOK, gin.H{"status": "ok"})
+}
+
+// stopSession stops a playback session
+func (s *Server) stopSession(c *gin.Context) {
+	sessionID := c.Param("id")
+
+	result := s.db.Delete(&models.PlaybackSession{}, "id = ?", sessionID)
+	if result.RowsAffected == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Session not found"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"status": "ok"})
 }
 
 // ============ Playlist Handlers ============
@@ -2135,6 +2849,16 @@ func (s *Server) transcodeSegment(c *gin.Context) {
 	}
 }
 
+// getThumbSimple handles /library/metadata/:key/thumb (without thumbId)
+func (s *Server) getThumbSimple(c *gin.Context) {
+	s.getThumb(c)
+}
+
+// getArtSimple handles /library/metadata/:key/art (without artId)
+func (s *Server) getArtSimple(c *gin.Context) {
+	s.getArt(c)
+}
+
 func (s *Server) getThumb(c *gin.Context) {
 	keyStr := c.Param("key")
 	key, err := strconv.Atoi(keyStr)
@@ -2150,8 +2874,9 @@ func (s *Server) getThumb(c *gin.Context) {
 		return
 	}
 
-	// If no thumb URL, return 404
+	// If no thumb URL, try to generate a placeholder or return 404
 	if item.Thumb == "" {
+		// Return a placeholder image or 404
 		c.JSON(http.StatusNotFound, gin.H{"error": "No poster available"})
 		return
 	}

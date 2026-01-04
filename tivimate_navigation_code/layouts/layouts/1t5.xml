@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout android:orientation="vertical" android:paddingBottom="@dimen/1ss" android:clipChildren="false" android:clipToPadding="false" android:layout_width="fill_parent" android:layout_height="wrap_content"
+  xmlns:android="http://schemas.android.com/apk/res/android">
+    <FrameLayout android:layout_width="fill_parent" android:layout_height="fill_parent">
+        <LinearLayout android:layout_gravity="bottom" android:orientation="horizontal" android:id="@id/4fq" android:clipToPadding="false" android:layout_width="fill_parent" android:layout_height="wrap_content" android:layout_marginBottom="@dimen/1bf" android:paddingStart="?76b" android:paddingEnd="?bt">
+            <ImageView android:layout_gravity="top" android:id="@id/1m9" android:layout_width="wrap_content" android:layout_height="@dimen/6h4" android:scaleType="fitStart" android:adjustViewBounds="true" android:layout_marginEnd="@dimen/gk" />
+            <FrameLayout android:gravity="bottom" android:layout_gravity="top" android:id="@id/5po" android:clipToPadding="false" android:layout_width="fill_parent" android:layout_height="wrap_content" />
+        </LinearLayout>
+        <androidx.leanback.widget.ThumbsBar android:layout_gravity="bottom" android:orientation="horizontal" android:id="@id/339" android:visibility="invisible" android:layout_width="fill_parent" android:layout_height="wrap_content" android:layout_marginBottom="@dimen/13a" />
+    </FrameLayout>
+    <androidx.leanback.widget.PlaybackTransportRowView android:orientation="vertical" android:id="@id/2hi" android:clipChildren="false" android:clipToPadding="false" android:layout_width="fill_parent" android:layout_height="fill_parent" android:paddingStart="?76b" android:paddingEnd="?bt">
+        <FrameLayout android:id="@id/4kj" android:layout_width="fill_parent" android:layout_height="wrap_content" android:layout_marginLeft="@dimen/5b4" android:layoutDirection="ltr" />
+        <androidx.leanback.widget.SeekBar android:id="@id/j6" android:focusable="true" android:layout_width="fill_parent" android:layout_height="@dimen/bb" />
+        <RelativeLayout android:layout_width="fill_parent" android:layout_height="wrap_content" android:layout_marginLeft="@dimen/5b4" android:layoutDirection="ltr">
+            <FrameLayout android:id="@id/1pl" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_alignParentStart="true" />
+            <TextView android:layout_gravity="top" android:id="@id/2o3" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="@dimen/1ar" android:layout_marginStart="@dimen/48g" android:layout_toStartOf="@id/i9" style="?b8" />
+            <TextView android:layout_gravity="top" android:id="@id/i9" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="@dimen/1ar" android:text="@string/1k2" android:layout_marginStart="@dimen/48g" android:layout_toStartOf="@id/32m" style="?b8" />
+            <TextView android:layout_gravity="top" android:id="@id/32m" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="@dimen/1ar" android:layout_marginStart="@dimen/48g" android:layout_alignParentEnd="true" style="?b8" />
+        </RelativeLayout>
+    </androidx.leanback.widget.PlaybackTransportRowView>
+</LinearLayout>

@@ -1,13 +1,24 @@
-import { FolderOpen, Tv, Video, Activity, HardDrive } from 'lucide-react'
+import { FolderOpen, Tv, Video, Activity, HardDrive, Server, Users, Clock, Cpu, FileText } from 'lucide-react'
+import { useQuery } from '@tanstack/react-query'
+import { api } from '../api/client'
 import { useLibraries } from '../hooks/useLibraries'
 import { useM3USources } from '../hooks/useLiveTV'
 import { useRecordings } from '../hooks/useDVR'
 
-function StatCard({ title, value, icon: Icon, color }: {
+function useServerStatus() {
+  return useQuery({
+    queryKey: ['serverStatus'],
+    queryFn: () => api.getServerStatus(),
+    refetchInterval: 10000, // Refresh every 10 seconds
+  })
+}
+
+function StatCard({ title, value, icon: Icon, color, subtitle }: {
   title: string
   value: string | number
   icon: React.ElementType
   color: string
+  subtitle?: string
 }) {
   return (
     <div className="bg-gray-800 rounded-xl p-6">
@@ -18,6 +29,7 @@ function StatCard({ title, value, icon: Icon, color }: {
         <div>
           <p className="text-sm text-gray-400">{title}</p>
           <p className="text-2xl font-bold text-white">{value}</p>
+          {subtitle && <p className="text-xs text-gray-500">{subtitle}</p>}
         </div>
       </div>
     </div>
@@ -25,6 +37,7 @@ function StatCard({ title, value, icon: Icon, color }: {
 }
 
 export function DashboardPage() {
+  const { data: status } = useServerStatus()
   const { data: libraries } = useLibraries()
   const { data: m3uSources } = useM3USources()
   const { data: recordings } = useRecordings()
@@ -40,31 +53,61 @@ export function DashboardPage() {
         <p className="text-gray-400 mt-1">Overview of your OpenFlix server</p>
       </div>
 
+      {/* Server Status Bar */}
+      {status && (
+        <div className="bg-gray-800 rounded-xl p-4 mb-6 flex flex-wrap items-center gap-6 text-sm">
+          <div className="flex items-center gap-2">
+            <Server className="h-4 w-4 text-green-400" />
+            <span className="text-gray-300">{status.server.name} v{status.server.version}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Clock className="h-4 w-4 text-blue-400" />
+            <span className="text-gray-300">Uptime: {status.server.uptime}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Users className="h-4 w-4 text-purple-400" />
+            <span className="text-gray-300">{status.sessions.active} active session{status.sessions.active !== 1 ? 's' : ''}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Cpu className="h-4 w-4 text-orange-400" />
+            <span className="text-gray-300">{status.system.memAllocMB} MB</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <FileText className="h-4 w-4 text-yellow-400" />
+            <span className="text-gray-300">Log: {status.logging.level}</span>
+          </div>
+        </div>
+      )}
+
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <StatCard
           title="Libraries"
-          value={libraries?.length || 0}
+          value={status?.libraries.count || libraries?.length || 0}
           icon={FolderOpen}
           color="bg-blue-600"
+          subtitle={status ? `${status.libraries.movies} movies, ${status.libraries.shows} shows` : undefined}
         />
         <StatCard
           title="Live TV Channels"
-          value={totalChannels}
+          value={status?.livetv.channels || totalChannels}
           icon={Tv}
           color="bg-green-600"
+          subtitle={status?.livetv.timeshiftEnabled ? `${status.livetv.timeshiftChannels} buffering` : undefined}
         />
         <StatCard
           title="Scheduled Recordings"
-          value={scheduledRecordings}
+          value={status?.dvr.scheduled || scheduledRecordings}
           icon={Video}
           color="bg-orange-600"
+          subtitle={status?.dvr.recording ? `${status.dvr.recording} recording now` : undefined}
         />
         <StatCard
           title="Completed Recordings"
-          value={completedRecordings}
+          value={status?.dvr.completed || completedRecordings}
           icon={HardDrive}
           color="bg-purple-600"
+          subtitle={status?.dvr.commercialDetect ? 'Commercial detect enabled' : undefined}
         />
       </div>
 

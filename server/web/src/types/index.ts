@@ -28,6 +28,12 @@ export interface LoginRequest {
   password: string
 }
 
+export interface RegisterRequest {
+  username: string
+  email: string
+  password: string
+}
+
 export interface LoginResponse {
   authToken: string
   user: User
@@ -124,6 +130,29 @@ export interface EPGSource {
   updatedAt: string
 }
 
+export interface XtreamSource {
+  id: number
+  name: string
+  serverUrl: string
+  username: string
+  enabled: boolean
+  lastFetched?: string
+  lastError?: string
+  expirationDate?: string
+  maxConnections?: number
+  activeConns?: number
+  importLive: boolean
+  importVod: boolean
+  importSeries: boolean
+  vodLibraryId?: number
+  seriesLibraryId?: number
+  channelCount: number
+  vodCount: number
+  seriesCount: number
+  createdAt: string
+  updatedAt: string
+}
+
 export interface Channel {
   id: number
   number: string
@@ -193,11 +222,46 @@ export interface SeriesRule {
 
 // Server types
 export interface ServerStatus {
-  version: string
-  uptime: number
-  activeSessions: number
-  libraryCount: number
-  recordingCount: number
+  server: {
+    name: string
+    version: string
+    hostname: string
+    machineIdentifier: string
+    platform: string
+    arch: string
+    goVersion: string
+    uptime: string
+  }
+  sessions: {
+    active: number
+  }
+  libraries: {
+    count: number
+    movies: number
+    shows: number
+    episodes: number
+  }
+  livetv: {
+    channels: number
+    timeshiftChannels: number
+    timeshiftEnabled: boolean
+  }
+  dvr: {
+    scheduled: number
+    recording: number
+    completed: number
+    commercialDetect: boolean
+  }
+  system: {
+    goroutines: number
+    memAllocMB: number
+    memTotalMB: number
+    numCPU: number
+  }
+  logging: {
+    level: string
+    json: boolean
+  }
 }
 
 export interface ServerConfig {

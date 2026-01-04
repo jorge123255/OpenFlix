@@ -3,6 +3,7 @@ package api
 import (
 	"fmt"
 	"net/http"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -12,22 +13,32 @@ import (
 	"github.com/openflix/openflix-server/internal/config"
 	"github.com/openflix/openflix-server/internal/dvr"
 	"github.com/openflix/openflix-server/internal/library"
+	"github.com/openflix/openflix-server/internal/livetv"
+	"github.com/openflix/openflix-server/internal/logger"
 	"github.com/openflix/openflix-server/internal/metadata"
 	"github.com/openflix/openflix-server/internal/transcode"
+	limiter "github.com/ulule/limiter/v3"
+	mgin "github.com/ulule/limiter/v3/drivers/middleware/gin"
+	"github.com/ulule/limiter/v3/drivers/store/memory"
 	"gorm.io/gorm"
 )
 
 // Server represents the API server
 type Server struct {
-	config         *config.Config
-	db             *gorm.DB
-	router         *gin.Engine
-	authService    *auth.Service
-	libraryService *library.Service
-	scanner        *library.Scanner
-	transcoder     *transcode.Transcoder
-	recorder       *dvr.Recorder
-	epgService     *EPGService
+	config            *config.Config
+	db                *gorm.DB
+	router            *gin.Engine
+	authService       *auth.Service
+	libraryService    *library.Service
+	scanner           *library.Scanner
+	transcoder        *transcode.Transcoder
+	recorder          *dvr.Recorder
+	epgService        *EPGService
+	epgScheduler      *livetv.EPGScheduler
+	guideCache        *livetv.GuideCache
+	timeshiftBuffer   *livetv.TimeShiftBuffer
+	archiveManager    *livetv.ArchiveManager
+	metadataScheduler *metadata.Scheduler
 }
 
 // NewServer creates a new API server
@@ -35,11 +46,17 @@ func NewServer(cfg *config.Config, db *gorm.DB) *Server {
 	dataDir := cfg.GetDataDir()
 	scanner := library.NewScanner(db)
 
-	// Initialize TMDB agent if API key is configured
+	// Initialize TMDB agent and metadata scheduler if API key is configured
+	var metadataScheduler *metadata.Scheduler
 	if cfg.Library.TMDBApiKey != "" {
 		tmdbAgent := metadata.NewTMDBAgent(cfg.Library.TMDBApiKey, db, dataDir)
 		scanner.SetTMDBAgent(tmdbAgent)
-		fmt.Println("TMDB metadata agent enabled")
+		logger.Info("TMDB metadata agent enabled")
+
+		// Start automatic metadata scheduler (checks every 2 minutes)
+		metadataScheduler = metadata.NewScheduler(db, tmdbAgent, 2)
+		metadataScheduler.Start()
+		logger.Info("Metadata auto-refresh enabled (every 2 minutes)")
 	}
 
 	// Initialize transcoder
@@ -48,7 +65,7 @@ func NewServer(cfg *config.Config, db *gorm.DB) *Server {
 		hwAccel := cfg.Transcode.HardwareAccel
 		if hwAccel == "auto" {
 			hwAccel = transcode.DetectHardwareAccel(cfg.Transcode.FFmpegPath)
-			fmt.Printf("Auto-detected hardware acceleration: %s\n", hwAccel)
+			logger.Infof("Auto-detected hardware acceleration: %s", hwAccel)
 		}
 		transcoder = transcode.NewTranscoder(
 			cfg.Transcode.FFmpegPath,
@@ -56,7 +73,7 @@ func NewServer(cfg *config.Config, db *gorm.DB) *Server {
 			hwAccel,
 			cfg.Transcode.MaxSessions,
 		)
-		fmt.Println("Transcoding enabled")
+		logger.Info("Transcoding enabled")
 	}
 
 	// Initialize DVR recorder with commercial detection
@@ -69,24 +86,62 @@ func NewServer(cfg *config.Config, db *gorm.DB) *Server {
 			ComskipINIPath:   cfg.DVR.ComskipINIPath,
 			CommercialDetect: cfg.DVR.CommercialDetect,
 		})
-		fmt.Println("DVR recording enabled")
+		logger.Info("DVR recording enabled")
 		if cfg.DVR.CommercialDetect {
-			fmt.Println("Commercial detection enabled")
+			logger.Info("Commercial detection enabled")
 		}
 	}
 
 	// Initialize EPG service
 	epgService := NewEPGService()
 
+	// Initialize EPG scheduler for automatic refresh
+	epgScheduler := livetv.NewEPGScheduler(db, livetv.EPGSchedulerConfig{
+		RefreshInterval: cfg.LiveTV.EPGInterval,
+		Enabled:         cfg.LiveTV.Enabled,
+	})
+	if cfg.LiveTV.Enabled && cfg.LiveTV.EPGInterval > 0 {
+		logger.Infof("EPG auto-refresh enabled (every %d hours)", cfg.LiveTV.EPGInterval)
+	}
+
+	// Initialize guide cache for EPG queries (5 minute TTL, 1000 max entries)
+	guideCache := livetv.NewGuideCache(5*time.Minute, 1000)
+	logger.Info("Guide cache initialized (5m TTL)")
+
+	// Initialize TimeShift buffer for catch-up TV
+	timeshiftBuffer := livetv.NewTimeShiftBuffer(db, livetv.TimeShiftConfig{
+		FFmpegPath:    cfg.Transcode.FFmpegPath,
+		BufferDir:     filepath.Join(dataDir, "timeshift"),
+		BufferHours:   4, // Keep 4 hours of buffer
+		SegmentLength: 6, // 6 second segments
+	})
+	logger.Info("TimeShift buffer initialized for catch-up TV")
+
+	// Initialize Archive Manager for continuous catch-up recording
+	archiveManager := livetv.NewArchiveManager(db, livetv.ArchiveConfig{
+		FFmpegPath:     cfg.Transcode.FFmpegPath,
+		ArchiveDir:     filepath.Join(dataDir, "archive"),
+		SegmentLength:  6,  // 6 second segments
+		CleanupMinutes: 30, // Cleanup every 30 minutes
+		MaxDays:        7,  // Maximum 7 days archive
+	})
+	archiveManager.Start()
+	logger.Info("Archive Manager initialized for catch-up TV")
+
 	s := &Server{
-		config:         cfg,
-		db:             db,
-		authService:    auth.NewService(db, cfg.Auth.JWTSecret, cfg.Auth.TokenExpiry),
-		libraryService: library.NewService(db, dataDir),
-		scanner:        scanner,
-		transcoder:     transcoder,
-		recorder:       recorder,
-		epgService:     epgService,
+		config:            cfg,
+		db:                db,
+		authService:       auth.NewService(db, cfg.Auth.JWTSecret, cfg.Auth.TokenExpiry),
+		libraryService:    library.NewService(db, dataDir),
+		scanner:           scanner,
+		transcoder:        transcoder,
+		recorder:          recorder,
+		epgService:        epgService,
+		epgScheduler:      epgScheduler,
+		guideCache:        guideCache,
+		timeshiftBuffer:   timeshiftBuffer,
+		archiveManager:    archiveManager,
+		metadataScheduler: metadataScheduler,
 	}
 	s.setupRouter()
 	return s
@@ -104,10 +159,21 @@ func (s *Server) reinitializeTMDBAgent() {
 		dataDir := s.config.GetDataDir()
 		tmdbAgent := metadata.NewTMDBAgent(s.config.Library.TMDBApiKey, s.db, dataDir)
 		s.scanner.SetTMDBAgent(tmdbAgent)
-		fmt.Println("TMDB metadata agent re-initialized with new API key")
+
+		// Update or start metadata scheduler
+		if s.metadataScheduler != nil {
+			s.metadataScheduler.SetTMDBAgent(tmdbAgent)
+		} else {
+			s.metadataScheduler = metadata.NewScheduler(s.db, tmdbAgent, 2)
+			s.metadataScheduler.Start()
+		}
+		logger.Info("TMDB metadata agent re-initialized with new API key")
 	} else {
 		s.scanner.SetTMDBAgent(nil)
-		fmt.Println("TMDB metadata agent disabled (no API key)")
+		if s.metadataScheduler != nil {
+			s.metadataScheduler.SetTMDBAgent(nil)
+		}
+		logger.Info("TMDB metadata agent disabled (no API key)")
 	}
 }
 
@@ -122,23 +188,46 @@ func (s *Server) setupRouter() {
 	// Health check
 	r.GET("/health", s.healthCheck)
 
+	// App Downloads (public - no auth required)
+	r.GET("/downloads", s.getAvailableDownloads)
+	r.GET("/downloads/:filename", s.downloadApp)
+
 	// Web Admin UI
 	s.setupWebUI(r)
 
 	// Server identity (Plex-compatible)
 	r.GET("/", s.getServerInfo)
 	r.GET("/identity", s.getServerIdentity)
+	r.GET("/api/status", s.authRequired(), s.getServerStatus)
+
+	// Logs API (admin only)
+	r.GET("/api/logs", s.authRequired(), s.adminRequired(), s.getLogs)
+	r.DELETE("/api/logs", s.authRequired(), s.adminRequired(), s.clearLogs)
+
+	// Client logs API (any authenticated user can submit, admin can view)
+	r.POST("/api/client-logs", s.authRequired(), s.submitClientLogs)
+	r.GET("/api/client-logs", s.authRequired(), s.adminRequired(), s.getClientLogs)
+	r.DELETE("/api/client-logs", s.authRequired(), s.adminRequired(), s.clearClientLogs)
+
+	// Transcoding API (admin only)
+	r.GET("/api/transcode", s.authRequired(), s.adminRequired(), s.getTranscodeInfo)
 
 	// ============ Auth API ============
+	// Rate limiter for auth endpoints: 10 requests per minute per IP
+	rate, _ := limiter.NewRateFromFormatted("10-M")
+	authLimiterStore := memory.NewStore()
+	authLimiter := mgin.NewMiddleware(limiter.New(authLimiterStore, rate))
+
 	// Simplified auth (not Plex.tv dependent)
-	auth := r.Group("/auth")
+	authGroup := r.Group("/auth")
 	{
-		auth.POST("/register", s.register)
-		auth.POST("/login", s.login)
-		auth.POST("/logout", s.authRequired(), s.logout)
-		auth.GET("/user", s.authRequired(), s.getCurrentUser)
-		auth.PUT("/user", s.authRequired(), s.updateCurrentUser)
-		auth.PUT("/user/password", s.authRequired(), s.changePassword)
+		// Apply stricter rate limiting to login/register to prevent brute force
+		authGroup.POST("/register", authLimiter, s.register)
+		authGroup.POST("/login", authLimiter, s.login)
+		authGroup.POST("/logout", s.authRequired(), s.logout)
+		authGroup.GET("/user", s.authRequired(), s.getCurrentUser)
+		authGroup.PUT("/user", s.authRequired(), s.updateCurrentUser)
+		authGroup.PUT("/user/password", s.authRequired(), authLimiter, s.changePassword)
 	}
 
 	// ============ User Profiles API ============
@@ -187,6 +276,7 @@ func (s *Server) setupRouter() {
 		admin.GET("/media", s.adminGetMedia)
 		admin.PUT("/media/:id", s.adminUpdateMedia)
 		admin.POST("/media/:id/refresh", s.adminRefreshMediaMetadata)
+		admin.POST("/media/refresh-missing", s.adminRefreshAllMissingMetadata)
 		admin.GET("/media/search-tmdb", s.adminSearchTMDB)
 		admin.POST("/media/:id/match", s.adminApplyMediaMatch)
 	}
@@ -253,6 +343,9 @@ func (s *Server) setupRouter() {
 
 	// Sessions
 	r.GET("/status/sessions", s.authRequired(), s.getSessions)
+	r.POST("/sessions", s.authRequired(), s.startSession)
+	r.PUT("/sessions/:id", s.authRequired(), s.updateSession)
+	r.DELETE("/sessions/:id", s.authRequired(), s.stopSession)
 
 	// ============ Playlists API ============
 	playlists := r.Group("/playlists")
@@ -294,8 +387,10 @@ func (s *Server) setupRouter() {
 		livetv.GET("/channels", s.getChannels)
 		livetv.GET("/channels/:id", s.getChannel)
 		livetv.PUT("/channels/:id", s.updateChannel)
-		livetv.POST("/channels/bulk-map", s.bulkMapChannels)      // Bulk map multiple channels
+		livetv.POST("/channels/bulk-map", s.bulkMapChannels)       // Bulk map multiple channels
+		livetv.POST("/channels/auto-detect", s.autoDetectChannels) // Auto-detect EPG mappings
 		livetv.DELETE("/channels/:id/epg-mapping", s.unmapChannel) // Remove EPG mapping
+		livetv.GET("/channels/:id/suggestions", s.getSuggestedMatches) // Get suggested EPG matches
 		livetv.POST("/channels/:id/favorite", s.toggleChannelFavorite)
 
 		// Guide (EPG)
@@ -316,6 +411,62 @@ func (s *Server) setupRouter() {
 		livetv.POST("/epg/refresh", s.refreshAllEPG)
 		livetv.GET("/epg/programs", s.getEPGPrograms)
 		livetv.GET("/epg/channels", s.getEPGChannels)
+
+		// EPG Scheduler
+		livetv.GET("/epg/scheduler", s.getEPGSchedulerStatus)
+		livetv.POST("/epg/scheduler/refresh", s.forceEPGRefresh)
+
+		// Guide Cache
+		livetv.GET("/guide/cache/stats", s.getGuideCacheStats)
+		livetv.POST("/guide/cache/invalidate", s.invalidateGuideCache)
+
+		// EPG Maintenance (duplicate/conflict detection)
+		livetv.GET("/epg/conflicts", s.getEPGConflicts)
+		livetv.POST("/epg/duplicates/resolve", s.resolveDuplicates)
+		livetv.POST("/epg/overlaps/resolve", s.resolveOverlaps)
+		livetv.POST("/epg/cleanup", s.cleanupOldPrograms)
+
+		// Multi-Source Fallback
+		livetv.GET("/epg/sources/health", s.getEPGSourceHealth)
+		livetv.POST("/epg/sources/fetch-fallback", s.fetchWithFallback)
+		livetv.POST("/epg/sources/:id/reset-health", s.resetSourceHealth)
+
+		// Gracenote provider discovery by zip code
+		livetv.GET("/gracenote/providers", s.discoverGracenoteProviders)
+
+		// Catch-up TV / Start Over
+		livetv.GET("/channels/:id/catchup", s.getCatchUpPrograms)
+		livetv.GET("/channels/:id/startover", s.getStartOverInfo)
+
+		// TimeShift streaming
+		livetv.GET("/timeshift/:id/stream.m3u8", s.getTimeshiftPlaylist)
+		livetv.GET("/timeshift/:id/segment/:filename", s.getTimeshiftSegment)
+		livetv.POST("/timeshift/:id/start", s.startTimeshiftBuffer)
+		livetv.POST("/timeshift/:id/stop", s.stopTimeshiftBuffer)
+
+		// Archive / Catch-up (server-side recording)
+		livetv.GET("/channels/:id/archive", s.getArchivedPrograms)
+		livetv.POST("/channels/:id/archive/enable", s.enableChannelArchive)
+		livetv.POST("/channels/:id/archive/disable", s.disableChannelArchive)
+		livetv.GET("/archive/:id/stream.m3u8", s.getArchivePlaylist)
+		livetv.GET("/archive/:id/segment/:filename", s.getArchiveSegment)
+		livetv.GET("/archive/status", s.getArchiveStatus)
+
+		// Xtream Codes API sources
+		livetv.GET("/xtream/sources", s.listXtreamSources)
+		livetv.GET("/xtream/sources/:id", s.getXtreamSource)
+		livetv.POST("/xtream/sources", s.createXtreamSource)
+		livetv.PUT("/xtream/sources/:id", s.updateXtreamSource)
+		livetv.DELETE("/xtream/sources/:id", s.deleteXtreamSource)
+		livetv.POST("/xtream/sources/:id/test", s.testXtreamSource)
+		livetv.POST("/xtream/sources/:id/refresh", s.refreshXtreamSource)
+		livetv.POST("/xtream/parse-m3u", s.parseXtreamFromM3U)
+		livetv.GET("/xtream/sources/:id/categories", s.getXtreamCategories)
+		livetv.GET("/xtream/sources/:id/streams", s.getXtreamStreams)
+		// VOD/Series import
+		livetv.POST("/xtream/sources/:id/import-vod", s.importXtreamVOD)
+		livetv.POST("/xtream/sources/:id/import-series", s.importXtreamSeries)
+		livetv.POST("/xtream/sources/:id/import-all", s.importAllXtreamContent)
 	}
 
 	// ============ DVR API ============
@@ -325,6 +476,7 @@ func (s *Server) setupRouter() {
 		// Recordings
 		dvrGroup.GET("/recordings", s.getRecordings)
 		dvrGroup.POST("/recordings", s.scheduleRecording)
+		dvrGroup.POST("/recordings/from-program", s.recordFromProgram)
 		dvrGroup.GET("/recordings/:id", s.getRecording)
 		dvrGroup.DELETE("/recordings/:id", s.deleteRecording)
 
@@ -341,10 +493,16 @@ func (s *Server) setupRouter() {
 
 		// Recording Playback
 		dvrGroup.GET("/stream/:id", s.streamRecording)
+
+		// Stream Validation (validates stream before scheduling)
+		dvrGroup.GET("/validate-stream", s.validateRecordingStream)
 	}
 
 	// ============ Gracenote EPG API ============
 	s.epgService.RegisterRoutes(r)
+
+	// ============ Watch Party API ============
+	s.RegisterWatchPartyRoutes(r)
 
 	// ============ Server Preferences ============
 	// Plex uses /:/prefs - we use /-/prefs
@@ -363,9 +521,27 @@ func (s *Server) setupRouter() {
 	r.GET("/transcode/universal/start.m3u8", s.authRequired(), s.transcodeStart)
 	r.GET("/transcode/universal/session/:sessionId/:segment", s.authRequired(), s.transcodeSegment)
 
-	// Images
+	// ============ Playback Decision API ============
+	// Smart playback mode selection
+	playbackAPI := r.Group("/api/playback")
+	playbackAPI.Use(s.authRequired())
+	{
+		// Client capabilities
+		playbackAPI.POST("/capabilities", s.registerClientCapabilities)
+		playbackAPI.GET("/capabilities/:deviceId", s.getClientCapabilities)
+		playbackAPI.GET("/capabilities/defaults", s.getDefaultCapabilities)
+
+		// Playback decisions
+		playbackAPI.GET("/decide/:fileId", s.getPlaybackDecision)
+		playbackAPI.POST("/decide/:fileId", s.getPlaybackDecision) // POST with capabilities in body
+		playbackAPI.GET("/options/:mediaId", s.getMediaPlaybackOptions)
+	}
+
+	// Images - support both /thumb/:id and /thumb (simple)
 	r.GET("/library/metadata/:key/thumb/:thumbId", s.getThumb)
+	r.GET("/library/metadata/:key/thumb", s.getThumbSimple)
 	r.GET("/library/metadata/:key/art/:artId", s.getArt)
+	r.GET("/library/metadata/:key/art", s.getArtSimple)
 
 	s.router = r
 }
@@ -382,13 +558,13 @@ func (s *Server) loggerMiddleware() gin.HandlerFunc {
 		latency := time.Since(start)
 		status := c.Writer.Status()
 
-		fmt.Printf("[%s] %s %s %d %v\n",
-			time.Now().Format("2006-01-02 15:04:05"),
-			c.Request.Method,
-			path,
-			status,
-			latency,
-		)
+		logger.WithFields(map[string]interface{}{
+			"method":  c.Request.Method,
+			"path":    path,
+			"status":  status,
+			"latency": latency,
+			"ip":      c.ClientIP(),
+		}).Debug("HTTP request")
 	}
 }
 
@@ -409,6 +585,19 @@ func (s *Server) corsMiddleware() gin.HandlerFunc {
 
 func (s *Server) authRequired() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		// Check if local access is enabled and request is from localhost
+		if s.config.Auth.AllowLocalAccess && s.isLocalRequest(c) {
+			// Allow local access without authentication
+			// Set default local user context
+			c.Set("token", "local-access")
+			c.Set("userID", uint(0))
+			c.Set("userUUID", "local-user")
+			c.Set("isAdmin", true) // Local users have full access
+			c.Set("isLocalAccess", true)
+			c.Next()
+			return
+		}
+
 		// Check X-Plex-Token header (Plex-compatible)
 		token := c.GetHeader("X-Plex-Token")
 		if token == "" {
@@ -447,6 +636,40 @@ func (s *Server) authRequired() gin.HandlerFunc {
 		c.Set("isAdmin", claims.IsAdmin)
 		c.Next()
 	}
+}
+
+// isLocalRequest checks if the request is from localhost or local network
+func (s *Server) isLocalRequest(c *gin.Context) bool {
+	clientIP := c.ClientIP()
+
+	// Check for localhost addresses
+	if clientIP == "127.0.0.1" || clientIP == "::1" || clientIP == "localhost" {
+		return true
+	}
+
+	// Check for private network ranges
+	if strings.HasPrefix(clientIP, "192.168.") ||
+		strings.HasPrefix(clientIP, "10.") ||
+		strings.HasPrefix(clientIP, "172.16.") ||
+		strings.HasPrefix(clientIP, "172.17.") ||
+		strings.HasPrefix(clientIP, "172.18.") ||
+		strings.HasPrefix(clientIP, "172.19.") ||
+		strings.HasPrefix(clientIP, "172.20.") ||
+		strings.HasPrefix(clientIP, "172.21.") ||
+		strings.HasPrefix(clientIP, "172.22.") ||
+		strings.HasPrefix(clientIP, "172.23.") ||
+		strings.HasPrefix(clientIP, "172.24.") ||
+		strings.HasPrefix(clientIP, "172.25.") ||
+		strings.HasPrefix(clientIP, "172.26.") ||
+		strings.HasPrefix(clientIP, "172.27.") ||
+		strings.HasPrefix(clientIP, "172.28.") ||
+		strings.HasPrefix(clientIP, "172.29.") ||
+		strings.HasPrefix(clientIP, "172.30.") ||
+		strings.HasPrefix(clientIP, "172.31.") {
+		return true
+	}
+
+	return false
 }
 
 func (s *Server) adminRequired() gin.HandlerFunc {

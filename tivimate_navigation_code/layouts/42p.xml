@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<merge android:layout_width="wrap_content" android:layout_height="fill_parent"
+  xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto">
+    <LinearLayout android:layout_gravity="start" android:orientation="vertical" android:id="@id/2hm" android:paddingLeft="@dimen/2b2" android:paddingRight="@dimen/2b2" android:paddingBottom="@dimen/2b2" android:layout_width="wrap_content" android:layout_height="fill_parent" android:paddingStart="@dimen/2b2" android:paddingEnd="@dimen/2b2" style="?3pa">
+        <androidx.constraintlayout.widget.ConstraintLayout android:id="@id/2e1" android:paddingLeft="@dimen/725" android:focusable="false" android:focusableInTouchMode="false" android:layout_width="@dimen/1qm" android:layout_height="0.0dip" android:layout_weight="1.0" android:importantForAccessibility="yes" android:paddingStart="@dimen/725">
+            <androidx.constraintlayout.widget.Guideline android:orientation="horizontal" android:id="@id/3ug" android:layout_width="wrap_content" android:layout_height="wrap_content" app:3ps="0.55" />
+            <TextView android:id="@id/6nm" android:layout_width="0.0dip" android:layout_height="wrap_content" app:rp="@dimen/4oj" app:1ja="true" app:5dj="@id/3ug" app:6il="47i" app:3s4="47i" app:37u="47i" app:6hv="0.0" style="?6ga" />
+            <TextView android:id="@id/3c0" android:layout_width="0.0dip" android:layout_height="0.0dip" app:1ja="true" app:3an="47i" app:6il="47i" app:3s4="47i" app:7de="@id/6nm" app:1qd="@dimen/3gs" style="?285" />
+        </androidx.constraintlayout.widget.ConstraintLayout>
+        <include layout="@layout/mtrl_picker_header_toggle" />
+    </LinearLayout>
+    <View android:layout_gravity="end" android:layout_width="@dimen/5lc" android:layout_height="fill_parent" style="?6if" />
+</merge>

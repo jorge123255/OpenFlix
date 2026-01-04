@@ -48,7 +48,10 @@ class MpvPlayerPlugin : FlutterPlugin, MethodChannel.MethodCallHandler,
     override fun onAttachedToActivity(binding: ActivityPluginBinding) {
         activity = binding.activity
         activityBinding = binding
-        binding.addOnUserLeaveHintListener { playerCore?.onPause() }
+        // Note: We don't disable video on user leave hint because:
+        // 1. The SurfaceHolder.Callback handles surface lifecycle automatically
+        // 2. On Android TV, the app is typically always in foreground during playback
+        // 3. Disabling video requires explicit re-enabling which we don't have a good hook for
         Log.d(TAG, "Attached to activity")
     }
 

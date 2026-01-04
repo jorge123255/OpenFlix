@@ -8,8 +8,12 @@ import { LibrariesPage } from './pages/Libraries'
 import { MediaPage } from './pages/Media'
 import { LiveTVPage } from './pages/LiveTV'
 import { EPGEditorSimplePage } from './pages/EPGEditorSimple'
+import { TVGuidePage } from './pages/TVGuide'
 import { DVRPage } from './pages/DVR'
+import { TranscodePage } from './pages/Transcode'
+import { LogsPage } from './pages/Logs'
 import { SettingsPage } from './pages/Settings'
+import { DownloadsPage } from './pages/Downloads'
 import { api } from './api/client'
 
 const queryClient = new QueryClient({
@@ -48,8 +52,12 @@ function App() {
             <Route path="media" element={<MediaPage />} />
             <Route path="livetv" element={<LiveTVPage />} />
             <Route path="livetv/epg-editor" element={<EPGEditorSimplePage />} />
+            <Route path="tvguide" element={<TVGuidePage />} />
             <Route path="dvr" element={<DVRPage />} />
+            <Route path="transcode" element={<TranscodePage />} />
+            <Route path="logs" element={<LogsPage />} />
             <Route path="settings" element={<SettingsPage />} />
+            <Route path="downloads" element={<DownloadsPage />} />
           </Route>
           <Route path="*" element={<Navigate to="/ui" replace />} />
         </Routes>

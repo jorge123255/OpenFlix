@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useState, useMemo, useRef, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Search, Check } from 'lucide-react'
+import { Search, Check, X } from 'lucide-react'
 import { api } from '../api/client'
 
 interface Channel {
@@ -36,6 +36,9 @@ export function EPGEditorSimplePage() {
   const [mappingChannel, setMappingChannel] = useState<string | null>(null)
   const [selectedChannels, setSelectedChannels] = useState<Set<number>>(new Set())
   const [bulkMappingEPGChannel, setBulkMappingEPGChannel] = useState<string | null>(null)
+  const [m3uSearchQuery, setM3uSearchQuery] = useState('')
+  const [m3uModalSearchQuery, setM3uModalSearchQuery] = useState('')
+  const searchInputRef = useRef<HTMLInputElement>(null)
 
   // Fetch all channels
   const { data: channelsData } = useQuery({
@@ -446,6 +449,70 @@ export function EPGEditorSimplePage() {
     ? filteredEPGChannels.filter(ch => !epgChannelMatchesKeywords(ch, selectedKeywords))
     : filteredEPGChannels
 
+  // Filter M3U channels by search query for the mapping dropdown
+  const filteredM3uChannels = useMemo(() => {
+    if (!channelsData) return []
+    if (!m3uSearchQuery.trim()) return channelsData
+    const query = m3uSearchQuery.toLowerCase()
+    return channelsData.filter(ch =>
+      ch.name.toLowerCase().includes(query) ||
+      ch.number.toString().includes(query) ||
+      ch.group?.toLowerCase().includes(query)
+    )
+  }, [channelsData, m3uSearchQuery])
+
+  // Group M3U channels by group/provider
+  const groupedM3uChannels = useMemo(() => {
+    const groups: Record<string, Channel[]> = {}
+    filteredM3uChannels.forEach(channel => {
+      const groupName = channel.group || 'Uncategorized'
+      if (!groups[groupName]) {
+        groups[groupName] = []
+      }
+      groups[groupName].push(channel)
+    })
+    // Sort groups alphabetically
+    return Object.entries(groups).sort((a, b) => a[0].localeCompare(b[0]))
+  }, [filteredM3uChannels])
+
+  // Filter M3U channels for the modal selection
+  const filteredModalM3uChannels = useMemo(() => {
+    if (!channelsData) return []
+    if (!m3uModalSearchQuery.trim()) return channelsData
+    const query = m3uModalSearchQuery.toLowerCase()
+    return channelsData.filter(ch =>
+      ch.name.toLowerCase().includes(query) ||
+      ch.number.toString().includes(query) ||
+      ch.group?.toLowerCase().includes(query)
+    )
+  }, [channelsData, m3uModalSearchQuery])
+
+  // Group filtered modal channels by group/provider
+  const groupedModalM3uChannels = useMemo(() => {
+    const groups: Record<string, Channel[]> = {}
+    filteredModalM3uChannels.forEach(channel => {
+      const groupName = channel.group || 'Uncategorized'
+      if (!groups[groupName]) {
+        groups[groupName] = []
+      }
+      groups[groupName].push(channel)
+    })
+    return Object.entries(groups).sort((a, b) => a[0].localeCompare(b[0]))
+  }, [filteredModalM3uChannels])
+
+  // Focus search input when mapping dropdown opens
+  useEffect(() => {
+    if (mappingChannel && searchInputRef.current) {
+      searchInputRef.current.focus()
+    }
+  }, [mappingChannel])
+
+  // Reset search when closing mapping dropdown
+  const closeMappingDropdown = () => {
+    setMappingChannel(null)
+    setM3uSearchQuery('')
+  }
+
   return (
     <div className="h-screen flex flex-col bg-gray-900">
       {/* Header */}
@@ -473,15 +540,34 @@ export function EPGEditorSimplePage() {
 
         {/* Search */}
         {epgSourceId && (
-          <div className="relative max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search EPG channels or programs..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400"
-            />
+          <div className="flex items-center gap-3">
+            <div className="relative max-w-md flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search EPG channels or programs..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-10 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-gray-700 rounded"
+                  title="Clear search"
+                >
+                  <X className="h-4 w-4 text-gray-400" />
+                </button>
+              )}
+            </div>
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg text-sm font-medium"
+              >
+                Clear Filter - Show All {epgChannels.length} Channels
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -530,12 +616,27 @@ export function EPGEditorSimplePage() {
           </div>
         ) : (
           <div className="max-w-6xl mx-auto">
-            <div className="mb-4 text-sm text-gray-400">
-              Showing {filteredEPGChannels.length} EPG channels
+            <div className="mb-4 flex items-center gap-3">
+              <span className="text-sm text-gray-400">
+                Showing {filteredEPGChannels.length} of {epgChannels.length} EPG channels
+                {searchQuery && (
+                  <span className="ml-1 text-yellow-400">
+                    (filtered by "{searchQuery}")
+                  </span>
+                )}
+              </span>
               {selectedKeywords.length > 0 && suggestedEPGChannels.length > 0 && (
-                <span className="ml-2 text-green-400">
+                <span className="text-sm text-green-400">
                   ({suggestedEPGChannels.length} suggested matches)
                 </span>
+              )}
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="text-sm text-yellow-400 hover:text-yellow-300 underline"
+                >
+                  Clear filter to see all channels
+                </button>
               )}
             </div>
 
@@ -770,44 +871,17 @@ export function EPGEditorSimplePage() {
                           </button>
                         )}
 
-                        {/* Individual mapping controls */}
-                        {mappingChannel === epgChannel.channelId ? (
-                          <div className="space-y-2">
-                            <select
-                              onChange={(e) => {
-                                if (e.target.value) {
-                                  handleMap(epgChannel.channelId, parseInt(e.target.value))
-                                }
-                              }}
-                              className="px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white text-sm min-w-[200px]"
-                              autoFocus
-                            >
-                              <option value="">Select channel...</option>
-                              {channelsData?.map((channel) => (
-                                <option key={channel.id} value={channel.id}>
-                                  {channel.name} (#{channel.number})
-                                </option>
-                              ))}
-                            </select>
-                            <button
-                              onClick={() => setMappingChannel(null)}
-                              className="w-full px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white text-sm rounded"
-                            >
-                              Cancel
-                            </button>
-                          </div>
-                        ) : (
-                          <button
-                            onClick={() => setMappingChannel(epgChannel.channelId)}
-                            className={`px-4 py-2 rounded text-sm font-medium ${
-                              getMappedChannels(epgChannel.channelId).length > 0
-                                ? 'bg-gray-700 hover:bg-gray-600 text-white'
-                                : 'bg-indigo-600 hover:bg-indigo-700 text-white'
-                            }`}
-                          >
-                            {getMappedChannels(epgChannel.channelId).length > 0 ? 'Map Another' : 'Map Channel'}
-                          </button>
-                        )}
+                        {/* Individual mapping button - opens modal */}
+                        <button
+                          onClick={() => setMappingChannel(epgChannel.channelId)}
+                          className={`px-4 py-2 rounded text-sm font-medium ${
+                            getMappedChannels(epgChannel.channelId).length > 0
+                              ? 'bg-gray-700 hover:bg-gray-600 text-white'
+                              : 'bg-indigo-600 hover:bg-indigo-700 text-white'
+                          }`}
+                        >
+                          {getMappedChannels(epgChannel.channelId).length > 0 ? 'Map Another' : 'Map Channel'}
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -820,7 +894,7 @@ export function EPGEditorSimplePage() {
 
       {/* M3U Channel Selection Modal */}
       {bulkMappingEPGChannel === 'selecting' && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setBulkMappingEPGChannel(null)}>
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => { setBulkMappingEPGChannel(null); setM3uModalSearchQuery(''); }}>
           <div className="bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
             {/* Header */}
             <div className="p-4 border-b border-gray-700">
@@ -828,6 +902,31 @@ export function EPGEditorSimplePage() {
               <p className="text-sm text-gray-400 mt-1">
                 Choose the M3U channels you want to map to an EPG channel
               </p>
+              {/* Search input */}
+              <div className="relative mt-3">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search channels by name, number, or group..."
+                  value={m3uModalSearchQuery}
+                  onChange={(e) => setM3uModalSearchQuery(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 bg-gray-700 border border-gray-600 rounded text-white placeholder-gray-400 text-sm"
+                  autoFocus
+                />
+                {m3uModalSearchQuery && (
+                  <button
+                    onClick={() => setM3uModalSearchQuery('')}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-gray-600 rounded"
+                  >
+                    <X className="h-4 w-4 text-gray-400" />
+                  </button>
+                )}
+              </div>
+              {/* Results count */}
+              <div className="text-xs text-gray-400 mt-2">
+                {filteredModalM3uChannels.length} channel{filteredModalM3uChannels.length !== 1 ? 's' : ''} found
+                {m3uModalSearchQuery && ` for "${m3uModalSearchQuery}"`}
+              </div>
             </div>
 
             {/* Channel List */}
@@ -836,9 +935,55 @@ export function EPGEditorSimplePage() {
                 <div className="text-center py-8 text-gray-400">
                   <p>No M3U channels available</p>
                 </div>
+              ) : filteredModalM3uChannels.length === 0 ? (
+                <div className="text-center py-8 text-gray-400">
+                  <p>No channels match your search</p>
+                </div>
+              ) : groupedModalM3uChannels.length > 1 ? (
+                // Show grouped channels when there are multiple groups
+                <div className="space-y-4">
+                  {groupedModalM3uChannels.map(([groupName, channels]) => (
+                    <div key={groupName}>
+                      <div className="px-2 py-1.5 bg-gray-700 rounded text-sm font-semibold text-gray-300 mb-2 flex items-center justify-between">
+                        <span>{groupName}</span>
+                        <span className="text-xs text-gray-400">{channels.length} channels</span>
+                      </div>
+                      <div className="space-y-2">
+                        {channels.map((channel) => (
+                          <label
+                            key={channel.id}
+                            className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors ${
+                              selectedChannels.has(channel.id)
+                                ? 'bg-indigo-900/40 border-2 border-indigo-600'
+                                : 'bg-gray-700/50 border-2 border-transparent hover:bg-gray-700'
+                            }`}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={selectedChannels.has(channel.id)}
+                              onChange={() => toggleChannelSelection(channel.id)}
+                              className="w-4 h-4 rounded border-gray-500 bg-gray-600 text-indigo-600 focus:ring-indigo-500"
+                            />
+                            {channel.logo && (
+                              <img src={channel.logo} alt="" className="w-8 h-8 rounded object-cover" />
+                            )}
+                            <div className="flex-1">
+                              <div className="text-white font-medium">{channel.name}</div>
+                              <div className="text-xs text-gray-400">Channel #{channel.number}</div>
+                            </div>
+                            {channel.epgSourceId && (
+                              <span className="text-xs text-green-400">Already mapped</span>
+                            )}
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               ) : (
+                // Show flat list when there's only one group
                 <div className="space-y-2">
-                  {channelsData.map((channel) => (
+                  {filteredModalM3uChannels.map((channel) => (
                     <label
                       key={channel.id}
                       className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors ${
@@ -876,12 +1021,138 @@ export function EPGEditorSimplePage() {
               </span>
               <div className="flex gap-2">
                 <button
-                  onClick={() => setBulkMappingEPGChannel(null)}
+                  onClick={() => { setBulkMappingEPGChannel(null); setM3uModalSearchQuery(''); }}
                   className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded"
                 >
                   Done
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Individual Channel Mapping Modal */}
+      {mappingChannel && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={closeMappingDropdown}>
+          <div className="bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+            {/* Header */}
+            <div className="p-4 border-b border-gray-700">
+              <h2 className="text-xl font-bold text-white">Map M3U Channel to EPG</h2>
+              <p className="text-sm text-gray-400 mt-1">
+                Select an M3U channel to map to: <span className="text-indigo-400 font-medium">
+                  {epgChannels.find(ch => ch.channelId === mappingChannel)?.currentProgram.callSign || mappingChannel}
+                </span>
+              </p>
+              {/* Search input */}
+              <div className="relative mt-3">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  placeholder="Search M3U channels by name, number, or group..."
+                  value={m3uSearchQuery}
+                  onChange={(e) => setM3uSearchQuery(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 bg-gray-700 border border-gray-600 rounded text-white placeholder-gray-400 text-sm"
+                  autoFocus
+                />
+                {m3uSearchQuery && (
+                  <button
+                    onClick={() => setM3uSearchQuery('')}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-gray-600 rounded"
+                  >
+                    <X className="h-4 w-4 text-gray-400" />
+                  </button>
+                )}
+              </div>
+              {/* Results count */}
+              <div className="text-xs text-gray-400 mt-2">
+                {filteredM3uChannels.length} channel{filteredM3uChannels.length !== 1 ? 's' : ''} found
+                {m3uSearchQuery && ` for "${m3uSearchQuery}"`}
+              </div>
+            </div>
+
+            {/* Channel List */}
+            <div className="flex-1 overflow-y-auto p-4">
+              {!channelsData || channelsData.length === 0 ? (
+                <div className="text-center py-8 text-gray-400">
+                  <p>No M3U channels available</p>
+                </div>
+              ) : filteredM3uChannels.length === 0 ? (
+                <div className="text-center py-8 text-gray-400">
+                  <p>No channels match your search</p>
+                </div>
+              ) : groupedM3uChannels.length > 1 ? (
+                // Show grouped channels when there are multiple groups
+                <div className="space-y-4">
+                  {groupedM3uChannels.map(([groupName, channels]) => (
+                    <div key={groupName}>
+                      <div className="px-2 py-1.5 bg-gray-700 rounded text-sm font-semibold text-gray-300 mb-2 flex items-center justify-between">
+                        <span>{groupName}</span>
+                        <span className="text-xs text-gray-400">{channels.length} channels</span>
+                      </div>
+                      <div className="space-y-1">
+                        {channels.map((channel) => (
+                          <button
+                            key={channel.id}
+                            onClick={() => {
+                              handleMap(mappingChannel, channel.id)
+                              closeMappingDropdown()
+                            }}
+                            className="w-full flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors bg-gray-700/50 hover:bg-indigo-900/40 hover:border-indigo-600 border-2 border-transparent"
+                          >
+                            {channel.logo && (
+                              <img src={channel.logo} alt="" className="w-8 h-8 rounded object-cover" />
+                            )}
+                            <div className="flex-1 text-left">
+                              <div className="text-white font-medium">{channel.name}</div>
+                              <div className="text-xs text-gray-400">Channel #{channel.number}</div>
+                            </div>
+                            {channel.epgSourceId && (
+                              <span className="text-xs text-green-400">Already mapped</span>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                // Show flat list when there's only one group
+                <div className="space-y-1">
+                  {filteredM3uChannels.map((channel) => (
+                    <button
+                      key={channel.id}
+                      onClick={() => {
+                        handleMap(mappingChannel, channel.id)
+                        closeMappingDropdown()
+                      }}
+                      className="w-full flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors bg-gray-700/50 hover:bg-indigo-900/40 hover:border-indigo-600 border-2 border-transparent"
+                    >
+                      {channel.logo && (
+                        <img src={channel.logo} alt="" className="w-8 h-8 rounded object-cover" />
+                      )}
+                      <div className="flex-1 text-left">
+                        <div className="text-white font-medium">{channel.name}</div>
+                        <div className="text-xs text-gray-400">Channel #{channel.number}</div>
+                      </div>
+                      {channel.epgSourceId && (
+                        <span className="text-xs text-green-400">Already mapped</span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="p-4 border-t border-gray-700 flex justify-end">
+              <button
+                onClick={closeMappingDropdown}
+                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded"
+              >
+                Cancel
+              </button>
             </div>
           </div>
         </div>

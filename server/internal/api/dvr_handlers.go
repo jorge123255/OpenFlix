@@ -74,6 +74,107 @@ func (s *Server) scheduleRecording(c *gin.Context) {
 	c.JSON(http.StatusCreated, recording)
 }
 
+// recordFromProgram creates a recording from an EPG program
+func (s *Server) recordFromProgram(c *gin.Context) {
+	userID := c.GetUint("userID")
+
+	var req struct {
+		ChannelID    uint `json:"channelId" binding:"required"`
+		ProgramID    uint `json:"programId" binding:"required"`
+		SeriesRecord bool `json:"seriesRecord"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Validate channel exists
+	var channel models.Channel
+	if err := s.db.First(&channel, req.ChannelID).Error; err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Channel not found"})
+		return
+	}
+
+	// Get the program
+	var program models.Program
+	if err := s.db.First(&program, req.ProgramID).Error; err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Program not found"})
+		return
+	}
+
+	// Create the recording
+	recording := models.Recording{
+		UserID:       userID,
+		ChannelID:    req.ChannelID,
+		ProgramID:    &req.ProgramID,
+		Title:        program.Title,
+		Description:  program.Description,
+		StartTime:    program.Start,
+		EndTime:      program.End,
+		Status:       "scheduled",
+		SeriesRecord: req.SeriesRecord,
+		Category:     program.Category,
+		EpisodeNum:   program.EpisodeNum,
+	}
+
+	if err := s.db.Create(&recording).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create recording"})
+		return
+	}
+
+	// If series recording is requested, schedule future episodes
+	if req.SeriesRecord && program.Title != "" {
+		go s.scheduleFutureSeriesRecordings(userID, channel.ChannelID, program.Title, recording.ID)
+	}
+
+	c.JSON(http.StatusCreated, recording)
+}
+
+// scheduleFutureSeriesRecordings finds and schedules future episodes of a series
+func (s *Server) scheduleFutureSeriesRecordings(userID uint, channelID string, seriesTitle string, parentRecordingID uint) {
+	// Find future programs with the same title on this channel
+	var futurePrograms []models.Program
+	s.db.Where("channel_id = ? AND title = ? AND start > ?", channelID, seriesTitle, time.Now()).
+		Order("start ASC").
+		Limit(20). // Limit to prevent excessive recordings
+		Find(&futurePrograms)
+
+	for _, prog := range futurePrograms {
+		// Check if this program is already scheduled
+		var existingCount int64
+		s.db.Model(&models.Recording{}).
+			Where("user_id = ? AND channel_id = ? AND start_time = ?", userID, prog.ChannelID, prog.Start).
+			Count(&existingCount)
+
+		if existingCount > 0 {
+			continue // Skip already scheduled
+		}
+
+		programID := prog.ID
+		recording := models.Recording{
+			UserID:            userID,
+			ChannelID:         0, // Will need to look up by channel ID
+			ProgramID:         &programID,
+			Title:             prog.Title,
+			Description:       prog.Description,
+			StartTime:         prog.Start,
+			EndTime:           prog.End,
+			Status:            "scheduled",
+			SeriesRecord:      true,
+			SeriesParentID:    &parentRecordingID,
+			Category:          prog.Category,
+			EpisodeNum:        prog.EpisodeNum,
+		}
+
+		// Get the channel ID
+		var channel models.Channel
+		if s.db.Where("channel_id = ?", channelID).First(&channel).Error == nil {
+			recording.ChannelID = channel.ID
+			s.db.Create(&recording)
+		}
+	}
+}
+
 // getRecording returns a single recording
 func (s *Server) getRecording(c *gin.Context) {
 	userID := c.GetUint("userID")
@@ -388,4 +489,46 @@ func (s *Server) streamRecording(c *gin.Context) {
 
 	// Serve the file
 	c.File(recording.FilePath)
+}
+
+// validateRecordingStream validates a channel's stream before scheduling a recording
+func (s *Server) validateRecordingStream(c *gin.Context) {
+	// Can validate by channel ID or direct URL
+	channelID := c.Query("channelId")
+	streamURL := c.Query("url")
+
+	if channelID == "" && streamURL == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Either channelId or url parameter required"})
+		return
+	}
+
+	if s.recorder == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "DVR recorder not available"})
+		return
+	}
+
+	if channelID != "" {
+		id, err := strconv.ParseUint(channelID, 10, 32)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid channel ID"})
+			return
+		}
+
+		result, err := s.recorder.ValidateChannelStream(uint(id))
+		if err != nil {
+			c.JSON(http.StatusNotFound, gin.H{
+				"valid":   false,
+				"error":   result.Error,
+				"details": err.Error(),
+			})
+			return
+		}
+
+		c.JSON(http.StatusOK, result)
+		return
+	}
+
+	// Validate direct URL
+	result := s.recorder.ValidateStream(streamURL)
+	c.JSON(http.StatusOK, result)
 }

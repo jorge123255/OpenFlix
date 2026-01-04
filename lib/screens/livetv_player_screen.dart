@@ -5,16 +5,22 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
+import '../i18n/strings.g.dart';
 import '../models/livetv_channel.dart';
 import '../mpv/mpv.dart';
 import '../providers/media_client_provider.dart';
+import '../services/catchup_service.dart';
 import '../services/channel_history_service.dart';
+import '../services/tuner_sharing_service.dart';
 import '../services/livetv_aspect_ratio_manager.dart';
 import '../services/pip_service.dart';
 import '../services/settings_service.dart';
 import '../services/sleep_timer_service.dart';
+import '../services/last_watched_service.dart';
+import '../widgets/catchup_tv_sheet.dart';
 import '../utils/app_logger.dart';
 import 'dvr_screen.dart';
+import 'epg_guide_screen.dart';
 import '../widgets/channel_history_panel.dart';
 import '../widgets/livetv_volume_overlay.dart';
 import '../widgets/livetv/channel_preview_overlay.dart';
@@ -97,9 +103,23 @@ class _LiveTVPlayerScreenState extends State<LiveTVPlayerScreen> with WidgetsBin
   // Favorites filter
   bool _favoritesFilterActive = false;
 
+  // Catch-up TV
+  bool _startOverAvailable = false;
+  bool _catchUpAvailable = false;
+  StartOverInfo? _startOverInfo;
+
+  // Favorite toggle
+  bool _isTogglingFavorite = false;
+
   // Picture-in-Picture
   final PipService _pipService = PipService();
   bool _isPipMode = false;
+
+  // Tuner sharing
+  TunerSharingService? _tunerSharingService;
+  bool _isSharedStream = false;
+  int _viewerCount = 1;
+  String _sessionId = '';
 
   @override
   void initState() {
@@ -110,14 +130,21 @@ class _LiveTVPlayerScreenState extends State<LiveTVPlayerScreen> with WidgetsBin
     );
     if (_currentChannelIndex < 0) _currentChannelIndex = 0;
 
+    // Generate unique session ID for tuner sharing
+    _sessionId = 'session_${DateTime.now().millisecondsSinceEpoch}_${_currentChannel.id}';
+
     _initializePlayer();
     _startOverlayTimer();
+    _initializeTunerSharing();
 
     // Initialize channel history
     _channelHistory.initialize();
 
     // Load stats overlay preference
     _loadStatsOverlayPreference();
+
+    // Check catch-up availability
+    _checkCatchUpAvailability();
 
     // Refresh current program info every minute
     _programRefreshTimer = Timer.periodic(const Duration(minutes: 1), (_) {
@@ -135,6 +162,8 @@ class _LiveTVPlayerScreenState extends State<LiveTVPlayerScreen> with WidgetsBin
     _bufferingSubscription?.cancel();
     _errorSubscription?.cancel();
     _volumeSubscription?.cancel();
+    _tunerSharingService?.leaveChannel();
+    _tunerSharingService?.dispose();
     _player?.dispose();
     _isBuffering.dispose();
     super.dispose();
@@ -161,6 +190,12 @@ class _LiveTVPlayerScreenState extends State<LiveTVPlayerScreen> with WidgetsBin
         'reconnect=1,reconnect_streamed=1,reconnect_delay_max=2',
       );
 
+      // Configure video upscaling for better quality on large screens
+      final videoUpscaler = settingsService.getVideoUpscaler();
+      await _player!.setProperty('scale', videoUpscaler);
+      await _player!.setProperty('cscale', videoUpscaler);
+      await _player!.setProperty('dscale', 'mitchell'); // Good downscaler
+
       // Ensure audio is enabled by default
       await _player!.setProperty('aid', 'auto');
       await _player!.setProperty('audio-channels', 'auto');
@@ -174,7 +209,7 @@ class _LiveTVPlayerScreenState extends State<LiveTVPlayerScreen> with WidgetsBin
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Playback error: $error'),
+              content: Text(t.liveTV.playbackError(error: error)),
               backgroundColor: Colors.red,
             ),
           );
@@ -204,6 +239,79 @@ class _LiveTVPlayerScreenState extends State<LiveTVPlayerScreen> with WidgetsBin
       await _playChannel(_currentChannel);
     } catch (e) {
       appLogger.e('Failed to initialize player', error: e);
+    }
+  }
+
+  /// Initialize tuner sharing service for stream sharing
+  Future<void> _initializeTunerSharing() async {
+    try {
+      final client = context.read<MediaClientProvider>().client;
+      if (client == null) return;
+
+      _tunerSharingService = TunerSharingService(
+        baseUrl: client.config.baseUrl,
+        token: client.config.headers['Authorization']?.replaceFirst('Bearer ', '') ?? '',
+      );
+
+      // Join the channel
+      await _joinTunerSession();
+    } catch (e) {
+      appLogger.d('Tuner sharing not available: $e');
+    }
+  }
+
+  /// Join tuner session for current channel
+  Future<void> _joinTunerSession() async {
+    if (_tunerSharingService == null) return;
+
+    try {
+      final result = await _tunerSharingService!.joinChannel(
+        channelId: _currentChannel.id,
+        sessionId: _sessionId,
+        deviceName: Platform.operatingSystem,
+        deviceType: Platform.isAndroid || Platform.isIOS ? 'mobile' : 'desktop',
+      );
+
+      if (result.success && mounted) {
+        setState(() {
+          _isSharedStream = result.isShared;
+          _viewerCount = result.viewerCount;
+        });
+
+        if (result.isShared) {
+          appLogger.d('Joined shared tuner session with ${result.viewerCount} viewers');
+        }
+      }
+    } catch (e) {
+      appLogger.d('Failed to join tuner session: $e');
+    }
+  }
+
+  /// Leave current tuner session and join new one for channel switch
+  Future<void> _switchTunerSession(LiveTVChannel newChannel) async {
+    if (_tunerSharingService == null) return;
+
+    try {
+      await _tunerSharingService!.leaveChannel();
+
+      // Update session ID for new channel
+      _sessionId = 'session_${DateTime.now().millisecondsSinceEpoch}_${newChannel.id}';
+
+      final result = await _tunerSharingService!.joinChannel(
+        channelId: newChannel.id,
+        sessionId: _sessionId,
+        deviceName: Platform.operatingSystem,
+        deviceType: Platform.isAndroid || Platform.isIOS ? 'mobile' : 'desktop',
+      );
+
+      if (result.success && mounted) {
+        setState(() {
+          _isSharedStream = result.isShared;
+          _viewerCount = result.viewerCount;
+        });
+      }
+    } catch (e) {
+      appLogger.d('Failed to switch tuner session: $e');
     }
   }
 
@@ -278,8 +386,14 @@ class _LiveTVPlayerScreenState extends State<LiveTVPlayerScreen> with WidgetsBin
         _currentChannel = channel;
       });
 
+      // Switch tuner session for the new channel
+      await _switchTunerSession(channel);
+
       // Add to channel history
       _channelHistory.addChannel(channel.id);
+
+      // Save as last watched channel for docked player
+      _saveLastWatchedChannel(channel);
 
       // Show overlay when changing channels
       _showOverlayTemporarily();
@@ -422,9 +536,9 @@ class _LiveTVPlayerScreenState extends State<LiveTVPlayerScreen> with WidgetsBin
     if (previousChannelId == null) {
       // No previous channel available
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('No previous channel'),
-          duration: Duration(seconds: 1),
+        SnackBar(
+          content: Text(t.liveTV.noPreviousChannel),
+          duration: const Duration(seconds: 1),
           backgroundColor: Colors.grey,
         ),
       );
@@ -444,7 +558,7 @@ class _LiveTVPlayerScreenState extends State<LiveTVPlayerScreen> with WidgetsBin
       // Show notification
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Switched to: ${previousChannel.name}'),
+          content: Text(t.liveTV.switchedTo(channel: previousChannel.name)),
           duration: const Duration(seconds: 2),
           backgroundColor: Colors.blue,
         ),
@@ -468,6 +582,16 @@ class _LiveTVPlayerScreenState extends State<LiveTVPlayerScreen> with WidgetsBin
       _showOverlay = true;
     });
     _startOverlayTimer();
+  }
+
+  /// Save the last watched channel for the docked player feature
+  Future<void> _saveLastWatchedChannel(LiveTVChannel channel) async {
+    try {
+      final lastWatchedService = await LastWatchedService.getInstance();
+      await lastWatchedService.setLastWatchedChannel(channel);
+    } catch (e) {
+      appLogger.e('Failed to save last watched channel', error: e);
+    }
   }
 
   void _toggleOverlay() {
@@ -733,12 +857,197 @@ class _LiveTVPlayerScreenState extends State<LiveTVPlayerScreen> with WidgetsBin
     );
   }
 
+  /// Check if catch-up features are available for the current channel
+  Future<void> _checkCatchUpAvailability() async {
+    try {
+      final catchUpService = CatchUpService.instance;
+      final channelId = _currentChannel.id;
+
+      // Check start-over availability
+      final startOverInfo = await catchUpService.getStartOverInfo(channelId);
+
+      if (mounted) {
+        setState(() {
+          _startOverInfo = startOverInfo;
+          _startOverAvailable = startOverInfo?.available ?? false;
+          // Catch-up is available if server supports it
+          _catchUpAvailable = true; // Assume available, will fail gracefully if not
+        });
+      }
+    } catch (e) {
+      appLogger.d('Catch-up not available: $e');
+      if (mounted) {
+        setState(() {
+          _startOverAvailable = false;
+          _catchUpAvailable = false;
+        });
+      }
+    }
+  }
+
+  /// Handle Start Over - restart current program from beginning
+  Future<void> _handleStartOver() async {
+    if (_startOverInfo == null || !_startOverAvailable) return;
+
+    try {
+      final catchUpService = CatchUpService.instance;
+      final channelId = _currentChannel.id;
+
+      // Get the time-shift URL
+      final offsetSeconds = _startOverInfo!.offsetSeconds ?? 0;
+      final timeshiftUrl = await catchUpService.getTimeShiftUrl(channelId, offsetSeconds);
+
+      if (timeshiftUrl != null && _player != null) {
+        // Switch to the time-shifted stream
+        await _player!.open(Media(timeshiftUrl));
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(t.liveTV.startingFromBeginning),
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      appLogger.e('Failed to start over: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(t.liveTV.failedToStartOver(error: e.toString())),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    }
+  }
+
+  /// Show catch-up TV sheet with available programs
+  Future<void> _showCatchUpSheet() async {
+    final channelId = _currentChannel.id;
+
+    final selectedProgram = await showCatchUpTVSheet(
+      context,
+      channelId: channelId,
+      channelName: _currentChannel.name,
+    );
+
+    if (selectedProgram != null && mounted) {
+      try {
+        final catchUpService = CatchUpService.instance;
+
+        // Calculate offset from program start to now
+        final offsetSeconds = DateTime.now().difference(selectedProgram.startTime).inSeconds;
+        final timeshiftUrl = await catchUpService.getTimeShiftUrl(channelId, offsetSeconds);
+
+        if (timeshiftUrl != null && _player != null) {
+          await _player!.open(Media(timeshiftUrl));
+
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(t.liveTV.playingProgram(title: selectedProgram.title)),
+                duration: const Duration(seconds: 2),
+              ),
+            );
+          }
+        }
+      } catch (e) {
+        appLogger.e('Failed to play catch-up program: $e');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(t.liveTV.failedToPlayProgram(error: e.toString())),
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        }
+      }
+    }
+  }
+
+  Future<void> _toggleFavorite() async {
+    if (_isTogglingFavorite) return;
+
+    setState(() {
+      _isTogglingFavorite = true;
+    });
+
+    try {
+      final client = context.read<MediaClientProvider>().client;
+      if (client == null) return;
+
+      final updatedChannel = await client.toggleChannelFavorite(
+        _currentChannel.id,
+      );
+
+      if (updatedChannel != null && mounted) {
+        setState(() {
+          _currentChannel = updatedChannel;
+          // Update in the channels list too
+          final index = widget.channels.indexWhere(
+            (c) => c.id == _currentChannel.id,
+          );
+          if (index >= 0) {
+            widget.channels[index] = updatedChannel;
+          }
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              updatedChannel.isFavorite
+                  ? t.liveTV.addedToFavorites
+                  : t.liveTV.removedFromFavorites,
+            ),
+            duration: const Duration(seconds: 1),
+          ),
+        );
+      }
+    } catch (e) {
+      appLogger.e('Failed to toggle favorite', error: e);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(t.liveTV.failedToUpdateFavorite(error: e.toString())),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isTogglingFavorite = false;
+        });
+      }
+    }
+  }
+
+  void _showEPG() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const EPGGuideScreen(),
+      ),
+    );
+  }
+
+  void _switchToChannel(LiveTVChannel channel) {
+    final channelIndex = widget.channels.indexWhere((c) => c.id == channel.id);
+    if (channelIndex >= 0) {
+      _currentChannelIndex = channelIndex;
+      _playChannel(channel);
+      // Check catch-up availability for new channel
+      _checkCatchUpAvailability();
+    }
+  }
+
   Future<void> _togglePip() async {
     if (!_pipService.isSupported) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Picture-in-Picture not supported on this platform'),
-          duration: Duration(seconds: 2),
+        SnackBar(
+          content: Text(t.liveTV.pipNotSupported),
+          duration: const Duration(seconds: 2),
         ),
       );
       return;
@@ -754,8 +1063,8 @@ class _LiveTVPlayerScreenState extends State<LiveTVPlayerScreen> with WidgetsBin
         SnackBar(
           content: Text(
             _isPipMode
-                ? 'Entered Picture-in-Picture mode'
-                : 'Exited Picture-in-Picture mode',
+                ? t.liveTV.enteredPipMode
+                : t.liveTV.exitedPipMode,
           ),
           duration: const Duration(seconds: 1),
         ),
@@ -823,7 +1132,7 @@ class _LiveTVPlayerScreenState extends State<LiveTVPlayerScreen> with WidgetsBin
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Aspect Ratio: ${newMode.displayName}'),
+          content: Text(t.liveTV.aspectRatioChanged(mode: newMode.displayName)),
           duration: const Duration(seconds: 2),
           backgroundColor: Colors.blue,
         ),
@@ -910,10 +1219,10 @@ class _LiveTVPlayerScreenState extends State<LiveTVPlayerScreen> with WidgetsBin
 
         if (result == true) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Recording scheduled'),
+            SnackBar(
+              content: Text(t.dvr.recordingScheduled),
               backgroundColor: Colors.green,
-              duration: Duration(seconds: 2),
+              duration: const Duration(seconds: 2),
             ),
           );
         }
@@ -936,8 +1245,8 @@ class _LiveTVPlayerScreenState extends State<LiveTVPlayerScreen> with WidgetsBin
 
     if (result == true && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Recording scheduled'),
+        SnackBar(
+          content: Text(t.dvr.recordingScheduled),
           backgroundColor: Colors.green,
         ),
       );
@@ -972,7 +1281,11 @@ class _LiveTVPlayerScreenState extends State<LiveTVPlayerScreen> with WidgetsBin
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Platform.isMacOS ? Colors.transparent : Colors.black,
+      // On Android, the video is rendered on a native SurfaceView behind Flutter.
+      // We need the background to be transparent so the video shows through.
+      // On macOS, we also need transparency for the Metal layer.
+      // On other platforms (Windows, Linux), video is rendered via native windows.
+      backgroundColor: (Platform.isAndroid || Platform.isMacOS) ? Colors.transparent : Colors.black,
       body: Focus(
         autofocus: true,
         onKeyEvent: _handleKeyEvent,
@@ -1021,10 +1334,57 @@ class _LiveTVPlayerScreenState extends State<LiveTVPlayerScreen> with WidgetsBin
                 },
               ),
 
+              // Tuner sharing indicator
+              if (_isSharedStream && _viewerCount > 1)
+                Positioned(
+                  top: 16,
+                  left: 16,
+                  child: AnimatedOpacity(
+                    opacity: _showOverlay ? 1.0 : 0.0,
+                    duration: const Duration(milliseconds: 200),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.green.withValues(alpha: 0.9),
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.3),
+                            blurRadius: 8,
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.people,
+                            color: Colors.white,
+                            size: 16,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            '$_viewerCount watching',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+
               // Channel info overlay
               if (_showOverlay)
                 LiveTVPlayerControls(
                   channel: _currentChannel,
+                  allChannels: widget.channels,
                   sleepTimer: _sleepTimer,
                   isRecordingScheduled: _isRecordingScheduled,
                   isSchedulingRecording: _isSchedulingRecording,
@@ -1040,6 +1400,14 @@ class _LiveTVPlayerScreenState extends State<LiveTVPlayerScreen> with WidgetsBin
                   onToggleHistoryPanel: _toggleHistoryPanel,
                   onShowSleepTimer: _showSleepTimer,
                   onTogglePip: _togglePip,
+                  onToggleFavorite: _toggleFavorite,
+                  isTogglingFavorite: _isTogglingFavorite,
+                  onShowEPG: _showEPG,
+                  onSwitchToChannel: _switchToChannel,
+                  startOverAvailable: _startOverAvailable,
+                  catchUpAvailable: _catchUpAvailable,
+                  onStartOver: _startOverAvailable ? _handleStartOver : null,
+                  onShowCatchUp: _catchUpAvailable ? _showCatchUpSheet : null,
                 ),
 
               // Channel number input display
