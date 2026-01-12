@@ -113,6 +113,7 @@ func (r *Recorder) scheduleLoop() {
 		case <-ticker.C:
 			r.checkScheduledRecordings()
 			r.processSeriesRules()
+			r.processTeamPassesInternal()
 		}
 	}
 }
@@ -224,6 +225,123 @@ func (r *Recorder) processSeriesRules() {
 	}
 }
 
+// processTeamPassesInternal is the internal team pass processing (called by scheduler)
+func (r *Recorder) processTeamPassesInternal() int {
+	return r.processTeamPassesForUser(0) // 0 means all users
+}
+
+// ProcessTeamPasses is the public interface for processing team passes
+// Returns the number of recordings scheduled
+func (r *Recorder) ProcessTeamPasses() int {
+	return r.processTeamPassesInternal()
+}
+
+// processTeamPassesForUser processes team passes for a specific user (0 = all users)
+func (r *Recorder) processTeamPassesForUser(userID uint) int {
+	var teamPasses []models.TeamPass
+	query := r.db.Where("enabled = ?", true)
+	if userID > 0 {
+		query = query.Where("user_id = ?", userID)
+	}
+	query.Find(&teamPasses)
+
+	now := time.Now()
+	scheduledCount := 0
+
+	for _, tp := range teamPasses {
+		// Find matching sports programs in the next 7 days
+		var programs []models.Program
+		query := r.db.Where("is_sports = ? AND start > ? AND start < ?", true, now, now.Add(7*24*time.Hour))
+
+		// Match team name in teams field or title
+		teamSearch := tp.TeamName
+		query = query.Where("teams LIKE ? OR title LIKE ?", "%"+teamSearch+"%", "%"+teamSearch+"%")
+
+		// Match league if specified
+		if tp.League != "" {
+			query = query.Where("league = ?", tp.League)
+		}
+
+		// Filter by channels if specified
+		if tp.ChannelIDs != "" {
+			channelIDs := strings.Split(tp.ChannelIDs, ",")
+			query = query.Where("channel_id IN ?", channelIDs)
+		}
+
+		query.Find(&programs)
+
+		for _, prog := range programs {
+			// Check if recording already exists for this program
+			var existing models.Recording
+			if r.db.Where("program_id = ? AND user_id = ?", prog.ID, tp.UserID).First(&existing).Error == nil {
+				continue // Already scheduled
+			}
+
+			// Find channel by EPG ID
+			var channel models.Channel
+			if r.db.Where("channel_id = ?", prog.ChannelID).First(&channel).Error != nil {
+				continue
+			}
+
+			// Apply padding
+			startTime := prog.Start.Add(-time.Duration(tp.PrePadding) * time.Minute)
+			endTime := prog.End.Add(time.Duration(tp.PostPadding) * time.Minute)
+
+			// Check for conflicts with other recordings
+			var conflict models.Recording
+			if r.db.Where("user_id = ? AND status IN ? AND start_time < ? AND end_time > ?",
+				tp.UserID, []string{"scheduled", "recording"}, endTime, startTime).First(&conflict).Error == nil {
+				// There's a conflict - skip for now (could add priority-based conflict resolution)
+				logger.Log.Warnf("Team pass conflict: %s overlaps with %s", prog.Title, conflict.Title)
+				continue
+			}
+
+			recording := models.Recording{
+				UserID:       tp.UserID,
+				ChannelID:    channel.ID,
+				ProgramID:    &prog.ID,
+				Title:        prog.Title,
+				Description:  prog.Description,
+				StartTime:    startTime,
+				EndTime:      endTime,
+				Status:       "scheduled",
+				Category:     "Sports",
+				SeriesRecord: true, // Mark as auto-recorded
+			}
+
+			if err := r.db.Create(&recording).Error; err != nil {
+				logger.Log.Errorf("Failed to create team pass recording: %v", err)
+				continue
+			}
+
+			logger.Log.Infof("Team pass scheduled recording: %s on %s at %s",
+				prog.Title, channel.Name, prog.Start.Format("2006-01-02 15:04"))
+			scheduledCount++
+		}
+
+		// Clean up old recordings if KeepCount is set
+		if tp.KeepCount > 0 {
+			// Get recordings from this team pass that are completed
+			var recordings []models.Recording
+			r.db.Where("user_id = ? AND category = ? AND status = ?",
+				tp.UserID, "Sports", "completed").
+				Where("title LIKE ?", "%"+tp.TeamName+"%").
+				Order("start_time DESC").
+				Offset(tp.KeepCount).
+				Find(&recordings)
+
+			for _, rec := range recordings {
+				if rec.FilePath != "" {
+					os.Remove(rec.FilePath)
+				}
+				r.db.Delete(&rec)
+			}
+		}
+	}
+
+	return scheduledCount
+}
+
 // startRecording starts a recording
 func (r *Recorder) startRecording(recording *models.Recording) error {
 	r.mutex.Lock()
@@ -242,6 +360,9 @@ func (r *Recorder) startRecording(recording *models.Recording) error {
 		r.db.Save(recording)
 		return fmt.Errorf("channel not found: %w", err)
 	}
+
+	// Verify/refresh EPG metadata at actual recording start time
+	r.verifyRecordingMetadata(recording, &channel)
 
 	// Validate stream before starting
 	r.mutex.Unlock() // Release lock during validation (network I/O)
@@ -584,4 +705,93 @@ func (r *Recorder) ValidateChannelStream(channelID uint) (StreamValidationResult
 	}
 
 	return r.ValidateStream(channel.StreamURL), nil
+}
+
+// verifyRecordingMetadata checks EPG at recording start and updates metadata if needed
+// This helps catch EPG mismatches by re-checking what's actually on at start time
+func (r *Recorder) verifyRecordingMetadata(recording *models.Recording, channel *models.Channel) {
+	now := time.Now()
+
+	// Find the current program on this channel from EPG
+	var currentProgram models.Program
+	err := r.db.Where("channel_id = ? AND start <= ? AND end > ?",
+		channel.ChannelID, now, now).First(&currentProgram).Error
+
+	if err != nil {
+		logger.Log.WithFields(map[string]interface{}{
+			"recording_id": recording.ID,
+			"channel_id":   channel.ID,
+			"channel_name": channel.Name,
+			"epg_id":       channel.ChannelID,
+		}).Warn("No EPG program found for channel at recording start time")
+		return
+	}
+
+	// Log the EPG match for debugging
+	logger.Log.WithFields(map[string]interface{}{
+		"recording_id":    recording.ID,
+		"scheduled_title": recording.Title,
+		"current_program": currentProgram.Title,
+		"channel_name":    channel.Name,
+		"epg_channel_id":  channel.ChannelID,
+		"program_start":   currentProgram.Start,
+		"program_end":     currentProgram.End,
+	}).Info("EPG verification at recording start")
+
+	// If the current program title differs significantly from scheduled, update it
+	// This catches EPG mismatches where wrong metadata was used
+	if recording.Title != currentProgram.Title {
+		logger.Log.WithFields(map[string]interface{}{
+			"recording_id": recording.ID,
+			"old_title":    recording.Title,
+			"new_title":    currentProgram.Title,
+		}).Warn("Recording title mismatch detected - updating from current EPG")
+
+		// Update recording metadata from current program
+		recording.Title = currentProgram.Title
+		recording.Description = currentProgram.Description
+		recording.Category = currentProgram.Category
+		recording.EpisodeNum = currentProgram.EpisodeNum
+
+		// Update program reference
+		recording.ProgramID = &currentProgram.ID
+
+		r.db.Save(recording)
+	}
+}
+
+// RefreshChannelEPGMapping re-detects EPG mapping for a channel
+// Call this when EPG data seems mismatched
+func (r *Recorder) RefreshChannelEPGMapping(channelID uint) error {
+	var channel models.Channel
+	if err := r.db.First(&channel, channelID).Error; err != nil {
+		return fmt.Errorf("channel not found: %w", err)
+	}
+
+	// Log current mapping
+	logger.Log.WithFields(map[string]interface{}{
+		"channel_id":   channel.ID,
+		"channel_name": channel.Name,
+		"current_epg":  channel.ChannelID,
+		"tvg_id":       channel.TVGId,
+	}).Info("Refreshing EPG mapping for channel")
+
+	// If channel has a TVG ID from M3U, try to use that
+	if channel.TVGId != "" && channel.TVGId != channel.ChannelID {
+		// Check if programs exist with this TVG ID
+		var count int64
+		r.db.Model(&models.Program{}).Where("channel_id = ?", channel.TVGId).Count(&count)
+		if count > 0 {
+			channel.ChannelID = channel.TVGId
+			r.db.Save(&channel)
+			logger.Log.WithFields(map[string]interface{}{
+				"channel_id":  channel.ID,
+				"new_epg_id":  channel.TVGId,
+				"program_cnt": count,
+			}).Info("Updated channel EPG mapping from TVG ID")
+			return nil
+		}
+	}
+
+	return nil
 }

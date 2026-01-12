@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"sort"
 	"strconv"
@@ -179,7 +180,7 @@ func (s *Server) getChannels(c *gin.Context) {
 
 	// Filter by source
 	if sourceID := c.Query("sourceId"); sourceID != "" {
-		query = query.Where("m3u_source_id = ?", sourceID)
+		query = query.Where("m3_u_source_id = ?", sourceID)
 	}
 
 	// Filter by group
@@ -406,6 +407,85 @@ func (s *Server) unmapChannel(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Channel unmapped successfully"})
 }
 
+// refreshChannelEPG re-detects EPG mapping for a single channel
+func (s *Server) refreshChannelEPG(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid channel ID"})
+		return
+	}
+
+	var channel models.Channel
+	if err := s.db.First(&channel, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Channel not found"})
+		return
+	}
+
+	oldEPGID := channel.ChannelID
+
+	// Get EPG channels for matching
+	epgChannels := s.getEPGChannelList()
+	if len(epgChannels) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "No EPG data available for matching"})
+		return
+	}
+
+	// Create matcher and find best match
+	matcher := livetv.NewChannelMatcher(epgChannels)
+	matches := matcher.FindMatches(&channel)
+
+	var newMatch *livetv.MatchResult
+	if len(matches) > 0 && matches[0].Confidence >= 0.5 {
+		newMatch = &matches[0]
+		// Apply the new mapping
+		channel.ChannelID = newMatch.EPGChannelID
+		channel.EPGCallSign = newMatch.EPGCallSign
+		channel.EPGChannelNo = newMatch.EPGNumber
+		channel.MatchConfidence = newMatch.Confidence
+		channel.MatchStrategy = newMatch.MatchStrategy
+		channel.AutoDetected = true
+
+		if err := s.db.Save(&channel).Error; err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save channel mapping"})
+			return
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"channel":    channel,
+		"oldEPGID":   oldEPGID,
+		"newMatch":   newMatch,
+		"allMatches": matches,
+	})
+}
+
+// getEPGChannelList returns all EPG channels for matching
+func (s *Server) getEPGChannelList() []livetv.EPGChannelInfo {
+	// Get unique channel IDs from programs
+	var programs []models.Program
+	s.db.Select("DISTINCT channel_id, call_sign, channel_no, affiliate_name").
+		Where("end > ?", time.Now()).
+		Find(&programs)
+
+	channels := make([]livetv.EPGChannelInfo, 0, len(programs))
+	seen := make(map[string]bool)
+
+	for _, p := range programs {
+		if p.ChannelID == "" || seen[p.ChannelID] {
+			continue
+		}
+		seen[p.ChannelID] = true
+		channels = append(channels, livetv.EPGChannelInfo{
+			ChannelID:     p.ChannelID,
+			CallSign:      p.CallSign,
+			Number:        p.ChannelNo,
+			AffiliateName: p.AffiliateName,
+		})
+	}
+
+	return channels
+}
+
 // autoDetectChannels automatically detects EPG mappings for channels
 func (s *Server) autoDetectChannels(c *gin.Context) {
 	// Get optional source filter
@@ -423,7 +503,7 @@ func (s *Server) autoDetectChannels(c *gin.Context) {
 	// Get channels to process
 	query := s.db.Model(&models.Channel{})
 	if sourceID > 0 {
-		query = query.Where("m3u_source_id = ?", sourceID)
+		query = query.Where("m3_u_source_id = ?", sourceID)
 	}
 
 	var channels []models.Channel
@@ -440,11 +520,12 @@ func (s *Server) autoDetectChannels(c *gin.Context) {
 		sourceNames[src.ID] = strings.ToLower(src.Name)
 	}
 
-	// Get all channel IDs that have programs in the database
+	// Get all channel IDs that have CURRENT or FUTURE programs in the database
+	// Only consider channels with programs ending after now as "mapped"
 	var channelIDsWithPrograms []string
 	s.db.Model(&models.Program{}).
 		Distinct("channel_id").
-		Where("channel_id != ''").
+		Where("channel_id != '' AND end > ?", time.Now()).
 		Pluck("channel_id", &channelIDsWithPrograms)
 
 	// Create a map for fast lookup
@@ -453,10 +534,17 @@ func (s *Server) autoDetectChannels(c *gin.Context) {
 		hasPrograms[id] = true
 	}
 
-	// Track EPG channel IDs that are already assigned to prevent duplicates
+	// Track EPG channel IDs that are already assigned within the SAME source to prevent duplicates
+	// Different M3U sources can share the same EPG channel ID (e.g., Fubo and Directv can both use "COMEDYCENT")
 	usedEPGChannelIDs := make(map[string]bool)
 	var existingChannels []models.Channel
-	s.db.Where("channel_id != ''").Find(&existingChannels)
+	if sourceID > 0 {
+		// Only track EPG IDs used by channels from the same source
+		s.db.Where("channel_id != '' AND m3_u_source_id = ?", sourceID).Find(&existingChannels)
+	} else {
+		// When no source filter, track all used EPG IDs
+		s.db.Where("channel_id != ''").Find(&existingChannels)
+	}
 	for _, ch := range existingChannels {
 		usedEPGChannelIDs[ch.ChannelID] = true
 	}
@@ -499,12 +587,17 @@ func (s *Server) autoDetectChannels(c *gin.Context) {
 			Find(&programs)
 
 		for _, p := range programs {
+			// Use channel_id as callsign/name fallback when not provided
+			callSign := p.CallSign
+			if callSign == "" {
+				callSign = p.ChannelID
+			}
 			epgChannels = append(epgChannels, livetv.EPGChannelInfo{
 				ChannelID:     p.ChannelID,
-				CallSign:      p.CallSign,
+				CallSign:      callSign,
 				Number:        p.ChannelNo,
 				AffiliateName: p.AffiliateName,
-				Name:          p.CallSign, // Use call sign as name
+				Name:          callSign,
 			})
 		}
 	} else {
@@ -521,12 +614,17 @@ func (s *Server) autoDetectChannels(c *gin.Context) {
 			Scan(&programs)
 
 		for _, p := range programs {
+			// Use channel_id as callsign/name fallback when not provided
+			callSign := p.CallSign
+			if callSign == "" {
+				callSign = p.ChannelID
+			}
 			epgChannels = append(epgChannels, livetv.EPGChannelInfo{
 				ChannelID:     p.ChannelID,
-				CallSign:      p.CallSign,
+				CallSign:      callSign,
 				Number:        p.ChannelNo,
 				AffiliateName: p.AffiliateName,
-				Name:          p.CallSign,
+				Name:          callSign,
 			})
 		}
 	}
@@ -795,18 +893,27 @@ func (s *Server) getGuide(c *gin.Context) {
 	var channels []models.Channel
 	channelQuery := s.db.Where("enabled = ?", true).Order("number, name")
 	if sourceID != "" {
-		channelQuery = channelQuery.Where("m3u_source_id = ?", sourceID)
+		channelQuery = channelQuery.Where("m3_u_source_id = ?", sourceID)
 	}
 	if err := channelQuery.Find(&channels).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch channels"})
 		return
 	}
 
-	// Get channel IDs for EPG query
+	// Get channel IDs for EPG query - use TVGId which matches program channel_id
+	// Build a map from EPG channel ID to our channel for response mapping
 	channelIDs := make([]string, 0, len(channels))
+	epgToChannelID := make(map[string]string) // Maps EPG ID (TVGId) to channel.ChannelID
 	for _, ch := range channels {
-		if ch.ChannelID != "" {
-			channelIDs = append(channelIDs, ch.ChannelID)
+		// Use TVGId for EPG lookup (this matches program.channel_id)
+		// Fall back to ChannelID if TVGId is not set
+		epgID := ch.TVGId
+		if epgID == "" {
+			epgID = ch.ChannelID
+		}
+		if epgID != "" {
+			channelIDs = append(channelIDs, epgID)
+			epgToChannelID[epgID] = ch.ChannelID
 		}
 	}
 
@@ -818,14 +925,35 @@ func (s *Server) getGuide(c *gin.Context) {
 		return
 	}
 
-	// Group programs by channel
+	// Group programs by their EPG channel ID (tvgId)
+	// Don't map back to channelId because multiple channels can share the same tvgId
+	// Frontend matches programs using channel.tvgId
 	programsByChannel := make(map[string][]models.Program)
 	for _, prog := range programs {
 		programsByChannel[prog.ChannelID] = append(programsByChannel[prog.ChannelID], prog)
 	}
 
+	// Get M3U source names for provider display in guide
+	var m3uSources []models.M3USource
+	s.db.Find(&m3uSources)
+	sourceNames := make(map[uint]string)
+	for _, src := range m3uSources {
+		sourceNames[src.ID] = src.Name
+	}
+
+	// Enrich channels with source names
+	type GuideChannel struct {
+		models.Channel
+		SourceName string `json:"sourceName,omitempty"`
+	}
+	enrichedChannels := make([]GuideChannel, len(channels))
+	for i, ch := range channels {
+		enrichedChannels[i].Channel = ch
+		enrichedChannels[i].SourceName = sourceNames[ch.M3USourceID]
+	}
+
 	response := gin.H{
-		"channels": channels,
+		"channels": enrichedChannels,
 		"programs": programsByChannel,
 		"start":    start,
 		"end":      end,
@@ -866,9 +994,13 @@ func (s *Server) getChannelGuide(c *gin.Context) {
 		return
 	}
 
-	// Get programs
+	// Get programs - use TVGId for EPG lookup (matches program.channel_id)
+	epgID := channel.TVGId
+	if epgID == "" {
+		epgID = channel.ChannelID
+	}
 	epgParser := livetv.NewEPGParser(s.db)
-	programs, err := epgParser.GetGuide(start, end, []string{channel.ChannelID})
+	programs, err := epgParser.GetGuide(start, end, []string{epgID})
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch programs"})
 		return
@@ -937,12 +1069,17 @@ func (s *Server) getWhatsOnNow(c *gin.Context) {
 			MatchStrategy:   ch.MatchStrategy,
 			AutoDetected:    ch.AutoDetected,
 		}
-		if ch.ChannelID != "" {
-			if program, err := epgParser.GetCurrentProgram(ch.ChannelID); err == nil {
+		// Use TVGId for EPG lookup (matches program.channel_id), fall back to ChannelID
+		epgID := ch.TVGId
+		if epgID == "" {
+			epgID = ch.ChannelID
+		}
+		if epgID != "" {
+			if program, err := epgParser.GetCurrentProgram(epgID); err == nil {
 				item.NowPlaying = program
 				item.HasEpgData = true
 			}
-			if program, err := epgParser.GetNextProgram(ch.ChannelID); err == nil {
+			if program, err := epgParser.GetNextProgram(epgID); err == nil {
 				item.NextProgram = program
 			}
 		}
@@ -2355,17 +2492,41 @@ func (s *Server) getEPGChannels(c *gin.Context) {
 				// For Gracenote sources, filter by channel_id prefix
 				if epgSource.ProviderType == "gracenote" && epgSource.GracenoteAffiliate != "" {
 					prefix := fmt.Sprintf("gracenote-%s-%%", epgSource.GracenoteAffiliate)
+					log.Printf("📺 EPG Channels query: source=%s, affiliate=%s, prefix=%s", epgSource.Name, epgSource.GracenoteAffiliate, prefix)
+
+					// Debug: count total programs and matching programs
+					var totalCount int64
+					s.db.Model(&models.Program{}).Count(&totalCount)
+					var matchingCount int64
+					s.db.Model(&models.Program{}).Where("channel_id LIKE ?", prefix).Count(&matchingCount)
+					log.Printf("📊 Programs in DB: total=%d, matching prefix=%d", totalCount, matchingCount)
+
+					// Sample some channel_ids to see what patterns exist
+					var sampleIDs []string
+					s.db.Model(&models.Program{}).Distinct("channel_id").Limit(5).Pluck("channel_id", &sampleIDs)
+					log.Printf("📋 Sample channel_ids in DB: %v", sampleIDs)
+
 					query = query.Where("channel_id LIKE ?", prefix)
 				} else if epgSource.ProviderType == "xmltv" {
-					// For XMLTV sources, filter by mapped channels
-					var channels []models.Channel
-					s.db.Where("epg_source_id = ?", sourceID).Find(&channels)
-					if len(channels) > 0 {
-						channelIDs := make([]string, len(channels))
-						for i, ch := range channels {
-							channelIDs[i] = ch.ChannelID
+					// For XMLTV sources, show all non-Gracenote channels
+					// NOTE: Since Programs table doesn't track epg_source_id, we can't
+					// distinguish which programs belong to which XMLTV source.
+					// Just exclude Gracenote channels (which have their own prefix).
+					log.Printf("📺 XMLTV EPG source: %s - showing all non-Gracenote channels", epgSource.Name)
+
+					sourceName := strings.ToLower(epgSource.Name)
+					if strings.Contains(sourceName, "fubo") {
+						// For Fubo, use known channel mappings
+						fuboIDs := make([]string, 0, len(livetv.FuboTVMappings))
+						for id := range livetv.FuboTVMappings {
+							fuboIDs = append(fuboIDs, id)
 						}
-						query = query.Where("channel_id IN ?", channelIDs)
+						if len(fuboIDs) > 0 {
+							query = query.Where("channel_id IN ?", fuboIDs)
+						}
+					} else {
+						// For all other XMLTV sources (including DIRECTV), show all non-Gracenote channels
+						query = query.Where("channel_id NOT LIKE ?", "gracenote-%")
 					}
 				}
 			}
@@ -2390,9 +2551,18 @@ func (s *Server) getEPGChannels(c *gin.Context) {
 		var program models.Program
 		s.db.Where("channel_id = ?", channelID).Order("start DESC").First(&program)
 
+		// Get call sign from program or fallback to Fubo channel names
+		callSign := program.CallSign
+		if callSign == "" {
+			// Try Fubo channel names lookup
+			if name, ok := livetv.FuboChannelNames[channelID]; ok {
+				callSign = name
+			}
+		}
+
 		channels = append(channels, EPGChannel{
 			ChannelID:     channelID,
-			CallSign:      program.CallSign,
+			CallSign:      callSign,
 			ChannelNo:     program.ChannelNo,
 			AffiliateName: program.AffiliateName,
 			SampleTitle:   program.Title,
