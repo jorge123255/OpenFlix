@@ -93,3 +93,8 @@ recordings/
 
 # Transcoding temp files
 transcode/
+
+# APK files (too large for GitHub)
+*.apk
+server/downloads/*.apk
+android-native/app/build/
