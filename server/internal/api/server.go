@@ -39,6 +39,8 @@ type Server struct {
 	timeshiftBuffer   *livetv.TimeShiftBuffer
 	archiveManager    *livetv.ArchiveManager
 	metadataScheduler *metadata.Scheduler
+	epgEnricher       *livetv.EPGEnricher
+	dvrEnricher       *dvr.Enricher
 }
 
 // NewServer creates a new API server
@@ -48,6 +50,8 @@ func NewServer(cfg *config.Config, db *gorm.DB) *Server {
 
 	// Initialize TMDB agent and metadata scheduler if API key is configured
 	var metadataScheduler *metadata.Scheduler
+	var epgEnricher *livetv.EPGEnricher
+	var dvrEnricher *dvr.Enricher
 	if cfg.Library.TMDBApiKey != "" {
 		tmdbAgent := metadata.NewTMDBAgent(cfg.Library.TMDBApiKey, db, dataDir)
 		scanner.SetTMDBAgent(tmdbAgent)
@@ -57,6 +61,14 @@ func NewServer(cfg *config.Config, db *gorm.DB) *Server {
 		metadataScheduler = metadata.NewScheduler(db, tmdbAgent, 2)
 		metadataScheduler.Start()
 		logger.Info("Metadata auto-refresh enabled (every 2 minutes)")
+
+		// Initialize EPG enricher for program artwork
+		epgEnricher = livetv.NewEPGEnricher(db, tmdbAgent)
+		logger.Info("EPG artwork enrichment enabled")
+
+		// Initialize DVR enricher for recording metadata
+		dvrEnricher = dvr.NewEnricher(db, tmdbAgent)
+		logger.Info("DVR metadata enrichment enabled")
 	}
 
 	// Initialize transcoder
@@ -142,8 +154,16 @@ func NewServer(cfg *config.Config, db *gorm.DB) *Server {
 		timeshiftBuffer:   timeshiftBuffer,
 		archiveManager:    archiveManager,
 		metadataScheduler: metadataScheduler,
+		epgEnricher:       epgEnricher,
+		dvrEnricher:       dvrEnricher,
 	}
 	s.setupRouter()
+
+	// Start background EPG enrichment if TMDB is configured
+	if epgEnricher != nil {
+		epgEnricher.StartBackgroundEnrichment()
+	}
+
 	return s
 }
 
@@ -167,12 +187,26 @@ func (s *Server) reinitializeTMDBAgent() {
 			s.metadataScheduler = metadata.NewScheduler(s.db, tmdbAgent, 2)
 			s.metadataScheduler.Start()
 		}
+
+		// Stop old enricher if running
+		if s.epgEnricher != nil {
+			s.epgEnricher.StopBackgroundEnrichment()
+		}
+
+		// Initialize and start EPG enricher for program artwork
+		s.epgEnricher = livetv.NewEPGEnricher(s.db, tmdbAgent)
+		s.epgEnricher.StartBackgroundEnrichment()
 		logger.Info("TMDB metadata agent re-initialized with new API key")
+		logger.Info("EPG artwork enrichment enabled")
 	} else {
 		s.scanner.SetTMDBAgent(nil)
 		if s.metadataScheduler != nil {
 			s.metadataScheduler.SetTMDBAgent(nil)
 		}
+		if s.epgEnricher != nil {
+			s.epgEnricher.StopBackgroundEnrichment()
+		}
+		s.epgEnricher = nil
 		logger.Info("TMDB metadata agent disabled (no API key)")
 	}
 }
@@ -319,7 +353,15 @@ func (s *Server) setupRouter() {
 	hubs.Use(s.authRequired())
 	{
 		hubs.GET("/sections/:id", s.getLibraryHubs)
+		hubs.GET("/sections/:id/streaming-services", s.getStreamingServices)
+		hubs.GET("/home/streaming-services", s.getAllStreamingServices)
 		hubs.GET("/search", s.search)
+
+		// TMDB trending/popular endpoints
+		hubs.GET("/trending", s.getTrending)
+		hubs.GET("/popular/movies", s.getPopularMovies)
+		hubs.GET("/popular/tv", s.getPopularTV)
+		hubs.GET("/top-rated/movies", s.getTopRatedMovies)
 	}
 
 	// ============ Playback API ============
@@ -392,6 +434,7 @@ func (s *Server) setupRouter() {
 		livetv.DELETE("/channels/:id/epg-mapping", s.unmapChannel) // Remove EPG mapping
 		livetv.GET("/channels/:id/suggestions", s.getSuggestedMatches) // Get suggested EPG matches
 		livetv.POST("/channels/:id/favorite", s.toggleChannelFavorite)
+		livetv.POST("/channels/:id/refresh-epg", s.refreshChannelEPG) // Refresh EPG mapping
 
 		// Guide (EPG)
 		livetv.GET("/guide", s.getGuide)
@@ -467,6 +510,8 @@ func (s *Server) setupRouter() {
 		livetv.POST("/xtream/sources/:id/import-vod", s.importXtreamVOD)
 		livetv.POST("/xtream/sources/:id/import-series", s.importXtreamSeries)
 		livetv.POST("/xtream/sources/:id/import-all", s.importAllXtreamContent)
+		// M3U8 proxy for Xtream VOD (handles nested playlists)
+		livetv.GET("/xtream/proxy", s.proxyXtreamM3U8)
 	}
 
 	// ============ DVR API ============
@@ -477,6 +522,7 @@ func (s *Server) setupRouter() {
 		dvrGroup.GET("/recordings", s.getRecordings)
 		dvrGroup.POST("/recordings", s.scheduleRecording)
 		dvrGroup.POST("/recordings/from-program", s.recordFromProgram)
+		dvrGroup.GET("/recordings/stats", s.getActiveRecordingStats) // Must be before :id route
 		dvrGroup.GET("/recordings/:id", s.getRecording)
 		dvrGroup.DELETE("/recordings/:id", s.deleteRecording)
 
@@ -496,6 +542,57 @@ func (s *Server) setupRouter() {
 
 		// Stream Validation (validates stream before scheduling)
 		dvrGroup.GET("/validate-stream", s.validateRecordingStream)
+
+		// Conflict Detection
+		dvrGroup.GET("/conflicts", s.getRecordingConflicts)
+		dvrGroup.POST("/conflicts/check", s.checkRecordingConflict)
+		dvrGroup.POST("/conflicts/resolve", s.resolveConflict)
+	}
+
+	// ============ On Later API (Browse upcoming content) ============
+	onlater := r.Group("/api/onlater")
+	onlater.Use(s.authRequired())
+	{
+		onlater.GET("/movies", s.handleGetOnLaterMovies)
+		onlater.GET("/sports", s.handleGetOnLaterSports)
+		onlater.GET("/kids", s.handleGetOnLaterKids)
+		onlater.GET("/news", s.handleGetOnLaterNews)
+		onlater.GET("/premieres", s.handleGetOnLaterPremieres)
+		onlater.GET("/tonight", s.handleGetOnLaterTonight)
+		onlater.GET("/week", s.handleGetOnLaterWeek)
+		onlater.GET("/search", s.handleSearchOnLater)
+		onlater.GET("/channels/:id", s.handleGetOnLaterByChannel)
+		onlater.GET("/stats", s.handleGetOnLaterStats)
+
+		// EPG enrichment
+		onlater.POST("/enrich", s.handleEnrichEPG)
+
+		// Sports teams
+		onlater.GET("/leagues", s.handleGetLeagues)
+		onlater.GET("/teams/:league", s.handleGetTeamsByLeague)
+		onlater.GET("/teams/search", s.handleSearchTeams)
+	}
+
+	// ============ Team Pass API (Auto-record sports teams) ============
+	teampass := r.Group("/api/teampass")
+	teampass.Use(s.authRequired())
+	{
+		teampass.GET("", s.handleListTeamPasses)
+		teampass.POST("", s.handleCreateTeamPass)
+		teampass.GET("/:id", s.handleGetTeamPass)
+		teampass.PUT("/:id", s.handleUpdateTeamPass)
+		teampass.DELETE("/:id", s.handleDeleteTeamPass)
+		teampass.GET("/:id/upcoming", s.handleGetTeamPassUpcoming)
+		teampass.PUT("/:id/toggle", s.handleToggleTeamPass)
+
+		// Stats and processing
+		teampass.GET("/stats", s.handleGetTeamPassStats)
+		teampass.POST("/process", s.handleProcessTeamPasses)
+
+		// Team search
+		teampass.GET("/teams/search", s.handleSearchSportsTeams)
+		teampass.GET("/leagues", s.handleGetSportsLeagues)
+		teampass.GET("/leagues/:league/teams", s.handleGetLeagueTeams)
 	}
 
 	// ============ Gracenote EPG API ============
