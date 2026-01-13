@@ -91,8 +91,9 @@ server/config.yaml
 # DVR recordings (local storage)
 recordings/
 
-# Transcoding temp files
-transcode/
+# Transcoding temp files (not source code)
+/transcode/
+server/transcode/
 
 # APK files (too large for GitHub)
 *.apk
