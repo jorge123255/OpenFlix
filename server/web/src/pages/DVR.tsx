@@ -1208,7 +1208,9 @@ function CalendarView({ recordings }: { recordings: Recording[] }) {
       .filter(r => r.status === 'scheduled' || r.status === 'recording')
       .filter(r => {
         const startTime = new Date(r.startTime)
-        return startTime >= now && startTime <= weekFromNow
+        const endTime = r.endTime ? new Date(r.endTime) : new Date(startTime.getTime() + 60 * 60 * 1000)
+        // Include if recording hasn't ended yet and starts within the week
+        return endTime >= now && startTime <= weekFromNow
       })
       .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime())
   }, [recordings])
