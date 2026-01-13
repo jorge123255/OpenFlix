@@ -110,8 +110,12 @@ func (s *EPGScheduler) ForceRefresh() {
 
 // scheduleLoop is the main scheduler loop
 func (s *EPGScheduler) scheduleLoop() {
-	// Initial check - refresh if any source hasn't been refreshed recently
-	s.checkAndRefreshStale()
+	// Delay initial check to allow server to start up and handle requests
+	// Run the initial stale check after 2 minutes to not block startup
+	go func() {
+		time.Sleep(2 * time.Minute)
+		s.checkAndRefreshStale()
+	}()
 
 	ticker := time.NewTicker(s.refreshInterval)
 	defer ticker.Stop()

@@ -26,6 +26,7 @@ type Config struct {
 	Library   LibraryConfig   `yaml:"library"`
 	LiveTV    LiveTVConfig    `yaml:"livetv"`
 	DVR       DVRConfig       `yaml:"dvr"`
+	VOD       VODConfig       `yaml:"vod"`
 	Transcode TranscodeConfig `yaml:"transcode"`
 	Logging   LoggingConfig   `yaml:"logging"`
 }
@@ -88,6 +89,12 @@ type DVRConfig struct {
 	ComskipINIPath   string `yaml:"comskip_ini_path"`   // path to comskip INI config
 }
 
+// VODConfig holds VOD (Video On Demand) download settings
+type VODConfig struct {
+	Enabled bool   `yaml:"enabled"`
+	APIURL  string `yaml:"api_url"` // External VOD API URL (e.g., http://192.168.1.82:7070)
+}
+
 // TranscodeConfig holds transcoding settings
 type TranscodeConfig struct {
 	Enabled           bool   `yaml:"enabled"`
@@ -136,6 +143,10 @@ func DefaultConfig() *Config {
 			CommercialDetect: true,  // enabled by default, but only runs if comskip is found
 			ComskipPath:      "",    // auto-detect
 			ComskipINIPath:   "",    // use defaults
+		},
+		VOD: VODConfig{
+			Enabled: true,
+			APIURL:  "", // Must be configured in settings
 		},
 		Transcode: TranscodeConfig{
 			Enabled:       true,
@@ -235,6 +246,10 @@ func loadEnvOverrides(cfg *Config) {
 	// DVR settings
 	if recordingDir := os.Getenv("OPENFLIX_RECORDING_DIR"); recordingDir != "" {
 		cfg.DVR.RecordingDir = recordingDir
+	}
+	// VOD settings
+	if vodAPIURL := os.Getenv("OPENFLIX_VOD_API_URL"); vodAPIURL != "" {
+		cfg.VOD.APIURL = vodAPIURL
 	}
 }
 

@@ -9,7 +9,10 @@ import { MediaPage } from './pages/Media'
 import { LiveTVPage } from './pages/LiveTV'
 import { EPGEditorSimplePage } from './pages/EPGEditorSimple'
 import { TVGuidePage } from './pages/TVGuide'
+import OnLaterPage from './pages/OnLater'
+import TeamPassPage from './pages/TeamPass'
 import { DVRPage } from './pages/DVR'
+import { VODPage } from './pages/VOD'
 import { TranscodePage } from './pages/Transcode'
 import { LogsPage } from './pages/Logs'
 import { SettingsPage } from './pages/Settings'
@@ -53,7 +56,10 @@ function App() {
             <Route path="livetv" element={<LiveTVPage />} />
             <Route path="livetv/epg-editor" element={<EPGEditorSimplePage />} />
             <Route path="tvguide" element={<TVGuidePage />} />
+            <Route path="onlater" element={<OnLaterPage />} />
+            <Route path="teampass" element={<TeamPassPage />} />
             <Route path="dvr" element={<DVRPage />} />
+            <Route path="vod" element={<VODPage />} />
             <Route path="transcode" element={<TranscodePage />} />
             <Route path="logs" element={<LogsPage />} />
             <Route path="settings" element={<SettingsPage />} />

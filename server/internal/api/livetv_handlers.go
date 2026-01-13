@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"sort"
 	"strconv"
 	"strings"
@@ -3180,4 +3181,282 @@ func (s *Server) getArchiveStatus(c *gin.Context) {
 		"totalChannels":   len(channels),
 		"activeRecording": len(statuses),
 	})
+}
+
+// proxyChannelStream proxies a channel's stream for web playback
+func (s *Server) proxyChannelStream(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid channel ID"})
+		return
+	}
+
+	var channel models.Channel
+	if err := s.db.First(&channel, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Channel not found"})
+		return
+	}
+
+	if channel.StreamURL == "" {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Channel has no stream URL"})
+		return
+	}
+
+	// Create request to upstream stream
+	req, err := http.NewRequestWithContext(c.Request.Context(), "GET", channel.StreamURL, nil)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create request"})
+		return
+	}
+
+	// Copy relevant headers from original request
+	if ua := c.GetHeader("User-Agent"); ua != "" {
+		req.Header.Set("User-Agent", ua)
+	}
+
+	// Don't follow redirects - we need to handle HLS redirects specially
+	// because HLS CDNs often use IP-bound tokens
+	client := &http.Client{
+		Timeout: 0, // No timeout for streaming
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			return http.ErrUseLastResponse // Don't follow redirects
+		},
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		c.JSON(http.StatusBadGateway, gin.H{"error": "Failed to connect to stream"})
+		return
+	}
+	defer resp.Body.Close()
+
+	// If upstream returns a redirect to an HLS stream, proxy it
+	if resp.StatusCode == http.StatusFound || resp.StatusCode == http.StatusMovedPermanently || resp.StatusCode == http.StatusTemporaryRedirect {
+		location := resp.Header.Get("Location")
+		if location != "" && (strings.Contains(location, ".m3u8") || strings.Contains(location, "m3u8")) {
+			// Proxy the HLS manifest
+			s.proxyHLSManifest(c, location, channel.ID)
+			return
+		}
+		// Non-HLS redirect - pass through
+		c.Header("Access-Control-Allow-Origin", "*")
+		c.Redirect(resp.StatusCode, location)
+		return
+	}
+
+	// Set response headers
+	ct := resp.Header.Get("Content-Type")
+	if ct == "" {
+		ct = "video/mp2t"
+	}
+	c.Header("Content-Type", ct)
+	c.Header("Cache-Control", "no-cache, no-store, must-revalidate")
+	c.Header("Access-Control-Allow-Origin", "*")
+
+	c.Status(resp.StatusCode)
+
+	// Stream the response
+	io.Copy(c.Writer, resp.Body)
+}
+
+// proxyHLSManifest fetches an HLS manifest and rewrites URLs to proxy through our server
+func (s *Server) proxyHLSManifest(c *gin.Context, manifestURL string, channelID uint) {
+	client := &http.Client{Timeout: 30 * time.Second}
+
+	req, err := http.NewRequestWithContext(c.Request.Context(), "GET", manifestURL, nil)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create request"})
+		return
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		c.JSON(http.StatusBadGateway, gin.H{"error": "Failed to fetch manifest"})
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		c.JSON(resp.StatusCode, gin.H{"error": "Upstream returned error"})
+		return
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read manifest"})
+		return
+	}
+
+	manifest := string(body)
+
+	// Parse base URL for resolving relative URLs
+	parsedURL, err := url.Parse(manifestURL)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse manifest URL"})
+		return
+	}
+	baseURL := parsedURL.Scheme + "://" + parsedURL.Host + parsedURL.Path[:strings.LastIndex(parsedURL.Path, "/")+1]
+
+	// Rewrite URLs in manifest to proxy through our server
+	lines := strings.Split(manifest, "\n")
+	var rewrittenLines []string
+
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+
+		// Skip empty lines and comments (but keep #EXT tags)
+		if trimmed == "" {
+			rewrittenLines = append(rewrittenLines, line)
+			continue
+		}
+
+		// If it's a URL line (not starting with #), rewrite it
+		if !strings.HasPrefix(trimmed, "#") {
+			var fullURL string
+			if strings.HasPrefix(trimmed, "http://") || strings.HasPrefix(trimmed, "https://") {
+				fullURL = trimmed
+			} else {
+				// Relative URL - resolve against base
+				fullURL = baseURL + trimmed
+			}
+			// Rewrite to proxy URL
+			proxyURL := fmt.Sprintf("/livetv/channels/%d/hls-segment?url=%s", channelID, url.QueryEscape(fullURL))
+			rewrittenLines = append(rewrittenLines, proxyURL)
+		} else if strings.HasPrefix(trimmed, "#EXT-X-STREAM-INF") || strings.HasPrefix(trimmed, "#EXT-X-MEDIA") {
+			// These tags may contain URI attributes that need rewriting
+			if strings.Contains(trimmed, "URI=\"") {
+				// Extract and rewrite URI
+				rewritten := rewriteHLSURIAttribute(trimmed, baseURL, channelID)
+				rewrittenLines = append(rewrittenLines, rewritten)
+			} else {
+				rewrittenLines = append(rewrittenLines, line)
+			}
+		} else {
+			rewrittenLines = append(rewrittenLines, line)
+		}
+	}
+
+	c.Header("Content-Type", "application/vnd.apple.mpegurl")
+	c.Header("Access-Control-Allow-Origin", "*")
+	c.Header("Cache-Control", "no-cache")
+	c.String(http.StatusOK, strings.Join(rewrittenLines, "\n"))
+}
+
+// rewriteHLSURIAttribute rewrites URI attributes in HLS tags
+func rewriteHLSURIAttribute(line, baseURL string, channelID uint) string {
+	// Find URI="..." and rewrite
+	uriStart := strings.Index(line, "URI=\"")
+	if uriStart == -1 {
+		return line
+	}
+	uriStart += 5 // Skip past URI="
+	uriEnd := strings.Index(line[uriStart:], "\"")
+	if uriEnd == -1 {
+		return line
+	}
+	uriEnd += uriStart
+
+	uri := line[uriStart:uriEnd]
+	var fullURL string
+	if strings.HasPrefix(uri, "http://") || strings.HasPrefix(uri, "https://") {
+		fullURL = uri
+	} else {
+		fullURL = baseURL + uri
+	}
+	proxyURL := fmt.Sprintf("/livetv/channels/%d/hls-segment?url=%s", channelID, url.QueryEscape(fullURL))
+
+	return line[:uriStart] + proxyURL + line[uriEnd:]
+}
+
+// proxyHLSSegment proxies an HLS segment request
+func (s *Server) proxyHLSSegment(c *gin.Context) {
+	segmentURL := c.Query("url")
+	if segmentURL == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Missing url parameter"})
+		return
+	}
+
+	client := &http.Client{Timeout: 60 * time.Second}
+
+	req, err := http.NewRequestWithContext(c.Request.Context(), "GET", segmentURL, nil)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create request"})
+		return
+	}
+
+	// Forward range header if present
+	if rangeHeader := c.GetHeader("Range"); rangeHeader != "" {
+		req.Header.Set("Range", rangeHeader)
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		c.JSON(http.StatusBadGateway, gin.H{"error": "Failed to fetch segment"})
+		return
+	}
+	defer resp.Body.Close()
+
+	// Check if this is another m3u8 (variant playlist)
+	contentType := resp.Header.Get("Content-Type")
+	if strings.Contains(contentType, "mpegurl") || strings.Contains(segmentURL, ".m3u8") {
+		// It's a playlist - rewrite it
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read playlist"})
+			return
+		}
+
+		// Get channel ID from path
+		idStr := c.Param("id")
+		channelID, _ := strconv.ParseUint(idStr, 10, 32)
+
+		// Parse base URL
+		parsedURL, _ := url.Parse(segmentURL)
+		baseURL := parsedURL.Scheme + "://" + parsedURL.Host + parsedURL.Path[:strings.LastIndex(parsedURL.Path, "/")+1]
+
+		manifest := string(body)
+		lines := strings.Split(manifest, "\n")
+		var rewrittenLines []string
+
+		for _, line := range lines {
+			trimmed := strings.TrimSpace(line)
+			if trimmed == "" {
+				rewrittenLines = append(rewrittenLines, line)
+				continue
+			}
+			if !strings.HasPrefix(trimmed, "#") {
+				var fullURL string
+				if strings.HasPrefix(trimmed, "http://") || strings.HasPrefix(trimmed, "https://") {
+					fullURL = trimmed
+				} else {
+					fullURL = baseURL + trimmed
+				}
+				proxyURL := fmt.Sprintf("/livetv/channels/%d/hls-segment?url=%s", channelID, url.QueryEscape(fullURL))
+				rewrittenLines = append(rewrittenLines, proxyURL)
+			} else {
+				rewrittenLines = append(rewrittenLines, line)
+			}
+		}
+
+		c.Header("Content-Type", "application/vnd.apple.mpegurl")
+		c.Header("Access-Control-Allow-Origin", "*")
+		c.Header("Cache-Control", "no-cache")
+		c.String(http.StatusOK, strings.Join(rewrittenLines, "\n"))
+		return
+	}
+
+	// Copy response headers
+	if contentType != "" {
+		c.Header("Content-Type", contentType)
+	}
+	if contentRange := resp.Header.Get("Content-Range"); contentRange != "" {
+		c.Header("Content-Range", contentRange)
+	}
+	if contentLength := resp.Header.Get("Content-Length"); contentLength != "" {
+		c.Header("Content-Length", contentLength)
+	}
+	c.Header("Access-Control-Allow-Origin", "*")
+
+	c.Status(resp.StatusCode)
+	io.Copy(c.Writer, resp.Body)
 }

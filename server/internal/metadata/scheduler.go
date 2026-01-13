@@ -76,13 +76,14 @@ func (s *Scheduler) Stop() {
 
 // refreshMissingMetadata finds and updates items without metadata
 func (s *Scheduler) refreshMissingMetadata() {
-	if s.tmdb == nil {
+	if s.tmdb == nil || !s.tmdb.IsConfigured() {
 		return
 	}
 
-	// Find movies and shows without poster (thumb) - indicates missing metadata
+	// Find movies and shows without summary/description - indicates missing metadata
+	// VOD items may have posters from Xtream but lack descriptions
 	var items []models.MediaItem
-	s.db.Where("type IN ? AND (thumb IS NULL OR thumb = '')", []string{"movie", "show"}).
+	s.db.Where("type IN ? AND (summary IS NULL OR summary = '')", []string{"movie", "show"}).
 		Order("added_at DESC").
 		Limit(50). // Process 50 at a time to avoid overloading
 		Find(&items)

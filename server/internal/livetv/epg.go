@@ -18,12 +18,16 @@ import (
 
 // EPGParser parses XMLTV EPG data
 type EPGParser struct {
-	db *gorm.DB
+	db         *gorm.DB
+	classifier *ContentClassifier
 }
 
 // NewEPGParser creates a new EPG parser
 func NewEPGParser(db *gorm.DB) *EPGParser {
-	return &EPGParser{db: db}
+	return &EPGParser{
+		db:         db,
+		classifier: NewContentClassifier(),
+	}
 }
 
 // XMLTV represents the root element of an XMLTV file
@@ -246,6 +250,8 @@ func (p *EPGParser) ImportPrograms(sourceID uint, xmltv *XMLTV) (int, error) {
 			existing.Category = category
 			existing.EpisodeNum = episodeNum
 			existing.Icon = icon
+			// Classify content
+			p.classifier.ClassifyProgram(&existing)
 			p.db.Save(&existing)
 		} else {
 			// Create new
@@ -259,6 +265,8 @@ func (p *EPGParser) ImportPrograms(sourceID uint, xmltv *XMLTV) (int, error) {
 				EpisodeNum:  episodeNum,
 				Icon:        icon,
 			}
+			// Classify content
+			p.classifier.ClassifyProgram(&program)
 			p.db.Create(&program)
 			imported++
 		}
@@ -438,6 +446,8 @@ func (p *EPGParser) ImportProgramsFromEPGSource(source *models.EPGSource, xmltv 
 			existing.Category = category
 			existing.EpisodeNum = episodeNum
 			existing.Icon = icon
+			// Classify content
+			p.classifier.ClassifyProgram(&existing)
 			p.db.Save(&existing)
 		} else {
 			// Create new
@@ -451,6 +461,8 @@ func (p *EPGParser) ImportProgramsFromEPGSource(source *models.EPGSource, xmltv 
 				EpisodeNum:  episodeNum,
 				Icon:        icon,
 			}
+			// Classify content
+			p.classifier.ClassifyProgram(&program)
 			p.db.Create(&program)
 			imported++
 		}
@@ -483,16 +495,25 @@ func (p *EPGParser) ImportProgramsFromGracenote(source *models.EPGSource) (int, 
 		return 0, 0, fmt.Errorf("failed to fetch Gracenote listings: %w", err)
 	}
 
-	// Delete old programs (before today)
-	p.db.Where("start < ?", now.Add(-24*time.Hour)).Delete(&models.Program{})
-
-	// Count unique channels
+	// Count unique channels first to build the list
 	channelSet := make(map[string]bool)
+	for _, channel := range gridResp.Channels {
+		channelID := fmt.Sprintf("gracenote-%s-%s", source.GracenoteAffiliate, channel.ChannelID)
+		channelSet[channelID] = true
+	}
+
+	// Delete old programs only for THIS source's channels (not globally!)
+	if len(channelSet) > 0 {
+		channelIDs := make([]string, 0, len(channelSet))
+		for chID := range channelSet {
+			channelIDs = append(channelIDs, chID)
+		}
+		p.db.Where("channel_id IN ? AND start < ?", channelIDs, now.Add(-24*time.Hour)).Delete(&models.Program{})
+	}
 
 	// Process each channel and its programs
 	for i, channel := range gridResp.Channels {
 		channelID := fmt.Sprintf("gracenote-%s-%s", source.GracenoteAffiliate, channel.ChannelID)
-		channelSet[channelID] = true
 
 		// Debug: print first channel to see what data we're getting
 		if i == 0 {
@@ -548,6 +569,8 @@ func (p *EPGParser) ImportProgramsFromGracenote(source *models.EPGSource) (int, 
 				existing.CallSign = channel.CallSign
 				existing.ChannelNo = channel.ChannelNo
 				existing.AffiliateName = channel.AffiliateName
+				// Classify content
+				p.classifier.ClassifyProgram(&existing)
 				p.db.Save(&existing)
 			} else {
 				// Create new
@@ -563,6 +586,8 @@ func (p *EPGParser) ImportProgramsFromGracenote(source *models.EPGSource) (int, 
 					Category:      category,
 					Icon:          icon,
 				}
+				// Classify content
+				p.classifier.ClassifyProgram(&program)
 				p.db.Create(&program)
 				imported++
 			}

@@ -1,11 +1,14 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Clock, Calendar, Video, Circle, X, ChevronLeft, ChevronRight, Link2, Search, Wand2, RefreshCw } from 'lucide-react'
+import { Clock, Calendar, Video, Circle, X, ChevronLeft, ChevronRight, Link2, Search, Wand2, RefreshCw, Volume2, VolumeX, Maximize, Loader, Play, Pause, SkipBack, SkipForward } from 'lucide-react'
 import { api } from '../api/client'
+import Hls from 'hls.js'
+import mpegts from 'mpegts.js'
 
 interface Channel {
   id: number
   channelId: string
+  tvgId?: string  // TVG ID used for EPG matching
   number: number
   name: string
   logo?: string
@@ -13,6 +16,7 @@ interface Channel {
   sourceName?: string
   enabled?: boolean
   epgSourceId?: number
+  streamUrl?: string
 }
 
 interface Program {
@@ -98,12 +102,16 @@ function ProgramBlock({
   width,
   onClick,
   isNow,
+  isScheduled,
+  isRecording,
 }: {
   program: Program
   startOffset: number
   width: number
   onClick: () => void
   isNow: boolean
+  isScheduled?: boolean
+  isRecording?: boolean
 }) {
   const categoryColor = categoryColors[program.category || ''] || 'bg-gray-600'
   const minWidth = 60
@@ -118,8 +126,16 @@ function ProgramBlock({
         left: `${startOffset}px`,
         width: `${Math.max(width - 4, minWidth)}px`,
       }}
-      title={`${program.title}\n${formatTime(new Date(program.start))} - ${formatTime(new Date(program.end))}`}
+      title={`${program.title}\n${formatTime(new Date(program.start))} - ${formatTime(new Date(program.end))}${isScheduled ? '\n🔴 Scheduled to record' : ''}`}
     >
+      {/* Recording indicator */}
+      {(isScheduled || isRecording) && (
+        <div className="absolute top-1 right-1 z-10">
+          <div className={`w-3 h-3 rounded-full flex items-center justify-center ${isRecording ? 'bg-red-600 animate-pulse' : 'bg-red-500'}`}>
+            <Circle className="w-2 h-2 text-white fill-current" />
+          </div>
+        </div>
+      )}
       <div className="p-2 h-full flex flex-col justify-center">
         <div className="font-semibold text-white text-sm leading-tight truncate">{program.title}</div>
         {width > 120 && (
@@ -142,13 +158,19 @@ function ProgramModal({
   channel,
   onClose,
   onRecord,
+  onWatchNow,
   isRecording,
+  scheduledStatus,
+  onCancelRecording,
 }: {
   program: Program
   channel?: Channel
   onClose: () => void
   onRecord: (seriesRecord: boolean) => void
+  onWatchNow: () => void
   isRecording: boolean
+  scheduledStatus?: 'scheduled' | 'recording' | null
+  onCancelRecording?: () => void
 }) {
   const start = new Date(program.start)
   const end = new Date(program.end)
@@ -156,6 +178,7 @@ function ProgramModal({
   const isNow = new Date() >= start && new Date() < end
   const isFuture = new Date() < start
   const categoryColor = categoryColors[program.category || ''] || 'bg-gray-600'
+  const isScheduledToRecord = scheduledStatus === 'scheduled' || scheduledStatus === 'recording'
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4" onClick={onClose}>
@@ -167,7 +190,17 @@ function ProgramModal({
           >
             <X className="h-5 w-5 text-white" />
           </button>
-          {isNow && (
+          {scheduledStatus === 'recording' ? (
+            <span className="absolute top-3 left-3 flex items-center gap-1.5 px-2.5 py-1 bg-red-600 text-white text-xs font-bold rounded-full">
+              <Circle className="h-2 w-2 fill-current animate-pulse" />
+              RECORDING
+            </span>
+          ) : scheduledStatus === 'scheduled' ? (
+            <span className="absolute top-3 left-3 flex items-center gap-1.5 px-2.5 py-1 bg-red-500 text-white text-xs font-bold rounded-full">
+              <Circle className="h-2 w-2 fill-current" />
+              SCHEDULED
+            </span>
+          ) : isNow && (
             <span className="absolute top-3 left-3 flex items-center gap-1.5 px-2.5 py-1 bg-red-600 text-white text-xs font-bold rounded-full">
               <Circle className="h-2 w-2 fill-current animate-pulse" />
               LIVE NOW
@@ -209,16 +242,16 @@ function ProgramModal({
           )}
 
           <div className="flex gap-3 mt-6 pt-4 border-t border-gray-700">
-            {isNow && (
+            {isNow && channel?.streamUrl && (
               <button
-                onClick={onClose}
+                onClick={onWatchNow}
                 className="flex-1 flex items-center justify-center gap-2 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold transition-colors"
               >
                 <Video className="h-5 w-5" />
                 Watch Now
               </button>
             )}
-            {(isNow || isFuture) && (
+            {(isNow || isFuture) && !isScheduledToRecord && (
               <>
                 <button
                   onClick={() => onRecord(false)}
@@ -236,6 +269,305 @@ function ProgramModal({
                 </button>
               </>
             )}
+            {isScheduledToRecord && onCancelRecording && (
+              <button
+                onClick={onCancelRecording}
+                className="flex-1 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold transition-colors"
+              >
+                {scheduledStatus === 'recording' ? 'Stop Recording' : 'Cancel Recording'}
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Live TV Video Player Modal
+function LiveTVPlayer({
+  channel,
+  program,
+  onClose,
+}: {
+  channel: Channel
+  program?: Program
+  onClose: () => void
+}) {
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const hlsRef = useRef<Hls | null>(null)
+  const mpegtsRef = useRef<mpegts.Player | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [isMuted, setIsMuted] = useState(false)
+  const [isPlaying, setIsPlaying] = useState(true)
+  const [showControls, setShowControls] = useState(true)
+  const controlsTimeoutRef = useRef<number | null>(null)
+
+  // Playback control handlers
+  const togglePlayPause = () => {
+    const video = videoRef.current
+    if (!video) return
+    if (video.paused) {
+      video.play().catch(() => {})
+      setIsPlaying(true)
+    } else {
+      video.pause()
+      setIsPlaying(false)
+    }
+  }
+
+  const seekBackward = () => {
+    const video = videoRef.current
+    if (!video) return
+    video.currentTime = Math.max(0, video.currentTime - 10)
+  }
+
+  const seekForward = () => {
+    const video = videoRef.current
+    if (!video) return
+    video.currentTime = video.currentTime + 10
+  }
+
+  useEffect(() => {
+    const video = videoRef.current
+    if (!video || !channel.streamUrl) return
+
+    setIsLoading(true)
+    setError(null)
+
+    // Use absolute proxy URL for web worker compatibility
+    const proxyUrl = `${window.location.origin}/livetv/channels/${channel.id}/stream`
+
+    // Helper to start mpegts player
+    const startMpegts = (url: string) => {
+      if (!mpegts.isSupported()) {
+        setError('Your browser does not support MPEG-TS playback')
+        setIsLoading(false)
+        return
+      }
+
+      const player = mpegts.createPlayer({
+        type: 'mpegts',
+        isLive: true,
+        url: url,
+      }, {
+        enableWorker: false,
+        lazyLoad: false,
+        autoCleanupSourceBuffer: true,
+        autoCleanupMaxBackwardDuration: 30,
+        autoCleanupMinBackwardDuration: 15,
+        stashInitialSize: 512 * 1024,
+        enableStashBuffer: true,
+        liveBufferLatencyChasing: false,
+        liveBufferLatencyMaxLatency: 5,
+        liveBufferLatencyMinRemain: 1,
+      })
+      mpegtsRef.current = player
+      player.attachMediaElement(video)
+      player.load()
+
+      player.on(mpegts.Events.LOADING_COMPLETE, () => {
+        setIsLoading(false)
+      })
+      player.on(mpegts.Events.MEDIA_INFO, () => {
+        setIsLoading(false)
+        video.play().catch(() => {})
+      })
+      player.on(mpegts.Events.ERROR, (errorType: string, errorDetail: string) => {
+        setError(`Stream error: ${errorType} - ${errorDetail}`)
+        setIsLoading(false)
+      })
+    }
+
+    // Try HLS first (server will proxy HLS streams), fall back to mpegts
+    if (Hls.isSupported()) {
+      const hls = new Hls({
+        enableWorker: true,
+        lowLatencyMode: true,
+      })
+      hlsRef.current = hls
+
+      let hlsFailed = false
+
+      hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        setIsLoading(false)
+        video.play().catch(() => {})
+      })
+
+      hls.on(Hls.Events.ERROR, (_, data) => {
+        if (data.fatal && !hlsFailed) {
+          hlsFailed = true
+          console.log('HLS failed, trying mpegts.js:', data.details)
+          hls.destroy()
+          hlsRef.current = null
+          startMpegts(proxyUrl)
+        }
+      })
+
+      hls.loadSource(proxyUrl)
+      hls.attachMedia(video)
+    } else {
+      startMpegts(proxyUrl)
+    }
+
+    return () => {
+      if (hlsRef.current) {
+        hlsRef.current.destroy()
+        hlsRef.current = null
+      }
+      if (mpegtsRef.current) {
+        mpegtsRef.current.destroy()
+        mpegtsRef.current = null
+      }
+    }
+  }, [channel.id, channel.streamUrl])
+
+  // Auto-hide controls
+  useEffect(() => {
+    if (showControls) {
+      if (controlsTimeoutRef.current) {
+        clearTimeout(controlsTimeoutRef.current)
+      }
+      controlsTimeoutRef.current = window.setTimeout(() => {
+        setShowControls(false)
+      }, 3000)
+    }
+    return () => {
+      if (controlsTimeoutRef.current) {
+        clearTimeout(controlsTimeoutRef.current)
+      }
+    }
+  }, [showControls])
+
+  const handleMouseMove = () => setShowControls(true)
+
+  const toggleFullscreen = () => {
+    const container = document.getElementById('livetv-player-container')
+    if (container) {
+      if (document.fullscreenElement) {
+        document.exitFullscreen()
+      } else {
+        container.requestFullscreen()
+      }
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black">
+      <div
+        id="livetv-player-container"
+        className="relative w-full h-full"
+        onMouseMove={handleMouseMove}
+        onClick={handleMouseMove}
+      >
+        {/* Video */}
+        {isLoading && (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <Loader className="w-12 h-12 text-white animate-spin" />
+          </div>
+        )}
+        {error ? (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="text-center">
+              <p className="text-red-400 text-lg mb-4">{error}</p>
+              <button
+                onClick={onClose}
+                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        ) : (
+          <video
+            ref={videoRef}
+            className="w-full h-full object-contain"
+            muted={isMuted}
+            playsInline
+          />
+        )}
+
+        {/* Controls Overlay */}
+        <div
+          className={`absolute inset-0 transition-opacity duration-300 ${showControls ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+        >
+          {/* Top bar */}
+          <div className="absolute top-0 left-0 right-0 p-4 bg-gradient-to-b from-black/80 to-transparent">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <button
+                  onClick={onClose}
+                  className="p-2 text-white hover:bg-white/20 rounded-lg transition-colors"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+                <div>
+                  <div className="flex items-center gap-3">
+                    <h2 className="text-xl font-semibold text-white">
+                      Ch {channel.number} - {channel.name}
+                    </h2>
+                    <span className="flex items-center gap-1.5 px-2.5 py-1 bg-red-600 text-white text-xs font-bold rounded-full">
+                      <Circle className="h-2 w-2 fill-current animate-pulse" />
+                      LIVE
+                    </span>
+                  </div>
+                  {program && (
+                    <p className="text-gray-300 mt-1">{program.title}</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Bottom bar */}
+          <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent">
+            <div className="flex items-center justify-between">
+              {/* Left controls - Volume */}
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setIsMuted(!isMuted)}
+                  className="p-2 text-white hover:bg-white/20 rounded-lg transition-colors"
+                  title={isMuted ? "Unmute" : "Mute"}
+                >
+                  {isMuted ? <VolumeX className="w-6 h-6" /> : <Volume2 className="w-6 h-6" />}
+                </button>
+              </div>
+
+              {/* Center controls - Playback */}
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={seekBackward}
+                  className="p-3 text-white hover:bg-white/20 rounded-full transition-colors"
+                  title="Rewind 10s"
+                >
+                  <SkipBack className="w-6 h-6" />
+                </button>
+                <button
+                  onClick={togglePlayPause}
+                  className="p-4 text-white bg-white/20 hover:bg-white/30 rounded-full transition-colors"
+                  title={isPlaying ? "Pause" : "Play"}
+                >
+                  {isPlaying ? <Pause className="w-8 h-8" /> : <Play className="w-8 h-8" />}
+                </button>
+                <button
+                  onClick={seekForward}
+                  className="p-3 text-white hover:bg-white/20 rounded-full transition-colors"
+                  title="Forward 10s"
+                >
+                  <SkipForward className="w-6 h-6" />
+                </button>
+              </div>
+
+              {/* Right controls - Fullscreen */}
+              <button
+                onClick={toggleFullscreen}
+                className="p-2 text-white hover:bg-white/20 rounded-lg transition-colors"
+                title="Fullscreen"
+              >
+                <Maximize className="w-6 h-6" />
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -248,6 +580,7 @@ export function TVGuidePage() {
   const gridScrollRef = useRef<HTMLDivElement>(null)
   const channelScrollRef = useRef<HTMLDivElement>(null)
   const [selectedProgram, setSelectedProgram] = useState<{ program: Program; channel?: Channel } | null>(null)
+  const [watchingChannel, setWatchingChannel] = useState<{ channel: Channel; program?: Program } | null>(null)
   const [timeOffset, setTimeOffset] = useState(0) // hours offset from now
   const [selectedGroup, setSelectedGroup] = useState<string>('all') // provider/group filter
   const [showOnlyUnmapped, setShowOnlyUnmapped] = useState(false) // filter to show only channels without EPG
@@ -297,43 +630,52 @@ export function TVGuidePage() {
     },
   })
 
-  // Fetch EPG programs
-  const { data: programsData, isLoading: loadingPrograms } = useQuery({
-    queryKey: ['epgPrograms', 'guide'],
-    queryFn: () => api.getEPGPrograms({ page: 1, limit: 10000 }),
+  // Fetch guide data (channels + programs for current time window)
+  const { data: guideData, isLoading: loadingPrograms } = useQuery({
+    queryKey: ['guide'],
+    queryFn: () => api.getGuide(),
     staleTime: 5 * 60 * 1000, // 5 minutes
   })
 
-  // Group programs by channel ID - handle both prefixed (directv-2) and numeric (2) formats
+  // Fetch scheduled recordings to show badges on EPG
+  const { data: scheduledRecordings } = useQuery({
+    queryKey: ['scheduled-recordings'],
+    queryFn: () => api.getRecordings(),
+    staleTime: 30 * 1000, // 30 seconds
+  })
+
+  // Create a map of scheduled recordings by channel+time for quick lookup
+  const scheduledProgramsMap = useMemo(() => {
+    const map = new Map<string, { status: 'scheduled' | 'recording'; recordingId: number }>()
+    if (!scheduledRecordings) return map
+
+    scheduledRecordings
+      .filter(r => r.status === 'scheduled' || r.status === 'recording')
+      .forEach(rec => {
+        // Key by channelId + startTime
+        const key = `${rec.channelId}-${rec.startTime}`
+        map.set(key, { status: rec.status as 'scheduled' | 'recording', recordingId: rec.id })
+      })
+    return map
+  }, [scheduledRecordings])
+
+  // Helper to check if a program is scheduled
+  const getProgramRecordingStatus = useCallback((channelId: number, startTime: string): 'scheduled' | 'recording' | null => {
+    const key = `${channelId}-${startTime}`
+    return scheduledProgramsMap.get(key)?.status || null
+  }, [scheduledProgramsMap])
+
+  // Helper to get recording ID for a program
+  const getProgramRecordingId = useCallback((channelId: number, startTime: string): number | null => {
+    const key = `${channelId}-${startTime}`
+    return scheduledProgramsMap.get(key)?.recordingId || null
+  }, [scheduledProgramsMap])
+
+  // Programs are already grouped by channelId in the guide response
   const programsByChannel = useMemo(() => {
-    if (!programsData?.programs) return {}
-
-    const grouped: { [key: string]: Program[] } = {}
-    for (const program of programsData.programs) {
-      const channelKey = program.channelId
-      if (!grouped[channelKey]) {
-        grouped[channelKey] = []
-      }
-      grouped[channelKey].push(program)
-
-      // Also index by numeric portion for matching (e.g., "directv-2" programs should also be indexed as "2")
-      const numericMatch = channelKey.match(/-(\d+)$/)
-      if (numericMatch) {
-        const numericKey = numericMatch[1]
-        if (!grouped[numericKey]) {
-          grouped[numericKey] = []
-        }
-        grouped[numericKey].push(program)
-      }
-    }
-
-    // Sort programs by start time
-    for (const key of Object.keys(grouped)) {
-      grouped[key].sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime())
-    }
-
-    return grouped
-  }, [programsData])
+    if (!guideData?.programs) return {}
+    return guideData.programs
+  }, [guideData])
 
   // Get unique groups/providers from channels
   const channelGroups = useMemo(() => {
@@ -345,16 +687,27 @@ export function TVGuidePage() {
     return Array.from(groups).sort()
   }, [channelsData])
 
-  // Check if a channel has EPG programs
+  // Check if a channel has EPG programs - use tvgId for matching (matches program.channelId)
   const channelHasEPG = useCallback((channel: Channel): boolean => {
-    let programs = programsByChannel[channel.channelId] || []
-    if (programs.length === 0) {
-      const numericMatch = channel.channelId.match(/-(\d+)$/)
-      if (numericMatch) {
-        programs = programsByChannel[numericMatch[1]] || []
-      }
+    // First try tvgId (primary EPG matching field)
+    const epgId = channel.tvgId || channel.channelId
+    let programs = programsByChannel[epgId] || []
+    // Fallback to channelId if tvgId didn't match
+    if (programs.length === 0 && channel.tvgId) {
+      programs = programsByChannel[channel.channelId] || []
     }
     return programs.length > 0
+  }, [programsByChannel])
+
+  // Get current program for a channel
+  const getCurrentProgram = useCallback((channel: Channel): Program | undefined => {
+    const epgId = channel.tvgId || channel.channelId
+    let programs = programsByChannel[epgId] || []
+    if (programs.length === 0 && channel.tvgId) {
+      programs = programsByChannel[channel.channelId] || []
+    }
+    const now = new Date()
+    return programs.find(p => new Date(p.start) <= now && new Date(p.end) > now)
   }, [programsByChannel])
 
   // Filter channels by group and EPG status
@@ -405,6 +758,19 @@ export function TVGuidePage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['recordings'] })
+      queryClient.invalidateQueries({ queryKey: ['scheduled-recordings'] })
+      setSelectedProgram(null)
+    },
+  })
+
+  // Cancel recording mutation
+  const cancelRecording = useMutation({
+    mutationFn: async (recordingId: number) => {
+      await api.deleteRecording(recordingId)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['recordings'] })
+      queryClient.invalidateQueries({ queryKey: ['scheduled-recordings'] })
       setSelectedProgram(null)
     },
   })
@@ -463,7 +829,7 @@ export function TVGuidePage() {
     onSuccess: async () => {
       // Force immediate refetch of both channels and programs data
       await queryClient.refetchQueries({ queryKey: ['channels'] })
-      await queryClient.refetchQueries({ queryKey: ['epgPrograms'] })
+      await queryClient.refetchQueries({ queryKey: ['guide'] })
       setMappingChannel(null)
       setMappingSearchQuery('')
     },
@@ -484,7 +850,7 @@ export function TVGuidePage() {
     onSuccess: async () => {
       // Force immediate refetch
       await queryClient.refetchQueries({ queryKey: ['channels'] })
-      await queryClient.refetchQueries({ queryKey: ['epgPrograms'] })
+      await queryClient.refetchQueries({ queryKey: ['guide'] })
       setMappingChannel(null)
     },
   })
@@ -507,7 +873,7 @@ export function TVGuidePage() {
     onSuccess: async (data) => {
       // Force immediate refetch after auto-detect
       await queryClient.refetchQueries({ queryKey: ['channels'] })
-      await queryClient.refetchQueries({ queryKey: ['epgPrograms'] })
+      await queryClient.refetchQueries({ queryKey: ['guide'] })
       setAutoDetectResult(data)
     },
   })
@@ -570,7 +936,7 @@ export function TVGuidePage() {
           <button
             onClick={() => {
               queryClient.refetchQueries({ queryKey: ['channels'] })
-              queryClient.refetchQueries({ queryKey: ['epgPrograms'] })
+              queryClient.refetchQueries({ queryKey: ['guide'] })
             }}
             className="p-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
             title="Refresh EPG data"
@@ -728,22 +1094,45 @@ export function TVGuidePage() {
                   return (
                     <div
                       key={channel.id}
-                      className={`flex items-center gap-3 px-3 border-b border-gray-700/50 hover:bg-gray-750 ${
+                      className={`flex items-center gap-2 px-3 border-b border-gray-700/50 hover:bg-gray-750 cursor-pointer group ${
                         hasEPG ? 'bg-gray-800' : 'bg-red-900/20'
                       }`}
                       style={{ height: ROW_HEIGHT }}
+                      onClick={() => {
+                        if (channel.streamUrl) {
+                          setWatchingChannel({ channel, program: getCurrentProgram(channel) })
+                        }
+                      }}
                     >
+                      {/* Play button */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          if (channel.streamUrl) {
+                            setWatchingChannel({ channel, program: getCurrentProgram(channel) })
+                          }
+                        }}
+                        className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-all ${
+                          channel.streamUrl
+                            ? 'bg-green-600 hover:bg-green-500 text-white opacity-70 group-hover:opacity-100'
+                            : 'bg-gray-700 text-gray-500 cursor-not-allowed'
+                        }`}
+                        title={channel.streamUrl ? 'Watch Now' : 'No stream available'}
+                        disabled={!channel.streamUrl}
+                      >
+                        <Play className="h-4 w-4 ml-0.5" />
+                      </button>
                       {channel.logo ? (
                         <img
                           src={channel.logo}
                           alt={channel.name}
-                          className="w-12 h-9 object-contain bg-gray-700 rounded flex-shrink-0"
+                          className="w-10 h-7 object-contain bg-gray-700 rounded flex-shrink-0"
                           onError={(e) => {
                             (e.target as HTMLImageElement).style.display = 'none'
                           }}
                         />
                       ) : (
-                        <div className="w-12 h-9 bg-gray-700 rounded flex items-center justify-center text-xs text-gray-400 flex-shrink-0">
+                        <div className="w-10 h-7 bg-gray-700 rounded flex items-center justify-center text-xs text-gray-400 flex-shrink-0">
                           {channel.number}
                         </div>
                       )}
@@ -811,16 +1200,12 @@ export function TVGuidePage() {
 
                 {/* Channel rows */}
                 {channels.map((channel) => {
-                  // Try multiple matching strategies for programs:
-                  // 1. Full channelId (e.g., "directv-2")
-                  // 2. Numeric portion only (e.g., "2" extracted from "directv-2")
-                  let channelPrograms = programsByChannel[channel.channelId] || []
-                  if (channelPrograms.length === 0) {
-                    // Try numeric portion
-                    const numericMatch = channel.channelId.match(/-(\d+)$/)
-                    if (numericMatch) {
-                      channelPrograms = programsByChannel[numericMatch[1]] || []
-                    }
+                  // Use tvgId for EPG matching (this matches program.channelId in the database)
+                  const epgId = channel.tvgId || channel.channelId
+                  let channelPrograms: Program[] = programsByChannel[epgId] || []
+                  // Fallback to channelId if tvgId didn't match
+                  if (channelPrograms.length === 0 && channel.tvgId) {
+                    channelPrograms = programsByChannel[channel.channelId] || []
                   }
 
                   return (
@@ -853,6 +1238,7 @@ export function TVGuidePage() {
                         const width = ((visibleEnd.getTime() - visibleStart.getTime()) / 60000) * PIXELS_PER_MINUTE
 
                         const isNow = now >= programStart && now < programEnd
+                        const recordingStatus = getProgramRecordingStatus(channel.id, program.start)
 
                         return (
                           <ProgramBlock
@@ -861,13 +1247,15 @@ export function TVGuidePage() {
                             startOffset={startOffset}
                             width={width}
                             isNow={isNow}
+                            isScheduled={recordingStatus === 'scheduled'}
+                            isRecording={recordingStatus === 'recording'}
                             onClick={() => setSelectedProgram({ program, channel })}
                           />
                         )
                       })}
 
                       {/* Empty state for channels with no programs */}
-                      {channelPrograms.filter(p => {
+                      {channelPrograms.filter((p: Program) => {
                         const ps = new Date(p.start)
                         const pe = new Date(p.end)
                         return !(pe <= startTime || ps >= endTime)
@@ -892,7 +1280,34 @@ export function TVGuidePage() {
           channel={selectedProgram.channel}
           onClose={() => setSelectedProgram(null)}
           onRecord={handleRecord}
+          onWatchNow={() => {
+            if (selectedProgram.channel?.streamUrl) {
+              setWatchingChannel({
+                channel: selectedProgram.channel,
+                program: selectedProgram.program,
+              })
+            }
+            setSelectedProgram(null)
+          }}
           isRecording={recordProgram.isPending}
+          scheduledStatus={selectedProgram.channel ? getProgramRecordingStatus(selectedProgram.channel.id, selectedProgram.program.start) : null}
+          onCancelRecording={() => {
+            if (selectedProgram.channel) {
+              const recordingId = getProgramRecordingId(selectedProgram.channel.id, selectedProgram.program.start)
+              if (recordingId) {
+                cancelRecording.mutate(recordingId)
+              }
+            }
+          }}
+        />
+      )}
+
+      {/* Live TV Player modal */}
+      {watchingChannel && (
+        <LiveTVPlayer
+          channel={watchingChannel.channel}
+          program={watchingChannel.program}
+          onClose={() => setWatchingChannel(null)}
         />
       )}
 

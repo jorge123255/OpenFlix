@@ -404,3 +404,207 @@ func (s *Server) adminApplyMediaMatch(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"message": "Match applied, metadata refresh started"})
 }
+
+// TrendingItem represents a trending item for API response
+type TrendingItem struct {
+	ID           int     `json:"id"`
+	Title        string  `json:"title"`
+	Overview     string  `json:"overview"`
+	PosterPath   string  `json:"poster_path"`
+	BackdropPath string  `json:"backdrop_path"`
+	MediaType    string  `json:"media_type"`
+	VoteAverage  float64 `json:"vote_average"`
+	ReleaseDate  string  `json:"release_date"`
+	Popularity   float64 `json:"popularity"`
+}
+
+// getTrending returns trending movies/shows from TMDB
+func (s *Server) getTrending(c *gin.Context) {
+	mediaType := c.DefaultQuery("media_type", "all") // all, movie, tv
+	timeWindow := c.DefaultQuery("time_window", "week") // day, week
+
+	// Validate media_type
+	if mediaType != "all" && mediaType != "movie" && mediaType != "tv" {
+		mediaType = "all"
+	}
+
+	// Validate time_window
+	if timeWindow != "day" && timeWindow != "week" {
+		timeWindow = "week"
+	}
+
+	tmdbAgent := s.scanner.GetTMDBAgent()
+	if tmdbAgent == nil || !tmdbAgent.IsConfigured() {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "TMDB not configured"})
+		return
+	}
+
+	resp, err := tmdbAgent.GetTrending(mediaType, timeWindow)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get trending: " + err.Error()})
+		return
+	}
+
+	// Convert to our response format
+	items := make([]TrendingItem, 0, len(resp.Results))
+	for _, r := range resp.Results {
+		title := r.Title
+		if title == "" {
+			title = r.Name
+		}
+		releaseDate := r.ReleaseDate
+		if releaseDate == "" {
+			releaseDate = r.FirstAirDate
+		}
+		items = append(items, TrendingItem{
+			ID:           r.ID,
+			Title:        title,
+			Overview:     r.Overview,
+			PosterPath:   r.PosterPath,
+			BackdropPath: r.BackdropPath,
+			MediaType:    r.MediaType,
+			VoteAverage:  r.VoteAverage,
+			ReleaseDate:  releaseDate,
+			Popularity:   r.Popularity,
+		})
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"results":       items,
+		"total_results": resp.TotalResults,
+		"page":          resp.Page,
+		"total_pages":   resp.TotalPages,
+	})
+}
+
+// getPopularMovies returns popular movies from TMDB
+func (s *Server) getPopularMovies(c *gin.Context) {
+	pageStr := c.DefaultQuery("page", "1")
+	page, _ := strconv.Atoi(pageStr)
+	if page < 1 {
+		page = 1
+	}
+
+	tmdbAgent := s.scanner.GetTMDBAgent()
+	if tmdbAgent == nil || !tmdbAgent.IsConfigured() {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "TMDB not configured"})
+		return
+	}
+
+	resp, err := tmdbAgent.GetPopularMovies(page)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get popular movies: " + err.Error()})
+		return
+	}
+
+	// Convert to our response format
+	items := make([]TrendingItem, 0, len(resp.Results))
+	for _, r := range resp.Results {
+		items = append(items, TrendingItem{
+			ID:           r.ID,
+			Title:        r.Title,
+			Overview:     r.Overview,
+			PosterPath:   r.PosterPath,
+			BackdropPath: r.BackdropPath,
+			MediaType:    "movie",
+			VoteAverage:  r.VoteAverage,
+			ReleaseDate:  r.ReleaseDate,
+			Popularity:   r.Popularity,
+		})
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"results":       items,
+		"total_results": resp.TotalResults,
+		"page":          resp.Page,
+		"total_pages":   resp.TotalPages,
+	})
+}
+
+// getPopularTV returns popular TV shows from TMDB
+func (s *Server) getPopularTV(c *gin.Context) {
+	pageStr := c.DefaultQuery("page", "1")
+	page, _ := strconv.Atoi(pageStr)
+	if page < 1 {
+		page = 1
+	}
+
+	tmdbAgent := s.scanner.GetTMDBAgent()
+	if tmdbAgent == nil || !tmdbAgent.IsConfigured() {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "TMDB not configured"})
+		return
+	}
+
+	resp, err := tmdbAgent.GetPopularTV(page)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get popular TV: " + err.Error()})
+		return
+	}
+
+	// Convert to our response format
+	items := make([]TrendingItem, 0, len(resp.Results))
+	for _, r := range resp.Results {
+		items = append(items, TrendingItem{
+			ID:           r.ID,
+			Title:        r.Name,
+			Overview:     r.Overview,
+			PosterPath:   r.PosterPath,
+			BackdropPath: r.BackdropPath,
+			MediaType:    "tv",
+			VoteAverage:  r.VoteAverage,
+			ReleaseDate:  r.FirstAirDate,
+			Popularity:   r.Popularity,
+		})
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"results":       items,
+		"total_results": resp.TotalResults,
+		"page":          resp.Page,
+		"total_pages":   resp.TotalPages,
+	})
+}
+
+// getTopRatedMovies returns top rated movies from TMDB
+func (s *Server) getTopRatedMovies(c *gin.Context) {
+	pageStr := c.DefaultQuery("page", "1")
+	page, _ := strconv.Atoi(pageStr)
+	if page < 1 {
+		page = 1
+	}
+
+	tmdbAgent := s.scanner.GetTMDBAgent()
+	if tmdbAgent == nil || !tmdbAgent.IsConfigured() {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "TMDB not configured"})
+		return
+	}
+
+	resp, err := tmdbAgent.GetTopRatedMovies(page)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get top rated movies: " + err.Error()})
+		return
+	}
+
+	// Convert to our response format
+	items := make([]TrendingItem, 0, len(resp.Results))
+	for _, r := range resp.Results {
+		items = append(items, TrendingItem{
+			ID:           r.ID,
+			Title:        r.Title,
+			Overview:     r.Overview,
+			PosterPath:   r.PosterPath,
+			BackdropPath: r.BackdropPath,
+			MediaType:    "movie",
+			VoteAverage:  r.VoteAverage,
+			ReleaseDate:  r.ReleaseDate,
+			Popularity:   r.Popularity,
+		})
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"results":       items,
+		"total_results": resp.TotalResults,
+		"page":          resp.Page,
+		"total_pages":   resp.TotalPages,
+	})
+}

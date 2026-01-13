@@ -1,4 +1,4 @@
-import { RefreshCw, AlertCircle, CheckCircle, Clock, Tv, FileText } from 'lucide-react'
+import { RefreshCw, AlertCircle, CheckCircle, Clock, Tv, FileText, Edit } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 
 interface EPGSource {
@@ -19,10 +19,11 @@ interface EPGSourceCardProps {
   source: EPGSource
   onRefresh: (id: number) => void
   onDelete: (id: number) => void
+  onEdit?: (source: EPGSource) => void
   isRefreshing: boolean
 }
 
-export function EPGSourceCard({ source, onRefresh, onDelete, isRefreshing }: EPGSourceCardProps) {
+export function EPGSourceCard({ source, onRefresh, onDelete, onEdit, isRefreshing }: EPGSourceCardProps) {
   const getStatusColor = () => {
     if (isRefreshing) return 'border-blue-500 bg-blue-500/10'
     if (source.lastError) return 'border-red-500 bg-red-500/5'
@@ -124,6 +125,16 @@ export function EPGSourceCard({ source, onRefresh, onDelete, isRefreshing }: EPG
 
       {/* Actions */}
       <div className="flex gap-2">
+        {onEdit && (
+          <button
+            onClick={() => onEdit(source)}
+            disabled={isRefreshing}
+            className="px-3 py-1.5 bg-gray-600 hover:bg-gray-500 disabled:bg-gray-700 disabled:cursor-not-allowed text-white text-sm rounded flex items-center justify-center gap-1.5"
+            title="Edit"
+          >
+            <Edit className="h-4 w-4" />
+          </button>
+        )}
         <button
           onClick={() => onRefresh(source.id)}
           disabled={isRefreshing}

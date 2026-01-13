@@ -60,3 +60,32 @@ export function useDeleteSeriesRule() {
     },
   })
 }
+
+export function useRecordingConflicts() {
+  return useQuery({
+    queryKey: ['recordingConflicts'],
+    queryFn: () => api.getRecordingConflicts(),
+    refetchInterval: 60000, // Refresh every minute
+  })
+}
+
+export function useResolveConflict() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ keepId, cancelId }: { keepId: number; cancelId: number }) =>
+      api.resolveConflict(keepId, cancelId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['recordings'] })
+      queryClient.invalidateQueries({ queryKey: ['recordingConflicts'] })
+    },
+  })
+}
+
+export function useRecordingStats() {
+  return useQuery({
+    queryKey: ['recordingStats'],
+    queryFn: () => api.getRecordingStats(),
+    refetchInterval: 5000, // Refresh every 5 seconds for live stats
+  })
+}

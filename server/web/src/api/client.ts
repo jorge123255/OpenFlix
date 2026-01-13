@@ -12,10 +12,14 @@ import type {
   EPGSource,
   EPGChannel,
   ProgramsResponse,
+  GuideResponse,
   Recording,
   SeriesRule,
   ServerStatus,
   XtreamSource,
+  ConflictResponse,
+  RecordingStatsResponse,
+  CommercialsResponse,
 } from '../types'
 
 const TOKEN_KEY = 'openflix_token'
@@ -225,8 +229,25 @@ class ApiClient {
     await this.client.delete(`/livetv/epg/sources/${id}`)
   }
 
+  async updateEPGSource(id: number, data: {
+    name?: string
+    url?: string
+    gracenoteAffiliate?: string
+    gracenotePostalCode?: string
+    gracenoteHours?: number
+    enabled?: boolean
+  }): Promise<EPGSource> {
+    const response = await this.client.put<EPGSource>(`/livetv/epg/sources/${id}`, data)
+    return response.data
+  }
+
   async refreshEPG(): Promise<void> {
     await this.client.post('/livetv/epg/refresh')
+  }
+
+  async getGuide(): Promise<GuideResponse> {
+    const response = await this.client.get<GuideResponse>('/livetv/guide')
+    return response.data
   }
 
   async getEPGPrograms(params?: {
@@ -358,6 +379,38 @@ class ApiClient {
     await this.client.delete(`/dvr/rules/${id}`)
   }
 
+  // DVR conflict endpoints
+  async getRecordingConflicts(): Promise<ConflictResponse> {
+    const response = await this.client.get<ConflictResponse>('/dvr/conflicts')
+    return response.data
+  }
+
+  async resolveConflict(keepId: number, cancelId: number): Promise<void> {
+    await this.client.post('/dvr/conflicts/resolve', {
+      keepRecordingId: keepId,
+      cancelRecordingId: cancelId,
+    })
+  }
+
+  async getRecordingStats(): Promise<RecordingStatsResponse> {
+    const response = await this.client.get<RecordingStatsResponse>('/dvr/recordings/stats')
+    return response.data
+  }
+
+  async getRecordingCommercials(recordingId: number): Promise<CommercialsResponse> {
+    const response = await this.client.get<CommercialsResponse>(`/dvr/recordings/${recordingId}/commercials`)
+    return response.data
+  }
+
+  async getRecordingStreamUrl(recordingId: number): Promise<string> {
+    const response = await this.client.get<{ url: string }>(`/dvr/recordings/${recordingId}/stream`)
+    return response.data.url
+  }
+
+  async updateRecordingProgress(recordingId: number, viewOffset: number): Promise<void> {
+    await this.client.put(`/dvr/recordings/${recordingId}/progress`, { viewOffset })
+  }
+
   // Server admin endpoints
   async getServerStatus(): Promise<ServerStatus> {
     const response = await this.client.get<ServerStatus>('/api/status')
@@ -404,6 +457,58 @@ class ApiClient {
   async applyMediaMatch(id: number, tmdbId: number, mediaType: string): Promise<void> {
     await this.client.post(`/admin/media/${id}/match`, { tmdb_id: tmdbId, media_type: mediaType })
   }
+
+  // VOD endpoints
+  vod = {
+    testConnection: async (url?: string): Promise<VODConnectionStatus> => {
+      const params = url ? { url } : {}
+      const response = await this.client.get<VODConnectionStatus>('/api/vod/test-connection', { params })
+      return response.data
+    },
+
+    getProviders: async (): Promise<VODProvider[]> => {
+      const response = await this.client.get<VODProvider[]>('/api/vod/providers')
+      return response.data
+    },
+
+    getMovies: async (provider: string): Promise<VODMovie[]> => {
+      const response = await this.client.get<VODMovie[]>(`/api/vod/${provider}/movies`)
+      return response.data
+    },
+
+    getShows: async (provider: string): Promise<VODShow[]> => {
+      const response = await this.client.get<VODShow[]>(`/api/vod/${provider}/shows`)
+      return response.data
+    },
+
+    getGenres: async (provider: string): Promise<string[]> => {
+      const response = await this.client.get<string[]>(`/api/vod/${provider}/genres`)
+      return response.data
+    },
+
+    getMovie: async (provider: string, id: string): Promise<VODMovie> => {
+      const response = await this.client.get<VODMovie>(`/api/vod/${provider}/movie/${id}`)
+      return response.data
+    },
+
+    getShow: async (provider: string, id: string): Promise<VODShowDetails> => {
+      const response = await this.client.get<VODShowDetails>(`/api/vod/${provider}/show/${id}`)
+      return response.data
+    },
+
+    startDownload: async (provider: string, contentId: string, type: 'movie' | 'episode'): Promise<void> => {
+      await this.client.post(`/api/vod/${provider}/download`, { contentId, type })
+    },
+
+    getQueue: async (): Promise<VODDownloadQueue> => {
+      const response = await this.client.get<VODDownloadQueue>('/api/vod/queue')
+      return response.data
+    },
+
+    cancelDownload: async (id: string): Promise<void> => {
+      await this.client.delete(`/api/vod/queue/${id}`)
+    },
+  }
 }
 
 // Server settings (from /admin/settings endpoint)
@@ -412,6 +517,7 @@ export interface ServerSettings {
   tvdb_api_key?: string
   metadata_lang?: string
   scan_interval?: number
+  vod_api_url?: string
 }
 
 // Provider discovery types
@@ -501,6 +607,7 @@ export interface XtreamParseResult {
   error?: string
   serverUrl?: string
   username?: string
+  password?: string
   name?: string
   userInfo?: {
     status: string
@@ -516,6 +623,77 @@ export interface XtreamImportResult {
   errors: number
   total: number
   duration: string
+}
+
+// VOD types
+export interface VODConnectionStatus {
+  connected: boolean
+  error?: string
+  providerCount?: number
+  providers?: VODProvider[]
+}
+
+export interface VODProvider {
+  id: string
+  name: string
+  description?: string
+  logo?: string
+}
+
+export interface VODMovie {
+  id: string
+  title: string
+  description?: string
+  year?: number
+  runtime?: number
+  rating?: string
+  genres?: string[]
+  poster?: string
+  downloadUrl?: string
+}
+
+export interface VODShow {
+  id: string
+  title: string
+  description?: string
+  year?: number
+  rating?: string
+  genres?: string[]
+  poster?: string
+  seasonCount?: number
+}
+
+export interface VODEpisode {
+  id: string
+  episodeNumber: number
+  title: string
+  description?: string
+  runtime?: number
+  downloadUrl?: string
+}
+
+export interface VODSeason {
+  seasonNumber: number
+  episodes?: VODEpisode[]
+}
+
+export interface VODShowDetails extends VODShow {
+  seasons?: VODSeason[]
+}
+
+export interface VODDownloadItem {
+  id: string
+  contentId: string
+  title: string
+  provider: string
+  status: string
+  progress: number
+  filePath?: string
+  error?: string
+}
+
+export interface VODDownloadQueue {
+  items: VODDownloadItem[]
 }
 
 export const api = new ApiClient()

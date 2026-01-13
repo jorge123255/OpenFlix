@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Save } from 'lucide-react'
+import { Save, CheckCircle, XCircle, Loader } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api, type ServerSettings } from '../api/client'
 
@@ -34,6 +34,102 @@ function SettingField({
       <label className="block text-sm font-medium text-gray-300 mb-1">{label}</label>
       {description && <p className="text-xs text-gray-500 mb-2">{description}</p>}
       {children}
+    </div>
+  )
+}
+
+function VODSettingsSection({
+  vodApiUrl,
+  onUrlChange,
+}: {
+  vodApiUrl: string
+  onUrlChange: (url: string) => void
+}) {
+  const [testResult, setTestResult] = useState<{ connected: boolean; error?: string } | null>(null)
+  const [isTesting, setIsTesting] = useState(false)
+
+  const testConnection = async () => {
+    if (!vodApiUrl) {
+      setTestResult({ connected: false, error: 'Please enter a VOD API URL' })
+      return
+    }
+    setIsTesting(true)
+    setTestResult(null)
+    try {
+      const result = await api.vod.testConnection(vodApiUrl)
+      setTestResult(result)
+    } catch (error: any) {
+      setTestResult({
+        connected: false,
+        error: error.message || 'Connection failed',
+      })
+    } finally {
+      setIsTesting(false)
+    }
+  }
+
+  return (
+    <div className="bg-gray-800 rounded-xl p-6 mb-6">
+      <h2 className="text-lg font-semibold text-white mb-4">VOD Downloads</h2>
+      <div className="space-y-4">
+        <SettingField
+          label="VOD API URL"
+          description="URL of the external VOD download service (e.g., http://192.168.1.82:7070)"
+        >
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={vodApiUrl}
+              onChange={(e) => {
+                onUrlChange(e.target.value)
+                setTestResult(null)
+              }}
+              className="flex-1 px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
+              placeholder="http://192.168.1.82:7070"
+            />
+            <button
+              onClick={testConnection}
+              disabled={isTesting}
+              className="px-4 py-2 bg-gray-700 hover:bg-gray-600 disabled:bg-gray-800 text-white rounded-lg whitespace-nowrap"
+            >
+              {isTesting ? (
+                <Loader className="w-4 h-4 animate-spin" />
+              ) : (
+                'Test Connection'
+              )}
+            </button>
+          </div>
+        </SettingField>
+
+        {testResult && (
+          <div
+            className={`flex items-center gap-2 p-3 rounded-lg ${
+              testResult.connected
+                ? 'bg-green-500/10 border border-green-500/30'
+                : 'bg-red-500/10 border border-red-500/30'
+            }`}
+          >
+            {testResult.connected ? (
+              <>
+                <CheckCircle className="w-4 h-4 text-green-400" />
+                <span className="text-green-400 text-sm">Connection successful</span>
+              </>
+            ) : (
+              <>
+                <XCircle className="w-4 h-4 text-red-400" />
+                <span className="text-red-400 text-sm">
+                  {testResult.error || 'Connection failed'}
+                </span>
+              </>
+            )}
+          </div>
+        )}
+
+        <p className="text-xs text-gray-500">
+          The VOD service provides access to Disney+ and other streaming content for download.
+          Downloads will be saved to your configured movie and TV show library paths.
+        </p>
+      </div>
     </div>
   )
 }
@@ -185,6 +281,11 @@ transcode:
           />
         </SettingField>
       </SettingSection>
+
+      <VODSettingsSection
+        vodApiUrl={formData.vod_api_url || ''}
+        onUrlChange={(url) => updateField('vod_api_url', url)}
+      />
 
       <div className="bg-gray-800 rounded-xl p-6">
         <h2 className="text-lg font-semibold text-white mb-4">Other Settings</h2>

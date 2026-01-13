@@ -16,6 +16,43 @@ import (
 	"gorm.io/gorm"
 )
 
+// interfaceToInt converts an interface{} (which could be int, float64, or string) to int
+func interfaceToInt(v interface{}) int {
+	if v == nil {
+		return 0
+	}
+	switch val := v.(type) {
+	case float64:
+		return int(val)
+	case int:
+		return val
+	case int64:
+		return int(val)
+	case string:
+		i, _ := strconv.Atoi(val)
+		return i
+	default:
+		return 0
+	}
+}
+
+// interfaceToString converts an interface{} to string
+func interfaceToString(v interface{}) string {
+	if v == nil {
+		return ""
+	}
+	switch val := v.(type) {
+	case string:
+		return val
+	case float64:
+		return fmt.Sprintf("%.0f", val)
+	case int:
+		return strconv.Itoa(val)
+	default:
+		return fmt.Sprintf("%v", val)
+	}
+}
+
 // XtreamClient handles Xtream Codes API operations
 type XtreamClient struct {
 	db         *gorm.DB
@@ -27,7 +64,7 @@ func NewXtreamClient(db *gorm.DB) *XtreamClient {
 	return &XtreamClient{
 		db: db,
 		httpClient: &http.Client{
-			Timeout: 30 * time.Second,
+			Timeout: 5 * time.Minute, // Large VOD catalogs need more time
 		},
 	}
 }
@@ -41,71 +78,76 @@ type XtreamAuthResponse struct {
 }
 
 // XtreamUserInfo contains user account information
+// Note: Some Xtream providers return numbers instead of strings for certain fields
 type XtreamUserInfo struct {
-	Username          string `json:"username"`
-	Password          string `json:"password"`
-	Message           string `json:"message"`
-	Auth              int    `json:"auth"`
-	Status            string `json:"status"`
-	ExpDate           string `json:"exp_date"`
-	IsTrial           string `json:"is_trial"`
-	ActiveCons        string `json:"active_cons"`
-	CreatedAt         string `json:"created_at"`
-	MaxConnections    string `json:"max_connections"`
-	AllowedOutputFormats []string `json:"allowed_output_formats"`
+	Username             string      `json:"username"`
+	Password             string      `json:"password"`
+	Message              string      `json:"message"`
+	Auth                 interface{} `json:"auth"`
+	Status               string      `json:"status"`
+	ExpDate              interface{} `json:"exp_date"`
+	IsTrial              interface{} `json:"is_trial"`
+	ActiveCons           interface{} `json:"active_cons"`
+	CreatedAt            interface{} `json:"created_at"`
+	MaxConnections       interface{} `json:"max_connections"`
+	AllowedOutputFormats []string    `json:"allowed_output_formats"`
 }
 
 // XtreamServerInfo contains server information
+// Note: Some Xtream providers return numbers instead of strings for port fields
 type XtreamServerInfo struct {
-	URL          string `json:"url"`
-	Port         string `json:"port"`
-	HTTPSPort    string `json:"https_port"`
-	ServerProtocol string `json:"server_protocol"`
-	RTMPPort     string `json:"rtmp_port"`
-	Timezone     string `json:"timezone"`
-	TimestampNow int64  `json:"timestamp_now"`
-	TimeNow      string `json:"time_now"`
+	URL            string      `json:"url"`
+	Port           interface{} `json:"port"`
+	HTTPSPort      interface{} `json:"https_port"`
+	ServerProtocol string      `json:"server_protocol"`
+	RTMPPort       interface{} `json:"rtmp_port"`
+	Timezone       string      `json:"timezone"`
+	TimestampNow   interface{} `json:"timestamp_now"`
+	TimeNow        string      `json:"time_now"`
 }
 
 // XtreamCategory represents a category (live, VOD, or series)
+// Note: ParentID uses interface{} because Xtream providers return inconsistent types (string or int)
 type XtreamCategory struct {
-	CategoryID   string `json:"category_id"`
-	CategoryName string `json:"category_name"`
-	ParentID     int    `json:"parent_id"`
+	CategoryID   string      `json:"category_id"`
+	CategoryName string      `json:"category_name"`
+	ParentID     interface{} `json:"parent_id"`
 }
 
 // XtreamLiveStream represents a live TV stream
+// Note: Many fields use interface{} because Xtream providers return inconsistent types
 type XtreamLiveStream struct {
-	Num            int    `json:"num"`
-	Name           string `json:"name"`
-	StreamType     string `json:"stream_type"`
-	StreamID       int    `json:"stream_id"`
-	StreamIcon     string `json:"stream_icon"`
-	EPGChannelID   string `json:"epg_channel_id"`
-	Added          string `json:"added"`
-	IsAdult        string `json:"is_adult"`
-	CategoryID     string `json:"category_id"`
-	CustomSid      string `json:"custom_sid"`
-	TVArchive      int    `json:"tv_archive"`
-	DirectSource   string `json:"direct_source"`
-	TVArchiveDuration int `json:"tv_archive_duration"`
+	Num               interface{} `json:"num"`
+	Name              string      `json:"name"`
+	StreamType        string      `json:"stream_type"`
+	StreamID          interface{} `json:"stream_id"`
+	StreamIcon        string      `json:"stream_icon"`
+	EPGChannelID      string      `json:"epg_channel_id"`
+	Added             interface{} `json:"added"`
+	IsAdult           interface{} `json:"is_adult"`
+	CategoryID        interface{} `json:"category_id"`
+	CustomSid         string      `json:"custom_sid"`
+	TVArchive         interface{} `json:"tv_archive"`
+	DirectSource      string      `json:"direct_source"`
+	TVArchiveDuration interface{} `json:"tv_archive_duration"`
 }
 
 // XtreamVODStream represents a VOD item
+// Note: Many fields use interface{} because Xtream providers return inconsistent types
 type XtreamVODStream struct {
-	Num             int     `json:"num"`
-	Name            string  `json:"name"`
-	StreamType      string  `json:"stream_type"`
-	StreamID        int     `json:"stream_id"`
-	StreamIcon      string  `json:"stream_icon"`
-	Rating          float64 `json:"rating"`
-	Rating5Based    float64 `json:"rating_5based"`
-	Added           string  `json:"added"`
-	IsAdult         string  `json:"is_adult"`
-	CategoryID      string  `json:"category_id"`
-	ContainerExtension string `json:"container_extension"`
-	CustomSid       string  `json:"custom_sid"`
-	DirectSource    string  `json:"direct_source"`
+	Num                interface{} `json:"num"`
+	Name               string      `json:"name"`
+	StreamType         string      `json:"stream_type"`
+	StreamID           interface{} `json:"stream_id"`
+	StreamIcon         string      `json:"stream_icon"`
+	Rating             interface{} `json:"rating"`
+	Rating5Based       interface{} `json:"rating_5based"`
+	Added              interface{} `json:"added"`
+	IsAdult            interface{} `json:"is_adult"`
+	CategoryID         interface{} `json:"category_id"`
+	ContainerExtension string      `json:"container_extension"`
+	CustomSid          string      `json:"custom_sid"`
+	DirectSource       string      `json:"direct_source"`
 }
 
 // XtreamVODInfo represents detailed VOD information
@@ -138,23 +180,24 @@ type XtreamVODInfo struct {
 }
 
 // XtreamSeries represents a series
+// Note: Many fields use interface{} because Xtream providers return inconsistent types
 type XtreamSeries struct {
-	Num            int      `json:"num"`
-	Name           string   `json:"name"`
-	SeriesID       int      `json:"series_id"`
-	Cover          string   `json:"cover"`
-	Plot           string   `json:"plot"`
-	Cast           string   `json:"cast"`
-	Director       string   `json:"director"`
-	Genre          string   `json:"genre"`
-	ReleaseDate    string   `json:"releaseDate"`
-	LastModified   string   `json:"last_modified"`
-	Rating         string   `json:"rating"`
-	Rating5Based   float64  `json:"rating_5based"`
-	BackdropPath   []string `json:"backdrop_path"`
-	YoutubeTrailer string   `json:"youtube_trailer"`
-	TMDBId         string   `json:"tmdb_id"`
-	CategoryID     string   `json:"category_id"`
+	Num            interface{} `json:"num"`
+	Name           string      `json:"name"`
+	SeriesID       interface{} `json:"series_id"`
+	Cover          string      `json:"cover"`
+	Plot           string      `json:"plot"`
+	Cast           string      `json:"cast"`
+	Director       string      `json:"director"`
+	Genre          string      `json:"genre"`
+	ReleaseDate    string      `json:"releaseDate"`
+	LastModified   interface{} `json:"last_modified"`
+	Rating         interface{} `json:"rating"`
+	Rating5Based   interface{} `json:"rating_5based"`
+	BackdropPath   interface{} `json:"backdrop_path"`
+	YoutubeTrailer string      `json:"youtube_trailer"`
+	TMDBId         interface{} `json:"tmdb_id"`
+	CategoryID     interface{} `json:"category_id"`
 }
 
 // XtreamSeriesInfo represents detailed series information
@@ -195,20 +238,21 @@ type XtreamSeriesInfoDetails struct {
 }
 
 // XtreamEpisode represents an episode
+// Note: Added uses interface{} because Xtream providers return inconsistent types (string or number)
 type XtreamEpisode struct {
 	ID                 string `json:"id"`
 	EpisodeNum         int    `json:"episode_num"`
 	Title              string `json:"title"`
 	ContainerExtension string `json:"container_extension"`
 	Info               struct {
-		TMDBId      string `json:"tmdb_id"`
-		ReleaseDate string `json:"releasedate"`
-		Plot        string `json:"plot"`
-		Duration    string `json:"duration"`
-		DurationSecs int   `json:"duration_secs"`
-		Bitrate     int    `json:"bitrate"`
-		MovieImage  string `json:"movie_image"`
-		Video       struct {
+		TMDBId       string `json:"tmdb_id"`
+		ReleaseDate  string `json:"releasedate"`
+		Plot         string `json:"plot"`
+		Duration     string `json:"duration"`
+		DurationSecs int    `json:"duration_secs"`
+		Bitrate      int    `json:"bitrate"`
+		MovieImage   string `json:"movie_image"`
+		Video        struct {
 			Codec  string `json:"codec"`
 			Width  int    `json:"width"`
 			Height int    `json:"height"`
@@ -218,9 +262,9 @@ type XtreamEpisode struct {
 			Channels int    `json:"channels"`
 		} `json:"audio"`
 	} `json:"info"`
-	Added   string `json:"added"`
-	Season  int    `json:"season"`
-	DirectSource string `json:"direct_source"`
+	Added        interface{} `json:"added"`
+	Season       int         `json:"season"`
+	DirectSource string      `json:"direct_source"`
 }
 
 // ========== URL Parsing ==========
@@ -300,8 +344,30 @@ func (c *XtreamClient) Authenticate(source *models.XtreamSource) (*XtreamAuthRes
 		return nil, fmt.Errorf("failed to parse auth response: %w", err)
 	}
 
-	if authResp.UserInfo.Auth != 1 {
-		return nil, fmt.Errorf("authentication failed: %s", authResp.UserInfo.Message)
+	// Check auth status - providers return this in different ways:
+	// - Some return auth=1 (as int or float64)
+	// - Some return status="Active" without auth field
+	authOK := false
+	switch v := authResp.UserInfo.Auth.(type) {
+	case float64:
+		authOK = v == 1
+	case int:
+		authOK = v == 1
+	case string:
+		authOK = v == "1"
+	}
+
+	// Also check status field - some providers use this instead of auth
+	if !authOK && (authResp.UserInfo.Status == "Active" || authResp.UserInfo.Status == "active") {
+		authOK = true
+	}
+
+	if !authOK {
+		msg := authResp.UserInfo.Message
+		if msg == "" {
+			msg = "invalid credentials or account inactive"
+		}
+		return nil, fmt.Errorf("authentication failed: %s", msg)
 	}
 
 	return &authResp, nil
@@ -536,12 +602,16 @@ func (c *XtreamClient) ImportChannels(sourceID uint) (added, updated int, err er
 	}
 
 	for _, stream := range streams {
+		// Convert interface{} types to proper types
+		streamID := interfaceToInt(stream.StreamID)
+		categoryIDStr := interfaceToString(stream.CategoryID)
+
 		// Build stream URL
-		streamURL := c.BuildLiveStreamURL(&source, stream.StreamID)
+		streamURL := c.BuildLiveStreamURL(&source, streamID)
 
 		// Check if channel already exists
 		var existingChannel models.Channel
-		err := c.db.Where("xtream_source_id = ? AND xtream_stream_id = ?", source.ID, stream.StreamID).
+		err := c.db.Where("xtream_source_id = ? AND xtream_stream_id = ?", source.ID, streamID).
 			First(&existingChannel).Error
 
 		channel := models.Channel{
@@ -552,16 +622,16 @@ func (c *XtreamClient) ImportChannels(sourceID uint) (added, updated int, err er
 			SourceType:       "xtream",
 			SourceName:       source.Name,
 			XtreamSourceID:   &source.ID,
-			XtreamStreamID:   &stream.StreamID,
+			XtreamStreamID:   &streamID,
 			ChannelID:        stream.EPGChannelID,
 			TVGId:            stream.EPGChannelID,
 		}
 
 		// Set category/group
-		if catName, ok := categoryMap[stream.CategoryID]; ok {
+		if catName, ok := categoryMap[categoryIDStr]; ok {
 			channel.Group = catName
 		}
-		if catID, err := strconv.Atoi(stream.CategoryID); err == nil {
+		if catID, err := strconv.Atoi(categoryIDStr); err == nil {
 			channel.XtreamCategoryID = &catID
 		}
 

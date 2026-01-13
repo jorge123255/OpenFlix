@@ -14,6 +14,9 @@ import {
   Cpu,
   CalendarDays,
   Download,
+  Clock,
+  Trophy,
+  CloudDownload,
 } from 'lucide-react'
 import { useState } from 'react'
 import { useCurrentUser, useLogout } from '../hooks/useAuth'
@@ -25,7 +28,10 @@ const navigation = [
   { name: 'Media', href: '/ui/media', icon: Film },
   { name: 'Live TV', href: '/ui/livetv', icon: Tv },
   { name: 'TV Guide', href: '/ui/tvguide', icon: CalendarDays },
+  { name: 'On Later', href: '/ui/onlater', icon: Clock },
+  { name: 'Team Pass', href: '/ui/teampass', icon: Trophy },
   { name: 'DVR', href: '/ui/dvr', icon: Video },
+  { name: 'VOD', href: '/ui/vod', icon: CloudDownload },
   { name: 'Transcode', href: '/ui/transcode', icon: Cpu },
   { name: 'Logs', href: '/ui/logs', icon: FileText },
   { name: 'Downloads', href: '/ui/downloads', icon: Download },

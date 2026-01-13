@@ -9,6 +9,118 @@ import (
 	"github.com/openflix/openflix-server/internal/models"
 )
 
+// networkAliases maps network identifiers to their common name variations
+// Used for matching channel names to EPG callsigns
+var networkAliases = map[string][]string{
+	// Major broadcast networks
+	"NBC":       {"NBC", "NATIONAL BROADCASTING", "WNBC", "KNBC"},
+	"CBS":       {"CBS", "COLUMBIA BROADCASTING", "WCBS", "KCBS", "CBSHD"},
+	"ABC":       {"ABC", "AMERICAN BROADCASTING", "WABC", "KABC"},
+	"FOX":       {"FOX", "KTTV", "WNYW", "FOXHD"},
+	"PBS":       {"PBS", "PUBLIC BROADCASTING", "WNET", "KCET", "WTTW"},
+	"CW":        {"CW", "THE CW", "CWNETWORK", "CWHD"},
+
+	// Sports networks
+	"ESPN":        {"ESPN", "ESPNHD"},
+	"ESPN2":       {"ESPN2", "ESPN 2", "ESPN2HD"},
+	"ESPNU":       {"ESPNU", "ESPNUHD"},
+	"ESPNEWS":     {"ESPNEWS", "ESPN NEWS"},
+	"FOXSPORTS1":  {"FS1", "FOX SPORTS 1", "FOXSPORT1", "FS1HD"},
+	"FOXSPORTS2":  {"FS2", "FOX SPORTS 2", "FOXSPORT2", "FS2HD"},
+	"NBCSPORTS":   {"NBCSN", "NBC SPORTS", "NBCSPORT", "NBC SPORTS NETWORK"},
+	"CBSSPORTS":   {"CBS SPORTS", "CBSSN", "CBSSPORTS", "CBS SPORTS NETWORK"},
+	"MLBNETWORK":  {"MLB NETWORK", "MLBN", "MLBHD", "MLBNETWORK"},
+	"NBANETWORK":  {"NBA TV", "NBATV", "NBAHD"},
+	"NHLNETWORK":  {"NHL NETWORK", "NHLHD", "NHLNETWORK"},
+	"GOLFCHANNEL": {"GOLF CHANNEL", "GOLF", "GOLFHD"},
+	"TENNIS":      {"TENNIS CHANNEL", "TENNIS", "TENNISHD", "TENNISCHAN"},
+	"BTN":         {"BIG TEN NETWORK", "BTN", "BIGTENNETW"},
+	"SECNETWORK":  {"SEC NETWORK", "SECN", "SECHD", "SECNETWORK"},
+	"ACCNETWORK":  {"ACC NETWORK", "ACCN", "ACCNETWORK"},
+	"BEINSPORTS":  {"BEIN SPORTS", "BEINSPORTS", "BEIN"},
+
+	// News networks
+	"CNN":        {"CNN", "CABLE NEWS NETWORK", "CNNHD"},
+	"MSNBC":      {"MSNBC", "MSNBCHD"},
+	"FOXNEWS":    {"FOX NEWS", "FOXNEWS", "FNCHD", "FOX NEWS CHANNEL", "FOXNEWSCHA"},
+	"CNBC":       {"CNBC", "CNBCHD"},
+	"BLOOMBERG":  {"BLOOMBERG", "BLOOMBERGT", "BLOOMBERG TV"},
+	"NEWSMAX":    {"NEWSMAX", "NEWSMAXHD"},
+	"NEWSNATION": {"NEWSNATION", "NEWS NATION"},
+	"CSPAN":      {"C-SPAN", "CSPAN"},
+	"HLN":        {"HLN", "HEADLINE NEWS", "HLNHD"},
+
+	// Entertainment networks
+	"HBO":            {"HBO", "HOME BOX OFFICE", "HBOHD"},
+	"SHOWTIME":       {"SHOWTIME", "SHO", "SHOWHD"},
+	"STARZ":          {"STARZ", "STARZHD"},
+	"CINEMAX":        {"CINEMAX", "MAX", "CINEMAXHD"},
+	"AMC":            {"AMC", "AMCHD", "AMCSTR"},
+	"FX":             {"FX", "FXHD"},
+	"FXX":            {"FXX", "FXXHD"},
+	"FXM":            {"FXM", "FX MOVIES", "FX MOVIE CHANNEL"},
+	"TNT":            {"TNT", "TNTHD"},
+	"TBS":            {"TBS", "TBSHD"},
+	"USA":            {"USA", "USA NETWORK", "USAHD", "USAN"},
+	"SYFY":           {"SYFY", "SCI-FI", "SCIFI", "SYFYHD"},
+	"BRAVO":          {"BRAVO", "BRAVOHD", "BVO"},
+	"E!":             {"E!", "EENTERTAIN", "EHD"},
+	"OXYGEN":         {"OXYGEN", "OXG", "OXYGEN TRUE CRIME"},
+	"TVLAND":         {"TV LAND", "TVLAND", "TVLNDHD"},
+	"POP":            {"POP", "POP TV"},
+	"PARAMOUNT":      {"PARAMOUNT NETWORK", "PARHD", "PARAMOUNTN"},
+	"COMEDYCENTRAL":  {"COMEDY CENTRAL", "CC", "CCHD", "COMEDYCENT"},
+	"MTV":            {"MTV", "MTVHD"},
+	"MTV2":           {"MTV2", "MTV2HD"},
+	"VH1":            {"VH1", "VH1HD"},
+	"CMT":            {"CMT", "COUNTRY MUSIC", "CMTHD"},
+	"BET":            {"BET", "BETHD"},
+	"BETHER":         {"BET HER", "BETHER"},
+	"LOGO":           {"LOGO", "LOGOHD"},
+	"FREEFORM":       {"FREEFORM", "FREFMHD", "ABC FAMILY"},
+	"IFC":            {"IFC", "IFCHD"},
+	"SUNDANCE":       {"SUNDANCE", "SUNDANCETV"},
+	"TCM":            {"TCM", "TURNER CLASSIC MOVIES"},
+	"REELZ":          {"REELZ", "REELZCHANNEL"},
+
+	// Kids networks
+	"DISNEY":      {"DISNEY CHANNEL", "DISN", "DISNEYCHAN"},
+	"DISNEYJR":    {"DISNEY JUNIOR", "DJCHHD", "DISNEYJUNI"},
+	"DISNEYXD":    {"DISNEY XD", "DXDHD", "DISNEYXD"},
+	"NICKELODEON": {"NICKELODEON", "NICK", "NIKHD", "NICKELODEO"},
+	"NICKJR":      {"NICK JR", "NICK JR.", "NICKJR", "NICJRHD"},
+	"NICKTOONS":   {"NICKTOONS", "NIKTON"},
+	"TEENNICK":    {"TEENNICK", "TNCKHD"},
+	"CARTOON":     {"CARTOON NETWORK", "CN", "CARTOONHD"},
+	"BOOMERANG":   {"BOOMERANG", "BOOMHD"},
+
+	// Lifestyle networks
+	"HGTV":     {"HGTV", "HOME & GARDEN", "HGTVD", "HGTVHD"},
+	"FOOD":     {"FOOD NETWORK", "FOOD", "FOODHD"},
+	"COOKING":  {"COOKING CHANNEL", "COOKHD"},
+	"TRAVEL":   {"TRAVEL CHANNEL", "TRAVEL", "TRAVHD"},
+	"TLC":      {"TLC", "THE LEARNING CHANNEL", "TLCHD"},
+	"OWN":      {"OWN", "OPRAH", "OWNHD"},
+	"LIFETIME": {"LIFETIME", "LIF", "LIFEHD"},
+	"LMN":      {"LMN", "LIFETIME MOVIE NETWORK"},
+	"HALLMARK": {"HALLMARK CHANNEL", "HALL", "HALLHD", "HALLMARKCH"},
+	"WETV":     {"WE TV", "WETV"},
+	"MAGNOLIA": {"MAGNOLIA NETWORK", "MAGNHD", "DIY"},
+
+	// Documentary networks
+	"DISCOVERY":   {"DISCOVERY", "DISCOVERY CHANNEL", "DISC", "DSCHD"},
+	"HISTORY":     {"HISTORY", "HIST", "HISTORYHD", "HISTORY CHANNEL"},
+	"NATGEO":      {"NATIONAL GEOGRAPHIC", "NAT GEO", "NGCHD", "NATIONALGE"},
+	"NATGEOWILD":  {"NAT GEO WILD", "NGWIHD", "NATIONAL GEOGRAPHIC WILD"},
+	"ANIMAL":      {"ANIMAL PLANET", "APL", "APLHD"},
+	"SCIENCE":     {"SCIENCE CHANNEL", "SCIENCE", "SCIHD"},
+	"A&E":         {"A&E", "A AND E", "ARTS", "AEHD", "AESTR"},
+	"ID":          {"INVESTIGATION DISCOVERY", "ID", "IDHD"},
+	"DESTINATION": {"DESTINATION AMERICA", "DESTHD"},
+	"SMITHSONIAN": {"SMITHSONIAN CHANNEL", "SMITH", "SMITHSONIA"},
+	"FYI":         {"FYI", "FYIHD"},
+}
+
 // MatchResult represents a potential EPG match for a channel
 type MatchResult struct {
 	EPGChannelID  string  `json:"epgChannelId"`
@@ -246,6 +358,26 @@ func matchCallSign(channelName, callSign string) float64 {
 		}
 	}
 
+	// Check if callSign is in network aliases and channel name contains any alias
+	// This handles cases like "COMEDYCENT" matching "Comedy Central HD"
+	for _, aliases := range networkAliases {
+		callSignInAliases := false
+		for _, alias := range aliases {
+			if alias == callSign || strings.Contains(callSign, alias) || strings.Contains(alias, callSign) {
+				callSignInAliases = true
+				break
+			}
+		}
+		if callSignInAliases {
+			// Check if channel name contains any alias from this network
+			for _, alias := range aliases {
+				if strings.Contains(channelName, alias) {
+					return 0.85
+				}
+			}
+		}
+	}
+
 	return 0
 }
 
@@ -254,130 +386,6 @@ func matchNetwork(channelName, group, networkName string) float64 {
 	channelName = strings.ToUpper(channelName)
 	group = strings.ToUpper(group)
 	networkName = strings.ToUpper(networkName)
-
-	// Comprehensive network name variations (from Fubo, Philo, DirecTV provider data)
-	networkAliases := map[string][]string{
-		// Major broadcast networks
-		"NBC":       {"NBC", "NATIONAL BROADCASTING", "WNBC", "KNBC"},
-		"CBS":       {"CBS", "COLUMBIA BROADCASTING", "WCBS", "KCBS", "CBSHD"},
-		"ABC":       {"ABC", "AMERICAN BROADCASTING", "WABC", "KABC", "ABCHD"},
-		"FOX":       {"FOX", "FOX BROADCASTING", "WNYW", "KTTV", "FOXHD", "FOX4K"},
-		"PBS":       {"PBS", "PUBLIC BROADCASTING", "WNET", "KQED", "WEDW"},
-		"CW":        {"CW", "THE CW", "CWHD"},
-		"MYNETWORK": {"MYNETWORKTV", "MNTV", "MY NETWORK"},
-
-		// Sports networks
-		"ESPN":        {"ESPN", "ESPN+", "ESPN PLUS", "ESPNHD", "ESPN4K"},
-		"ESPN2":       {"ESPN2", "ESPN2HD"},
-		"ESPNEWS":     {"ESPNEWS", "ESNHD"},
-		"ESPNU":       {"ESPNU", "ESPN U", "ESPNUHD"},
-		"FOXSPORTS1":  {"FS1", "FOX SPORTS 1", "FS1HD", "FOXSPORTS1"},
-		"FOXSPORTS2":  {"FS2", "FOX SPORTS 2", "FS2HD", "FOXSPORTS2"},
-		"NBCSPORTS":   {"NBCSN", "NBC SPORTS", "NBCSPORTS"},
-		"CBSSPORTS":   {"CBSSN", "CBS SPORTS NETWORK", "CBSSPORTSN"},
-		"MLBNETWORK":  {"MLB NETWORK", "MLBHD", "MLBNETWORK"},
-		"NFLNETWORK":  {"NFL NETWORK", "NFLHD", "NFLNETWORK"},
-		"NBANETWORK":  {"NBA TV", "NBATV", "NBAHD"},
-		"NHLNETWORK":  {"NHL NETWORK", "NHLHD", "NHLNETWORK"},
-		"GOLFCHANNEL": {"GOLF CHANNEL", "GOLF", "GOLFHD"},
-		"TENNIS":      {"TENNIS CHANNEL", "TENNIS", "TENNISHD", "TENNISCHAN"},
-		"BTN":         {"BIG TEN NETWORK", "BTN", "BIGTENNETW"},
-		"SECNETWORK":  {"SEC NETWORK", "SECN", "SECHD", "SECNETWORK"},
-		"ACCNETWORK":  {"ACC NETWORK", "ACCN", "ACCNETWORK"},
-		"BEINSPORTS":  {"BEIN SPORTS", "BEINSPORTS", "BEIN"},
-
-		// News networks
-		"CNN":       {"CNN", "CABLE NEWS NETWORK", "CNNHD"},
-		"MSNBC":     {"MSNBC", "MSNBCHD"},
-		"FOXNEWS":   {"FOX NEWS", "FOXNEWS", "FNCHD", "FOX NEWS CHANNEL", "FOXNEWSCHA"},
-		"CNBC":      {"CNBC", "CNBCHD"},
-		"BLOOMBERG": {"BLOOMBERG", "BLOOMBERGT", "BLOOMBERG TV"},
-		"NEWSMAX":   {"NEWSMAX", "NEWSMAXHD"},
-		"NEWSNATION": {"NEWSNATION", "NEWS NATION"},
-		"CSPAN":     {"C-SPAN", "CSPAN"},
-		"HLN":       {"HLN", "HEADLINE NEWS", "HLNHD"},
-
-		// Entertainment networks
-		"HBO":         {"HBO", "HOME BOX OFFICE", "HBOHD"},
-		"SHOWTIME":    {"SHOWTIME", "SHO", "SHOWHD"},
-		"STARZ":       {"STARZ", "STARZHD"},
-		"CINEMAX":     {"CINEMAX", "MAX", "CINEMAXHD"},
-		"AMC":         {"AMC", "AMCHD", "AMCSTR"},
-		"FX":          {"FX", "FXHD"},
-		"FXX":         {"FXX", "FXXHD"},
-		"FXM":         {"FXM", "FX MOVIES"},
-		"TNT":         {"TNT", "TNTHD"},
-		"TBS":         {"TBS", "TBSHD"},
-		"USA":         {"USA", "USA NETWORK", "USAHD", "USAN"},
-		"SYFY":        {"SYFY", "SCI-FI", "SCIFI", "SYFYHD"},
-		"BRAVO":       {"BRAVO", "BRAVOHD", "BVO"},
-		"E!":          {"E!", "EENTERTAIN", "EHD"},
-		"OXYGEN":      {"OXYGEN", "OXG", "OXYGEN TRUE CRIME"},
-		"TVLAND":      {"TV LAND", "TVLAND", "TVLNDHD"},
-		"POP":         {"POP", "POP TV"},
-		"PARAMOUNT":   {"PARAMOUNT NETWORK", "PARHD", "PARAMOUNTN"},
-		"COMEDYCENTRAL": {"COMEDY CENTRAL", "CC", "CCHD", "COMEDYCENT"},
-		"MTV":         {"MTV", "MTVHD"},
-		"MTV2":        {"MTV2", "MTV2HD"},
-		"VH1":         {"VH1", "VH1HD"},
-		"CMT":         {"CMT", "COUNTRY MUSIC", "CMTHD"},
-		"BET":         {"BET", "BETHD"},
-		"BETHER":      {"BET HER", "BETHER"},
-		"LOGO":        {"LOGO", "LOGOHD"},
-		"FREEFORM":    {"FREEFORM", "FREFMHD", "ABC FAMILY"},
-		"IFC":         {"IFC", "IFCHD"},
-		"SUNDANCE":    {"SUNDANCE", "SUNDANCETV"},
-		"TCM":         {"TCM", "TURNER CLASSIC MOVIES"},
-		"REELZ":       {"REELZ", "REELZCHANNEL"},
-
-		// Kids networks
-		"DISNEY":      {"DISNEY CHANNEL", "DISN", "DISNEYCHAN"},
-		"DISNEYJR":    {"DISNEY JUNIOR", "DJCHHD", "DISNEYJUNI"},
-		"DISNEYXD":    {"DISNEY XD", "DXDHD", "DISNEYXD"},
-		"NICKELODEON": {"NICKELODEON", "NICK", "NIKHD", "NICKELODEO"},
-		"NICKJR":      {"NICK JR", "NICK JR.", "NICKJR", "NICJRHD"},
-		"NICKTOONS":   {"NICKTOONS", "NIKTON"},
-		"TEENNICK":    {"TEENNICK", "TNCKHD"},
-		"CARTOON":     {"CARTOON NETWORK", "CN", "CARTOONHD"},
-		"BOOMERANG":   {"BOOMERANG", "BOOMHD"},
-
-		// Lifestyle networks
-		"HGTV":       {"HGTV", "HOME & GARDEN", "HGTVD", "HGTVHD"},
-		"FOOD":       {"FOOD NETWORK", "FOOD", "FOODHD"},
-		"COOKING":    {"COOKING CHANNEL", "COOKHD"},
-		"TRAVEL":     {"TRAVEL CHANNEL", "TRAVEL", "TRAVHD"},
-		"TLC":        {"TLC", "THE LEARNING CHANNEL", "TLCHD"},
-		"OWN":        {"OWN", "OPRAH", "OWNHD"},
-		"LIFETIME":   {"LIFETIME", "LIF", "LIFEHD"},
-		"LMN":        {"LMN", "LIFETIME MOVIE NETWORK"},
-		"HALLMARK":   {"HALLMARK CHANNEL", "HALL", "HALLHD", "HALLMARKCH"},
-		"WETV":       {"WE TV", "WETV"},
-		"MAGNOLIA":   {"MAGNOLIA NETWORK", "MAGNHD", "DIY"},
-
-		// Documentary networks
-		"DISCOVERY": {"DISCOVERY", "DISCOVERY CHANNEL", "DISC", "DSCHD"},
-		"HISTORY":   {"HISTORY", "HIST", "HISTORYHD", "HISTORY CHANNEL"},
-		"NATGEO":    {"NATIONAL GEOGRAPHIC", "NAT GEO", "NGCHD", "NATIONALGE"},
-		"NATGEOWILD": {"NAT GEO WILD", "NGWIHD", "NATIONAL GEOGRAPHIC WILD"},
-		"ANIMAL":    {"ANIMAL PLANET", "APL", "APLHD"},
-		"SCIENCE":   {"SCIENCE CHANNEL", "SCIENCE", "SCIHD"},
-		"A&E":       {"A&E", "A AND E", "ARTS", "AEHD", "AESTR"},
-		"ID":        {"INVESTIGATION DISCOVERY", "ID", "IDHD"},
-		"DESTINATION": {"DESTINATION AMERICA", "DESTHD"},
-		"SMITHSONIAN": {"SMITHSONIAN CHANNEL", "SMITH", "SMITHSONIA"},
-		"FYI":       {"FYI", "FYIHD"},
-
-		// Premium movie networks
-		"MGM": {"MGM+", "EPIX", "MGMHD", "EPIXHD"},
-
-		// Family/faith networks
-		"UPTV":         {"UPTV", "UP"},
-		"INSP":         {"INSP", "INSPHD"},
-		"FETV":         {"FETV", "FAMILY ENTERTAINMENT"},
-		"GREATAMERICAN": {"GREAT AMERICAN FAMILY", "GAC", "GACHD", "GREATAMERI"},
-		"DAYSTAR":      {"DAYSTAR"},
-		"TBN":          {"TBN", "TRINITY BROADCASTING"},
-	}
 
 	// Normalize network name
 	networkNorm := strings.ReplaceAll(networkName, " ", "")

@@ -64,6 +64,24 @@ func (v *VODImporter) ImportXtreamVOD(sourceID uint) (*ImportResult, error) {
 		return nil, fmt.Errorf("target library must be a movie library")
 	}
 
+	// Fetch VOD categories first to build maps
+	categories, err := v.xtreamClient.GetVODCategories(&source)
+	if err != nil {
+		log.Printf("Warning: could not fetch VOD categories: %v", err)
+	}
+
+	// Build category maps: id -> name, id -> parent_id
+	categoryNameMap := make(map[string]string)  // category_id -> category_name
+	categoryParentMap := make(map[string]string) // category_id -> parent_id
+	for _, cat := range categories {
+		categoryNameMap[cat.CategoryID] = cat.CategoryName
+		parentID := interfaceToString(cat.ParentID)
+		if parentID != "0" && parentID != "" {
+			categoryParentMap[cat.CategoryID] = parentID
+		}
+	}
+	log.Printf("Loaded %d VOD categories", len(categoryNameMap))
+
 	// Get all VOD streams
 	streams, err := v.xtreamClient.GetVODStreams(&source, "")
 	if err != nil {
@@ -74,32 +92,61 @@ func (v *VODImporter) ImportXtreamVOD(sourceID uint) (*ImportResult, error) {
 	log.Printf("Importing %d VOD items from source %s", result.Total, source.Name)
 
 	for _, stream := range streams {
+		// Convert interface{} types to proper types
+		streamID := interfaceToInt(stream.StreamID)
+		categoryID := interfaceToString(stream.CategoryID)
+
 		// Check if already exists
 		var existing models.MediaItem
-		err := v.db.Where("xtream_vod_id = ? AND provider_source_id = ?", stream.StreamID, source.ID).
+		err := v.db.Where("xtream_vod_id = ? AND provider_source_id = ?", streamID, source.ID).
 			First(&existing).Error
 
 		// Build stream URL
-		streamURL := v.xtreamClient.BuildVODStreamURL(&source, stream.StreamID, stream.ContainerExtension)
+		streamURL := v.xtreamClient.BuildVODStreamURL(&source, streamID, stream.ContainerExtension)
 
 		// Parse year from name if present (e.g., "Movie Name (2023)")
 		title, year := parseYearFromTitle(stream.Name)
 
+		// Convert rating to float64
+		var rating float64
+		switch r := stream.Rating.(type) {
+		case float64:
+			rating = r
+		case string:
+			rating, _ = strconv.ParseFloat(r, 64)
+		}
+
+		// Get category name and parent info from maps
+		categoryName := categoryNameMap[categoryID]
+		parentCategoryID := categoryParentMap[categoryID]
+		parentCategoryName := categoryNameMap[parentCategoryID]
+
+		// If no parent, this category IS a top-level (streaming service)
+		// Store it as parent for easy filtering
+		if parentCategoryID == "" && categoryName != "" {
+			parentCategoryID = categoryID
+			parentCategoryName = categoryName
+		}
+
 		mediaItem := models.MediaItem{
-			UUID:             uuid.New().String(),
-			LibraryID:        *source.VODLibraryID,
-			Type:             "movie",
-			Title:            title,
-			Year:             year,
-			Thumb:            stream.StreamIcon,
-			Rating:           stream.Rating,
-			ProviderType:     "xtream",
-			ProviderSourceID: &source.ID,
-			ProviderName:     source.Name,
-			StreamURL:        streamURL,
-			XtreamVODID:      &stream.StreamID,
-			AddedAt:          time.Now(),
-			UpdatedAt:        time.Now(),
+			UUID:                   uuid.New().String(),
+			LibraryID:              *source.VODLibraryID,
+			Type:                   "movie",
+			Title:                  title,
+			Year:                   year,
+			Thumb:                  stream.StreamIcon,
+			Rating:                 rating,
+			ProviderType:           "xtream",
+			ProviderSourceID:       &source.ID,
+			ProviderName:           source.Name,
+			StreamURL:              streamURL,
+			XtreamVODID:            &streamID,
+			XtreamCategoryID:       categoryID,
+			XtreamCategoryName:     categoryName,
+			XtreamParentCategoryID: parentCategoryID,
+			XtreamParentCategory:   parentCategoryName,
+			AddedAt:                time.Now(),
+			UpdatedAt:              time.Now(),
 		}
 
 		if err == gorm.ErrRecordNotFound {
@@ -113,7 +160,7 @@ func (v *VODImporter) ImportXtreamVOD(sourceID uint) (*ImportResult, error) {
 			// Create a remote media file entry
 			mediaFile := models.MediaFile{
 				MediaItemID:     mediaItem.ID,
-				FilePath:        fmt.Sprintf("xtream://vod/%d/%d.%s", source.ID, stream.StreamID, stream.ContainerExtension),
+				FilePath:        fmt.Sprintf("xtream://vod/%d/%d.%s", source.ID, streamID, stream.ContainerExtension),
 				Container:       stream.ContainerExtension,
 				IsRemote:        true,
 				RemoteURL:       streamURL,
@@ -179,6 +226,24 @@ func (v *VODImporter) ImportXtreamSeries(sourceID uint) (*ImportResult, error) {
 		return nil, fmt.Errorf("target library must be a TV show library")
 	}
 
+	// Fetch series categories first to build maps
+	categories, err := v.xtreamClient.GetSeriesCategories(&source)
+	if err != nil {
+		log.Printf("Warning: could not fetch series categories: %v", err)
+	}
+
+	// Build category maps: id -> name, id -> parent_id
+	categoryNameMap := make(map[string]string)  // category_id -> category_name
+	categoryParentMap := make(map[string]string) // category_id -> parent_id
+	for _, cat := range categories {
+		categoryNameMap[cat.CategoryID] = cat.CategoryName
+		parentID := interfaceToString(cat.ParentID)
+		if parentID != "0" && parentID != "" {
+			categoryParentMap[cat.CategoryID] = parentID
+		}
+	}
+	log.Printf("Loaded %d series categories", len(categoryNameMap))
+
 	// Get all series
 	seriesList, err := v.xtreamClient.GetSeries(&source, "")
 	if err != nil {
@@ -189,32 +254,57 @@ func (v *VODImporter) ImportXtreamSeries(sourceID uint) (*ImportResult, error) {
 	log.Printf("Importing %d series from source %s", result.Total, source.Name)
 
 	for _, series := range seriesList {
+		// Convert interface{} types to proper types
+		seriesID := interfaceToInt(series.SeriesID)
+		categoryID := interfaceToString(series.CategoryID)
+
+		// Get category name and parent info from maps
+		categoryName := categoryNameMap[categoryID]
+		parentCategoryID := categoryParentMap[categoryID]
+		parentCategoryName := categoryNameMap[parentCategoryID]
+
+		// If no parent, this category IS a top-level (streaming service)
+		if parentCategoryID == "" && categoryName != "" {
+			parentCategoryID = categoryID
+			parentCategoryName = categoryName
+		}
+
 		// Check if show already exists
 		var existingShow models.MediaItem
 		err := v.db.Where("xtream_series_id = ? AND provider_source_id = ? AND type = ?",
-			series.SeriesID, source.ID, "show").First(&existingShow).Error
+			seriesID, source.ID, "show").First(&existingShow).Error
 
 		// Parse year
 		_, year := parseYearFromTitle(series.ReleaseDate)
 
 		// Parse rating
-		rating, _ := strconv.ParseFloat(series.Rating, 64)
+		var rating float64
+		switch r := series.Rating.(type) {
+		case float64:
+			rating = r
+		case string:
+			rating, _ = strconv.ParseFloat(r, 64)
+		}
 
 		showItem := models.MediaItem{
-			UUID:             uuid.New().String(),
-			LibraryID:        *source.SeriesLibraryID,
-			Type:             "show",
-			Title:            series.Name,
-			Summary:          series.Plot,
-			Year:             year,
-			Thumb:            series.Cover,
-			Rating:           rating,
-			ProviderType:     "xtream",
-			ProviderSourceID: &source.ID,
-			ProviderName:     source.Name,
-			XtreamSeriesID:   &series.SeriesID,
-			AddedAt:          time.Now(),
-			UpdatedAt:        time.Now(),
+			UUID:                   uuid.New().String(),
+			LibraryID:              *source.SeriesLibraryID,
+			Type:                   "show",
+			Title:                  series.Name,
+			Summary:                series.Plot,
+			Year:                   year,
+			Thumb:                  series.Cover,
+			Rating:                 rating,
+			ProviderType:           "xtream",
+			ProviderSourceID:       &source.ID,
+			ProviderName:           source.Name,
+			XtreamSeriesID:         &seriesID,
+			XtreamCategoryID:       categoryID,
+			XtreamCategoryName:     categoryName,
+			XtreamParentCategoryID: parentCategoryID,
+			XtreamParentCategory:   parentCategoryName,
+			AddedAt:                time.Now(),
+			UpdatedAt:              time.Now(),
 		}
 
 		var showID uint
@@ -244,7 +334,7 @@ func (v *VODImporter) ImportXtreamSeries(sourceID uint) (*ImportResult, error) {
 		}
 
 		// Get series details (seasons and episodes)
-		seriesInfo, err := v.xtreamClient.GetSeriesInfo(&source, series.SeriesID)
+		seriesInfo, err := v.xtreamClient.GetSeriesInfo(&source, seriesID)
 		if err != nil {
 			log.Printf("Failed to get series info for %s: %v", series.Name, err)
 			continue
@@ -278,7 +368,7 @@ func (v *VODImporter) importSeasonsAndEpisodes(source *models.XtreamSource, show
 		// Check if season exists
 		var existingSeason models.MediaItem
 		seasonNum := season.SeasonNumber
-		err := v.db.Where("parent_id = ? AND type = ? AND index = ?",
+		err := v.db.Where("parent_id = ? AND type = ? AND `index` = ?",
 			showID, "season", seasonNum).First(&existingSeason).Error
 
 		seasonItem := models.MediaItem{
@@ -355,7 +445,7 @@ func (v *VODImporter) importEpisode(source *models.XtreamSource, showID, seasonI
 
 	// Check if episode exists
 	var existing models.MediaItem
-	err := v.db.Where("parent_id = ? AND type = ? AND index = ?",
+	err := v.db.Where("parent_id = ? AND type = ? AND `index` = ?",
 		seasonID, "episode", ep.EpisodeNum).First(&existing).Error
 
 	// Build stream URL
