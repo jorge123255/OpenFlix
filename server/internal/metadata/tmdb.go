@@ -80,6 +80,17 @@ type tmdbMovie struct {
 		ID   int    `json:"id"`
 		Name string `json:"name"`
 	} `json:"production_companies"`
+	// Release dates with certifications (from append_to_response=release_dates)
+	ReleaseDates struct {
+		Results []struct {
+			ISO3166_1    string `json:"iso_3166_1"`
+			ReleaseDates []struct {
+				Certification string `json:"certification"`
+				ReleaseDate   string `json:"release_date"`
+				Type          int    `json:"type"`
+			} `json:"release_dates"`
+		} `json:"results"`
+	} `json:"release_dates"`
 }
 
 type tmdbShow struct {
@@ -199,6 +210,7 @@ func (t *TMDBAgent) GetMovieDetails(tmdbID int) (*tmdbMovie, error) {
 
 	params := url.Values{}
 	params.Set("api_key", t.apiKey)
+	params.Set("append_to_response", "release_dates") // Get certifications
 
 	resp, err := t.httpClient.Get(fmt.Sprintf("%s/movie/%d?%s", tmdbBaseURL, tmdbID, params.Encode()))
 	if err != nil {
@@ -409,6 +421,20 @@ func (t *TMDBAgent) UpdateMovieMetadata(item *models.MediaItem) error {
 		}
 	}
 
+	// Get content rating (US certification from release_dates)
+	for _, rd := range movie.ReleaseDates.Results {
+		if rd.ISO3166_1 == "US" {
+			// Find the theatrical or digital release certification
+			for _, release := range rd.ReleaseDates {
+				if release.Certification != "" {
+					updates["content_rating"] = release.Certification
+					break
+				}
+			}
+			break
+		}
+	}
+
 	if err := t.db.Model(item).Updates(updates).Error; err != nil {
 		return err
 	}
@@ -596,7 +622,29 @@ func (t *TMDBAgent) updateCast(item *models.MediaItem, credits *tmdbCredits) {
 	// Clear existing cast
 	t.db.Where("media_item_id = ?", item.ID).Delete(&models.CastMember{})
 
-	// Add top 10 cast members
+	order := 0
+
+	// Add directors and writers from crew (they come before cast in display)
+	for _, crew := range credits.Crew {
+		if crew.Job == "Director" || crew.Job == "Writer" || crew.Job == "Screenplay" || crew.Job == "Story" {
+			var thumb string
+			if crew.ProfilePath != "" {
+				thumb = fmt.Sprintf("%s/w185%s", tmdbImageURL, crew.ProfilePath)
+			}
+
+			member := models.CastMember{
+				MediaItemID: item.ID,
+				Tag:         crew.Name,
+				Role:        crew.Job, // Use job as role (Director, Writer, etc.)
+				Thumb:       thumb,
+				Order:       order,
+			}
+			t.db.Create(&member)
+			order++
+		}
+	}
+
+	// Add top 10 cast members (actors)
 	for i, cast := range credits.Cast {
 		if i >= 10 {
 			break
@@ -612,7 +660,7 @@ func (t *TMDBAgent) updateCast(item *models.MediaItem, credits *tmdbCredits) {
 			Tag:         cast.Name,
 			Role:        cast.Character,
 			Thumb:       thumb,
-			Order:       cast.Order,
+			Order:       order + cast.Order,
 		}
 		t.db.Create(&member)
 	}
@@ -631,4 +679,173 @@ func (t *TMDBAgent) DownloadImage(imagePath string) ([]byte, error) {
 	}
 
 	return io.ReadAll(resp.Body)
+}
+
+// TrendingResult represents a trending item from TMDB
+type TrendingResult struct {
+	ID           int     `json:"id"`
+	Title        string  `json:"title"`
+	Name         string  `json:"name"`
+	Overview     string  `json:"overview"`
+	PosterPath   string  `json:"poster_path"`
+	BackdropPath string  `json:"backdrop_path"`
+	MediaType    string  `json:"media_type"`
+	VoteAverage  float64 `json:"vote_average"`
+	ReleaseDate  string  `json:"release_date"`
+	FirstAirDate string  `json:"first_air_date"`
+	Popularity   float64 `json:"popularity"`
+}
+
+// TrendingResponse from TMDB API
+type TrendingResponse struct {
+	Page         int               `json:"page"`
+	Results      []TrendingResult  `json:"results"`
+	TotalPages   int               `json:"total_pages"`
+	TotalResults int               `json:"total_results"`
+}
+
+// GetTrending fetches trending movies and TV shows
+func (t *TMDBAgent) GetTrending(mediaType string, timeWindow string) (*TrendingResponse, error) {
+	if !t.IsConfigured() {
+		return nil, fmt.Errorf("TMDB API key not configured")
+	}
+
+	// Valid values: all, movie, tv for mediaType
+	// Valid values: day, week for timeWindow
+	if mediaType == "" {
+		mediaType = "all"
+	}
+	if timeWindow == "" {
+		timeWindow = "day"
+	}
+
+	params := url.Values{}
+	params.Set("api_key", t.apiKey)
+
+	resp, err := t.httpClient.Get(fmt.Sprintf("%s/trending/%s/%s?%s", tmdbBaseURL, mediaType, timeWindow, params.Encode()))
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("TMDB API error: %d", resp.StatusCode)
+	}
+
+	var result TrendingResponse
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, err
+	}
+
+	return &result, nil
+}
+
+// GetPopularMovies fetches popular movies from TMDB
+func (t *TMDBAgent) GetPopularMovies(page int) (*TrendingResponse, error) {
+	if !t.IsConfigured() {
+		return nil, fmt.Errorf("TMDB API key not configured")
+	}
+
+	if page < 1 {
+		page = 1
+	}
+
+	params := url.Values{}
+	params.Set("api_key", t.apiKey)
+	params.Set("page", strconv.Itoa(page))
+
+	resp, err := t.httpClient.Get(fmt.Sprintf("%s/movie/popular?%s", tmdbBaseURL, params.Encode()))
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("TMDB API error: %d", resp.StatusCode)
+	}
+
+	var result TrendingResponse
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, err
+	}
+
+	// Set media type for consistency
+	for i := range result.Results {
+		result.Results[i].MediaType = "movie"
+	}
+
+	return &result, nil
+}
+
+// GetPopularTV fetches popular TV shows from TMDB
+func (t *TMDBAgent) GetPopularTV(page int) (*TrendingResponse, error) {
+	if !t.IsConfigured() {
+		return nil, fmt.Errorf("TMDB API key not configured")
+	}
+
+	if page < 1 {
+		page = 1
+	}
+
+	params := url.Values{}
+	params.Set("api_key", t.apiKey)
+	params.Set("page", strconv.Itoa(page))
+
+	resp, err := t.httpClient.Get(fmt.Sprintf("%s/tv/popular?%s", tmdbBaseURL, params.Encode()))
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("TMDB API error: %d", resp.StatusCode)
+	}
+
+	var result TrendingResponse
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, err
+	}
+
+	// Set media type for consistency
+	for i := range result.Results {
+		result.Results[i].MediaType = "tv"
+	}
+
+	return &result, nil
+}
+
+// GetTopRatedMovies fetches top rated movies from TMDB
+func (t *TMDBAgent) GetTopRatedMovies(page int) (*TrendingResponse, error) {
+	if !t.IsConfigured() {
+		return nil, fmt.Errorf("TMDB API key not configured")
+	}
+
+	if page < 1 {
+		page = 1
+	}
+
+	params := url.Values{}
+	params.Set("api_key", t.apiKey)
+	params.Set("page", strconv.Itoa(page))
+
+	resp, err := t.httpClient.Get(fmt.Sprintf("%s/movie/top_rated?%s", tmdbBaseURL, params.Encode()))
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("TMDB API error: %d", resp.StatusCode)
+	}
+
+	var result TrendingResponse
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, err
+	}
+
+	for i := range result.Results {
+		result.Results[i].MediaType = "movie"
+	}
+
+	return &result, nil
 }

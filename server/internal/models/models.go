@@ -90,12 +90,16 @@ type MediaItem struct {
 	Art              string         `gorm:"size:500" json:"art,omitempty"`
 
 	// Provider tracking (for VOD content)
-	ProviderType     string `gorm:"size:20;index" json:"providerType,omitempty"`   // local, m3u, xtream
-	ProviderSourceID *uint  `gorm:"index" json:"providerSourceId,omitempty"`       // XtreamSource or M3USource ID
-	ProviderName     string `gorm:"size:255" json:"providerName,omitempty"`        // Source name for display
-	StreamURL        string `gorm:"size:2000" json:"streamUrl,omitempty"`          // Remote stream URL for VOD
-	XtreamVODID      *int   `gorm:"index" json:"xtreamVodId,omitempty"`            // Xtream VOD stream ID
-	XtreamSeriesID   *int   `gorm:"index" json:"xtreamSeriesId,omitempty"`         // Xtream series ID
+	ProviderType       string `gorm:"size:20;index" json:"providerType,omitempty"`        // local, m3u, xtream
+	ProviderSourceID   *uint  `gorm:"index" json:"providerSourceId,omitempty"`            // XtreamSource or M3USource ID
+	ProviderName       string `gorm:"size:255" json:"providerName,omitempty"`             // Source name for display
+	StreamURL          string `gorm:"size:2000" json:"streamUrl,omitempty"`               // Remote stream URL for VOD
+	XtreamVODID        *int   `gorm:"index" json:"xtreamVodId,omitempty"`                 // Xtream VOD stream ID
+	XtreamSeriesID     *int   `gorm:"index" json:"xtreamSeriesId,omitempty"`              // Xtream series ID
+	XtreamCategoryID       string `gorm:"size:50;index" json:"xtreamCategoryId,omitempty"`            // Xtream category ID (e.g., "p8_28")
+	XtreamCategoryName     string `gorm:"size:255;index" json:"xtreamCategoryName,omitempty"`         // Xtream category name (e.g., "Action")
+	XtreamParentCategoryID string `gorm:"size:50;index" json:"xtreamParentCategoryId,omitempty"`      // Parent category ID (e.g., "p8" for Netflix)
+	XtreamParentCategory   string `gorm:"size:255;index" json:"xtreamParentCategory,omitempty"`       // Parent category name (e.g., "Netflix")
 
 	// Hierarchy (for episodes/seasons)
 	ParentID            *uint  `gorm:"index" json:"parentRatingKey,omitempty"`
@@ -385,19 +389,44 @@ type Channel struct {
 
 // Program represents an EPG program entry
 type Program struct {
-	ID           uint      `gorm:"primaryKey" json:"id"`
-	ChannelID    string    `gorm:"size:255;index:idx_program_channel_time" json:"channelId"`
-	CallSign     string    `gorm:"size:50" json:"callSign,omitempty"`     // Station call letters (e.g., "WMAQ", "WBBM")
-	ChannelNo    string    `gorm:"size:20" json:"channelNo,omitempty"`     // Channel number (e.g., "5", "7.1")
-	AffiliateName string   `gorm:"size:100" json:"affiliateName,omitempty"` // Network name (e.g., "NBC", "CBS")
-	Title        string    `gorm:"size:500;index" json:"title"`
-	Description  string    `gorm:"type:text" json:"description,omitempty"`
-	Start        time.Time `gorm:"index:idx_program_channel_time;index:idx_program_time_range" json:"start"`
-	End          time.Time `gorm:"index:idx_program_time_range" json:"end"`
-	Icon         string    `gorm:"size:2000" json:"icon,omitempty"`
-	Category     string    `gorm:"size:100;index" json:"category,omitempty"`
-	EpisodeNum   string    `gorm:"size:50" json:"episodeNum,omitempty"`
-	CreatedAt    time.Time
+	ID            uint      `gorm:"primaryKey" json:"id"`
+	ChannelID     string    `gorm:"size:255;index:idx_program_channel_time" json:"channelId"`
+	CallSign      string    `gorm:"size:50" json:"callSign,omitempty"`      // Station call letters (e.g., "WMAQ", "WBBM")
+	ChannelNo     string    `gorm:"size:20" json:"channelNo,omitempty"`     // Channel number (e.g., "5", "7.1")
+	AffiliateName string    `gorm:"size:100" json:"affiliateName,omitempty"` // Network name (e.g., "NBC", "CBS")
+	Title         string    `gorm:"size:500;index" json:"title"`
+	Subtitle      string    `gorm:"size:500" json:"subtitle,omitempty"`     // Episode title
+	Description   string    `gorm:"type:text" json:"description,omitempty"`
+	Start         time.Time `gorm:"index:idx_program_channel_time;index:idx_program_time_range" json:"start"`
+	End           time.Time `gorm:"index:idx_program_time_range" json:"end"`
+	Icon          string    `gorm:"size:2000" json:"icon,omitempty"`
+	Art           string    `gorm:"size:2000" json:"art,omitempty"`
+	Category      string    `gorm:"size:100;index" json:"category,omitempty"`
+	EpisodeNum    string    `gorm:"size:50" json:"episodeNum,omitempty"`
+	SeasonNumber  int       `json:"seasonNumber,omitempty"`
+	EpisodeNumber int       `json:"episodeNumber,omitempty"`
+	Rating        string    `gorm:"size:20" json:"rating,omitempty"`        // TV-PG, TV-14, etc.
+
+	// Content classification flags
+	IsMovie     bool `gorm:"default:false;index" json:"isMovie"`
+	IsSports    bool `gorm:"default:false;index" json:"isSports"`
+	IsKids      bool `gorm:"default:false;index" json:"isKids"`
+	IsNews      bool `gorm:"default:false;index" json:"isNews"`
+	IsPremiere  bool `gorm:"default:false" json:"isPremiere"`
+	IsNew       bool `gorm:"default:false" json:"isNew"`
+	IsLive      bool `gorm:"default:false" json:"isLive"`
+	IsFinale    bool `gorm:"default:false" json:"isFinale"`
+
+	// Sports-specific fields
+	Teams  string `gorm:"size:500" json:"teams,omitempty"`  // Comma-separated team names
+	League string `gorm:"size:50" json:"league,omitempty"`  // NFL, NBA, MLB, NHL, MLS, etc.
+
+	// External IDs
+	SeriesID    string `gorm:"size:100" json:"seriesId,omitempty"`
+	ProgramID   string `gorm:"size:100" json:"programId,omitempty"`
+	GracenoteID string `gorm:"size:100" json:"gracenoteId,omitempty"`
+
+	CreatedAt time.Time
 }
 
 // ========== DVR Models ==========
@@ -409,7 +438,9 @@ type Recording struct {
 	ChannelID      uint       `gorm:"index" json:"channelId"`
 	ProgramID      *uint      `gorm:"index" json:"programId,omitempty"`
 	Title          string     `gorm:"size:500" json:"title"`
+	Subtitle       string     `gorm:"size:500" json:"subtitle,omitempty"`       // Episode title
 	Description    string     `gorm:"type:text" json:"description,omitempty"`
+	Summary        string     `gorm:"type:text" json:"summary,omitempty"`       // Full synopsis from TMDB
 	StartTime      time.Time  `json:"startTime"`
 	EndTime        time.Time  `json:"endTime"`
 	Status         string     `gorm:"size:20;index" json:"status"` // scheduled, recording, completed, failed
@@ -420,25 +451,58 @@ type Recording struct {
 	SeriesParentID *uint      `gorm:"index" json:"seriesParentId,omitempty"`
 	Category       string     `gorm:"size:100" json:"category,omitempty"`
 	EpisodeNum     string     `gorm:"size:50" json:"episodeNum,omitempty"`
-	CreatedAt      time.Time  `json:"createdAt"`
-	UpdatedAt      time.Time  `json:"updatedAt"`
+	// Metadata fields from TMDB
+	Thumb           string     `gorm:"size:500" json:"thumb,omitempty"`          // Poster URL
+	Art             string     `gorm:"size:500" json:"art,omitempty"`            // Backdrop URL
+	SeasonNumber    *int       `json:"seasonNumber,omitempty"`
+	EpisodeNumber   *int       `json:"episodeNumber,omitempty"`
+	Genres          string     `gorm:"size:500" json:"genres,omitempty"`         // Comma-separated
+	ContentRating   string     `gorm:"size:20" json:"contentRating,omitempty"`   // TV-MA, PG-13, etc.
+	Year            *int       `json:"year,omitempty"`
+	Duration        *int       `json:"duration,omitempty"`                       // Runtime in minutes
+	OriginalAirDate *time.Time `json:"originalAirDate,omitempty"`
+	TMDBId          *int       `json:"tmdbId,omitempty"`
+	IsMovie         bool       `gorm:"default:false" json:"isMovie"`
+	Rating          *float64   `json:"rating,omitempty"`                         // TMDB rating
+	ChannelName     string     `gorm:"size:200" json:"channelName,omitempty"`    // Cached channel name
+	ChannelLogo     string     `gorm:"size:500" json:"channelLogo,omitempty"`    // Cached channel logo
+	ViewOffset      *int64     `json:"viewOffset,omitempty"`                     // Watch progress in ms
+	CreatedAt       time.Time  `json:"createdAt"`
+	UpdatedAt       time.Time  `json:"updatedAt"`
 }
 
 // SeriesRule represents a series recording rule
 type SeriesRule struct {
-	ID           uint   `gorm:"primaryKey" json:"id"`
-	UserID       uint   `gorm:"index" json:"userId"`
-	Title        string `gorm:"size:500" json:"title"`
-	ChannelID    *uint  `gorm:"index" json:"channelId,omitempty"` // nil = any channel
-	Keywords     string `gorm:"size:500" json:"keywords,omitempty"`
-	TimeSlot     string `gorm:"size:20" json:"timeSlot,omitempty"` // e.g., "20:00"
-	DaysOfWeek   string `gorm:"size:20" json:"daysOfWeek,omitempty"` // e.g., "1,2,3,4,5"
-	KeepCount    int    `gorm:"default:0" json:"keepCount"` // 0 = keep all
-	PrePadding   int    `json:"prePadding"`   // minutes
-	PostPadding  int    `json:"postPadding"`  // minutes
-	Enabled      bool   `gorm:"default:true" json:"enabled"`
-	CreatedAt    time.Time `json:"createdAt"`
-	UpdatedAt    time.Time `json:"updatedAt"`
+	ID          uint      `gorm:"primaryKey" json:"id"`
+	UserID      uint      `gorm:"index" json:"userId"`
+	Title       string    `gorm:"size:500" json:"title"`
+	ChannelID   *uint     `gorm:"index" json:"channelId,omitempty"` // nil = any channel
+	Keywords    string    `gorm:"size:500" json:"keywords,omitempty"`
+	TimeSlot    string    `gorm:"size:20" json:"timeSlot,omitempty"`   // e.g., "20:00"
+	DaysOfWeek  string    `gorm:"size:20" json:"daysOfWeek,omitempty"` // e.g., "1,2,3,4,5"
+	KeepCount   int       `gorm:"default:0" json:"keepCount"`          // 0 = keep all
+	PrePadding  int       `json:"prePadding"`                          // minutes
+	PostPadding int       `json:"postPadding"`                         // minutes
+	Enabled     bool      `gorm:"default:true" json:"enabled"`
+	CreatedAt   time.Time `json:"createdAt"`
+	UpdatedAt   time.Time `json:"updatedAt"`
+}
+
+// TeamPass represents an auto-recording rule for sports teams
+type TeamPass struct {
+	ID          uint      `gorm:"primaryKey" json:"id"`
+	UserID      uint      `gorm:"index" json:"userId"`
+	TeamName    string    `gorm:"size:200" json:"teamName"`            // Primary team name
+	TeamAliases string    `gorm:"size:500" json:"teamAliases"`         // Comma-separated aliases
+	League      string    `gorm:"size:50" json:"league"`               // NFL, NBA, MLB, NHL, MLS, etc.
+	ChannelIDs  string    `gorm:"size:500" json:"channelIds,omitempty"` // Comma-separated channel IDs (empty = all)
+	PrePadding  int       `gorm:"default:5" json:"prePadding"`         // Minutes before start
+	PostPadding int       `gorm:"default:60" json:"postPadding"`       // Minutes after end (games run long)
+	KeepCount   int       `gorm:"default:0" json:"keepCount"`          // 0 = keep all
+	Priority    int       `gorm:"default:0" json:"priority"`           // For conflict resolution
+	Enabled     bool      `gorm:"default:true" json:"enabled"`
+	CreatedAt   time.Time `json:"createdAt"`
+	UpdatedAt   time.Time `json:"updatedAt"`
 }
 
 // CommercialSegment represents a detected commercial segment in a recording

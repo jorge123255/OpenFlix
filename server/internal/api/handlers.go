@@ -3,7 +3,10 @@ package api
 import (
 	"errors"
 	"fmt"
+	"io"
+	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -1250,7 +1253,11 @@ func (s *Server) getLibraryHubs(c *gin.Context) {
 		})
 	}
 
-	// 6. By Genre Hubs (get top 3 genres)
+	// 6. Streaming Service Hubs (Netflix, Disney+, etc.) - get top 8
+	serviceHubs := s.getStreamingServiceHubs(uint(libraryID), lib.Type, hubLimit, 8)
+	hubs = append(hubs, serviceHubs...)
+
+	// 7. By Genre Hubs (get top 3 genres)
 	genreHubs := s.getGenreHubs(uint(libraryID), lib.Type, hubLimit, 3)
 	hubs = append(hubs, genreHubs...)
 
@@ -1475,6 +1482,140 @@ func (s *Server) getGenreHubs(libraryID uint, libType string, itemLimit int, gen
 	return hubs
 }
 
+// getStreamingServices returns streaming service hubs for a specific library
+func (s *Server) getStreamingServices(c *gin.Context) {
+	libraryID, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid library ID"})
+		return
+	}
+
+	var lib models.Library
+	if err := s.db.First(&lib, libraryID).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Library not found"})
+		return
+	}
+
+	hubLimit := 20
+	serviceLimit := 20 // Get more services
+	serviceHubs := s.getStreamingServiceHubs(uint(libraryID), lib.Type, hubLimit, serviceLimit)
+
+	c.JSON(http.StatusOK, gin.H{
+		"MediaContainer": gin.H{
+			"size":             len(serviceHubs),
+			"librarySectionID": libraryID,
+			"Hub":              serviceHubs,
+		},
+	})
+}
+
+// getAllStreamingServices returns streaming service hubs from all libraries
+func (s *Server) getAllStreamingServices(c *gin.Context) {
+	// Get all libraries
+	var libraries []models.Library
+	s.db.Where("type IN (?)", []string{"movie", "show"}).Find(&libraries)
+
+	allHubs := []gin.H{}
+	hubLimit := 20
+	serviceLimit := 10 // Top 10 per library
+
+	for _, lib := range libraries {
+		serviceHubs := s.getStreamingServiceHubs(lib.ID, lib.Type, hubLimit, serviceLimit)
+		allHubs = append(allHubs, serviceHubs...)
+	}
+
+	// Deduplicate by service name (merge items from same service across libraries)
+	mergedHubs := make(map[string]gin.H)
+	for _, hub := range allHubs {
+		title := hub["title"].(string)
+		if existing, ok := mergedHubs[title]; ok {
+			// Merge metadata from both hubs
+			existingMeta := existing["Metadata"].([]gin.H)
+			newMeta := hub["Metadata"].([]gin.H)
+			existing["Metadata"] = append(existingMeta, newMeta...)
+			existing["size"] = len(existing["Metadata"].([]gin.H))
+		} else {
+			mergedHubs[title] = hub
+		}
+	}
+
+	// Convert back to slice
+	finalHubs := make([]gin.H, 0, len(mergedHubs))
+	for _, hub := range mergedHubs {
+		finalHubs = append(finalHubs, hub)
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"MediaContainer": gin.H{
+			"size": len(finalHubs),
+			"Hub":  finalHubs,
+		},
+	})
+}
+
+// getStreamingServiceHubs returns hubs for streaming services (Netflix, Disney+, etc.)
+func (s *Server) getStreamingServiceHubs(libraryID uint, libType string, itemLimit int, serviceLimit int) []gin.H {
+	itemType := libType
+	if libType == "show" {
+		itemType = "show"
+	}
+
+	// Get distinct parent categories (streaming services) with item counts
+	var serviceStats []struct {
+		ParentCategoryID string
+		ParentCategory   string
+		Count            int64
+	}
+
+	s.db.Model(&models.MediaItem{}).
+		Select("xtream_parent_category_id as parent_category_id, xtream_parent_category as parent_category, COUNT(*) as count").
+		Where("library_id = ? AND type = ? AND xtream_parent_category != ''", libraryID, itemType).
+		Group("xtream_parent_category_id, xtream_parent_category").
+		Order("count DESC").
+		Limit(serviceLimit).
+		Scan(&serviceStats)
+
+	var lib models.Library
+	s.db.First(&lib, libraryID)
+
+	hubs := []gin.H{}
+
+	for _, ss := range serviceStats {
+		if ss.ParentCategory == "" || ss.ParentCategory == "All Movies" || ss.ParentCategory == "All Series" {
+			continue // Skip generic categories
+		}
+
+		var items []models.MediaItem
+		s.db.Preload("Genres").
+			Where("library_id = ? AND type = ? AND xtream_parent_category_id = ?",
+				libraryID, itemType, ss.ParentCategoryID).
+			Order("rating DESC, added_at DESC").
+			Limit(itemLimit).
+			Find(&items)
+
+		if len(items) > 0 {
+			metadata := make([]gin.H, len(items))
+			for i, item := range items {
+				metadata[i] = s.mediaItemToMetadata(&item, &lib)
+			}
+
+			hubs = append(hubs, gin.H{
+				"key":           fmt.Sprintf("/hubs/sections/%d/service/%s", libraryID, ss.ParentCategoryID),
+				"hubIdentifier": fmt.Sprintf("service.%s", ss.ParentCategoryID),
+				"type":          libType,
+				"title":         ss.ParentCategory,
+				"context":       "hub.streamingService",
+				"size":          len(items),
+				"more":          len(items) >= itemLimit,
+				"style":         "shelf",
+				"Metadata":      metadata,
+			})
+		}
+	}
+
+	return hubs
+}
+
 // ============ Helper Functions ============
 
 // mediaItemToMetadata converts a MediaItem to Plex-compatible metadata format
@@ -1577,6 +1718,36 @@ func (s *Server) mediaItemToMetadata(item *models.MediaItem, lib *models.Library
 			genres[i] = gin.H{"tag": genre.Tag}
 		}
 		metadata["Genre"] = genres
+	}
+
+	// Add cast, directors, writers
+	if len(item.Cast) > 0 {
+		var directors, writers, roles []gin.H
+		for _, cast := range item.Cast {
+			entry := gin.H{
+				"tag":   cast.Tag,
+				"role":  cast.Role,
+				"thumb": cast.Thumb,
+			}
+			switch cast.Role {
+			case "Director":
+				directors = append(directors, gin.H{"tag": cast.Tag, "thumb": cast.Thumb})
+			case "Writer", "Screenplay", "Story":
+				writers = append(writers, gin.H{"tag": cast.Tag, "thumb": cast.Thumb})
+			default:
+				// Regular cast member (actor)
+				roles = append(roles, entry)
+			}
+		}
+		if len(directors) > 0 {
+			metadata["Director"] = directors
+		}
+		if len(writers) > 0 {
+			metadata["Writer"] = writers
+		}
+		if len(roles) > 0 {
+			metadata["Role"] = roles
+		}
 	}
 
 	// Add media files
@@ -2703,7 +2874,13 @@ func (s *Server) streamMedia(c *gin.Context) {
 		return
 	}
 
-	// Check if file exists on disk
+	// Check if this is a remote/Xtream VOD stream
+	if strings.HasPrefix(file.FilePath, "xtream://") {
+		s.streamXtreamVOD(c, &file)
+		return
+	}
+
+	// Check if file exists on disk for local files
 	if _, err := os.Stat(file.FilePath); os.IsNotExist(err) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "File not found on disk"})
 		return
@@ -2730,6 +2907,351 @@ func (s *Server) streamMedia(c *gin.Context) {
 
 	// Serve file with range request support
 	c.File(file.FilePath)
+}
+
+// streamXtreamVOD proxies VOD/Series content from an Xtream source
+func (s *Server) streamXtreamVOD(c *gin.Context, file *models.MediaFile) {
+	// Parse the xtream:// URL format:
+	// VOD: xtream://vod/{sourceID}/{streamID}.{ext}
+	// Series: xtream://series/{sourceID}/{streamID}.{ext}
+	var path string
+	var urlType string // "movie" or "series"
+
+	if strings.HasPrefix(file.FilePath, "xtream://vod/") {
+		path = strings.TrimPrefix(file.FilePath, "xtream://vod/")
+		urlType = "movie"
+	} else if strings.HasPrefix(file.FilePath, "xtream://series/") {
+		path = strings.TrimPrefix(file.FilePath, "xtream://series/")
+		urlType = "series"
+	} else {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid Xtream URL format"})
+		return
+	}
+
+	parts := strings.SplitN(path, "/", 2)
+	if len(parts) != 2 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid Xtream VOD path"})
+		return
+	}
+
+	sourceIDStr := parts[0]
+	streamFile := parts[1] // e.g., "600583.mp4" or "66732_1_1.mp4"
+
+	sourceID, err := strconv.Atoi(sourceIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid Xtream source ID"})
+		return
+	}
+
+	// Get the Xtream source
+	var source models.XtreamSource
+	if err := s.db.First(&source, sourceID).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Xtream source not found"})
+		return
+	}
+
+	// Extract stream ID and extension
+	dotIdx := strings.LastIndex(streamFile, ".")
+	if dotIdx == -1 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid stream file format"})
+		return
+	}
+	streamID := streamFile[:dotIdx]
+	ext := streamFile[dotIdx+1:]
+
+	// Build the actual VOD/Series URL:
+	// VOD: http://server:port/movie/username/password/streamID.ext
+	// Series: http://server:port/series/username/password/streamID.ext
+	vodURL := fmt.Sprintf("%s/%s/%s/%s/%s.%s",
+		strings.TrimSuffix(source.ServerURL, "/"),
+		urlType,
+		source.Username,
+		source.Password,
+		streamID,
+		ext,
+	)
+
+	log.Printf("Proxying Xtream VOD: %s", vodURL)
+
+	// Create HTTP request to fetch the VOD stream
+	req, err := http.NewRequestWithContext(c.Request.Context(), "GET", vodURL, nil)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create request"})
+		return
+	}
+
+	// Forward range header if present
+	if rangeHeader := c.GetHeader("Range"); rangeHeader != "" {
+		req.Header.Set("Range", rangeHeader)
+	}
+
+	// Forward user-agent
+	req.Header.Set("User-Agent", "OpenFlix/1.0")
+
+	client := &http.Client{
+		Timeout: 0, // No timeout for streaming
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			// Follow up to 10 redirects
+			if len(via) >= 10 {
+				return fmt.Errorf("too many redirects")
+			}
+			return nil
+		},
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Printf("Error fetching Xtream VOD: %v", err)
+		c.JSON(http.StatusBadGateway, gin.H{"error": "Failed to fetch VOD stream"})
+		return
+	}
+	defer resp.Body.Close()
+
+	// Get the base URL from the Xtream source for rewriting relative URLs
+	remoteBase := strings.TrimSuffix(source.ServerURL, "/")
+
+	// Build our proxy base URL for routing all M3U8/segment requests
+	scheme := "http"
+	if c.Request.TLS != nil {
+		scheme = "https"
+	}
+	proxyBaseURL := fmt.Sprintf("%s://%s/livetv/xtream/proxy", scheme, c.Request.Host)
+
+	// Check if response is an M3U8 playlist that needs URL rewriting
+	contentType := resp.Header.Get("Content-Type")
+	isM3U8 := strings.Contains(contentType, "mpegurl") ||
+		strings.Contains(contentType, "x-mpegURL") ||
+		strings.HasSuffix(vodURL, ".m3u8")
+
+	if isM3U8 && resp.StatusCode == http.StatusOK {
+		// Read the M3U8 content
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			log.Printf("Error reading M3U8: %v", err)
+			c.JSON(http.StatusBadGateway, gin.H{"error": "Failed to read M3U8"})
+			return
+		}
+
+		// Rewrite all URLs to go through our proxy
+		content := rewriteM3U8ForProxy(string(body), remoteBase, proxyBaseURL)
+
+		log.Printf("✅ Rewrote VOD M3U8 playlist - all URLs now routed through proxy: %s", proxyBaseURL)
+
+		c.Header("Content-Type", "application/vnd.apple.mpegurl")
+		c.Header("Content-Length", strconv.Itoa(len(content)))
+		c.Header("Access-Control-Allow-Origin", "*")
+		c.Status(http.StatusOK)
+		c.Writer.WriteString(content)
+		return
+	}
+
+	// Forward response headers for non-M3U8 content
+	c.Header("Content-Type", contentType)
+	if contentLength := resp.Header.Get("Content-Length"); contentLength != "" {
+		c.Header("Content-Length", contentLength)
+	}
+	if contentRange := resp.Header.Get("Content-Range"); contentRange != "" {
+		c.Header("Content-Range", contentRange)
+	}
+	c.Header("Accept-Ranges", "bytes")
+
+	// Set appropriate status code
+	c.Status(resp.StatusCode)
+
+	// Stream the response body
+	io.Copy(c.Writer, resp.Body)
+}
+
+// rewriteM3U8URIs rewrites relative URIs in M3U8 attributes to absolute URLs
+func rewriteM3U8URIs(content, baseURL string) string {
+	// Match URI="..." attributes and rewrite relative paths
+	// Example: URI="/proxy-m3u8/..." -> URI="http://server/proxy-m3u8/..."
+
+	// Simple approach: replace URI="/ with URI="baseURL/
+	result := strings.ReplaceAll(content, `URI="/`, `URI="`+baseURL+`/`)
+
+	return result
+}
+
+// rewriteM3U8ForProxy rewrites all URLs in M3U8 content to go through our proxy
+func rewriteM3U8ForProxy(content, remoteBase, proxyBaseURL string) string {
+	lines := strings.Split(content, "\n")
+	for i, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		// Skip comment lines and empty lines
+		if strings.HasPrefix(trimmed, "#") || trimmed == "" {
+			// But check for URI= attributes in comment lines (e.g., EXT-X-KEY)
+			if strings.Contains(trimmed, "URI=\"") {
+				// Rewrite URI="..." to go through our proxy
+				lines[i] = rewriteURIAttribute(line, remoteBase, proxyBaseURL)
+			}
+			continue
+		}
+
+		// Handle different URL formats
+		var fullURL string
+		if strings.HasPrefix(trimmed, "http://") || strings.HasPrefix(trimmed, "https://") {
+			// Already absolute URL
+			fullURL = trimmed
+		} else if strings.HasPrefix(trimmed, "/") {
+			// Relative to server root
+			fullURL = remoteBase + trimmed
+		} else {
+			// Relative to current path - just use as is with remote base
+			fullURL = remoteBase + "/" + trimmed
+		}
+
+		// Route through our proxy with URL encoding
+		lines[i] = proxyBaseURL + "?url=" + url.QueryEscape(fullURL)
+	}
+
+	return strings.Join(lines, "\n")
+}
+
+// rewriteURIAttribute rewrites URI="..." attributes in M3U8 tags
+func rewriteURIAttribute(line, remoteBase, proxyBaseURL string) string {
+	// Find URI="..." and rewrite it
+	uriIdx := strings.Index(line, `URI="`)
+	if uriIdx == -1 {
+		return line
+	}
+
+	// Find the closing quote
+	startIdx := uriIdx + 5 // After URI="
+	endIdx := strings.Index(line[startIdx:], `"`)
+	if endIdx == -1 {
+		return line
+	}
+	endIdx += startIdx
+
+	uri := line[startIdx:endIdx]
+
+	// Make absolute URL
+	var fullURL string
+	if strings.HasPrefix(uri, "http://") || strings.HasPrefix(uri, "https://") {
+		fullURL = uri
+	} else if strings.HasPrefix(uri, "/") {
+		fullURL = remoteBase + uri
+	} else {
+		fullURL = remoteBase + "/" + uri
+	}
+
+	// Route through proxy with URL encoding
+	proxyURL := proxyBaseURL + "?url=" + url.QueryEscape(fullURL)
+
+	return line[:startIdx] + proxyURL + line[endIdx:]
+}
+
+// proxyXtreamM3U8 proxies M3U8 content from Xtream servers and rewrites URLs
+func (s *Server) proxyXtreamM3U8(c *gin.Context) {
+	targetURL := c.Query("url")
+	if targetURL == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "URL parameter required"})
+		return
+	}
+
+	log.Printf("🔄 Proxying M3U8/segment: %s", targetURL)
+
+	// Parse the URL to get the base
+	parsedURL, err := http.NewRequest("GET", targetURL, nil)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid URL"})
+		return
+	}
+
+	// Get base URL for rewriting relative paths
+	remoteBase := parsedURL.URL.Scheme + "://" + parsedURL.URL.Host
+
+	// Build our proxy base URL
+	scheme := "http"
+	if c.Request.TLS != nil {
+		scheme = "https"
+	}
+	proxyBaseURL := fmt.Sprintf("%s://%s/livetv/xtream/proxy", scheme, c.Request.Host)
+
+	// Create HTTP request
+	req, err := http.NewRequestWithContext(c.Request.Context(), "GET", targetURL, nil)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create request"})
+		return
+	}
+
+	// Forward range header if present
+	if rangeHeader := c.GetHeader("Range"); rangeHeader != "" {
+		req.Header.Set("Range", rangeHeader)
+	}
+	req.Header.Set("User-Agent", "OpenFlix/1.0")
+
+	client := &http.Client{
+		Timeout: 30 * time.Second,
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			if len(via) >= 10 {
+				return fmt.Errorf("too many redirects")
+			}
+			return nil
+		},
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Printf("Error fetching from Xtream: %v", err)
+		c.JSON(http.StatusBadGateway, gin.H{"error": "Failed to fetch content"})
+		return
+	}
+	defer resp.Body.Close()
+
+	// Check if this is an M3U8 playlist
+	contentType := resp.Header.Get("Content-Type")
+	isM3U8 := strings.Contains(contentType, "mpegurl") ||
+		strings.Contains(contentType, "x-mpegURL") ||
+		strings.HasSuffix(targetURL, ".m3u8")
+
+	if isM3U8 && resp.StatusCode == http.StatusOK {
+		// Read and rewrite M3U8 content
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			log.Printf("Error reading M3U8: %v", err)
+			c.JSON(http.StatusBadGateway, gin.H{"error": "Failed to read M3U8"})
+			return
+		}
+
+		content := rewriteM3U8ForProxy(string(body), remoteBase, proxyBaseURL)
+
+		log.Printf("✅ Rewrote M3U8 with proxy base: %s", proxyBaseURL)
+
+		c.Header("Content-Type", "application/vnd.apple.mpegurl")
+		c.Header("Content-Length", strconv.Itoa(len(content)))
+		c.Header("Access-Control-Allow-Origin", "*")
+		c.Status(http.StatusOK)
+		c.Writer.WriteString(content)
+		return
+	}
+
+	// For non-M3U8 content (segments), just proxy through
+	contentLength := resp.Header.Get("Content-Length")
+	displayURL := targetURL
+	if len(displayURL) > 100 {
+		displayURL = displayURL[:100] + "..."
+	}
+	log.Printf("📦 Proxying segment: %s (type=%s, size=%s)", displayURL, contentType, contentLength)
+
+	c.Header("Content-Type", contentType)
+	if contentLength != "" {
+		c.Header("Content-Length", contentLength)
+	}
+	if contentRange := resp.Header.Get("Content-Range"); contentRange != "" {
+		c.Header("Content-Range", contentRange)
+	}
+	c.Header("Accept-Ranges", "bytes")
+	c.Header("Access-Control-Allow-Origin", "*")
+	c.Status(resp.StatusCode)
+
+	written, err := io.Copy(c.Writer, resp.Body)
+	if err != nil {
+		log.Printf("❌ Error copying segment data: %v", err)
+	} else {
+		log.Printf("✅ Segment delivered: %d bytes", written)
+	}
 }
 
 func (s *Server) transcodeStart(c *gin.Context) {
@@ -3429,6 +3951,7 @@ type ServerSettings struct {
 	TVDBApiKey   string `json:"tvdb_api_key,omitempty"`
 	MetadataLang string `json:"metadata_lang,omitempty"`
 	ScanInterval int    `json:"scan_interval,omitempty"`
+	VODAPIURL    string `json:"vod_api_url,omitempty"`
 }
 
 func (s *Server) adminGetSettings(c *gin.Context) {
@@ -3438,6 +3961,7 @@ func (s *Server) adminGetSettings(c *gin.Context) {
 		TVDBApiKey:   maskAPIKey(s.config.Library.TVDBApiKey),
 		MetadataLang: s.config.Library.MetadataLang,
 		ScanInterval: s.config.Library.ScanInterval,
+		VODAPIURL:    s.config.VOD.APIURL,
 	}
 
 	c.JSON(http.StatusOK, gin.H{
@@ -3467,6 +3991,11 @@ func (s *Server) adminUpdateSettings(c *gin.Context) {
 	if input.ScanInterval > 0 {
 		s.config.Library.ScanInterval = input.ScanInterval
 	}
+	// VOD API URL can be set to empty string to disable, so we check differently
+	if input.VODAPIURL != "" || c.Request.ContentLength > 0 {
+		// Allow setting VOD API URL (including clearing it)
+		s.config.VOD.APIURL = input.VODAPIURL
+	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Settings updated successfully",
@@ -3475,6 +4004,7 @@ func (s *Server) adminUpdateSettings(c *gin.Context) {
 			TVDBApiKey:   maskAPIKey(s.config.Library.TVDBApiKey),
 			MetadataLang: s.config.Library.MetadataLang,
 			ScanInterval: s.config.Library.ScanInterval,
+			VODAPIURL:    s.config.VOD.APIURL,
 		},
 	})
 }

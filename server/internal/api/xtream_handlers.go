@@ -1,13 +1,33 @@
 package api
 
 import (
+	"fmt"
+	"log"
 	"net/http"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/openflix/openflix-server/internal/livetv"
 	"github.com/openflix/openflix-server/internal/models"
+	"gorm.io/gorm"
 )
+
+// interfaceToString converts an interface{} (which could be string or number) to string
+func interfaceToString(v interface{}) string {
+	if v == nil {
+		return ""
+	}
+	switch val := v.(type) {
+	case string:
+		return val
+	case float64:
+		return fmt.Sprintf("%.0f", val)
+	case int:
+		return strconv.Itoa(val)
+	default:
+		return fmt.Sprintf("%v", val)
+	}
+}
 
 // ========== VOD Import Handlers ==========
 
@@ -39,14 +59,22 @@ func (s *Server) importXtreamSeries(c *gin.Context) {
 		return
 	}
 
-	importer := livetv.NewVODImporter(s.db)
-	result, err := importer.ImportXtreamSeries(uint(id))
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
+	// Run import in background to avoid HTTP timeout
+	go func(sourceID uint, db *gorm.DB) {
+		importer := livetv.NewVODImporter(db)
+		result, err := importer.ImportXtreamSeries(sourceID)
+		if err != nil {
+			log.Printf("Series import failed for source %d: %v", sourceID, err)
+		} else {
+			log.Printf("Series import completed for source %d: %d added, %d updated, %d errors",
+				sourceID, result.Added, result.Updated, result.Errors)
+		}
+	}(uint(id), s.db)
 
-	c.JSON(http.StatusOK, result)
+	c.JSON(http.StatusOK, gin.H{
+		"status":  "started",
+		"message": "Series import started in background. Check source stats for progress.",
+	})
 }
 
 // importAllXtreamContent imports channels, VOD, and series from an Xtream source
@@ -196,13 +224,15 @@ func (s *Server) createXtreamSource(c *gin.Context) {
 	}
 
 	// Update source with account info
-	if authResp.UserInfo.MaxConnections != "" {
-		if maxConns, err := strconv.Atoi(authResp.UserInfo.MaxConnections); err == nil {
+	maxConnsStr := interfaceToString(authResp.UserInfo.MaxConnections)
+	if maxConnsStr != "" {
+		if maxConns, err := strconv.Atoi(maxConnsStr); err == nil {
 			source.MaxConnections = maxConns
 		}
 	}
-	if authResp.UserInfo.ActiveCons != "" {
-		if activeConns, err := strconv.Atoi(authResp.UserInfo.ActiveCons); err == nil {
+	activeConnsStr := interfaceToString(authResp.UserInfo.ActiveCons)
+	if activeConnsStr != "" {
+		if activeConns, err := strconv.Atoi(activeConnsStr); err == nil {
 			source.ActiveConns = activeConns
 		}
 	}
@@ -211,6 +241,44 @@ func (s *Server) createXtreamSource(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create source"})
 		return
 	}
+
+	// Auto-import content in background
+	go func(sourceID uint, importLive, importVOD, importSeries bool, vodLibID, seriesLibID *uint) {
+		db := s.db
+
+		// Import live channels
+		if importLive {
+			client := livetv.NewXtreamClient(db)
+			added, updated, err := client.ImportChannels(sourceID)
+			if err != nil {
+				log.Printf("Auto-import channels failed for source %d: %v", sourceID, err)
+			} else {
+				log.Printf("Auto-imported %d channels (%d updated) for source %d", added, updated, sourceID)
+			}
+		}
+
+		// Import VOD
+		if importVOD && vodLibID != nil {
+			importer := livetv.NewVODImporter(db)
+			result, err := importer.ImportXtreamVOD(sourceID)
+			if err != nil {
+				log.Printf("Auto-import VOD failed for source %d: %v", sourceID, err)
+			} else {
+				log.Printf("Auto-imported %d VOD items for source %d", result.Added, sourceID)
+			}
+		}
+
+		// Import series
+		if importSeries && seriesLibID != nil {
+			importer := livetv.NewVODImporter(db)
+			result, err := importer.ImportXtreamSeries(sourceID)
+			if err != nil {
+				log.Printf("Auto-import series failed for source %d: %v", sourceID, err)
+			} else {
+				log.Printf("Auto-imported %d series for source %d", result.Added, sourceID)
+			}
+		}
+	}(source.ID, source.ImportLive, source.ImportVOD, source.ImportSeries, source.VODLibraryID, source.SeriesLibraryID)
 
 	// Don't return password
 	source.Password = ""
@@ -428,6 +496,7 @@ func (s *Server) parseXtreamFromM3U(c *gin.Context) {
 		"success":   true,
 		"serverUrl": source.ServerURL,
 		"username":  source.Username,
+		"password":  source.Password, // Return password since it came from user's URL
 		"name":      source.Name,
 		"userInfo": gin.H{
 			"status":         authResp.UserInfo.Status,

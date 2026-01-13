@@ -17,7 +17,12 @@ func Initialize(cfg config.DatabaseConfig) (*gorm.DB, error) {
 
 	switch cfg.Driver {
 	case "sqlite":
-		dialector = sqlite.Open(cfg.DSN)
+		// Add WAL mode for better concurrent read access during EPG updates
+		dsn := cfg.DSN
+		if dsn != "" && dsn != ":memory:" {
+			dsn = dsn + "?_journal_mode=WAL&_busy_timeout=5000"
+		}
+		dialector = sqlite.Open(dsn)
 	case "postgres":
 		dialector = postgres.Open(cfg.DSN)
 	default:
@@ -29,6 +34,12 @@ func Initialize(cfg config.DatabaseConfig) (*gorm.DB, error) {
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to database: %w", err)
+	}
+
+	// For SQLite, ensure WAL mode is set (in case DSN already had params)
+	if cfg.Driver == "sqlite" {
+		db.Exec("PRAGMA journal_mode=WAL")
+		db.Exec("PRAGMA busy_timeout=5000")
 	}
 
 	return db, nil
@@ -71,6 +82,8 @@ func Migrate(db *gorm.DB) error {
 		// DVR
 		&models.Recording{},
 		&models.SeriesRule{},
+		&models.TeamPass{},
+		&models.CommercialSegment{},
 
 		// Archive/Catch-up
 		&models.ArchiveProgram{},

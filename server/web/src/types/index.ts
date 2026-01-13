@@ -189,19 +189,60 @@ export interface ProgramsResponse {
   pages: number
 }
 
+export interface GuideResponse {
+  start: string
+  end: string
+  channels: Channel[]
+  programs: { [channelId: string]: Program[] }
+}
+
 // DVR types
 export interface Recording {
   id: number
   title: string
+  description?: string
+  summary?: string
   channelId: number
-  channelName: string
+  channelName?: string
+  channelLogo?: string
   startTime: string
   endTime: string
-  duration: number
+  duration?: number
   status: 'scheduled' | 'recording' | 'completed' | 'failed'
   filePath?: string
   fileSize?: number
+  category?: string
+  episodeNum?: string
+  seriesRecord?: boolean
+  seriesRuleId?: number
+  programId?: number
   createdAt: string
+  // TMDB metadata fields
+  thumb?: string
+  art?: string
+  seasonNumber?: number
+  episodeNumber?: number
+  genres?: string
+  contentRating?: string
+  year?: number
+  rating?: number
+  isMovie?: boolean
+  viewOffset?: number  // milliseconds - for resume playback
+}
+
+export interface CommercialSegment {
+  id: number
+  recordingId: number
+  startTime: number  // seconds from beginning
+  endTime: number    // seconds from beginning
+  duration: number   // seconds
+}
+
+export interface CommercialsResponse {
+  recordingId: number
+  segments: CommercialSegment[]
+  totalCommercials: number
+  commercialSeconds: number
 }
 
 export interface SeriesRule {
@@ -296,6 +337,107 @@ export interface ServerConfig {
     tempDir: string
     maxSessions: number
   }
+}
+
+// DVR Conflict types
+export interface ConflictGroup {
+  recordings: Recording[]
+}
+
+export interface ConflictResponse {
+  conflicts: ConflictGroup[]
+  hasConflicts: boolean
+  totalCount: number
+}
+
+// Live Recording Stats types
+export interface RecordingStats {
+  id: number
+  title: string
+  fileSize: number
+  fileSizeFormatted: string
+  elapsedSeconds: number
+  elapsedFormatted: string
+  totalSeconds: number
+  remainingSeconds: number
+  progressPercent: number
+  bitrate?: string
+  isHealthy: boolean
+  isFailed: boolean
+  failureReason?: string
+}
+
+export interface RecordingStatsResponse {
+  stats: RecordingStats[]
+  activeCount: number
+}
+
+// On Later types
+export interface OnLaterProgram {
+  id: number
+  channelId: string
+  title: string
+  subtitle?: string
+  description?: string
+  start: string
+  end: string
+  icon?: string
+  art?: string
+  category?: string
+  episodeNum?: string
+  seasonNumber?: number
+  episodeNumber?: number
+  rating?: string
+  isMovie?: boolean
+  isSports?: boolean
+  isKids?: boolean
+  isNews?: boolean
+  isPremiere?: boolean
+  isNew?: boolean
+  isLive?: boolean
+  isFinale?: boolean
+  teams?: string
+  league?: string
+  seriesId?: string
+  programId?: string
+}
+
+export interface OnLaterChannel {
+  id: number
+  channelId: string
+  name: string
+  logo?: string
+  number?: number
+}
+
+export interface OnLaterItem {
+  program: OnLaterProgram
+  channel?: OnLaterChannel
+  hasRecording: boolean
+  recordingId?: number
+}
+
+export interface OnLaterResponse {
+  items: OnLaterItem[]
+  totalCount: number
+  startTime: string
+  endTime: string
+}
+
+export interface OnLaterStats {
+  movies: number
+  sports: number
+  kids: number
+  news: number
+  premieres: number
+}
+
+export interface SportsTeam {
+  name: string
+  city: string
+  nickname: string
+  league?: string
+  aliases: string[]
 }
 
 // API Response wrappers

@@ -599,6 +599,474 @@ function EditChannelModal({
   )
 }
 
+function EditM3USourceModal({
+  source,
+  onClose,
+}: {
+  source: { id: number; name: string; url: string }
+  onClose: () => void
+}) {
+  const queryClient = useQueryClient()
+  const [name, setName] = useState(source.name)
+  const [url, setUrl] = useState(source.url)
+  const [error, setError] = useState('')
+
+  const updateSource = useMutation({
+    mutationFn: async (data: { name: string; url: string }) => {
+      return api.updateM3USource(source.id, data)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['m3uSources'] })
+      queryClient.invalidateQueries({ queryKey: ['channels'] })
+      onClose()
+    },
+    onError: (error: any) => {
+      setError(error.response?.data?.error || error.message || 'Failed to update source')
+    },
+  })
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    setError('')
+    updateSource.mutate({ name, url })
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="bg-gray-800 rounded-xl p-6 w-full max-w-md">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-white">Edit M3U Source</h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-white">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+        <form onSubmit={handleSubmit}>
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-300 mb-2">Name</label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
+              required
+            />
+          </div>
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-300 mb-2">URL</label>
+            <input
+              type="url"
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
+              placeholder="http://example.com/playlist.m3u"
+              required
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Update the URL if your provider's IP address changed
+            </p>
+          </div>
+          {error && (
+            <div className="mb-4 p-3 bg-red-500/20 border border-red-500/50 rounded-lg">
+              <p className="text-sm text-red-300 flex items-center gap-2">
+                <AlertCircle className="h-4 w-4" />
+                {error}
+              </p>
+            </div>
+          )}
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 py-2 px-4 bg-gray-700 hover:bg-gray-600 text-white rounded-lg"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={updateSource.isPending}
+              className="flex-1 py-2 px-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg"
+            >
+              {updateSource.isPending ? 'Saving...' : 'Save Changes'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
+function EditXtreamSourceModal({
+  source,
+  onClose,
+}: {
+  source: {
+    id: number
+    name: string
+    serverUrl: string
+    username: string
+    importVod?: boolean
+    importSeries?: boolean
+    vodLibraryId?: number
+    seriesLibraryId?: number
+  }
+  onClose: () => void
+}) {
+  const queryClient = useQueryClient()
+  const [name, setName] = useState(source.name)
+  const [serverUrl, setServerUrl] = useState(source.serverUrl)
+  const [username, setUsername] = useState(source.username)
+  const [password, setPassword] = useState('')
+  const [importVod, setImportVod] = useState(source.importVod || false)
+  const [importSeries, setImportSeries] = useState(source.importSeries || false)
+  const [vodLibraryId, setVodLibraryId] = useState<number | null>(source.vodLibraryId || null)
+  const [seriesLibraryId, setSeriesLibraryId] = useState<number | null>(source.seriesLibraryId || null)
+  const [error, setError] = useState('')
+
+  const { data: libraries } = useQuery({
+    queryKey: ['libraries'],
+    queryFn: () => api.getLibraries(),
+  })
+
+  const movieLibraries = libraries?.filter(l => l.type === 'movie') || []
+  const showLibraries = libraries?.filter(l => l.type === 'show') || []
+
+  const updateSource = useMutation({
+    mutationFn: async (data: any) => {
+      return api.updateXtreamSource(source.id, data)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['xtreamSources'] })
+      queryClient.invalidateQueries({ queryKey: ['channels'] })
+      onClose()
+    },
+    onError: (error: any) => {
+      setError(error.response?.data?.error || error.message || 'Failed to update source')
+    },
+  })
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    setError('')
+    const data: any = {
+      name,
+      serverUrl,
+      username,
+      importVod,
+      importSeries,
+      vodLibraryId: vodLibraryId ?? undefined,
+      seriesLibraryId: seriesLibraryId ?? undefined,
+    }
+    // Only include password if it was changed
+    if (password) {
+      data.password = password
+    }
+    updateSource.mutate(data)
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="bg-gray-800 rounded-xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+            <Zap className="h-5 w-5 text-yellow-400" />
+            Edit Xtream Source
+          </h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-white">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+        <form onSubmit={handleSubmit}>
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-300 mb-2">Name</label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
+              required
+            />
+          </div>
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-300 mb-2">Server URL</label>
+            <input
+              type="url"
+              value={serverUrl}
+              onChange={(e) => setServerUrl(e.target.value)}
+              className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
+              placeholder="http://server.com:8080"
+              required
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Update the URL if your provider's IP address changed
+            </p>
+          </div>
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-300 mb-2">Username</label>
+            <input
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
+              required
+            />
+          </div>
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Password <span className="text-gray-500">(leave blank to keep current)</span>
+            </label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
+              placeholder="••••••••"
+            />
+          </div>
+
+          {/* VOD/Series Import Settings */}
+          <div className="mb-6 p-4 bg-gray-700/50 rounded-lg border border-gray-600">
+            <h3 className="text-sm font-semibold text-white mb-3">Content Import</h3>
+            <div className="mb-4">
+              <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={importVod}
+                  onChange={(e) => setImportVod(e.target.checked)}
+                  className="rounded bg-gray-600 border-gray-500"
+                />
+                Import VOD Movies
+              </label>
+              {importVod && (
+                <div className="mt-2 ml-6">
+                  <select
+                    value={vodLibraryId || ''}
+                    onChange={(e) => setVodLibraryId(e.target.value ? parseInt(e.target.value) : null)}
+                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm"
+                  >
+                    <option value="">Select Movie Library...</option>
+                    {movieLibraries.map(lib => (
+                      <option key={lib.id} value={lib.id}>{lib.title}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+            <div>
+              <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={importSeries}
+                  onChange={(e) => setImportSeries(e.target.checked)}
+                  className="rounded bg-gray-600 border-gray-500"
+                />
+                Import TV Series
+              </label>
+              {importSeries && (
+                <div className="mt-2 ml-6">
+                  <select
+                    value={seriesLibraryId || ''}
+                    onChange={(e) => setSeriesLibraryId(e.target.value ? parseInt(e.target.value) : null)}
+                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm"
+                  >
+                    <option value="">Select TV Library...</option>
+                    {showLibraries.map(lib => (
+                      <option key={lib.id} value={lib.id}>{lib.title}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {error && (
+            <div className="mb-4 p-3 bg-red-500/20 border border-red-500/50 rounded-lg">
+              <p className="text-sm text-red-300 flex items-center gap-2">
+                <AlertCircle className="h-4 w-4" />
+                {error}
+              </p>
+            </div>
+          )}
+
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 py-2 px-4 bg-gray-700 hover:bg-gray-600 text-white rounded-lg"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={updateSource.isPending}
+              className="flex-1 py-2 px-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg"
+            >
+              {updateSource.isPending ? 'Saving...' : 'Save Changes'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
+function EditEPGSourceModal({
+  source,
+  onClose,
+}: {
+  source: {
+    id: number
+    name: string
+    providerType: string
+    url?: string
+    gracenoteAffiliate?: string
+    gracenotePostalCode?: string
+    gracenoteHours?: number
+  }
+  onClose: () => void
+}) {
+  const queryClient = useQueryClient()
+  const [name, setName] = useState(source.name)
+  const [url, setUrl] = useState(source.url || '')
+  const [gracenoteAffiliate, setGracenoteAffiliate] = useState(source.gracenoteAffiliate || '')
+  const [gracenotePostalCode, setGracenotePostalCode] = useState(source.gracenotePostalCode || '')
+  const [gracenoteHours, setGracenoteHours] = useState(source.gracenoteHours || 6)
+  const [error, setError] = useState('')
+
+  const updateSource = useMutation({
+    mutationFn: async (data: any) => {
+      return api.updateEPGSource(source.id, data)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['epgSources'] })
+      onClose()
+    },
+    onError: (error: any) => {
+      setError(error.response?.data?.error || error.message || 'Failed to update source')
+    },
+  })
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    setError('')
+
+    if (source.providerType === 'xmltv') {
+      updateSource.mutate({ name, url })
+    } else {
+      updateSource.mutate({
+        name,
+        gracenoteAffiliate,
+        gracenotePostalCode,
+        gracenoteHours,
+      })
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="bg-gray-800 rounded-xl p-6 w-full max-w-md">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-white">Edit EPG Source</h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-white">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+        <form onSubmit={handleSubmit}>
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-300 mb-2">Name</label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
+              required
+            />
+          </div>
+
+          {source.providerType === 'xmltv' ? (
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-300 mb-2">XMLTV URL</label>
+              <input
+                type="url"
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+                className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
+                placeholder="http://example.com/guide.xml"
+                required
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Update the URL if your EPG provider's address changed
+              </p>
+            </div>
+          ) : (
+            <>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-300 mb-2">ZIP Code</label>
+                <input
+                  type="text"
+                  value={gracenotePostalCode}
+                  onChange={(e) => setGracenotePostalCode(e.target.value.replace(/\D/g, '').slice(0, 5))}
+                  className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
+                  placeholder="10001"
+                  maxLength={5}
+                />
+              </div>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-300 mb-2">Provider ID (Headend)</label>
+                <input
+                  type="text"
+                  value={gracenoteAffiliate}
+                  onChange={(e) => setGracenoteAffiliate(e.target.value)}
+                  className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white font-mono"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Change if you switched TV providers
+                </p>
+              </div>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-300 mb-2">Hours of Guide Data</label>
+                <input
+                  type="number"
+                  value={gracenoteHours}
+                  onChange={(e) => setGracenoteHours(parseInt(e.target.value) || 6)}
+                  min="1"
+                  max="12"
+                  className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
+                />
+              </div>
+            </>
+          )}
+
+          {error && (
+            <div className="mb-4 p-3 bg-red-500/20 border border-red-500/50 rounded-lg">
+              <p className="text-sm text-red-300 flex items-center gap-2">
+                <AlertCircle className="h-4 w-4" />
+                {error}
+              </p>
+            </div>
+          )}
+
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 py-2 px-4 bg-gray-700 hover:bg-gray-600 text-white rounded-lg"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={updateSource.isPending}
+              className="flex-1 py-2 px-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg"
+            >
+              {updateSource.isPending ? 'Saving...' : 'Save Changes'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
 function AddXtreamSourceModal({ onClose }: { onClose: () => void }) {
   const queryClient = useQueryClient()
   const [name, setName] = useState('')
@@ -626,6 +1094,8 @@ function AddXtreamSourceModal({ onClose }: { onClose: () => void }) {
   const movieLibraries = libraries?.filter(l => l.type === 'movie') || []
   const showLibraries = libraries?.filter(l => l.type === 'show') || []
 
+  const [submitError, setSubmitError] = useState('')
+
   const createXtream = useMutation({
     mutationFn: async (data: {
       name: string
@@ -643,6 +1113,9 @@ function AddXtreamSourceModal({ onClose }: { onClose: () => void }) {
       queryClient.invalidateQueries({ queryKey: ['xtreamSources'] })
       onClose()
     },
+    onError: (error: any) => {
+      setSubmitError(error.response?.data?.error || error.message || 'Failed to add source')
+    },
   })
 
   const handleParseM3U = async () => {
@@ -657,6 +1130,7 @@ function AddXtreamSourceModal({ onClose }: { onClose: () => void }) {
         setParseResult(result)
         setServerUrl(result.serverUrl || '')
         setUsername(result.username || '')
+        setPassword(result.password || '')
         setName(result.name || '')
       } else {
         setParseError(result.error || 'Failed to parse URL')
@@ -673,6 +1147,7 @@ function AddXtreamSourceModal({ onClose }: { onClose: () => void }) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setSubmitError('')
     await createXtream.mutateAsync({
       name,
       serverUrl,
@@ -860,6 +1335,15 @@ function AddXtreamSourceModal({ onClose }: { onClose: () => void }) {
               )}
             </div>
           </div>
+
+          {submitError && (
+            <div className="mb-4 p-3 bg-red-500/20 border border-red-500/50 rounded-lg">
+              <p className="text-sm text-red-300 flex items-center gap-2">
+                <AlertCircle className="h-4 w-4" />
+                {submitError}
+              </p>
+            </div>
+          )}
 
           <div className="flex gap-3">
             <button
@@ -1086,6 +1570,9 @@ export function LiveTVPage() {
   const [activeTab, setActiveTab] = useState<'sources' | 'channels' | 'programs'>('sources')
   const [channelSearch, setChannelSearch] = useState('')
   const [editingChannel, setEditingChannel] = useState<Channel | null>(null)
+  const [editingM3USource, setEditingM3USource] = useState<any | null>(null)
+  const [editingXtreamSource, setEditingXtreamSource] = useState<any | null>(null)
+  const [editingEPGSource, setEditingEPGSource] = useState<any | null>(null)
   const [refreshingEPGId, setRefreshingEPGId] = useState<number | null>(null)
   const [refreshingXtreamId, setRefreshingXtreamId] = useState<number | null>(null)
 
@@ -1129,11 +1616,41 @@ export function LiveTVPage() {
   const importSeries = useMutation({
     mutationFn: (id: number) => api.importXtreamSeries(id),
     onMutate: (id) => setImportingSeriesId(id),
-    onSuccess: (result) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['xtreamSources'] })
-      alert(`Series Import: ${result.added} added, ${result.updated} updated`)
+      queryClient.invalidateQueries({ queryKey: ['libraryStats'] })
+      alert('Series import started in background. Check library stats for progress.')
     },
     onSettled: () => setImportingSeriesId(null),
+  })
+
+  // Query for library stats to show actual counts
+  const { data: libraryStatsMap } = useQuery({
+    queryKey: ['libraryStats'],
+    queryFn: async () => {
+      const stats: Record<number, { movieCount: number; showCount: number; episodeCount: number }> = {}
+      // Get stats for all libraries used by Xtream sources
+      const libraryIds = new Set<number>()
+      xtreamSources?.forEach(source => {
+        if (source.vodLibraryId) libraryIds.add(source.vodLibraryId)
+        if (source.seriesLibraryId) libraryIds.add(source.seriesLibraryId)
+      })
+      for (const id of libraryIds) {
+        try {
+          const libStats = await api.getLibraryStats(id)
+          stats[id] = {
+            movieCount: libStats.movieCount,
+            showCount: libStats.showCount,
+            episodeCount: libStats.episodeCount,
+          }
+        } catch {
+          // Library might not exist
+        }
+      }
+      return stats
+    },
+    enabled: !!xtreamSources?.length,
+    refetchInterval: 10000, // Refresh every 10 seconds to show import progress
   })
 
   // Individual EPG source refresh
@@ -1311,6 +1828,13 @@ export function LiveTVPage() {
                     </div>
                     <div className="flex items-center gap-2">
                       <button
+                        onClick={() => setEditingM3USource(source)}
+                        className="p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg"
+                        title="Edit"
+                      >
+                        <Edit className="h-4 w-4" />
+                      </button>
+                      <button
                         onClick={() => refreshM3U.mutate(source.id)}
                         disabled={refreshM3U.isPending}
                         className="p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg"
@@ -1386,6 +1910,13 @@ export function LiveTVPage() {
                       </div>
                       <div className="flex items-center gap-2">
                         <button
+                          onClick={() => setEditingXtreamSource(source)}
+                          className="p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg"
+                          title="Edit"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </button>
+                        <button
                           onClick={() => refreshXtream.mutate(source.id)}
                           disabled={refreshingXtreamId === source.id}
                           className="p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg"
@@ -1410,7 +1941,7 @@ export function LiveTVPage() {
                           <div className="flex items-center gap-2">
                             <div className="flex items-center gap-1 text-sm text-gray-400">
                               <Film className="h-4 w-4" />
-                              <span>VOD: {source.vodCount || 0} movies</span>
+                              <span>VOD: {libraryStatsMap?.[source.vodLibraryId]?.movieCount ?? source.vodCount ?? 0} movies</span>
                             </div>
                             <button
                               onClick={() => importVod.mutate(source.id)}
@@ -1431,7 +1962,7 @@ export function LiveTVPage() {
                           <div className="flex items-center gap-2">
                             <div className="flex items-center gap-1 text-sm text-gray-400">
                               <Monitor className="h-4 w-4" />
-                              <span>Series: {source.seriesCount || 0} shows</span>
+                              <span>Series: {libraryStatsMap?.[source.seriesLibraryId]?.showCount ?? source.seriesCount ?? 0} shows ({libraryStatsMap?.[source.seriesLibraryId]?.episodeCount ?? 0} episodes)</span>
                             </div>
                             <button
                               onClick={() => importSeries.mutate(source.id)}
@@ -1500,6 +2031,7 @@ export function LiveTVPage() {
                     source={source}
                     onRefresh={(id) => refreshIndividualEPG.mutate(id)}
                     onDelete={(id) => deleteEPG.mutate(id)}
+                    onEdit={(source) => setEditingEPGSource(source)}
                     isRefreshing={refreshingEPGId === source.id}
                   />
                 ))}
@@ -1651,6 +2183,27 @@ export function LiveTVPage() {
           channel={editingChannel}
           onClose={() => setEditingChannel(null)}
           epgSources={epgSources || []}
+        />
+      )}
+
+      {editingM3USource && (
+        <EditM3USourceModal
+          source={editingM3USource}
+          onClose={() => setEditingM3USource(null)}
+        />
+      )}
+
+      {editingXtreamSource && (
+        <EditXtreamSourceModal
+          source={editingXtreamSource}
+          onClose={() => setEditingXtreamSource(null)}
+        />
+      )}
+
+      {editingEPGSource && (
+        <EditEPGSourceModal
+          source={editingEPGSource}
+          onClose={() => setEditingEPGSource(null)}
         />
       )}
     </div>

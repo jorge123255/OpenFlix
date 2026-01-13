@@ -435,6 +435,8 @@ func (s *Server) setupRouter() {
 		livetv.GET("/channels/:id/suggestions", s.getSuggestedMatches) // Get suggested EPG matches
 		livetv.POST("/channels/:id/favorite", s.toggleChannelFavorite)
 		livetv.POST("/channels/:id/refresh-epg", s.refreshChannelEPG) // Refresh EPG mapping
+		livetv.GET("/channels/:id/stream", s.proxyChannelStream)        // Proxy channel stream for web playback
+		livetv.GET("/channels/:id/hls-segment", s.proxyHLSSegment)    // Proxy HLS segments for web playback
 
 		// Guide (EPG)
 		livetv.GET("/guide", s.getGuide)
@@ -539,6 +541,10 @@ func (s *Server) setupRouter() {
 
 		// Recording Playback
 		dvrGroup.GET("/stream/:id", s.streamRecording)
+		dvrGroup.GET("/recordings/:id/stream", s.getRecordingStreamUrl)
+		dvrGroup.GET("/recordings/:id/hls/master.m3u8", s.getRecordingHLSPlaylist)
+		dvrGroup.GET("/recordings/:id/hls/:segment", s.getRecordingHLSSegment)
+		dvrGroup.PUT("/recordings/:id/progress", s.updateRecordingProgress)
 
 		// Stream Validation (validates stream before scheduling)
 		dvrGroup.GET("/validate-stream", s.validateRecordingStream)
@@ -547,6 +553,29 @@ func (s *Server) setupRouter() {
 		dvrGroup.GET("/conflicts", s.getRecordingConflicts)
 		dvrGroup.POST("/conflicts/check", s.checkRecordingConflict)
 		dvrGroup.POST("/conflicts/resolve", s.resolveConflict)
+	}
+
+	// ============ VOD API (Video On Demand Downloads) ============
+	vodGroup := r.Group("/api/vod")
+	vodGroup.Use(s.authRequired())
+	{
+		// Providers
+		vodGroup.GET("/providers", s.getVODProviders)
+
+		// Content browsing
+		vodGroup.GET("/:provider/movies", s.getVODMovies)
+		vodGroup.GET("/:provider/shows", s.getVODShows)
+		vodGroup.GET("/:provider/genres", s.getVODGenres)
+		vodGroup.GET("/:provider/movie/:id", s.getVODMovie)
+		vodGroup.GET("/:provider/show/:id", s.getVODShow)
+
+		// Download management
+		vodGroup.POST("/:provider/download", s.startVODDownload)
+		vodGroup.GET("/queue", s.getVODQueue)
+		vodGroup.DELETE("/queue/:id", s.cancelVODDownload)
+
+		// Connection test
+		vodGroup.GET("/test-connection", s.testVODConnection)
 	}
 
 	// ============ On Later API (Browse upcoming content) ============
@@ -669,7 +698,8 @@ func (s *Server) corsMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.Header("Access-Control-Allow-Origin", "*")
 		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-		c.Header("Access-Control-Allow-Headers", "Origin, Content-Type, Accept, Authorization, X-Plex-Token, X-Plex-Client-Identifier, X-Plex-Product, X-Plex-Version, X-Plex-Platform")
+		c.Header("Access-Control-Allow-Headers", "Origin, Content-Type, Accept, Authorization, X-Plex-Token, X-Plex-Client-Identifier, X-Plex-Product, X-Plex-Version, X-Plex-Platform, Range")
+		c.Header("Access-Control-Expose-Headers", "Content-Range, Content-Length, Content-Type")
 
 		if c.Request.Method == "OPTIONS" {
 			c.AbortWithStatus(http.StatusNoContent)
