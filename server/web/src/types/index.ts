@@ -237,6 +237,7 @@ export interface Recording {
   year?: number
   rating?: number
   isMovie?: boolean
+  isLive?: boolean
   viewOffset?: number  // milliseconds - for resume playback
 }
 
