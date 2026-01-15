@@ -46,15 +46,38 @@ type XMLTVChannel struct {
 
 // XMLTVProgramme represents a programme in XMLTV
 type XMLTVProgramme struct {
-	Start       string        `xml:"start,attr"`
-	Stop        string        `xml:"stop,attr"`
-	Channel     string        `xml:"channel,attr"`
-	Title       []XMLTVLang   `xml:"title"`
-	SubTitle    []XMLTVLang   `xml:"sub-title"`
-	Desc        []XMLTVLang   `xml:"desc"`
-	Category    []XMLTVLang   `xml:"category"`
-	Icon        *XMLTVIcon    `xml:"icon"`
-	EpisodeNum  []XMLTVEpNum  `xml:"episode-num"`
+	Start           string           `xml:"start,attr"`
+	Stop            string           `xml:"stop,attr"`
+	Channel         string           `xml:"channel,attr"`
+	Title           []XMLTVLang      `xml:"title"`
+	SubTitle        []XMLTVLang      `xml:"sub-title"`
+	Desc            []XMLTVLang      `xml:"desc"`
+	Category        []XMLTVLang      `xml:"category"`
+	Icon            *XMLTVIcon       `xml:"icon"`
+	EpisodeNum      []XMLTVEpNum     `xml:"episode-num"`
+	New             *struct{}        `xml:"new"`              // Empty element indicates new episode
+	Premiere        *XMLTVPremiere   `xml:"premiere"`         // Premiere indicator
+	PreviouslyShown *XMLTVPrevShown  `xml:"previously-shown"` // Rerun indicator
+	Live            *struct{}        `xml:"live"`             // Live broadcast
+	Rating          []XMLTVRating    `xml:"rating"`           // Content rating
+	Date            string           `xml:"date"`             // Original air date (YYYY or YYYYMMDD)
+}
+
+// XMLTVPremiere represents a premiere element
+type XMLTVPremiere struct {
+	Value string `xml:",chardata"` // Optional text like "Series Premiere"
+}
+
+// XMLTVPrevShown represents a previously-shown element
+type XMLTVPrevShown struct {
+	Start   string `xml:"start,attr"`   // Original air date
+	Channel string `xml:"channel,attr"` // Original channel
+}
+
+// XMLTVRating represents a content rating
+type XMLTVRating struct {
+	System string `xml:"system,attr"`
+	Value  string `xml:"value"`
 }
 
 // XMLTVLang represents a localized string
@@ -238,6 +261,23 @@ func (p *EPGParser) ImportPrograms(sourceID uint, xmltv *XMLTV) (int, error) {
 			icon = prog.Icon.Src
 		}
 
+		// Get content rating
+		rating := ""
+		if len(prog.Rating) > 0 {
+			rating = prog.Rating[0].Value
+		}
+
+		// Determine new/premiere/live status from XMLTV elements
+		isNew := prog.New != nil                           // <new/> element present
+		isPremiere := prog.Premiere != nil                 // <premiere/> element present
+		isLive := prog.Live != nil                         // <live/> element present
+		isRerun := prog.PreviouslyShown != nil             // <previously-shown/> means it's a rerun
+
+		// If it's explicitly marked as previously-shown, it's NOT new (unless also marked new)
+		if isRerun && !isNew && !isPremiere {
+			isNew = false
+		}
+
 		// Check if program already exists
 		var existing models.Program
 		result := p.db.Where("channel_id = ? AND start = ?", channelID, start).First(&existing)
@@ -250,6 +290,10 @@ func (p *EPGParser) ImportPrograms(sourceID uint, xmltv *XMLTV) (int, error) {
 			existing.Category = category
 			existing.EpisodeNum = episodeNum
 			existing.Icon = icon
+			existing.Rating = rating
+			existing.IsNew = isNew
+			existing.IsPremiere = isPremiere
+			existing.IsLive = isLive
 			// Classify content
 			p.classifier.ClassifyProgram(&existing)
 			p.db.Save(&existing)
@@ -264,6 +308,10 @@ func (p *EPGParser) ImportPrograms(sourceID uint, xmltv *XMLTV) (int, error) {
 				Category:    category,
 				EpisodeNum:  episodeNum,
 				Icon:        icon,
+				Rating:      rating,
+				IsNew:       isNew,
+				IsPremiere:  isPremiere,
+				IsLive:      isLive,
 			}
 			// Classify content
 			p.classifier.ClassifyProgram(&program)
@@ -555,6 +603,26 @@ func (p *EPGParser) ImportProgramsFromGracenote(source *models.EPGSource) (int, 
 				icon = channel.Thumbnail
 			}
 
+			// Parse Gracenote flags for new/premiere/live/finale
+			isNew := false
+			isPremiere := false
+			isLive := false
+			isFinale := false
+			for _, flag := range event.Flag {
+				flagLower := strings.ToLower(flag)
+				switch {
+				case flagLower == "new":
+					isNew = true
+				case flagLower == "premiere" || strings.Contains(flagLower, "premiere"):
+					isPremiere = true
+					isNew = true // Premieres are always new
+				case flagLower == "live":
+					isLive = true
+				case flagLower == "finale" || strings.Contains(flagLower, "finale"):
+					isFinale = true
+				}
+			}
+
 			// Check if program already exists
 			var existing models.Program
 			result := p.db.Where("channel_id = ? AND start = ?", channelID, start).First(&existing)
@@ -569,6 +637,10 @@ func (p *EPGParser) ImportProgramsFromGracenote(source *models.EPGSource) (int, 
 				existing.CallSign = channel.CallSign
 				existing.ChannelNo = channel.ChannelNo
 				existing.AffiliateName = channel.AffiliateName
+				existing.IsNew = isNew
+				existing.IsPremiere = isPremiere
+				existing.IsLive = isLive
+				existing.IsFinale = isFinale
 				// Classify content
 				p.classifier.ClassifyProgram(&existing)
 				p.db.Save(&existing)
@@ -585,6 +657,10 @@ func (p *EPGParser) ImportProgramsFromGracenote(source *models.EPGSource) (int, 
 					Description:   event.Program.ShortDesc,
 					Category:      category,
 					Icon:          icon,
+					IsNew:         isNew,
+					IsPremiere:    isPremiere,
+					IsLive:        isLive,
+					IsFinale:      isFinale,
 				}
 				// Classify content
 				p.classifier.ClassifyProgram(&program)

@@ -340,8 +340,8 @@ func (s *Server) updateChannel(c *gin.Context) {
 // bulkMapChannels maps multiple M3U channels to the same EPG channel
 func (s *Server) bulkMapChannels(c *gin.Context) {
 	var req struct {
-		ChannelIDs  []uint `json:"channelIds" binding:"required"`
-		EPGSourceID uint   `json:"epgSourceId" binding:"required"`
+		ChannelIDs   []uint `json:"channelIds" binding:"required"`
+		EPGSourceID  uint   `json:"epgSourceId" binding:"required"`
 		EPGChannelID string `json:"epgChannelId" binding:"required"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -694,6 +694,56 @@ func (s *Server) autoDetectChannels(c *gin.Context) {
 			continue
 		}
 
+		// Try to match channel number to Gracenote EPG channel number
+		// This maps channels with numeric TVGId (e.g., "2") to Gracenote channels (e.g., "gracenote-DITV803-10367")
+		channelNumberMatched := false
+		if ch.TVGId != "" {
+			for _, epgCh := range epgChannels {
+				// Match by channel number if EPG channel has a number
+				if epgCh.Number != "" && epgCh.Number == ch.TVGId && !usedEPGChannelIDs[epgCh.ChannelID] {
+					if applyMappings {
+						ch.ChannelID = epgCh.ChannelID
+						ch.EPGCallSign = epgCh.CallSign
+						ch.EPGChannelNo = epgCh.Number
+						ch.MatchConfidence = 1.0
+						ch.MatchStrategy = "channel_number_to_gracenote"
+						ch.AutoDetected = true
+
+						if err := s.db.Save(&ch).Error; err == nil {
+							usedEPGChannelIDs[epgCh.ChannelID] = true
+							result.AutoMapped = true
+							result.BestMatch = &livetv.MatchResult{
+								EPGChannelID:  epgCh.ChannelID,
+								EPGCallSign:   epgCh.CallSign,
+								EPGNumber:     epgCh.Number,
+								Confidence:    1.0,
+								MatchReason:   "Channel number match to Gracenote",
+								MatchStrategy: "channel_number_to_gracenote",
+							}
+							summary.NewMappings++
+							summary.HighConfidence++
+						}
+					} else {
+						result.BestMatch = &livetv.MatchResult{
+							EPGChannelID:  epgCh.ChannelID,
+							EPGCallSign:   epgCh.CallSign,
+							EPGNumber:     epgCh.Number,
+							Confidence:    1.0,
+							MatchReason:   "Channel number match to Gracenote",
+							MatchStrategy: "channel_number_to_gracenote",
+						}
+						summary.HighConfidence++
+					}
+					results = append(results, result)
+					channelNumberMatched = true
+					break
+				}
+			}
+		}
+		if channelNumberMatched {
+			continue
+		}
+
 		// Find matches using the matcher
 		matches := matcher.FindMatches(&ch)
 
@@ -901,20 +951,16 @@ func (s *Server) getGuide(c *gin.Context) {
 		return
 	}
 
-	// Get channel IDs for EPG query - use TVGId which matches program channel_id
-	// Build a map from EPG channel ID to our channel for response mapping
+	// Build mapping from Gracenote channel ID to our channel's channelId
+	// Programs are stored with Gracenote IDs but frontend looks up by channel.channelId
 	channelIDs := make([]string, 0, len(channels))
-	epgToChannelID := make(map[string]string) // Maps EPG ID (TVGId) to channel.ChannelID
+	gracenoteToChannelID := make(map[string]string)
 	for _, ch := range channels {
-		// Use TVGId for EPG lookup (this matches program.channel_id)
-		// Fall back to ChannelID if TVGId is not set
-		epgID := ch.TVGId
-		if epgID == "" {
-			epgID = ch.ChannelID
-		}
-		if epgID != "" {
-			channelIDs = append(channelIDs, epgID)
-			epgToChannelID[epgID] = ch.ChannelID
+		// Channels may have channelId in Gracenote format or just a number (tvgId)
+		// We need to query programs by whatever format matches the program.channel_id
+		if ch.ChannelID != "" {
+			channelIDs = append(channelIDs, ch.ChannelID)
+			gracenoteToChannelID[ch.ChannelID] = ch.ChannelID
 		}
 	}
 
@@ -926,12 +972,17 @@ func (s *Server) getGuide(c *gin.Context) {
 		return
 	}
 
-	// Group programs by their EPG channel ID (tvgId)
-	// Don't map back to channelId because multiple channels can share the same tvgId
-	// Frontend matches programs using channel.tvgId
+	// Group programs by channel.channelId (what frontend uses for lookup)
+	// Map Gracenote program channel_id back to our channel's channelId
 	programsByChannel := make(map[string][]models.Program)
 	for _, prog := range programs {
-		programsByChannel[prog.ChannelID] = append(programsByChannel[prog.ChannelID], prog)
+		// Use the mapping to get the channel's channelId
+		if chID, ok := gracenoteToChannelID[prog.ChannelID]; ok {
+			programsByChannel[chID] = append(programsByChannel[chID], prog)
+		} else {
+			// Fallback: use program's channel_id directly
+			programsByChannel[prog.ChannelID] = append(programsByChannel[prog.ChannelID], prog)
+		}
 	}
 
 	// Get M3U source names for provider display in guide
@@ -1026,18 +1077,18 @@ func (s *Server) getWhatsOnNow(c *gin.Context) {
 
 	// Flat structure that Flutter expects
 	type ChannelWithPrograms struct {
-		ID              uint            `json:"id"`
-		SourceID        uint            `json:"sourceId"`
-		ChannelID       string          `json:"channelId"`
-		Number          int             `json:"number"`
-		Name            string          `json:"name"`
-		Logo            string          `json:"logo,omitempty"`
-		Group           string          `json:"group,omitempty"`
-		StreamURL       string          `json:"streamUrl"`
-		Enabled         bool            `json:"enabled"`
-		IsFavorite      bool            `json:"isFavorite"`
-		NowPlaying      *models.Program `json:"nowPlaying,omitempty"`
-		NextProgram     *models.Program `json:"nextProgram,omitempty"`
+		ID          uint            `json:"id"`
+		SourceID    uint            `json:"sourceId"`
+		ChannelID   string          `json:"channelId"`
+		Number      int             `json:"number"`
+		Name        string          `json:"name"`
+		Logo        string          `json:"logo,omitempty"`
+		Group       string          `json:"group,omitempty"`
+		StreamURL   string          `json:"streamUrl"`
+		Enabled     bool            `json:"enabled"`
+		IsFavorite  bool            `json:"isFavorite"`
+		NowPlaying  *models.Program `json:"nowPlaying,omitempty"`
+		NextProgram *models.Program `json:"nextProgram,omitempty"`
 		// EPG Mapping fields
 		TvgId           string  `json:"tvgId,omitempty"`
 		EPGCallSign     string  `json:"epgCallSign,omitempty"`
@@ -1924,12 +1975,12 @@ func getTotalPrograms(gridResp *gracenote.GridResponse) int {
 // addEPGSource adds a new standalone EPG source
 func (s *Server) addEPGSource(c *gin.Context) {
 	var req struct {
-		Name                 string `json:"name" binding:"required"`
-		ProviderType         string `json:"providerType" binding:"required"` // xmltv or gracenote
-		URL                  string `json:"url"`                             // For XMLTV
-		GracenoteAffiliate   string `json:"gracenoteAffiliate"`              // For Gracenote
-		GracenotePostalCode  string `json:"gracenotePostalCode"`             // For Gracenote
-		GracenoteHours       int    `json:"gracenoteHours"`                  // For Gracenote
+		Name                string `json:"name" binding:"required"`
+		ProviderType        string `json:"providerType" binding:"required"` // xmltv or gracenote
+		URL                 string `json:"url"`                             // For XMLTV
+		GracenoteAffiliate  string `json:"gracenoteAffiliate"`              // For Gracenote
+		GracenotePostalCode string `json:"gracenotePostalCode"`             // For Gracenote
+		GracenoteHours      int    `json:"gracenoteHours"`                  // For Gracenote
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -1958,13 +2009,13 @@ func (s *Server) addEPGSource(c *gin.Context) {
 	}
 
 	source := models.EPGSource{
-		Name:                 req.Name,
-		ProviderType:         req.ProviderType,
-		URL:                  req.URL,
-		GracenoteAffiliate:   req.GracenoteAffiliate,
-		GracenotePostalCode:  req.GracenotePostalCode,
-		GracenoteHours:       req.GracenoteHours,
-		Enabled:              true,
+		Name:                req.Name,
+		ProviderType:        req.ProviderType,
+		URL:                 req.URL,
+		GracenoteAffiliate:  req.GracenoteAffiliate,
+		GracenotePostalCode: req.GracenotePostalCode,
+		GracenoteHours:      req.GracenoteHours,
+		Enabled:             true,
 	}
 
 	if err := s.db.Create(&source).Error; err != nil {
@@ -2319,6 +2370,26 @@ func (s *Server) refreshGracenoteEPG(source *models.EPGSource) error {
 				fmt.Printf("🕐 DEBUG: First program time - Start: %v, End: %v\n", startTime, endTime)
 			}
 
+			// Parse Gracenote flags for new/premiere/live/finale
+			isNew := false
+			isPremiere := false
+			isLive := false
+			isFinale := false
+			for _, flag := range event.Flag {
+				flagLower := strings.ToLower(flag)
+				switch {
+				case flagLower == "new":
+					isNew = true
+				case flagLower == "premiere" || strings.Contains(flagLower, "premiere"):
+					isPremiere = true
+					isNew = true // Premieres are always new
+				case flagLower == "live":
+					isLive = true
+				case flagLower == "finale" || strings.Contains(flagLower, "finale"):
+					isFinale = true
+				}
+			}
+
 			program := models.Program{
 				ChannelID:     channelID,
 				CallSign:      channel.CallSign,
@@ -2329,6 +2400,10 @@ func (s *Server) refreshGracenoteEPG(source *models.EPGSource) error {
 				Start:         startTime,
 				End:           endTime,
 				Icon:          event.Thumbnail,
+				IsNew:         isNew,
+				IsPremiere:    isPremiere,
+				IsLive:        isLive,
+				IsFinale:      isFinale,
 			}
 
 			// Add episode info if available
@@ -3252,11 +3327,35 @@ func (s *Server) proxyChannelStream(c *gin.Context) {
 	c.Header("Content-Type", ct)
 	c.Header("Cache-Control", "no-cache, no-store, must-revalidate")
 	c.Header("Access-Control-Allow-Origin", "*")
+	c.Header("Access-Control-Expose-Headers", "Content-Type")
 
 	c.Status(resp.StatusCode)
 
-	// Stream the response
-	io.Copy(c.Writer, resp.Body)
+	// Flush headers immediately so client knows stream is starting
+	if flusher, ok := c.Writer.(http.Flusher); ok {
+		flusher.Flush()
+	}
+
+	// Get the flusher interface for streaming
+	flusher, ok := c.Writer.(http.Flusher)
+	if !ok {
+		// Fallback to regular copy if flushing not supported
+		io.Copy(c.Writer, resp.Body)
+		return
+	}
+
+	// Stream the response with periodic flushing
+	buf := make([]byte, 32*1024) // 32KB buffer
+	for {
+		n, err := resp.Body.Read(buf)
+		if n > 0 {
+			c.Writer.Write(buf[:n])
+			flusher.Flush()
+		}
+		if err != nil {
+			break
+		}
+	}
 }
 
 // proxyHLSManifest fetches an HLS manifest and rewrites URLs to proxy through our server
