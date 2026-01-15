@@ -21,7 +21,7 @@ FROM ubuntu:22.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Install runtime dependencies
+# Install runtime dependencies (including X11 libraries needed for Chrome)
 RUN apt-get update && apt-get install -y \
     ca-certificates \
     tzdata \
@@ -47,8 +47,12 @@ RUN apt-get update && apt-get install -y \
     libgtk-3-0 \
     libnspr4 \
     libnss3 \
+    libvulkan1 \
+    libx11-6 \
+    libxcb1 \
     libxcomposite1 \
     libxdamage1 \
+    libxext6 \
     libxfixes3 \
     libxkbcommon0 \
     libxrandr2 \

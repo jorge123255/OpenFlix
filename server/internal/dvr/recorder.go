@@ -1,6 +1,7 @@
 package dvr
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -31,10 +32,11 @@ type Recorder struct {
 
 // RecordingSession represents an active recording
 type RecordingSession struct {
-	Recording *models.Recording
-	Process   *exec.Cmd
-	Done      chan struct{}
-	Error     error
+	Recording   *models.Recording
+	Process     *exec.Cmd
+	Done        chan struct{}
+	Error       error
+	ErrorOutput string // Captured stderr from FFmpeg
 }
 
 // RecorderConfig holds configuration for the DVR recorder
@@ -120,7 +122,8 @@ func (r *Recorder) scheduleLoop() {
 
 // checkScheduledRecordings starts recordings that are due
 func (r *Recorder) checkScheduledRecordings() {
-	now := time.Now()
+	// Use UTC for database queries since times are stored in UTC
+	now := time.Now().UTC()
 
 	var recordings []models.Recording
 	r.db.Where("status = ? AND start_time <= ?", "scheduled", now).Find(&recordings)
@@ -153,7 +156,8 @@ func (r *Recorder) processSeriesRules() {
 	var rules []models.SeriesRule
 	r.db.Where("enabled = ?", true).Find(&rules)
 
-	now := time.Now()
+	// Use UTC for database queries since times are stored in UTC
+	now := time.Now().UTC()
 
 	for _, rule := range rules {
 		// Find matching programs in the next 24 hours
@@ -245,7 +249,8 @@ func (r *Recorder) processTeamPassesForUser(userID uint) int {
 	}
 	query.Find(&teamPasses)
 
-	now := time.Now()
+	// Use UTC for database queries since times are stored in UTC
+	now := time.Now().UTC()
 	scheduledCount := 0
 
 	for _, tp := range teamPasses {
@@ -415,9 +420,13 @@ func (r *Recorder) startRecording(recording *models.Recording) error {
 		outputPath,
 	}
 
+	cmd := exec.Command(r.ffmpegPath, args...)
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+
 	session := &RecordingSession{
 		Recording: recording,
-		Process:   exec.Command(r.ffmpegPath, args...),
+		Process:   cmd,
 		Done:      make(chan struct{}),
 	}
 
@@ -429,10 +438,79 @@ func (r *Recorder) startRecording(recording *models.Recording) error {
 	recording.FilePath = outputPath
 	r.db.Save(recording)
 
-	// Start FFmpeg
+	// Start FFmpeg with retry logic for transient stream errors
+	// Capture values needed in goroutine
+	streamURL := channel.StreamURL
+	ffmpegPath := r.ffmpegPath
+
 	go func() {
 		defer close(session.Done)
-		session.Error = session.Process.Run()
+
+		maxRetries := 3
+		retryDelay := 5 * time.Second
+
+		for attempt := 1; attempt <= maxRetries; attempt++ {
+			session.Error = session.Process.Run()
+			session.ErrorOutput = stderr.String()
+
+			if session.Error == nil {
+				// Success
+				break
+			}
+
+			// Check if error is retryable (transient stream issues)
+			isTransientError := strings.Contains(session.ErrorOutput, "Invalid data found") ||
+				strings.Contains(session.ErrorOutput, "Connection refused") ||
+				strings.Contains(session.ErrorOutput, "Connection reset") ||
+				strings.Contains(session.ErrorOutput, "Server returned")
+
+			// Check if we have enough time left to retry
+			timeRemaining := recording.EndTime.Sub(time.Now())
+
+			if !isTransientError || attempt >= maxRetries || timeRemaining < retryDelay*2 {
+				logger.Log.WithFields(map[string]interface{}{
+					"recording_id":  recording.ID,
+					"error":         session.Error.Error(),
+					"ffmpeg_output": session.ErrorOutput,
+					"attempt":       attempt,
+				}).Error("FFmpeg recording failed")
+				break
+			}
+
+			// Log retry attempt
+			logger.Log.WithFields(map[string]interface{}{
+				"recording_id":   recording.ID,
+				"error":          session.Error.Error(),
+				"attempt":        attempt,
+				"retry_in":       retryDelay.String(),
+				"time_remaining": timeRemaining.String(),
+			}).Warn("FFmpeg failed with transient error, retrying...")
+
+			// Wait before retry
+			time.Sleep(retryDelay)
+
+			// Recreate FFmpeg command for retry with updated duration
+			stderr.Reset()
+			newDuration := recording.EndTime.Sub(time.Now())
+			if newDuration <= 0 {
+				logger.Log.WithField("recording_id", recording.ID).Error("Recording end time passed during retry")
+				break
+			}
+
+			retryArgs := []string{
+				"-y",
+				"-hide_banner",
+				"-loglevel", "warning",
+				"-i", streamURL,
+				"-t", fmt.Sprintf("%d", int(newDuration.Seconds())),
+				"-c", "copy",
+				outputPath,
+			}
+			cmd := exec.Command(ffmpegPath, retryArgs...)
+			cmd.Stderr = &stderr
+			session.Process = cmd
+		}
+
 		r.onRecordingComplete(recording.ID)
 	}()
 
