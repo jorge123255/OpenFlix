@@ -57,6 +57,7 @@ func (s *Server) scheduleRecording(c *gin.Context) {
 		EndTime     time.Time `json:"endTime" binding:"required"`
 		Category    string    `json:"category"`
 		EpisodeNum  string    `json:"episodeNum"`
+		Priority    *int      `json:"priority"` // 0-100, higher = more important (default 50)
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -68,6 +69,21 @@ func (s *Server) scheduleRecording(c *gin.Context) {
 	if err := s.db.First(&channel, req.ChannelID).Error; err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Channel not found"})
 		return
+	}
+
+	// Check for conflicts before creating
+	var conflicts []models.Recording
+	s.db.Where("user_id = ? AND status IN ? AND start_time < ? AND end_time > ?",
+		userID, []string{"scheduled", "recording"}, req.EndTime, req.StartTime).Find(&conflicts)
+
+	// Set priority (default 50)
+	priority := 50
+	if req.Priority != nil {
+		if *req.Priority < 0 || *req.Priority > 100 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Priority must be between 0 and 100"})
+			return
+		}
+		priority = *req.Priority
 	}
 
 	recording := models.Recording{
@@ -83,6 +99,7 @@ func (s *Server) scheduleRecording(c *gin.Context) {
 		EpisodeNum:  req.EpisodeNum,
 		ChannelName: channel.Name,
 		ChannelLogo: channel.Logo,
+		Priority:    priority,
 	}
 
 	if err := s.db.Create(&recording).Error; err != nil {
@@ -99,7 +116,22 @@ func (s *Server) scheduleRecording(c *gin.Context) {
 		}()
 	}
 
-	c.JSON(http.StatusCreated, recording)
+	// Include conflict info in response
+	response := gin.H{
+		"id":          recording.ID,
+		"title":       recording.Title,
+		"description": recording.Description,
+		"channelId":   recording.ChannelID,
+		"channelName": recording.ChannelName,
+		"startTime":   recording.StartTime,
+		"endTime":     recording.EndTime,
+		"status":      recording.Status,
+		"priority":    recording.Priority,
+		"hasConflict": len(conflicts) > 0,
+		"conflicts":   conflicts,
+	}
+
+	c.JSON(http.StatusCreated, response)
 }
 
 // recordFromProgram creates a recording from an EPG program
@@ -110,6 +142,7 @@ func (s *Server) recordFromProgram(c *gin.Context) {
 		ChannelID    uint `json:"channelId" binding:"required"`
 		ProgramID    uint `json:"programId" binding:"required"`
 		SeriesRecord bool `json:"seriesRecord"`
+		Priority     *int `json:"priority"` // 0-100, higher = more important (default 50)
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -135,6 +168,16 @@ func (s *Server) recordFromProgram(c *gin.Context) {
 	s.db.Where("user_id = ? AND status IN ? AND start_time < ? AND end_time > ?",
 		userID, []string{"scheduled", "recording"}, program.End, program.Start).Find(&conflicts)
 
+	// Set priority (default 50)
+	priority := 50
+	if req.Priority != nil {
+		if *req.Priority < 0 || *req.Priority > 100 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Priority must be between 0 and 100"})
+			return
+		}
+		priority = *req.Priority
+	}
+
 	// Create the recording with program metadata
 	recording := models.Recording{
 		UserID:       userID,
@@ -154,6 +197,7 @@ func (s *Server) recordFromProgram(c *gin.Context) {
 		ChannelName:  channel.Name,
 		ChannelLogo:  channel.Logo,
 		IsMovie:      program.IsMovie,
+		Priority:     priority,
 	}
 
 	if err := s.db.Create(&recording).Error; err != nil {
@@ -293,6 +337,54 @@ func (s *Server) deleteRecording(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Recording deleted"})
+}
+
+// updateRecordingPriority updates the priority of a scheduled recording
+func (s *Server) updateRecordingPriority(c *gin.Context) {
+	userID := c.GetUint("userID")
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid recording ID"})
+		return
+	}
+
+	var req struct {
+		Priority int `json:"priority" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if req.Priority < 0 || req.Priority > 100 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Priority must be between 0 and 100"})
+		return
+	}
+
+	var recording models.Recording
+	if err := s.db.Where("user_id = ?", userID).First(&recording, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Recording not found"})
+		return
+	}
+
+	// Can only update priority of scheduled recordings
+	if recording.Status != "scheduled" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Can only update priority of scheduled recordings"})
+		return
+	}
+
+	recording.Priority = req.Priority
+	if err := s.db.Save(&recording).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update recording"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"id":       recording.ID,
+		"title":    recording.Title,
+		"priority": recording.Priority,
+		"message":  "Priority updated",
+	})
 }
 
 // ============ Series Rules ============

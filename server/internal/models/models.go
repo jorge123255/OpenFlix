@@ -467,6 +467,9 @@ type Recording struct {
 	ChannelName     string     `gorm:"size:200" json:"channelName,omitempty"`    // Cached channel name
 	ChannelLogo     string     `gorm:"size:500" json:"channelLogo,omitempty"`    // Cached channel logo
 	ViewOffset      *int64     `json:"viewOffset,omitempty"`                     // Watch progress in ms
+	// Conflict handling
+	Priority        int        `gorm:"default:50" json:"priority"`               // 0-100, higher = more important
+	ConflictGroupID *uint      `gorm:"index" json:"conflictGroupId,omitempty"`   // Groups conflicting recordings
 	CreatedAt       time.Time  `json:"createdAt"`
 	UpdatedAt       time.Time  `json:"updatedAt"`
 }
