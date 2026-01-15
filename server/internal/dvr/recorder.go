@@ -128,15 +128,23 @@ func (r *Recorder) checkScheduledRecordings() {
 	var recordings []models.Recording
 	r.db.Where("status = ? AND start_time <= ?", "scheduled", now).Find(&recordings)
 
+	// Separate expired vs valid recordings
+	var validRecordings []models.Recording
 	for _, rec := range recordings {
-		recording := rec // Create copy for goroutine
-		if recording.EndTime.Before(now) {
+		if rec.EndTime.Before(now) {
 			// Recording window passed, mark as failed
-			recording.Status = "failed"
-			r.db.Save(&recording)
+			rec.Status = "failed"
+			r.db.Save(&rec)
 			continue
 		}
+		validRecordings = append(validRecordings, rec)
+	}
 
+	// Resolve conflicts - only start recordings that win priority
+	recordingsToStart := r.ResolveConflictsAtRecordingTime(validRecordings)
+
+	for _, rec := range recordingsToStart {
+		recording := rec // Create copy for goroutine
 		// Start recording
 		go r.startRecording(&recording)
 	}
@@ -872,4 +880,176 @@ func (r *Recorder) RefreshChannelEPGMapping(channelID uint) error {
 	}
 
 	return nil
+}
+
+// ConflictInfo represents information about a recording conflict
+type ConflictInfo struct {
+	Recording        *models.Recording   `json:"recording"`
+	ConflictingWith  []*models.Recording `json:"conflictingWith"`
+	WillBeRecorded   bool                `json:"willBeRecorded"`
+	ConflictResolved bool                `json:"conflictResolved"`
+}
+
+// MaxConcurrentRecordings is the maximum number of simultaneous recordings
+// This could be made configurable in the future (based on tuner count)
+const MaxConcurrentRecordings = 1
+
+// FindConflicts checks if a recording conflicts with existing scheduled recordings
+func (r *Recorder) FindConflicts(recording *models.Recording) []*models.Recording {
+	var conflicts []*models.Recording
+
+	r.db.Where(
+		"id != ? AND user_id = ? AND status IN ? AND start_time < ? AND end_time > ?",
+		recording.ID,
+		recording.UserID,
+		[]string{"scheduled", "recording"},
+		recording.EndTime,
+		recording.StartTime,
+	).Order("priority DESC, created_at ASC").Find(&conflicts)
+
+	return conflicts
+}
+
+// FindConflictsForNewRecording checks for conflicts before creating a recording
+func (r *Recorder) FindConflictsForNewRecording(userID uint, startTime, endTime time.Time, excludeID uint) []*models.Recording {
+	var conflicts []*models.Recording
+
+	query := r.db.Where(
+		"user_id = ? AND status IN ? AND start_time < ? AND end_time > ?",
+		userID,
+		[]string{"scheduled", "recording"},
+		endTime,
+		startTime,
+	)
+
+	if excludeID > 0 {
+		query = query.Where("id != ?", excludeID)
+	}
+
+	query.Order("priority DESC, created_at ASC").Find(&conflicts)
+
+	return conflicts
+}
+
+// GetAllConflicts returns all scheduled recordings that have conflicts
+func (r *Recorder) GetAllConflicts(userID uint) []ConflictInfo {
+	var scheduled []models.Recording
+	r.db.Where("user_id = ? AND status = ?", userID, "scheduled").
+		Order("start_time ASC").Find(&scheduled)
+
+	var conflictInfos []ConflictInfo
+	processedPairs := make(map[string]bool)
+
+	for i := range scheduled {
+		recording := &scheduled[i]
+		conflicts := r.FindConflicts(recording)
+
+		if len(conflicts) == 0 {
+			continue
+		}
+
+		// Create a unique key for this conflict group to avoid duplicates
+		for _, conflict := range conflicts {
+			pairKey := fmt.Sprintf("%d-%d", minUint(recording.ID, conflict.ID), maxUint(recording.ID, conflict.ID))
+			if processedPairs[pairKey] {
+				continue
+			}
+			processedPairs[pairKey] = true
+		}
+
+		// Determine if this recording will be recorded based on priority
+		willBeRecorded := true
+		for _, conflict := range conflicts {
+			if conflict.Priority > recording.Priority {
+				willBeRecorded = false
+				break
+			} else if conflict.Priority == recording.Priority && conflict.CreatedAt.Before(recording.CreatedAt) {
+				willBeRecorded = false
+				break
+			}
+		}
+
+		conflictInfos = append(conflictInfos, ConflictInfo{
+			Recording:       recording,
+			ConflictingWith: conflicts,
+			WillBeRecorded:  willBeRecorded,
+		})
+	}
+
+	return conflictInfos
+}
+
+// ResolveConflictsAtRecordingTime handles conflicts when it's time to start recording
+// Returns the recordings that should actually start
+func (r *Recorder) ResolveConflictsAtRecordingTime(recordings []models.Recording) []models.Recording {
+	if len(recordings) <= MaxConcurrentRecordings {
+		return recordings
+	}
+
+	// Sort by priority (desc), then by created_at (asc) for tie-breaking
+	sortedRecordings := make([]models.Recording, len(recordings))
+	copy(sortedRecordings, recordings)
+
+	for i := 0; i < len(sortedRecordings)-1; i++ {
+		for j := i + 1; j < len(sortedRecordings); j++ {
+			// Higher priority wins
+			if sortedRecordings[j].Priority > sortedRecordings[i].Priority {
+				sortedRecordings[i], sortedRecordings[j] = sortedRecordings[j], sortedRecordings[i]
+			} else if sortedRecordings[j].Priority == sortedRecordings[i].Priority {
+				// Same priority: earlier created wins
+				if sortedRecordings[j].CreatedAt.Before(sortedRecordings[i].CreatedAt) {
+					sortedRecordings[i], sortedRecordings[j] = sortedRecordings[j], sortedRecordings[i]
+				}
+			}
+		}
+	}
+
+	// Take only the top MaxConcurrentRecordings
+	winners := sortedRecordings[:MaxConcurrentRecordings]
+	losers := sortedRecordings[MaxConcurrentRecordings:]
+
+	// Mark losers as conflict-skipped
+	for _, loser := range losers {
+		loser.Status = "conflict"
+		r.db.Save(&loser)
+		logger.Log.WithFields(map[string]interface{}{
+			"recording_id":      loser.ID,
+			"title":             loser.Title,
+			"priority":          loser.Priority,
+			"conflicted_by":     winners[0].Title,
+			"conflicted_by_pri": winners[0].Priority,
+		}).Warn("Recording skipped due to conflict with higher priority recording")
+	}
+
+	return winners
+}
+
+// SetRecordingPriority updates the priority of a recording
+func (r *Recorder) SetRecordingPriority(recordingID uint, priority int) error {
+	if priority < 0 || priority > 100 {
+		return fmt.Errorf("priority must be between 0 and 100")
+	}
+
+	var recording models.Recording
+	if err := r.db.First(&recording, recordingID).Error; err != nil {
+		return fmt.Errorf("recording not found: %w", err)
+	}
+
+	recording.Priority = priority
+	return r.db.Save(&recording).Error
+}
+
+// helper functions for min/max uint
+func minUint(a, b uint) uint {
+	if a < b {
+		return a
+	}
+	return b
+}
+
+func maxUint(a, b uint) uint {
+	if a > b {
+		return a
+	}
+	return b
 }

@@ -527,6 +527,7 @@ func (s *Server) setupRouter() {
 		dvrGroup.GET("/recordings/stats", s.getActiveRecordingStats) // Must be before :id route
 		dvrGroup.GET("/recordings/:id", s.getRecording)
 		dvrGroup.DELETE("/recordings/:id", s.deleteRecording)
+		dvrGroup.PUT("/recordings/:id/priority", s.updateRecordingPriority)
 
 		// Series Rules
 		dvrGroup.GET("/rules", s.getSeriesRules)
