@@ -1056,6 +1056,11 @@ function RecordingCard({
                   MOVIE
                 </span>
               )}
+              {recording.isLive && (
+                <span className="px-1.5 py-0.5 text-xs bg-red-500 text-white font-bold rounded animate-pulse">
+                  LIVE
+                </span>
+              )}
             </div>
 
             {/* Live recording stats panel */}
