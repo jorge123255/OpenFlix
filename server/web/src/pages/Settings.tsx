@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Save, CheckCircle, XCircle, Loader } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { api, type ServerSettings } from '../api/client'
+import { api, type ServerSettings, type DVRSettings } from '../api/client'
 
 function useServerConfig() {
   return useQuery({
@@ -34,6 +34,85 @@ function SettingField({
       <label className="block text-sm font-medium text-gray-300 mb-1">{label}</label>
       {description && <p className="text-xs text-gray-500 mb-2">{description}</p>}
       {children}
+    </div>
+  )
+}
+
+function DVRSettingsSection() {
+  const queryClient = useQueryClient()
+  const [saved, setSaved] = useState(false)
+
+  const { data: dvrSettings, isLoading } = useQuery({
+    queryKey: ['dvrSettings'],
+    queryFn: () => api.getDVRSettings(),
+  })
+
+  const [maxConcurrent, setMaxConcurrent] = useState(0)
+
+  useEffect(() => {
+    if (dvrSettings) {
+      setMaxConcurrent(dvrSettings.maxConcurrentRecordings)
+    }
+  }, [dvrSettings])
+
+  const updateSettings = useMutation({
+    mutationFn: (data: Partial<DVRSettings>) => api.updateDVRSettings(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['dvrSettings'] })
+      setSaved(true)
+      setTimeout(() => setSaved(false), 3000)
+    },
+  })
+
+  const handleSave = () => {
+    updateSettings.mutate({ maxConcurrentRecordings: maxConcurrent })
+  }
+
+  if (isLoading) {
+    return (
+      <div className="bg-gray-800 rounded-xl p-6 mb-6">
+        <h2 className="text-lg font-semibold text-white mb-4">DVR Settings</h2>
+        <div className="text-gray-400">Loading...</div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="bg-gray-800 rounded-xl p-6 mb-6">
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-lg font-semibold text-white">DVR Settings</h2>
+        <button
+          onClick={handleSave}
+          disabled={updateSettings.isPending}
+          className="flex items-center gap-2 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-800 text-white text-sm rounded-lg"
+        >
+          <Save className="h-3.5 w-3.5" />
+          {updateSettings.isPending ? 'Saving...' : saved ? 'Saved!' : 'Save'}
+        </button>
+      </div>
+      <div className="space-y-4">
+        <SettingField
+          label="Max Concurrent Recordings"
+          description="Maximum number of recordings that can run at the same time. Set to 0 for unlimited."
+        >
+          <div className="flex items-center gap-3">
+            <input
+              type="number"
+              min="0"
+              value={maxConcurrent}
+              onChange={(e) => setMaxConcurrent(Number(e.target.value))}
+              className="w-32 px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
+            />
+            <span className="text-gray-400 text-sm">
+              {maxConcurrent === 0 ? '(Unlimited)' : `(Max ${maxConcurrent} at once)`}
+            </span>
+          </div>
+        </SettingField>
+        <p className="text-xs text-gray-500">
+          If you have limited tuners or bandwidth, you may want to set a limit.
+          When conflicts occur, higher priority recordings will be preferred.
+        </p>
+      </div>
     </div>
   )
 }
@@ -282,6 +361,8 @@ transcode:
         </SettingField>
       </SettingSection>
 
+      <DVRSettingsSection />
+
       <VODSettingsSection
         vodApiUrl={formData.vod_api_url || ''}
         onUrlChange={(url) => updateField('vod_api_url', url)}
@@ -290,7 +371,7 @@ transcode:
       <div className="bg-gray-800 rounded-xl p-6">
         <h2 className="text-lg font-semibold text-white mb-4">Other Settings</h2>
         <p className="text-gray-400 text-sm">
-          Additional server settings (Live TV, DVR, Transcoding) can be configured via the <code className="bg-gray-700 px-2 py-1 rounded">config.yaml</code> file.
+          Additional server settings (Live TV, Transcoding) can be configured via the <code className="bg-gray-700 px-2 py-1 rounded">config.yaml</code> file.
         </p>
         <p className="text-gray-500 text-sm mt-2">
           Location: <code className="bg-gray-700 px-2 py-1 rounded">~/.openflix/config.yaml</code>

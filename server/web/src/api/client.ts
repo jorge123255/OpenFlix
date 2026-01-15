@@ -411,6 +411,17 @@ class ApiClient {
     await this.client.put(`/dvr/recordings/${recordingId}/progress`, { viewOffset })
   }
 
+  // DVR Settings
+  async getDVRSettings(): Promise<DVRSettings> {
+    const response = await this.client.get<{ settings: DVRSettings }>('/dvr/settings')
+    return response.data.settings
+  }
+
+  async updateDVRSettings(data: Partial<DVRSettings>): Promise<DVRSettings> {
+    const response = await this.client.put<{ settings: DVRSettings }>('/dvr/settings', data)
+    return response.data.settings
+  }
+
   // Server admin endpoints
   async getServerStatus(): Promise<ServerStatus> {
     const response = await this.client.get<ServerStatus>('/api/status')
@@ -694,6 +705,11 @@ export interface VODDownloadItem {
 
 export interface VODDownloadQueue {
   items: VODDownloadItem[]
+}
+
+// DVR Settings
+export interface DVRSettings {
+  maxConcurrentRecordings: number  // 0 = unlimited
 }
 
 export const api = new ApiClient()

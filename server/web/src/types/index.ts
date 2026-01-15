@@ -179,6 +179,16 @@ export interface Program {
   category?: string
   episodeNum?: string
   channelName?: string
+  // Episode status flags
+  isNew?: boolean
+  isPremiere?: boolean
+  isLive?: boolean
+  isFinale?: boolean
+  // Content type flags
+  isMovie?: boolean
+  isSports?: boolean
+  isKids?: boolean
+  isNews?: boolean
 }
 
 export interface ProgramsResponse {

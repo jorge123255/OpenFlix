@@ -31,6 +31,16 @@ interface Program {
   end: string
   category?: string
   episodeNum?: string
+  // Episode status flags
+  isNew?: boolean
+  isPremiere?: boolean
+  isLive?: boolean
+  isFinale?: boolean
+  // Content type flags
+  isMovie?: boolean
+  isSports?: boolean
+  isKids?: boolean
+  isNews?: boolean
 }
 
 interface EPGSource {
@@ -136,6 +146,34 @@ function ProgramBlock({
           </div>
         </div>
       )}
+      {/* NEW/PREMIERE/FINALE/LIVE badges */}
+      {(() => {
+        // For sports, only show NEW if it's also marked as LIVE (actual live broadcast, not replay)
+        const isSportsReplay = program.isSports && !program.isLive
+        const showNew = program.isNew && !isSportsReplay
+        const showPremiere = program.isPremiere && !isSportsReplay
+        const showLive = program.isLive
+        const showFinale = program.isFinale
+        
+        if (!showNew && !showPremiere && !showFinale && !showLive) return null
+        
+        return (
+          <div className="absolute top-1 left-1 z-10 flex gap-1">
+            {showLive && (
+              <span className="px-1 py-0.5 bg-red-500 text-white text-[9px] font-bold rounded uppercase animate-pulse">Live</span>
+            )}
+            {showPremiere && (
+              <span className="px-1 py-0.5 bg-yellow-500 text-black text-[9px] font-bold rounded uppercase">Premiere</span>
+            )}
+            {showNew && !showPremiere && (
+              <span className="px-1 py-0.5 bg-green-500 text-white text-[9px] font-bold rounded uppercase">New</span>
+            )}
+            {showFinale && (
+              <span className="px-1 py-0.5 bg-purple-500 text-white text-[9px] font-bold rounded uppercase">Finale</span>
+            )}
+          </div>
+        )
+      })()}
       <div className="p-2 h-full flex flex-col justify-center">
         <div className="font-semibold text-white text-sm leading-tight truncate">{program.title}</div>
         {width > 120 && (
@@ -231,6 +269,34 @@ function ProgramModal({
                 {program.category}
               </span>
             )}
+            {/* NEW/PREMIERE/FINALE badges - for sports, only show NEW if also LIVE (not a replay) */}
+            {(() => {
+              const isSportsReplay = program.isSports && !program.isLive
+              return (
+                <>
+                  {program.isPremiere && !isSportsReplay && (
+                    <span className="px-2.5 py-1 bg-yellow-500 text-black text-xs font-bold rounded uppercase">
+                      Premiere
+                    </span>
+                  )}
+                  {program.isNew && !program.isPremiere && !isSportsReplay && (
+                    <span className="px-2.5 py-1 bg-green-500 text-white text-xs font-bold rounded uppercase">
+                      New Episode
+                    </span>
+                  )}
+                  {program.isFinale && (
+                    <span className="px-2.5 py-1 bg-purple-500 text-white text-xs font-bold rounded uppercase">
+                      Finale
+                    </span>
+                  )}
+                  {program.isLive && (
+                    <span className="px-2.5 py-1 bg-red-500 text-white text-xs font-bold rounded uppercase animate-pulse">
+                      Live
+                    </span>
+                  )}
+                </>
+              )
+            })()}
           </div>
 
           {program.description && (
@@ -302,7 +368,9 @@ function LiveTVPlayer({
   const [isMuted, setIsMuted] = useState(false)
   const [isPlaying, setIsPlaying] = useState(true)
   const [showControls, setShowControls] = useState(true)
+  const [retryCount, setRetryCount] = useState(0)
   const controlsTimeoutRef = useRef<number | null>(null)
+  const loadingTimeoutRef = useRef<number | null>(null)
 
   // Playback control handlers
   const togglePlayPause = () => {
@@ -331,87 +399,171 @@ function LiveTVPlayer({
 
   useEffect(() => {
     const video = videoRef.current
-    if (!video || !channel.streamUrl) return
+    if (!video) return
+
+    // Check if channel has a stream URL
+    if (!channel.streamUrl) {
+      setError('No stream URL available for this channel')
+      setIsLoading(false)
+      return
+    }
 
     setIsLoading(true)
     setError(null)
 
     // Use absolute proxy URL for web worker compatibility
     const proxyUrl = `${window.location.origin}/livetv/channels/${channel.id}/stream`
+    console.log('[LiveTVPlayer] Loading stream:', proxyUrl, 'Original URL:', channel.streamUrl)
 
-    // Helper to start mpegts player
-    const startMpegts = (url: string) => {
-      if (!mpegts.isSupported()) {
-        setError('Your browser does not support MPEG-TS playback')
-        setIsLoading(false)
-        return
-      }
+    // Try mpegts.js first since most live TV streams are MPEG-TS
+    // Fall back to HLS.js if mpegts fails
+    if (mpegts.isSupported()) {
+      console.log('[LiveTVPlayer] Trying mpegts.js first (most live TV is MPEG-TS)')
+      let mpegtsWorked = false
 
       const player = mpegts.createPlayer({
         type: 'mpegts',
         isLive: true,
-        url: url,
+        url: proxyUrl,
       }, {
         enableWorker: false,
         lazyLoad: false,
         autoCleanupSourceBuffer: true,
-        autoCleanupMaxBackwardDuration: 30,
-        autoCleanupMinBackwardDuration: 15,
-        stashInitialSize: 512 * 1024,
+        autoCleanupMaxBackwardDuration: 60,
+        autoCleanupMinBackwardDuration: 30,
+        stashInitialSize: 512 * 1024, // Larger buffer to reduce stuttering
         enableStashBuffer: true,
-        liveBufferLatencyChasing: false,
-        liveBufferLatencyMaxLatency: 5,
-        liveBufferLatencyMinRemain: 1,
+        liveBufferLatencyChasing: false, // Disable latency chasing to reduce stuttering
+        liveBufferLatencyMaxLatency: 10,
+        liveBufferLatencyMinRemain: 3,
       })
       mpegtsRef.current = player
       player.attachMediaElement(video)
       player.load()
 
-      player.on(mpegts.Events.LOADING_COMPLETE, () => {
-        setIsLoading(false)
-      })
       player.on(mpegts.Events.MEDIA_INFO, () => {
+        console.log('[LiveTVPlayer] mpegts media info received - stream is MPEG-TS')
+        mpegtsWorked = true
+        // Clear timeout since loading succeeded
+        if (loadingTimeoutRef.current) {
+          clearTimeout(loadingTimeoutRef.current)
+          loadingTimeoutRef.current = null
+        }
         setIsLoading(false)
-        video.play().catch(() => {})
+        video.play().catch((err) => console.error('[LiveTVPlayer] Play error:', err))
       })
-      player.on(mpegts.Events.ERROR, (errorType: string, errorDetail: string) => {
-        setError(`Stream error: ${errorType} - ${errorDetail}`)
-        setIsLoading(false)
-      })
-    }
 
-    // Try HLS first (server will proxy HLS streams), fall back to mpegts
-    if (Hls.isSupported()) {
+      player.on(mpegts.Events.ERROR, (errorType: string, errorDetail: string) => {
+        console.error('[LiveTVPlayer] mpegts error:', errorType, errorDetail)
+        if (!mpegtsWorked) {
+          // mpegts failed, try HLS
+          console.log('[LiveTVPlayer] mpegts failed, trying HLS.js...')
+          player.destroy()
+          mpegtsRef.current = null
+
+          if (Hls.isSupported()) {
+            const hls = new Hls({
+              enableWorker: true,
+              lowLatencyMode: true,
+            })
+            hlsRef.current = hls
+
+            hls.on(Hls.Events.MANIFEST_PARSED, () => {
+              console.log('[LiveTVPlayer] HLS manifest parsed successfully')
+              if (loadingTimeoutRef.current) {
+                clearTimeout(loadingTimeoutRef.current)
+                loadingTimeoutRef.current = null
+              }
+              setIsLoading(false)
+              video.play().catch((err) => console.error('[LiveTVPlayer] Play error:', err))
+            })
+
+            hls.on(Hls.Events.ERROR, (_, data) => {
+              console.error('[LiveTVPlayer] HLS error:', data.type, data.details)
+              if (data.fatal) {
+                setError(`Stream error: ${data.details}`)
+                setIsLoading(false)
+              }
+            })
+
+            hls.loadSource(proxyUrl)
+            hls.attachMedia(video)
+          } else {
+            setError(`Stream error: ${errorType} - ${errorDetail}`)
+            setIsLoading(false)
+          }
+        } else {
+          // Stream was working but errored - show error
+          setError(`Stream error: ${errorType} - ${errorDetail}`)
+          setIsLoading(false)
+        }
+      })
+    } else if (Hls.isSupported()) {
+      // Fallback to HLS if mpegts not supported
+      console.log('[LiveTVPlayer] Using HLS.js (mpegts not supported)')
       const hls = new Hls({
         enableWorker: true,
         lowLatencyMode: true,
       })
       hlsRef.current = hls
 
-      let hlsFailed = false
-
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        console.log('[LiveTVPlayer] HLS manifest parsed successfully')
+        if (loadingTimeoutRef.current) {
+          clearTimeout(loadingTimeoutRef.current)
+          loadingTimeoutRef.current = null
+        }
         setIsLoading(false)
-        video.play().catch(() => {})
+        video.play().catch((err) => console.error('[LiveTVPlayer] Play error:', err))
       })
 
       hls.on(Hls.Events.ERROR, (_, data) => {
-        if (data.fatal && !hlsFailed) {
-          hlsFailed = true
-          console.log('HLS failed, trying mpegts.js:', data.details)
-          hls.destroy()
-          hlsRef.current = null
-          startMpegts(proxyUrl)
+        console.error('[LiveTVPlayer] HLS error:', data.type, data.details)
+        if (data.fatal) {
+          setError(`Stream error: ${data.details}`)
+          setIsLoading(false)
         }
       })
 
       hls.loadSource(proxyUrl)
       hls.attachMedia(video)
+    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+      // Safari native HLS support
+      console.log('[LiveTVPlayer] Using native HLS (Safari)')
+      video.src = proxyUrl
+      video.addEventListener('loadedmetadata', () => {
+        console.log('[LiveTVPlayer] Native HLS loaded')
+        if (loadingTimeoutRef.current) {
+          clearTimeout(loadingTimeoutRef.current)
+          loadingTimeoutRef.current = null
+        }
+        setIsLoading(false)
+        video.play().catch((err) => console.error('[LiveTVPlayer] Play error:', err))
+      })
+      video.addEventListener('error', () => {
+        console.error('[LiveTVPlayer] Native HLS error:', video.error)
+        setError(`Video error: ${video.error?.message || 'Unknown error'}`)
+        setIsLoading(false)
+      })
     } else {
-      startMpegts(proxyUrl)
+      setError('Your browser does not support video playback')
+      setIsLoading(false)
     }
 
+    // Add a loading timeout in case neither HLS nor mpegts can load
+    // Using 30 seconds since some streams take time to start
+    loadingTimeoutRef.current = window.setTimeout(() => {
+      console.error('[LiveTVPlayer] Loading timeout - stream failed to load within 30 seconds')
+      setError('Stream failed to load. Please check if the channel is available.')
+      setIsLoading(false)
+      loadingTimeoutRef.current = null
+    }, 30000)
+
     return () => {
+      if (loadingTimeoutRef.current) {
+        clearTimeout(loadingTimeoutRef.current)
+        loadingTimeoutRef.current = null
+      }
       if (hlsRef.current) {
         hlsRef.current.destroy()
         hlsRef.current = null
@@ -421,7 +573,7 @@ function LiveTVPlayer({
         mpegtsRef.current = null
       }
     }
-  }, [channel.id, channel.streamUrl])
+  }, [channel.id, channel.streamUrl, retryCount])
 
   // Auto-hide controls
   useEffect(() => {
@@ -469,14 +621,27 @@ function LiveTVPlayer({
         )}
         {error ? (
           <div className="absolute inset-0 flex items-center justify-center">
-            <div className="text-center">
+            <div className="text-center max-w-md px-4">
               <p className="text-red-400 text-lg mb-4">{error}</p>
-              <button
-                onClick={onClose}
-                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg"
-              >
-                Close
-              </button>
+              <div className="flex gap-3 justify-center">
+                <button
+                  onClick={() => {
+                    setError(null)
+                    setIsLoading(true)
+                    setRetryCount(c => c + 1)
+                  }}
+                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg flex items-center gap-2"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                  Retry
+                </button>
+                <button
+                  onClick={onClose}
+                  className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg"
+                >
+                  Close
+                </button>
+              </div>
             </div>
           </div>
         ) : (
@@ -687,25 +852,15 @@ export function TVGuidePage() {
     return Array.from(groups).sort()
   }, [channelsData])
 
-  // Check if a channel has EPG programs - use tvgId for matching (matches program.channelId)
+  // Check if a channel has EPG programs - use channelId for matching (matches program.channelId from Gracenote)
   const channelHasEPG = useCallback((channel: Channel): boolean => {
-    // First try tvgId (primary EPG matching field)
-    const epgId = channel.tvgId || channel.channelId
-    let programs = programsByChannel[epgId] || []
-    // Fallback to channelId if tvgId didn't match
-    if (programs.length === 0 && channel.tvgId) {
-      programs = programsByChannel[channel.channelId] || []
-    }
+    const programs = programsByChannel[channel.channelId] || []
     return programs.length > 0
   }, [programsByChannel])
 
   // Get current program for a channel
   const getCurrentProgram = useCallback((channel: Channel): Program | undefined => {
-    const epgId = channel.tvgId || channel.channelId
-    let programs = programsByChannel[epgId] || []
-    if (programs.length === 0 && channel.tvgId) {
-      programs = programsByChannel[channel.channelId] || []
-    }
+    const programs = programsByChannel[channel.channelId] || []
     const now = new Date()
     return programs.find(p => new Date(p.start) <= now && new Date(p.end) > now)
   }, [programsByChannel])
@@ -1200,13 +1355,8 @@ export function TVGuidePage() {
 
                 {/* Channel rows */}
                 {channels.map((channel) => {
-                  // Use tvgId for EPG matching (this matches program.channelId in the database)
-                  const epgId = channel.tvgId || channel.channelId
-                  let channelPrograms: Program[] = programsByChannel[epgId] || []
-                  // Fallback to channelId if tvgId didn't match
-                  if (channelPrograms.length === 0 && channel.tvgId) {
-                    channelPrograms = programsByChannel[channel.channelId] || []
-                  }
+                  // Use channelId for EPG matching (matches program.channelId from Gracenote)
+                  const channelPrograms: Program[] = programsByChannel[channel.channelId] || []
 
                   return (
                     <div
