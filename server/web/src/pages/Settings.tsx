@@ -42,9 +42,10 @@ function DVRSettingsSection() {
   const queryClient = useQueryClient()
   const [saved, setSaved] = useState(false)
 
-  const { data: dvrSettings, isLoading } = useQuery({
+  const { data: dvrSettings, isLoading, error } = useQuery({
     queryKey: ['dvrSettings'],
     queryFn: () => api.getDVRSettings(),
+    retry: 1,
   })
 
   const [maxConcurrent, setMaxConcurrent] = useState(0)
@@ -73,6 +74,15 @@ function DVRSettingsSection() {
       <div className="bg-gray-800 rounded-xl p-6 mb-6">
         <h2 className="text-lg font-semibold text-white mb-4">DVR Settings</h2>
         <div className="text-gray-400">Loading...</div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="bg-gray-800 rounded-xl p-6 mb-6">
+        <h2 className="text-lg font-semibold text-white mb-4">DVR Settings</h2>
+        <div className="text-red-400 text-sm">Failed to load DVR settings</div>
       </div>
     )
   }
