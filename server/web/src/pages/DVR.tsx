@@ -1472,12 +1472,20 @@ export function DVRPage() {
   const { data: rules, isLoading: loadingRules } = useSeriesRules()
   const { data: conflictsData } = useRecordingConflicts()
   const { data: statsData } = useRecordingStats()
+  const { data: dvrSettings } = useQuery({
+    queryKey: ['dvrSettings'],
+    queryFn: () => api.getDVRSettings(),
+  })
   const deleteRecording = useDeleteRecording()
   const deleteRule = useDeleteSeriesRule()
   const resolveConflict = useResolveConflict()
   const [showCreateRule, setShowCreateRule] = useState(false)
   const [activeTab, setActiveTab] = useState<'recordings' | 'rules' | 'calendar'>('recordings')
   const [selectedConflict, setSelectedConflict] = useState<ConflictGroup | null>(null)
+
+  // Only show conflict warnings when max concurrent is limited (not 0/unlimited)
+  const showConflictWarnings = dvrSettings?.maxConcurrentRecordings !== undefined &&
+    dvrSettings.maxConcurrentRecordings > 0
   const [playbackRecording, setPlaybackRecording] = useState<Recording | null>(null)
   const [playbackStartLive, setPlaybackStartLive] = useState(false)
   const [watchOptionsRecording, setWatchOptionsRecording] = useState<Recording | null>(null)
@@ -1581,8 +1589,8 @@ export function DVRPage() {
         <p className="text-gray-400 mt-1">Manage recordings and series rules</p>
       </div>
 
-      {/* Conflict Alert Banner */}
-      {conflictsData?.hasConflicts && (
+      {/* Conflict Alert Banner - only show when max concurrent is limited */}
+      {showConflictWarnings && conflictsData?.hasConflicts && (
         <div className="mb-6 p-4 bg-amber-500/10 border border-amber-500/30 rounded-xl">
           <div className="flex items-start gap-3">
             <AlertTriangle className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
@@ -1591,7 +1599,7 @@ export function DVRPage() {
                 {conflictsData.totalCount} Recording Conflict{conflictsData.totalCount > 1 ? 's' : ''} Detected
               </h3>
               <p className="text-sm text-gray-400 mt-1">
-                Some of your scheduled recordings overlap in time. Only one can be recorded at a time.
+                Some of your scheduled recordings overlap in time. Only {dvrSettings?.maxConcurrentRecordings} can be recorded at a time.
               </p>
               <div className="mt-3 flex flex-wrap gap-2">
                 {conflictsData.conflicts.map((conflict, idx) => (
