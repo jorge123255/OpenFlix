@@ -554,6 +554,10 @@ func (s *Server) setupRouter() {
 		dvrGroup.GET("/conflicts", s.getRecordingConflicts)
 		dvrGroup.POST("/conflicts/check", s.checkRecordingConflict)
 		dvrGroup.POST("/conflicts/resolve", s.resolveConflict)
+
+		// DVR Settings
+		dvrGroup.GET("/settings", s.getDVRSettings)
+		dvrGroup.PUT("/settings", s.updateDVRSettings)
 	}
 
 	// ============ VOD API (Video On Demand Downloads) ============

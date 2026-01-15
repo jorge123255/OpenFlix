@@ -94,5 +94,8 @@ func Migrate(db *gorm.DB) error {
 
 		// Playback Sessions
 		&models.PlaybackSession{},
+
+		// Settings
+		&models.Setting{},
 	)
 }

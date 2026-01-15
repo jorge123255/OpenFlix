@@ -598,3 +598,11 @@ type PlaybackSession struct {
 	User      *User      `gorm:"foreignKey:UserID" json:"-"`
 	MediaItem *MediaItem `gorm:"foreignKey:MediaItemID" json:"-"`
 }
+
+// Setting stores application settings as key-value pairs
+type Setting struct {
+	Key       string `gorm:"primaryKey;size:100" json:"key"`
+	Value     string `gorm:"type:text" json:"value"`
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}

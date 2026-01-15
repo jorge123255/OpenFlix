@@ -4019,3 +4019,62 @@ func maskAPIKey(key string) string {
 	}
 	return key[:4] + "****" + key[len(key)-4:]
 }
+
+// ============ DVR Settings Handlers ============
+
+// DVRSettings represents DVR-specific settings
+type DVRSettings struct {
+	MaxConcurrentRecordings int `json:"maxConcurrentRecordings"` // 0 = unlimited
+}
+
+func (s *Server) getDVRSettings(c *gin.Context) {
+	settings := DVRSettings{
+		MaxConcurrentRecordings: s.getSettingInt("dvr_max_concurrent", 0),
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"settings": settings,
+	})
+}
+
+func (s *Server) updateDVRSettings(c *gin.Context) {
+	var input DVRSettings
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Validate
+	if input.MaxConcurrentRecordings < 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "maxConcurrentRecordings must be >= 0 (0 = unlimited)"})
+		return
+	}
+
+	// Save to database
+	s.setSetting("dvr_max_concurrent", fmt.Sprintf("%d", input.MaxConcurrentRecordings))
+
+	c.JSON(http.StatusOK, gin.H{
+		"message":  "DVR settings updated",
+		"settings": input,
+	})
+}
+
+// getSettingInt reads an integer setting from the database
+func (s *Server) getSettingInt(key string, defaultVal int) int {
+	var setting models.Setting
+	if err := s.db.Where("key = ?", key).First(&setting).Error; err != nil {
+		return defaultVal
+	}
+
+	var value int
+	if _, err := fmt.Sscanf(setting.Value, "%d", &value); err != nil {
+		return defaultVal
+	}
+	return value
+}
+
+// setSetting saves a setting to the database
+func (s *Server) setSetting(key, value string) {
+	setting := models.Setting{Key: key, Value: value}
+	s.db.Where("key = ?", key).Assign(setting).FirstOrCreate(&setting)
+}

@@ -890,9 +890,9 @@ type ConflictInfo struct {
 	ConflictResolved bool                `json:"conflictResolved"`
 }
 
-// MaxConcurrentRecordings is the maximum number of simultaneous recordings
-// This could be made configurable in the future (based on tuner count)
-const MaxConcurrentRecordings = 1
+// DefaultMaxConcurrentRecordings is the default maximum number of simultaneous recordings
+// 0 means unlimited. This can be overridden via settings.
+const DefaultMaxConcurrentRecordings = 0
 
 // FindConflicts checks if a recording conflicts with existing scheduled recordings
 func (r *Recorder) FindConflicts(recording *models.Recording) []*models.Recording {
@@ -982,7 +982,11 @@ func (r *Recorder) GetAllConflicts(userID uint) []ConflictInfo {
 // ResolveConflictsAtRecordingTime handles conflicts when it's time to start recording
 // Returns the recordings that should actually start
 func (r *Recorder) ResolveConflictsAtRecordingTime(recordings []models.Recording) []models.Recording {
-	if len(recordings) <= MaxConcurrentRecordings {
+	// Get max concurrent from settings, default to unlimited (0)
+	maxConcurrent := r.getMaxConcurrentRecordings()
+
+	// 0 means unlimited - start all recordings
+	if maxConcurrent == 0 || len(recordings) <= maxConcurrent {
 		return recordings
 	}
 
@@ -1004,9 +1008,9 @@ func (r *Recorder) ResolveConflictsAtRecordingTime(recordings []models.Recording
 		}
 	}
 
-	// Take only the top MaxConcurrentRecordings
-	winners := sortedRecordings[:MaxConcurrentRecordings]
-	losers := sortedRecordings[MaxConcurrentRecordings:]
+	// Take only the top maxConcurrent
+	winners := sortedRecordings[:maxConcurrent]
+	losers := sortedRecordings[maxConcurrent:]
 
 	// Mark losers as conflict-skipped
 	for _, loser := range losers {
@@ -1037,6 +1041,22 @@ func (r *Recorder) SetRecordingPriority(recordingID uint, priority int) error {
 
 	recording.Priority = priority
 	return r.db.Save(&recording).Error
+}
+
+// getMaxConcurrentRecordings returns the max concurrent recordings setting
+// Returns 0 for unlimited (default)
+func (r *Recorder) getMaxConcurrentRecordings() int {
+	var setting models.Setting
+	if err := r.db.Where("key = ?", "dvr_max_concurrent").First(&setting).Error; err != nil {
+		return DefaultMaxConcurrentRecordings // Default: unlimited
+	}
+
+	var value int
+	if _, err := fmt.Sscanf(setting.Value, "%d", &value); err != nil {
+		return DefaultMaxConcurrentRecordings
+	}
+
+	return value
 }
 
 // helper functions for min/max uint
