@@ -29,6 +29,9 @@ import {
   Maximize,
   Radio,
   Rewind,
+  Search,
+  Square,
+  CheckSquare,
 } from 'lucide-react'
 import {
   useRecordings,
@@ -914,11 +917,17 @@ function RecordingCard({
   onDelete,
   onPlay,
   liveStats,
+  isSelected,
+  onToggleSelect,
+  selectionMode,
 }: {
   recording: Recording
   onDelete: () => void
   onPlay?: () => void
   liveStats?: RecordingStats
+  isSelected?: boolean
+  onToggleSelect?: () => void
+  selectionMode?: boolean
 }) {
   const config = statusConfig[recording.status]
   const StatusIcon = config.icon
@@ -944,6 +953,23 @@ function RecordingCard({
 
       <div className="p-4">
         <div className="flex items-start gap-4">
+          {/* Selection Checkbox */}
+          {selectionMode && onToggleSelect && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                onToggleSelect()
+              }}
+              className="flex-shrink-0 p-1 -ml-1 mt-1"
+            >
+              {isSelected ? (
+                <CheckSquare className="w-5 h-5 text-indigo-400" />
+              ) : (
+                <Square className="w-5 h-5 text-gray-500 hover:text-gray-300" />
+              )}
+            </button>
+          )}
+
           {/* Poster/Thumbnail Image */}
           <div className={`flex-shrink-0 relative ${recording.isMovie ? 'w-24 h-36' : 'w-40 h-24'} rounded-lg overflow-hidden bg-gray-700`}>
             {posterImage ? (
@@ -1455,6 +1481,72 @@ export function DVRPage() {
   const [playbackRecording, setPlaybackRecording] = useState<Recording | null>(null)
   const [playbackStartLive, setPlaybackStartLive] = useState(false)
   const [watchOptionsRecording, setWatchOptionsRecording] = useState<Recording | null>(null)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [selectedRecordings, setSelectedRecordings] = useState<Set<number>>(new Set())
+  const [isDeleting, setIsDeleting] = useState(false)
+
+  // Filter recordings based on search query
+  const filteredRecordings = useMemo(() => {
+    if (!recordings || !searchQuery.trim()) return recordings
+    const query = searchQuery.toLowerCase()
+    return recordings.filter(rec =>
+      rec.title?.toLowerCase().includes(query) ||
+      rec.description?.toLowerCase().includes(query) ||
+      rec.summary?.toLowerCase().includes(query) ||
+      rec.channelName?.toLowerCase().includes(query) ||
+      rec.genres?.toLowerCase().includes(query) ||
+      rec.episodeNum?.toLowerCase().includes(query)
+    )
+  }, [recordings, searchQuery])
+
+  // Selection helpers
+  const selectionMode = selectedRecordings.size > 0
+
+  const toggleRecordingSelection = (id: number) => {
+    setSelectedRecordings(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) {
+        next.delete(id)
+      } else {
+        next.add(id)
+      }
+      return next
+    })
+  }
+
+  const selectAllInStatus = (status: string) => {
+    const statusRecordings = filteredRecordings?.filter(r => r.status === status) || []
+    setSelectedRecordings(prev => {
+      const next = new Set(prev)
+      statusRecordings.forEach(r => next.add(r.id))
+      return next
+    })
+  }
+
+  const clearSelection = () => {
+    setSelectedRecordings(new Set())
+  }
+
+  const handleBulkDelete = async () => {
+    if (selectedRecordings.size === 0) return
+
+    const confirmMsg = `Are you sure you want to delete ${selectedRecordings.size} recording${selectedRecordings.size > 1 ? 's' : ''}?`
+    if (!confirm(confirmMsg)) return
+
+    setIsDeleting(true)
+    const ids = Array.from(selectedRecordings)
+
+    for (const id of ids) {
+      try {
+        await deleteRecording.mutateAsync(id)
+      } catch {
+        // Continue deleting others even if one fails
+      }
+    }
+
+    setSelectedRecordings(new Set())
+    setIsDeleting(false)
+  }
 
   // Create a lookup map for live stats by recording ID
   const statsMap = new Map<number, RecordingStats>()
@@ -1462,7 +1554,7 @@ export function DVRPage() {
     statsMap.set(stat.id, stat)
   })
 
-  const groupedRecordings = recordings?.reduce(
+  const groupedRecordings = filteredRecordings?.reduce(
     (acc, rec) => {
       acc[rec.status] = acc[rec.status] || []
       acc[rec.status].push(rec)
@@ -1554,6 +1646,58 @@ export function DVRPage() {
 
       {activeTab === 'recordings' && (
         <div>
+          {/* Search and Actions Bar */}
+          <div className="mb-6 flex flex-col sm:flex-row gap-4">
+            {/* Search Input */}
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search recordings by title, channel, description..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-white"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Selection Toolbar */}
+          {selectionMode && (
+            <div className="mb-4 p-3 bg-indigo-600/20 border border-indigo-500/30 rounded-lg flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <span className="text-indigo-300 font-medium">
+                  {selectedRecordings.size} selected
+                </span>
+                <button
+                  onClick={clearSelection}
+                  className="text-sm text-gray-400 hover:text-white"
+                >
+                  Clear selection
+                </button>
+              </div>
+              <button
+                onClick={handleBulkDelete}
+                disabled={isDeleting}
+                className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white rounded-lg font-medium"
+              >
+                {isDeleting ? (
+                  <Loader className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Trash2 className="w-4 h-4" />
+                )}
+                Delete Selected
+              </button>
+            </div>
+          )}
+
           {loadingRec ? (
             <div className="flex items-center justify-center py-12">
               <Loader className="w-8 h-8 text-indigo-500 animate-spin" />
@@ -1592,10 +1736,20 @@ export function DVRPage() {
                 const StatusIcon = config.icon
                 return (
                   <div key={status}>
-                    <h3 className="text-sm font-medium text-gray-400 uppercase tracking-wider mb-4 flex items-center gap-2">
-                      <StatusIcon className={`h-4 w-4 ${config.color}`} />
-                      {config.label} ({items.length})
-                    </h3>
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-sm font-medium text-gray-400 uppercase tracking-wider flex items-center gap-2">
+                        <StatusIcon className={`h-4 w-4 ${config.color}`} />
+                        {config.label} ({items.length})
+                      </h3>
+                      {items.length > 0 && (
+                        <button
+                          onClick={() => selectAllInStatus(status)}
+                          className="text-xs text-indigo-400 hover:text-indigo-300"
+                        >
+                          Select all {config.label.toLowerCase()}
+                        </button>
+                      )}
+                    </div>
                     <div className="space-y-3">
                       {items.map((rec) => (
                         <RecordingCard
@@ -1613,12 +1767,27 @@ export function DVRPage() {
                             }
                           } : undefined}
                           liveStats={statsMap.get(rec.id)}
+                          isSelected={selectedRecordings.has(rec.id)}
+                          onToggleSelect={() => toggleRecordingSelection(rec.id)}
+                          selectionMode={true}
                         />
                       ))}
                     </div>
                   </div>
                 )
               })}
+            </div>
+          ) : searchQuery && recordings?.length ? (
+            <div className="text-center py-12 bg-gray-800 rounded-xl">
+              <Search className="h-12 w-12 text-gray-600 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-white mb-2">No matches found</h3>
+              <p className="text-gray-400">No recordings match "{searchQuery}"</p>
+              <button
+                onClick={() => setSearchQuery('')}
+                className="mt-4 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg"
+              >
+                Clear search
+              </button>
             </div>
           ) : (
             <div className="text-center py-12 bg-gray-800 rounded-xl">
