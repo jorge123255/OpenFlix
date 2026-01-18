@@ -60,7 +60,7 @@ object NetworkModule {
     ): Retrofit {
         // Note: baseUrl will be updated dynamically based on server selection
         return Retrofit.Builder()
-            .baseUrl("http://localhost:8080/") // Placeholder, will be overridden
+            .baseUrl("http://127.0.0.1:32400/") // Placeholder, will be overridden by AuthInterceptor
             .client(okHttpClient)
             .addConverterFactory(GsonConverterFactory.create())
             .build()

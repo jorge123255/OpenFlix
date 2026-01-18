@@ -16,6 +16,7 @@ import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import com.openflix.data.local.LastWatchedService
 import com.openflix.player.LiveTVPlayer
 import com.openflix.player.MpvPlayer
 import com.openflix.presentation.navigation.OpenFlixNavHost
@@ -47,6 +48,9 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var liveTVPlayer: LiveTVPlayer
 
+    @Inject
+    lateinit var lastWatchedService: LastWatchedService
+
     // PiP state
     private var pipState by mutableStateOf(PipState())
     private var isInPlayerScreen by mutableStateOf(false)
@@ -68,6 +72,7 @@ class MainActivity : ComponentActivity() {
                     OpenFlixNavHost(
                         mpvPlayer = mpvPlayer,
                         liveTVPlayer = liveTVPlayer,
+                        lastWatchedService = lastWatchedService,
                         onPlayerScreenChanged = { isInPlayer ->
                             isInPlayerScreen = isInPlayer
                             pipState = pipState.copy(canEnterPip = isInPlayer)

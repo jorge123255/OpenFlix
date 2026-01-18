@@ -15,10 +15,13 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.openflix.data.local.LastWatchedService
 import com.openflix.player.LiveTVPlayer
 import com.openflix.player.MpvPlayer
 import com.openflix.presentation.screens.auth.AuthScreen
 import com.openflix.presentation.screens.auth.AuthViewModel
+import com.openflix.presentation.screens.dvr.DVRPlaybackMode
+import com.openflix.presentation.screens.dvr.DVRPlayerScreen
 import com.openflix.presentation.screens.dvr.DVRScreen
 import com.openflix.presentation.screens.home.DiscoverScreen
 import com.openflix.presentation.screens.home.MainScreen
@@ -26,14 +29,19 @@ import com.openflix.presentation.screens.epg.EPGGuideScreen
 import com.openflix.presentation.screens.livetv.ArchivePlayerScreen
 import com.openflix.presentation.screens.livetv.ChannelLogoEditorScreen
 import com.openflix.presentation.screens.livetv.LiveTVGuideScreen
+import com.openflix.presentation.screens.livetv.ChannelSurfingScreen
 import com.openflix.presentation.screens.livetv.LiveTVPlayerScreen
 import com.openflix.presentation.screens.livetv.LiveTVScreen
 import com.openflix.presentation.screens.livetv.MultiviewScreen
 import com.openflix.presentation.screens.media.MediaDetailScreen
+import com.openflix.presentation.screens.onlater.OnLaterScreen
 import com.openflix.presentation.screens.player.VideoPlayerScreen
+import com.openflix.presentation.screens.allmedia.AllMediaScreen
 import com.openflix.presentation.screens.search.SearchScreen
 import com.openflix.presentation.screens.settings.RemoteMappingScreen
 import com.openflix.presentation.screens.settings.SettingsScreen
+import com.openflix.presentation.screens.teampass.TeamPassScreen
+import com.openflix.presentation.screens.catchup.CatchupScreen
 
 /**
  * Main navigation host for OpenFlix.
@@ -44,6 +52,7 @@ fun OpenFlixNavHost(
     navController: NavHostController = rememberNavController(),
     mpvPlayer: MpvPlayer,
     liveTVPlayer: LiveTVPlayer,
+    lastWatchedService: LastWatchedService? = null,
     onPlayerScreenChanged: (Boolean) -> Unit = {}
 ) {
     val authViewModel: AuthViewModel = hiltViewModel()
@@ -103,6 +112,9 @@ fun OpenFlixNavHost(
                 onNavigateToLiveTVPlayer = { channelId ->
                     navController.navigate(NavRoutes.LiveTVPlayer.createRoute(channelId))
                 },
+                onNavigateToDVRPlayer = { recordingId, mode ->
+                    navController.navigate(NavRoutes.DVRPlayer.createRoute(recordingId, mode))
+                },
                 onNavigateToSettings = {
                     navController.navigate(NavRoutes.Settings.route)
                 },
@@ -112,8 +124,21 @@ fun OpenFlixNavHost(
                 onNavigateToMultiview = {
                     navController.navigate(NavRoutes.Multiview.route)
                 },
+                onNavigateToChannelSurfing = {
+                    navController.navigate(NavRoutes.ChannelSurfing.route)
+                },
+                onNavigateToCatchup = {
+                    navController.navigate(NavRoutes.Catchup.route)
+                },
+                onNavigateToArchivePlayer = { channelId, startTime ->
+                    navController.navigate(NavRoutes.ArchivePlayer.createRoute(channelId, startTime))
+                },
+                onNavigateToBrowseAll = { libraryId, mediaType ->
+                    navController.navigate(NavRoutes.AllMedia.createRoute(libraryId, mediaType))
+                },
                 mpvPlayer = mpvPlayer,
-                liveTVPlayer = liveTVPlayer
+                liveTVPlayer = liveTVPlayer,
+                lastWatchedService = lastWatchedService
             )
         }
 
@@ -196,6 +221,9 @@ fun OpenFlixNavHost(
                 onEPGGuide = {
                     navController.navigate(NavRoutes.EPGGuide.route)
                 },
+                onCatchup = {
+                    navController.navigate(NavRoutes.Catchup.route)
+                },
                 liveTVPlayer = liveTVPlayer
             )
         }
@@ -224,15 +252,54 @@ fun OpenFlixNavHost(
             )
         }
 
+        // === Channel Surfing ===
+        composable(NavRoutes.ChannelSurfing.route) {
+            // Track player screen for PiP
+            DisposableEffect(Unit) {
+                onPlayerScreenChanged(true)
+                onDispose { onPlayerScreenChanged(false) }
+            }
+
+            ChannelSurfingScreen(
+                onBack = { navController.popBackStack() },
+                onChannelSelected = { channelId ->
+                    navController.navigate(NavRoutes.LiveTVPlayer.createRoute(channelId))
+                },
+                liveTVPlayer = liveTVPlayer
+            )
+        }
+
         // === DVR Player ===
         composable(
             route = NavRoutes.DVRPlayer.route,
             arguments = listOf(
-                navArgument(NavRoutes.ARG_RECORDING_ID) { type = NavType.StringType }
+                navArgument(NavRoutes.ARG_RECORDING_ID) { type = NavType.StringType },
+                navArgument(NavRoutes.ARG_PLAYBACK_MODE) {
+                    type = NavType.StringType
+                    defaultValue = "default"
+                }
             )
         ) { backStackEntry ->
             val recordingId = backStackEntry.arguments?.getString(NavRoutes.ARG_RECORDING_ID) ?: return@composable
-            // TODO: DVRPlayerScreen
+            val modeString = backStackEntry.arguments?.getString(NavRoutes.ARG_PLAYBACK_MODE) ?: "default"
+            val playbackMode = when (modeString.lowercase()) {
+                "live" -> DVRPlaybackMode.LIVE
+                "start" -> DVRPlaybackMode.START
+                else -> DVRPlaybackMode.DEFAULT
+            }
+
+            // Track player screen for PiP
+            DisposableEffect(Unit) {
+                onPlayerScreenChanged(true)
+                onDispose { onPlayerScreenChanged(false) }
+            }
+
+            DVRPlayerScreen(
+                recordingId = recordingId,
+                playbackMode = playbackMode,
+                onBack = { navController.popBackStack() },
+                mpvPlayer = mpvPlayer
+            )
         }
 
         // === Archive/Catch-up Player ===
@@ -257,6 +324,22 @@ fun OpenFlixNavHost(
             SearchScreen(
                 onBack = { navController.popBackStack() },
                 onMediaSelected = { mediaId ->
+                    navController.navigate(NavRoutes.MediaDetail.createRoute(mediaId))
+                }
+            )
+        }
+
+        // === All Media (Browse All) ===
+        composable(
+            route = NavRoutes.AllMedia.route,
+            arguments = listOf(
+                navArgument(NavRoutes.ARG_LIBRARY_ID) { type = NavType.StringType },
+                navArgument(NavRoutes.ARG_MEDIA_TYPE) { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            AllMediaScreen(
+                onBackClick = { navController.popBackStack() },
+                onMediaClick = { mediaId ->
                     navController.navigate(NavRoutes.MediaDetail.createRoute(mediaId))
                 }
             )
@@ -397,11 +480,6 @@ fun OpenFlixNavHost(
             // TODO: VirtualChannelsScreen
         }
 
-        // === Channel Surfing ===
-        composable(NavRoutes.ChannelSurfing.route) {
-            // TODO: ChannelSurfingScreen
-        }
-
         // === Multiview ===
         composable(NavRoutes.Multiview.route) {
             // Track player screen for PiP
@@ -420,7 +498,29 @@ fun OpenFlixNavHost(
 
         // === Catchup ===
         composable(NavRoutes.Catchup.route) {
-            // TODO: CatchupScreen
+            CatchupScreen(
+                onBack = { navController.popBackStack() },
+                onPlayProgram = { channelId, startTime ->
+                    navController.navigate(NavRoutes.ArchivePlayer.createRoute(channelId, startTime))
+                }
+            )
+        }
+
+        // === On Later ===
+        composable(NavRoutes.OnLater.route) {
+            OnLaterScreen(
+                onProgramClick = { item ->
+                    // Navigate to live TV player for that channel
+                    item.channel?.let { channel ->
+                        navController.navigate(NavRoutes.LiveTVPlayer.createRoute(channel.id.toString()))
+                    }
+                }
+            )
+        }
+
+        // === Team Pass ===
+        composable(NavRoutes.TeamPass.route) {
+            TeamPassScreen()
         }
     }
 }

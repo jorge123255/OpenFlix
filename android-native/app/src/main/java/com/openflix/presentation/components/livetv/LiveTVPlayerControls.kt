@@ -62,6 +62,8 @@ fun LiveTVPlayerControls(
     isPaused: Boolean = false,
     timeShiftOffset: String = "",
     isStartOverAvailable: Boolean = false,
+    instantSwitchReady: Boolean = false,
+    preBufferedChannelIds: Set<String> = emptySet(),
     modifier: Modifier = Modifier,
     onShowEPG: () -> Unit = {},
     onShowMultiview: () -> Unit = {},
@@ -77,7 +79,8 @@ fun LiveTVPlayerControls(
     onSeekBack: () -> Unit = {},
     onSeekForward: () -> Unit = {},
     onGoLive: () -> Unit = {},
-    onStartOver: () -> Unit = {}
+    onStartOver: () -> Unit = {},
+    onCatchup: () -> Unit = {}
 ) {
     val nowPlaying = channel.nowPlaying
     val upNext = channel.upNext
@@ -215,22 +218,58 @@ fun LiveTVPlayerControls(
                     }
                 }
 
-                // Live badge
-                if (isLive) {
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(4.dp))
-                            .background(PlayerColors.AccentRed)
-                            .padding(horizontal = 10.dp, vertical = 4.dp)
-                    ) {
-                        Text(
-                            text = "LIVE",
-                            color = Color.White,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold
-                        )
+                // Status badges row
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Live badge
+                    if (isLive) {
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(PlayerColors.AccentRed)
+                                .padding(horizontal = 10.dp, vertical = 4.dp)
+                        ) {
+                            Text(
+                                text = "LIVE",
+                                color = Color.White,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                     }
-                } else {
+
+                    // Instant switch indicator
+                    if (instantSwitchReady && preBufferedChannelIds.isNotEmpty()) {
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(PlayerColors.AccentGreen)
+                                .padding(horizontal = 10.dp, vertical = 4.dp)
+                        ) {
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    Icons.Default.FlashOn,
+                                    contentDescription = "Instant Switch Ready",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(12.dp)
+                                )
+                                Text(
+                                    text = "INSTANT",
+                                    color = Color.White,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
+                }
+
+                if (!isLive) {
                     TvSurface(
                         onClick = onGoLive,
                         shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(4.dp)),
@@ -389,6 +428,15 @@ fun LiveTVPlayerControls(
                     label = "Channels",
                     color = PlayerColors.AccentBlue,
                     onClick = onShowMiniGuide
+                )
+
+                Spacer(modifier = Modifier.width(12.dp))
+
+                QuickAccessPill(
+                    icon = Icons.Default.History,
+                    label = "Catch Up",
+                    color = PlayerColors.AccentGold,
+                    onClick = onCatchup
                 )
             }
         }

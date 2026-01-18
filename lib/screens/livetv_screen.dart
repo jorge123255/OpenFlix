@@ -13,6 +13,7 @@ import '../utils/app_logger.dart';
 import '../widgets/content_badge.dart';
 import '../widgets/focus/focus_indicator.dart';
 import 'dvr_screen.dart';
+import 'onlater_screen.dart';
 import 'tv_guide_screen.dart';
 import 'livetv_multiview_screen.dart';
 import 'livetv_player_screen.dart';
@@ -191,6 +192,9 @@ class _LiveTVScreenState extends State<LiveTVScreen> {
             onDVR: () => Navigator.of(context).push(
               MaterialPageRoute(builder: (context) => const DVRScreen()),
             ),
+            onOnLater: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (context) => const OnLaterScreen()),
+            ),
             onMultiview: _launchMultiview,
           ),
 
@@ -327,17 +331,19 @@ class _LiveTVScreenState extends State<LiveTVScreen> {
   }
 }
 
-/// Quick action bar with Guide, DVR, Multiview buttons
+/// Quick action bar with Guide, DVR, On Later, Multiview buttons
 class _QuickActionBar extends StatelessWidget {
   final bool isTV;
   final VoidCallback onGuide;
   final VoidCallback onDVR;
+  final VoidCallback onOnLater;
   final VoidCallback onMultiview;
 
   const _QuickActionBar({
     required this.isTV,
     required this.onGuide,
     required this.onDVR,
+    required this.onOnLater,
     required this.onMultiview,
   });
 
@@ -368,6 +374,16 @@ class _QuickActionBar extends StatelessWidget {
               label: t.liveTV.dvr,
               color: Colors.red,
               onTap: onDVR,
+              isTV: isTV,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: _ActionButton(
+              icon: Icons.schedule,
+              label: 'On Later',
+              color: Colors.orange,
+              onTap: onOnLater,
               isTV: isTV,
             ),
           ),

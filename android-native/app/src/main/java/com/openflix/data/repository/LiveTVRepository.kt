@@ -3,7 +3,25 @@ package com.openflix.data.repository
 import com.openflix.data.local.PreferencesManager
 import com.openflix.data.remote.api.OpenFlixApi
 import com.openflix.data.remote.dto.*
-import com.openflix.domain.model.*
+import com.openflix.domain.model.ArchiveChannelStatus
+import com.openflix.domain.model.ArchiveProgram
+import com.openflix.domain.model.ArchiveStatus
+import com.openflix.domain.model.ArchivedProgramsInfo
+import com.openflix.domain.model.CatchUpInfo
+import com.openflix.domain.model.CatchUpProgram
+import com.openflix.domain.model.Channel
+import com.openflix.domain.model.ChannelWithPrograms
+import com.openflix.domain.model.EPGChannel
+import com.openflix.domain.model.EPGData
+import com.openflix.domain.model.OnLaterChannel
+import com.openflix.domain.model.OnLaterItem
+import com.openflix.domain.model.OnLaterProgram
+import com.openflix.domain.model.OnLaterStats
+import com.openflix.domain.model.Program
+import com.openflix.domain.model.SportsTeam
+import com.openflix.domain.model.StartOverInfo
+import com.openflix.domain.model.TeamPass
+import com.openflix.domain.model.TeamPassStats
 import kotlinx.coroutines.flow.first
 import timber.log.Timber
 import javax.inject.Inject
@@ -462,5 +480,405 @@ class LiveTVRepository @Inject constructor(
         number = number,
         logo = logo,
         programs = programs?.map { it.toDomain() } ?: emptyList()
+    )
+
+    // ============ On Later ============
+
+    suspend fun getOnLaterStats(): Result<OnLaterStats> {
+        return try {
+            val response = api.getOnLaterStats()
+            if (response.isSuccessful && response.body() != null) {
+                val dto = response.body()!!
+                Result.success(OnLaterStats(
+                    movies = dto.movies,
+                    sports = dto.sports,
+                    kids = dto.kids,
+                    news = dto.news,
+                    premieres = dto.premieres
+                ))
+            } else {
+                Result.failure(Exception("Failed to get On Later stats"))
+            }
+        } catch (e: Exception) {
+            Timber.e(e, "Error getting On Later stats")
+            Result.failure(e)
+        }
+    }
+
+    suspend fun getOnLaterTonight(): Result<List<OnLaterItem>> {
+        return try {
+            val response = api.getOnLaterTonight()
+            if (response.isSuccessful && response.body() != null) {
+                val items = response.body()!!.items.map { it.toDomain() }
+                Result.success(items)
+            } else {
+                Result.failure(Exception("Failed to get tonight's programs"))
+            }
+        } catch (e: Exception) {
+            Timber.e(e, "Error getting tonight's programs")
+            Result.failure(e)
+        }
+    }
+
+    suspend fun getOnLaterMovies(hours: Int? = null): Result<List<OnLaterItem>> {
+        return try {
+            val response = api.getOnLaterMovies(hours)
+            if (response.isSuccessful && response.body() != null) {
+                val items = response.body()!!.items.map { it.toDomain() }
+                Result.success(items)
+            } else {
+                Result.failure(Exception("Failed to get upcoming movies"))
+            }
+        } catch (e: Exception) {
+            Timber.e(e, "Error getting upcoming movies")
+            Result.failure(e)
+        }
+    }
+
+    suspend fun getOnLaterSports(hours: Int? = null, league: String? = null, team: String? = null): Result<List<OnLaterItem>> {
+        return try {
+            val response = api.getOnLaterSports(hours, league, team)
+            if (response.isSuccessful && response.body() != null) {
+                val items = response.body()!!.items.map { it.toDomain() }
+                Result.success(items)
+            } else {
+                Result.failure(Exception("Failed to get upcoming sports"))
+            }
+        } catch (e: Exception) {
+            Timber.e(e, "Error getting upcoming sports")
+            Result.failure(e)
+        }
+    }
+
+    suspend fun getOnLaterKids(hours: Int? = null): Result<List<OnLaterItem>> {
+        return try {
+            val response = api.getOnLaterKids(hours)
+            if (response.isSuccessful && response.body() != null) {
+                val items = response.body()!!.items.map { it.toDomain() }
+                Result.success(items)
+            } else {
+                Result.failure(Exception("Failed to get kids programs"))
+            }
+        } catch (e: Exception) {
+            Timber.e(e, "Error getting kids programs")
+            Result.failure(e)
+        }
+    }
+
+    suspend fun getOnLaterNews(hours: Int? = null): Result<List<OnLaterItem>> {
+        return try {
+            val response = api.getOnLaterNews(hours)
+            if (response.isSuccessful && response.body() != null) {
+                val items = response.body()!!.items.map { it.toDomain() }
+                Result.success(items)
+            } else {
+                Result.failure(Exception("Failed to get news programs"))
+            }
+        } catch (e: Exception) {
+            Timber.e(e, "Error getting news programs")
+            Result.failure(e)
+        }
+    }
+
+    suspend fun getOnLaterPremieres(hours: Int? = null): Result<List<OnLaterItem>> {
+        return try {
+            val response = api.getOnLaterPremieres(hours)
+            if (response.isSuccessful && response.body() != null) {
+                val items = response.body()!!.items.map { it.toDomain() }
+                Result.success(items)
+            } else {
+                Result.failure(Exception("Failed to get premieres"))
+            }
+        } catch (e: Exception) {
+            Timber.e(e, "Error getting premieres")
+            Result.failure(e)
+        }
+    }
+
+    suspend fun getOnLaterWeek(category: String? = null): Result<List<OnLaterItem>> {
+        return try {
+            val response = api.getOnLaterWeek(category)
+            if (response.isSuccessful && response.body() != null) {
+                val items = response.body()!!.items.map { it.toDomain() }
+                Result.success(items)
+            } else {
+                Result.failure(Exception("Failed to get week's programs"))
+            }
+        } catch (e: Exception) {
+            Timber.e(e, "Error getting week's programs")
+            Result.failure(e)
+        }
+    }
+
+    suspend fun searchOnLater(query: String): Result<List<OnLaterItem>> {
+        return try {
+            val response = api.searchOnLater(query)
+            if (response.isSuccessful && response.body() != null) {
+                val items = response.body()!!.items.map { it.toDomain() }
+                Result.success(items)
+            } else {
+                Result.failure(Exception("Failed to search On Later"))
+            }
+        } catch (e: Exception) {
+            Timber.e(e, "Error searching On Later: $query")
+            Result.failure(e)
+        }
+    }
+
+    suspend fun getOnLaterLeagues(): Result<List<String>> {
+        return try {
+            val response = api.getOnLaterLeagues()
+            if (response.isSuccessful && response.body() != null) {
+                Result.success(response.body()!!.leagues)
+            } else {
+                Result.failure(Exception("Failed to get leagues"))
+            }
+        } catch (e: Exception) {
+            Timber.e(e, "Error getting leagues")
+            Result.failure(e)
+        }
+    }
+
+    private fun OnLaterItemDto.toDomain() = OnLaterItem(
+        program = program.toDomain(),
+        channel = channel?.toDomain(),
+        hasRecording = hasRecording,
+        recordingId = recordingId
+    )
+
+    private fun OnLaterProgramDto.toDomain() = OnLaterProgram(
+        id = id,
+        channelId = channelId,
+        title = title,
+        subtitle = subtitle,
+        description = description,
+        start = parseIsoToUnix(start) ?: 0L,
+        end = parseIsoToUnix(end) ?: 0L,
+        icon = icon,
+        art = art,
+        category = category,
+        isMovie = isMovie,
+        isSports = isSports,
+        isKids = isKids,
+        isNews = isNews,
+        isPremiere = isPremiere,
+        isNew = isNew,
+        isLive = isLive,
+        teams = teams,
+        league = league,
+        rating = rating
+    )
+
+    private fun OnLaterChannelDto.toDomain() = OnLaterChannel(
+        id = id,
+        name = name,
+        logo = logo,
+        number = number
+    )
+
+    // ============ Team Pass ============
+
+    suspend fun getTeamPasses(): Result<List<TeamPass>> {
+        return try {
+            val response = api.getTeamPasses()
+            if (response.isSuccessful && response.body() != null) {
+                val passes = response.body()!!.teamPasses.map { it.toDomain() }
+                Result.success(passes)
+            } else {
+                Result.failure(Exception("Failed to get team passes"))
+            }
+        } catch (e: Exception) {
+            Timber.e(e, "Error getting team passes")
+            Result.failure(e)
+        }
+    }
+
+    suspend fun getTeamPassStats(): Result<TeamPassStats> {
+        return try {
+            val response = api.getTeamPassStats()
+            if (response.isSuccessful && response.body() != null) {
+                val dto = response.body()!!
+                Result.success(TeamPassStats(
+                    totalPasses = dto.totalPasses,
+                    activePasses = dto.activePasses,
+                    upcomingGames = dto.upcomingGames,
+                    scheduledRecordings = dto.scheduledRecordings
+                ))
+            } else {
+                Result.failure(Exception("Failed to get team pass stats"))
+            }
+        } catch (e: Exception) {
+            Timber.e(e, "Error getting team pass stats")
+            Result.failure(e)
+        }
+    }
+
+    suspend fun getTeamPassUpcoming(id: Long): Result<List<OnLaterItem>> {
+        return try {
+            val response = api.getTeamPassUpcoming(id)
+            if (response.isSuccessful && response.body() != null) {
+                val games = response.body()!!.games?.map { it.toDomain() } ?: emptyList()
+                Result.success(games)
+            } else {
+                Result.failure(Exception("Failed to get upcoming games"))
+            }
+        } catch (e: Exception) {
+            Timber.e(e, "Error getting upcoming games for team pass: $id")
+            Result.failure(e)
+        }
+    }
+
+    suspend fun createTeamPass(
+        teamName: String,
+        league: String,
+        prePadding: Int = 5,
+        postPadding: Int = 60,
+        keepCount: Int = 0
+    ): Result<TeamPass> {
+        return try {
+            val request = TeamPassRequest(
+                teamName = teamName,
+                league = league,
+                prePadding = prePadding,
+                postPadding = postPadding,
+                keepCount = keepCount
+            )
+            val response = api.createTeamPass(request)
+            if (response.isSuccessful && response.body() != null) {
+                Result.success(response.body()!!.toDomain())
+            } else {
+                Result.failure(Exception("Failed to create team pass"))
+            }
+        } catch (e: Exception) {
+            Timber.e(e, "Error creating team pass")
+            Result.failure(e)
+        }
+    }
+
+    suspend fun updateTeamPass(
+        id: Long,
+        teamName: String,
+        league: String,
+        prePadding: Int,
+        postPadding: Int,
+        keepCount: Int,
+        enabled: Boolean
+    ): Result<TeamPass> {
+        return try {
+            val request = TeamPassRequest(
+                teamName = teamName,
+                league = league,
+                prePadding = prePadding,
+                postPadding = postPadding,
+                keepCount = keepCount,
+                enabled = enabled
+            )
+            val response = api.updateTeamPass(id, request)
+            if (response.isSuccessful && response.body() != null) {
+                Result.success(response.body()!!.toDomain())
+            } else {
+                Result.failure(Exception("Failed to update team pass"))
+            }
+        } catch (e: Exception) {
+            Timber.e(e, "Error updating team pass: $id")
+            Result.failure(e)
+        }
+    }
+
+    suspend fun deleteTeamPass(id: Long): Result<Unit> {
+        return try {
+            val response = api.deleteTeamPass(id)
+            if (response.isSuccessful) {
+                Result.success(Unit)
+            } else {
+                Result.failure(Exception("Failed to delete team pass"))
+            }
+        } catch (e: Exception) {
+            Timber.e(e, "Error deleting team pass: $id")
+            Result.failure(e)
+        }
+    }
+
+    suspend fun toggleTeamPass(id: Long): Result<TeamPass> {
+        return try {
+            val response = api.toggleTeamPass(id)
+            if (response.isSuccessful && response.body() != null) {
+                Result.success(response.body()!!.toDomain())
+            } else {
+                Result.failure(Exception("Failed to toggle team pass"))
+            }
+        } catch (e: Exception) {
+            Timber.e(e, "Error toggling team pass: $id")
+            Result.failure(e)
+        }
+    }
+
+    suspend fun getSportsLeagues(): Result<List<String>> {
+        return try {
+            val response = api.getSportsLeagues()
+            if (response.isSuccessful && response.body() != null) {
+                Result.success(response.body()!!.leagues)
+            } else {
+                Result.failure(Exception("Failed to get sports leagues"))
+            }
+        } catch (e: Exception) {
+            Timber.e(e, "Error getting sports leagues")
+            Result.failure(e)
+        }
+    }
+
+    suspend fun getLeagueTeams(league: String): Result<List<SportsTeam>> {
+        return try {
+            val response = api.getLeagueTeams(league)
+            if (response.isSuccessful && response.body() != null) {
+                val teams = response.body()!!.teams.map { it.toDomain() }
+                Result.success(teams)
+            } else {
+                Result.failure(Exception("Failed to get teams for league"))
+            }
+        } catch (e: Exception) {
+            Timber.e(e, "Error getting teams for league: $league")
+            Result.failure(e)
+        }
+    }
+
+    suspend fun searchSportsTeams(query: String): Result<List<SportsTeam>> {
+        return try {
+            val response = api.searchSportsTeams(query)
+            if (response.isSuccessful && response.body() != null) {
+                val teams = response.body()!!.teams.map { it.toDomain() }
+                Result.success(teams)
+            } else {
+                Result.failure(Exception("Failed to search teams"))
+            }
+        } catch (e: Exception) {
+            Timber.e(e, "Error searching teams: $query")
+            Result.failure(e)
+        }
+    }
+
+    private fun TeamPassDto.toDomain() = TeamPass(
+        id = id,
+        userId = userId,
+        teamName = teamName,
+        teamAliases = teamAliases,
+        league = league,
+        channelIds = channelIds,
+        prePadding = prePadding,
+        postPadding = postPadding,
+        keepCount = keepCount,
+        priority = priority,
+        enabled = enabled,
+        upcomingCount = upcomingCount,
+        logoUrl = logoUrl
+    )
+
+    private fun SportsTeamDto.toDomain() = SportsTeam(
+        name = name,
+        city = city,
+        nickname = nickname,
+        league = league,
+        aliases = aliases ?: emptyList(),
+        logoUrl = logoUrl
     )
 }

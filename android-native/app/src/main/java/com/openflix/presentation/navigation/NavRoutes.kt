@@ -22,6 +22,9 @@ sealed class NavRoutes(val route: String) {
     data object Libraries : NavRoutes("libraries")
 
     // === Media Browsing ===
+    data object AllMedia : NavRoutes("all_media/{libraryId}/{mediaType}") {
+        fun createRoute(libraryId: String, mediaType: String) = "all_media/$libraryId/$mediaType"
+    }
     data object MediaDetail : NavRoutes("media/{mediaId}") {
         fun createRoute(mediaId: String) = "media/$mediaId"
     }
@@ -48,10 +51,16 @@ sealed class NavRoutes(val route: String) {
     data object ChannelSurfing : NavRoutes("livetv/surfing")
     data object Multiview : NavRoutes("livetv/multiview")
 
+    // === On Later ===
+    data object OnLater : NavRoutes("onlater")
+
+    // === Team Pass ===
+    data object TeamPass : NavRoutes("teampass")
+
     // === DVR ===
     data object DVR : NavRoutes("dvr")
-    data object DVRPlayer : NavRoutes("dvr/player/{recordingId}") {
-        fun createRoute(recordingId: String) = "dvr/player/$recordingId"
+    data object DVRPlayer : NavRoutes("dvr/player/{recordingId}?mode={mode}") {
+        fun createRoute(recordingId: String, mode: String = "default") = "dvr/player/$recordingId?mode=$mode"
     }
     data object VirtualChannels : NavRoutes("dvr/virtual_channels")
 
@@ -84,6 +93,7 @@ sealed class NavRoutes(val route: String) {
         const val ARG_MEDIA_ID = "mediaId"
         const val ARG_CHANNEL_ID = "channelId"
         const val ARG_RECORDING_ID = "recordingId"
+        const val ARG_PLAYBACK_MODE = "mode"
         const val ARG_START_TIME = "startTime"
         const val ARG_SHOW_ID = "showId"
         const val ARG_SEASON_NUMBER = "seasonNumber"
@@ -91,5 +101,7 @@ sealed class NavRoutes(val route: String) {
         const val ARG_COLLECTION_ID = "collectionId"
         const val ARG_PLAYLIST_ID = "playlistId"
         const val ARG_PROFILE_ID = "profileId"
+        const val ARG_LIBRARY_ID = "libraryId"
+        const val ARG_MEDIA_TYPE = "mediaType"
     }
 }

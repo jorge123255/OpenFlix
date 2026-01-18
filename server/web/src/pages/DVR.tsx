@@ -32,6 +32,7 @@ import {
   Search,
   Square,
   CheckSquare,
+  ScanLine,
 } from 'lucide-react'
 import {
   useRecordings,
@@ -916,6 +917,8 @@ function RecordingCard({
   recording,
   onDelete,
   onPlay,
+  onDetectCommercials,
+  isDetecting,
   liveStats,
   isSelected,
   onToggleSelect,
@@ -924,6 +927,8 @@ function RecordingCard({
   recording: Recording
   onDelete: () => void
   onPlay?: () => void
+  onDetectCommercials?: () => void
+  isDetecting?: boolean
   liveStats?: RecordingStats
   isSelected?: boolean
   onToggleSelect?: () => void
@@ -1215,6 +1220,20 @@ function RecordingCard({
                 <Play className="w-4 h-4" />
               </button>
             )}
+            {recording.status === 'completed' && onDetectCommercials && (
+              <button
+                onClick={onDetectCommercials}
+                disabled={isDetecting}
+                className="p-2 text-gray-400 hover:text-indigo-400 hover:bg-gray-700 rounded-lg transition-colors disabled:opacity-50"
+                title="Detect Commercials"
+              >
+                {isDetecting ? (
+                  <Loader className="w-4 h-4 animate-spin" />
+                ) : (
+                  <ScanLine className="w-4 h-4" />
+                )}
+              </button>
+            )}
             <button
               onClick={onDelete}
               className="p-2 text-gray-400 hover:text-red-400 hover:bg-gray-700 rounded-lg transition-colors"
@@ -1497,6 +1516,25 @@ export function DVRPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedRecordings, setSelectedRecordings] = useState<Set<number>>(new Set())
   const [isDeleting, setIsDeleting] = useState(false)
+  const [detectingRecordingId, setDetectingRecordingId] = useState<number | null>(null)
+
+  // Commercial detection status
+  const { data: commercialStatus } = useQuery({
+    queryKey: ['commercialDetectionStatus'],
+    queryFn: () => api.getCommercialDetectionStatus(),
+  })
+
+  const handleDetectCommercials = async (recordingId: number) => {
+    setDetectingRecordingId(recordingId)
+    try {
+      await api.runCommercialDetection(recordingId)
+      // Show success toast or notification could be added here
+    } catch (error) {
+      console.error('Commercial detection failed:', error)
+    } finally {
+      setDetectingRecordingId(null)
+    }
+  }
 
   // Filter recordings based on search query
   const filteredRecordings = useMemo(() => {
@@ -1779,6 +1817,8 @@ export function DVRPage() {
                               setPlaybackRecording(rec)
                             }
                           } : undefined}
+                          onDetectCommercials={commercialStatus?.enabled ? () => handleDetectCommercials(rec.id) : undefined}
+                          isDetecting={detectingRecordingId === rec.id}
                           liveStats={statsMap.get(rec.id)}
                           isSelected={selectedRecordings.has(rec.id)}
                           onToggleSelect={() => toggleRecordingSelection(rec.id)}

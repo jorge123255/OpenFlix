@@ -616,6 +616,8 @@ function MapChannelNumbersModal({
   const fileInputRef = useRef<HTMLInputElement>(null)
   // Manual mappings: { m3uName: channelId }
   const [manualMappings, setManualMappings] = useState<Record<string, number>>({})
+  // Search filters for each unmatched row
+  const [searchFilters, setSearchFilters] = useState<Record<string, string>>({})
 
   // Fetch existing channels for manual matching dropdown
   const { data: existingChannels } = useQuery({
@@ -873,41 +875,98 @@ function MapChannelNumbersModal({
                     )}
                   </h3>
                   <div className="space-y-1">
-                    {unmatchedResults.map((r: any, idx: number) => (
-                      <div key={idx} className="flex items-center gap-2 text-sm p-2 bg-gray-700/30 rounded">
-                        <span className="text-indigo-400 font-mono w-12 flex-shrink-0">{r.m3uNumber}</span>
-                        <span className="text-white flex-shrink-0 min-w-[120px]">{r.m3uName}</span>
-                        <span className="text-gray-500 mx-2">→</span>
-                        <select
-                          value={manualMappings[r.m3uName] || ''}
-                          onChange={(e) => {
-                            const value = e.target.value
-                            setManualMappings(prev => {
-                              if (value === '') {
-                                const { [r.m3uName]: _, ...rest } = prev
-                                return rest
-                              }
-                              return { ...prev, [r.m3uName]: parseInt(value) }
-                            })
-                          }}
-                          className={`flex-1 px-2 py-1 bg-gray-700 border rounded text-sm ${
-                            manualMappings[r.m3uName]
-                              ? 'border-green-500 text-green-300'
-                              : 'border-gray-600 text-gray-400'
-                          }`}
-                        >
-                          <option value="">Select channel...</option>
-                          {existingChannels?.map((ch: Channel) => (
-                            <option key={ch.id} value={ch.id}>
-                              {ch.number} - {ch.name}
-                            </option>
-                          ))}
-                        </select>
-                        {manualMappings[r.m3uName] && (
-                          <Check className="h-4 w-4 text-green-400 flex-shrink-0" />
-                        )}
-                      </div>
-                    ))}
+                    {unmatchedResults.map((r: any, idx: number) => {
+                      const searchFilter = searchFilters[r.m3uName] || ''
+                      const selectedChannel = manualMappings[r.m3uName]
+                        ? existingChannels?.find(ch => ch.id === manualMappings[r.m3uName])
+                        : null
+                      const filteredChannels = existingChannels?.filter(ch => {
+                        if (!searchFilter) return true
+                        const search = searchFilter.toLowerCase()
+                        return ch.name.toLowerCase().includes(search) ||
+                               ch.number.toString().includes(search)
+                      }) || []
+
+                      return (
+                        <div key={idx} className="flex items-center gap-2 text-sm p-2 bg-gray-700/30 rounded">
+                          <span className="text-indigo-400 font-mono w-12 flex-shrink-0">{r.m3uNumber}</span>
+                          <span className="text-white flex-shrink-0 min-w-[120px]">{r.m3uName}</span>
+                          <span className="text-gray-500 mx-2">→</span>
+                          <div className="flex-1 relative">
+                            <input
+                              type="text"
+                              value={selectedChannel ? `${selectedChannel.number} - ${selectedChannel.name}` : searchFilter}
+                              onChange={(e) => {
+                                // Clear selection when typing
+                                if (manualMappings[r.m3uName]) {
+                                  setManualMappings(prev => {
+                                    const { [r.m3uName]: _, ...rest } = prev
+                                    return rest
+                                  })
+                                }
+                                setSearchFilters(prev => ({ ...prev, [r.m3uName]: e.target.value }))
+                              }}
+                              onFocus={() => {
+                                // Show dropdown on focus
+                                if (selectedChannel) {
+                                  setSearchFilters(prev => ({ ...prev, [r.m3uName]: '' }))
+                                  setManualMappings(prev => {
+                                    const { [r.m3uName]: _, ...rest } = prev
+                                    return rest
+                                  })
+                                }
+                              }}
+                              placeholder="Type to search channels..."
+                              className={`w-full px-2 py-1 bg-gray-700 border rounded text-sm ${
+                                selectedChannel
+                                  ? 'border-green-500 text-green-300'
+                                  : 'border-gray-600 text-white'
+                              }`}
+                            />
+                            {searchFilter && !selectedChannel && filteredChannels.length > 0 && (
+                              <div className="absolute z-10 w-full mt-1 max-h-48 overflow-y-auto bg-gray-800 border border-gray-600 rounded shadow-lg">
+                                {filteredChannels.slice(0, 20).map((ch: Channel) => (
+                                  <div
+                                    key={ch.id}
+                                    onClick={() => {
+                                      setManualMappings(prev => ({ ...prev, [r.m3uName]: ch.id }))
+                                      setSearchFilters(prev => {
+                                        const { [r.m3uName]: _, ...rest } = prev
+                                        return rest
+                                      })
+                                    }}
+                                    className="px-2 py-1 hover:bg-gray-700 cursor-pointer text-gray-200"
+                                  >
+                                    {ch.number} - {ch.name}
+                                  </div>
+                                ))}
+                                {filteredChannels.length > 20 && (
+                                  <div className="px-2 py-1 text-gray-500 text-xs">
+                                    +{filteredChannels.length - 20} more results...
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                          {selectedChannel && (
+                            <button
+                              onClick={() => {
+                                setManualMappings(prev => {
+                                  const { [r.m3uName]: _, ...rest } = prev
+                                  return rest
+                                })
+                              }}
+                              className="text-gray-400 hover:text-red-400"
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                          )}
+                          {selectedChannel && (
+                            <Check className="h-4 w-4 text-green-400 flex-shrink-0" />
+                          )}
+                        </div>
+                      )
+                    })}
                   </div>
                 </div>
               )}

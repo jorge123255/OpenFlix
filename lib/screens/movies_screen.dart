@@ -17,6 +17,7 @@ import '../utils/app_logger.dart';
 import '../utils/keyboard_utils.dart';
 import '../utils/provider_extensions.dart';
 import 'main_screen.dart';
+import 'all_media_screen.dart';
 
 /// Movies screen showing only movie content
 class MoviesScreen extends StatefulWidget {
@@ -350,6 +351,11 @@ class MoviesScreenState extends State<MoviesScreen>
                     ),
                   ),
                 if (!_isLoading && _errorMessage == null) ...[
+                  // Browse All Section
+                  if (_movieLibraries.isNotEmpty)
+                    SliverToBoxAdapter(
+                      child: _buildBrowseAllSection(),
+                    ),
                   // Continue Watching Movies
                   if (_recentlyWatched.isNotEmpty)
                     SliverToBoxAdapter(
@@ -393,6 +399,94 @@ class MoviesScreenState extends State<MoviesScreen>
                 ],
               ],
             ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBrowseAllSection() {
+    final theme = Theme.of(context);
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+      child: InkWell(
+        onTap: () {
+          // Navigate to all movies screen
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => AllMediaScreen(
+                libraries: _movieLibraries,
+                title: t.navigation.movies,
+                mediaType: 'movie',
+              ),
+            ),
+          );
+        },
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                theme.colorScheme.primaryContainer,
+                theme.colorScheme.primaryContainer.withValues(alpha: 0.7),
+              ],
+            ),
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: theme.colorScheme.primary.withValues(alpha: 0.2),
+                blurRadius: 8,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.primary,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  Icons.movie_outlined,
+                  color: theme.colorScheme.onPrimary,
+                  size: 28,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      t.libraries.browseAll,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: theme.colorScheme.onPrimaryContainer,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      t.navigation.movies,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.colorScheme.onPrimaryContainer.withValues(alpha: 0.8),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.arrow_forward_ios,
+                color: theme.colorScheme.onPrimaryContainer,
+                size: 20,
+              ),
+            ],
           ),
         ),
       ),

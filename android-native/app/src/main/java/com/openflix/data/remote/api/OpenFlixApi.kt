@@ -58,6 +58,17 @@ interface OpenFlixApi {
     @GET("library/sections")
     suspend fun getHomeContent(): Response<LibrarySectionsResponse>
 
+    // === Hubs (Recommendations) ===
+
+    @GET("hubs/sections/{id}")
+    suspend fun getLibraryHubs(@Path("id") libraryId: String): Response<HubsResponse>
+
+    @GET("hubs/sections/{id}/streaming-services")
+    suspend fun getLibraryStreamingServices(@Path("id") libraryId: String): Response<HubsResponse>
+
+    @GET("hubs/home/streaming-services")
+    suspend fun getAllStreamingServices(): Response<HubsResponse>
+
     // === Media ===
 
     @GET("media/{id}")
@@ -174,12 +185,21 @@ interface OpenFlixApi {
     @DELETE("dvr/recordings/{id}")
     suspend fun deleteRecording(@Path("id") recordingId: String): Response<Unit>
 
-    @GET("dvr/recordings/{id}/stream")
+    @GET("dvr/stream/{id}")
     suspend fun getRecordingStreamUrl(@Path("id") recordingId: String): Response<StreamResponse>
+
+    @GET("dvr/conflicts")
+    suspend fun getRecordingConflicts(): Response<ConflictsResponse>
+
+    @POST("dvr/conflicts/resolve")
+    suspend fun resolveConflict(@Body request: ResolveConflictRequest): Response<Unit>
+
+    @GET("dvr/recordings/stats")
+    suspend fun getRecordingStats(): Response<RecordingStatsResponse>
 
     // === Search ===
 
-    @GET("search")
+    @GET("hubs/search")
     suspend fun globalSearch(
         @Query("query") query: String,
         @Query("limit") limit: Int = 50
@@ -222,4 +242,93 @@ interface OpenFlixApi {
 
     @GET("server/capabilities")
     suspend fun getServerCapabilities(): Response<ServerCapabilitiesDto>
+
+    // === On Later (Browse upcoming content) ===
+
+    @GET("api/onlater/stats")
+    suspend fun getOnLaterStats(): Response<OnLaterStatsDto>
+
+    @GET("api/onlater/movies")
+    suspend fun getOnLaterMovies(
+        @Query("hours") hours: Int? = null
+    ): Response<OnLaterResponse>
+
+    @GET("api/onlater/sports")
+    suspend fun getOnLaterSports(
+        @Query("hours") hours: Int? = null,
+        @Query("league") league: String? = null,
+        @Query("team") team: String? = null
+    ): Response<OnLaterResponse>
+
+    @GET("api/onlater/kids")
+    suspend fun getOnLaterKids(
+        @Query("hours") hours: Int? = null
+    ): Response<OnLaterResponse>
+
+    @GET("api/onlater/news")
+    suspend fun getOnLaterNews(
+        @Query("hours") hours: Int? = null
+    ): Response<OnLaterResponse>
+
+    @GET("api/onlater/premieres")
+    suspend fun getOnLaterPremieres(
+        @Query("hours") hours: Int? = null
+    ): Response<OnLaterResponse>
+
+    @GET("api/onlater/tonight")
+    suspend fun getOnLaterTonight(): Response<OnLaterResponse>
+
+    @GET("api/onlater/week")
+    suspend fun getOnLaterWeek(
+        @Query("category") category: String? = null
+    ): Response<OnLaterResponse>
+
+    @GET("api/onlater/search")
+    suspend fun searchOnLater(
+        @Query("q") query: String
+    ): Response<OnLaterResponse>
+
+    @GET("api/onlater/leagues")
+    suspend fun getOnLaterLeagues(): Response<LeaguesResponse>
+
+    // === Team Pass ===
+
+    @GET("api/teampass")
+    suspend fun getTeamPasses(): Response<TeamPassListResponse>
+
+    @GET("api/teampass/{id}")
+    suspend fun getTeamPass(@Path("id") id: Long): Response<TeamPassWithGamesResponse>
+
+    @POST("api/teampass")
+    suspend fun createTeamPass(@Body request: TeamPassRequest): Response<TeamPassDto>
+
+    @PUT("api/teampass/{id}")
+    suspend fun updateTeamPass(
+        @Path("id") id: Long,
+        @Body request: TeamPassRequest
+    ): Response<TeamPassDto>
+
+    @DELETE("api/teampass/{id}")
+    suspend fun deleteTeamPass(@Path("id") id: Long): Response<Unit>
+
+    @GET("api/teampass/{id}/upcoming")
+    suspend fun getTeamPassUpcoming(@Path("id") id: Long): Response<TeamPassWithGamesResponse>
+
+    @PUT("api/teampass/{id}/toggle")
+    suspend fun toggleTeamPass(@Path("id") id: Long): Response<TeamPassDto>
+
+    @GET("api/teampass/stats")
+    suspend fun getTeamPassStats(): Response<TeamPassStatsDto>
+
+    @GET("api/teampass/teams/search")
+    suspend fun searchSportsTeams(@Query("q") query: String): Response<TeamsSearchResponse>
+
+    @GET("api/teampass/leagues")
+    suspend fun getSportsLeagues(): Response<SportsLeaguesResponse>
+
+    @GET("api/teampass/leagues/{league}/teams")
+    suspend fun getLeagueTeams(@Path("league") league: String): Response<LeagueTeamsResponse>
+
+    @POST("api/teampass/process")
+    suspend fun processTeamPasses(): Response<Unit>
 }

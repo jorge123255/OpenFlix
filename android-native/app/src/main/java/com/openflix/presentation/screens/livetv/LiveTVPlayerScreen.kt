@@ -54,6 +54,7 @@ fun LiveTVPlayerScreen(
     onBack: () -> Unit,
     onMultiview: () -> Unit = {},
     onEPGGuide: () -> Unit = {},
+    onCatchup: () -> Unit = {},
     viewModel: LiveTVPlayerViewModel = hiltViewModel(),
     liveTVPlayer: LiveTVPlayer
 ) {
@@ -483,7 +484,10 @@ fun LiveTVPlayerScreen(
                     onToggleMute = { viewModel.toggleMute() },
                     onShowAudioTracks = { /* TODO: Audio tracks sheet */ },
                     onShowSubtitles = { /* TODO: Subtitle tracks sheet */ },
-                    onQuickRecord = { /* TODO: Quick record */ },
+                    onQuickRecord = { viewModel.scheduleQuickRecording() },
+                    isRecording = uiState.isRecording,
+                    instantSwitchReady = uiState.instantSwitchReady,
+                    preBufferedChannelIds = uiState.preBufferedChannelIds,
                     onChannelSelected = { selectedChannel ->
                         viewModel.switchToChannel(selectedChannel)
                         showOverlay = true
@@ -493,7 +497,8 @@ fun LiveTVPlayerScreen(
                     onSeekBack = { viewModel.seekBack(10) },
                     onSeekForward = { viewModel.seekForward(10) },
                     onGoLive = { viewModel.goLive() },
-                    onStartOver = { viewModel.startOver() }
+                    onStartOver = { viewModel.startOver() },
+                    onCatchup = onCatchup
                 )
             }
         }
@@ -553,6 +558,16 @@ fun LiveTVPlayerScreen(
             modifier = Modifier
                 .align(Alignment.TopCenter)
                 .padding(top = 80.dp)
+        )
+
+        // Recording feedback indicator
+        RecordingIndicator(
+            successMessage = uiState.recordingSuccess,
+            errorMessage = uiState.recordingError,
+            isScheduling = uiState.isSchedulingRecording,
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .padding(top = 140.dp)
         )
 
         // Sleep timer indicator (shows remaining time when active)
@@ -1924,6 +1939,122 @@ private fun LoadingSpinner(
                 (size.height - radius * 2) / 2
             )
         )
+    }
+}
+
+/**
+ * Recording feedback indicator - shows success/error messages for DVR recording
+ */
+@Composable
+private fun RecordingIndicator(
+    successMessage: String?,
+    errorMessage: String?,
+    isScheduling: Boolean,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        // Scheduling indicator
+        AnimatedVisibility(
+            visible = isScheduling,
+            enter = fadeIn() + scaleIn(),
+            exit = fadeOut() + scaleOut()
+        ) {
+            Box(
+                modifier = Modifier
+                    .background(
+                        Color.Black.copy(alpha = 0.85f),
+                        RoundedCornerShape(12.dp)
+                    )
+                    .padding(horizontal = 24.dp, vertical = 12.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    LoadingSpinner(
+                        color = OpenFlixColors.LiveIndicator,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Text(
+                        text = "Scheduling recording...",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Medium,
+                        color = Color.White
+                    )
+                }
+            }
+        }
+
+        // Success indicator
+        AnimatedVisibility(
+            visible = successMessage != null && !isScheduling,
+            enter = fadeIn() + scaleIn(),
+            exit = fadeOut() + scaleOut()
+        ) {
+            Box(
+                modifier = Modifier
+                    .background(
+                        OpenFlixColors.Success.copy(alpha = 0.9f),
+                        RoundedCornerShape(12.dp)
+                    )
+                    .padding(horizontal = 24.dp, vertical = 12.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    // Record icon
+                    Text(
+                        text = "⏺",
+                        fontSize = 20.sp,
+                        color = Color.White
+                    )
+                    Text(
+                        text = successMessage ?: "",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Medium,
+                        color = Color.White
+                    )
+                }
+            }
+        }
+
+        // Error indicator
+        AnimatedVisibility(
+            visible = errorMessage != null && !isScheduling,
+            enter = fadeIn() + scaleIn(),
+            exit = fadeOut() + scaleOut()
+        ) {
+            Box(
+                modifier = Modifier
+                    .background(
+                        OpenFlixColors.Error.copy(alpha = 0.9f),
+                        RoundedCornerShape(12.dp)
+                    )
+                    .padding(horizontal = 24.dp, vertical = 12.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    // Error icon
+                    Text(
+                        text = "⚠️",
+                        fontSize = 20.sp
+                    )
+                    Text(
+                        text = errorMessage ?: "",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Medium,
+                        color = Color.White
+                    )
+                }
+            }
+        }
     }
 }
 

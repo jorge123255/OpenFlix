@@ -5,6 +5,7 @@ import 'package:dio/dio.dart';
 import '../config/client_config.dart';
 import '../models/dvr.dart';
 import '../models/livetv_channel.dart';
+import '../models/onlater.dart';
 import '../models/file_info.dart';
 import '../models/filter.dart';
 import '../models/hub.dart';
@@ -26,6 +27,71 @@ class ConnectionTestResult {
   final int latencyMs;
 
   ConnectionTestResult({required this.success, required this.latencyMs});
+}
+
+/// Trending item from TMDB API
+class TmdbTrendingItem {
+  final int id;
+  final String title;
+  final String? overview;
+  final String? posterPath;
+  final String? backdropPath;
+  final String mediaType;
+  final double? voteAverage;
+  final String? releaseDate;
+  final double? popularity;
+
+  TmdbTrendingItem({
+    required this.id,
+    required this.title,
+    this.overview,
+    this.posterPath,
+    this.backdropPath,
+    required this.mediaType,
+    this.voteAverage,
+    this.releaseDate,
+    this.popularity,
+  });
+
+  factory TmdbTrendingItem.fromJson(Map<String, dynamic> json) {
+    return TmdbTrendingItem(
+      id: json['id'] ?? 0,
+      title: json['title'] ?? '',
+      overview: json['overview'],
+      posterPath: json['poster_path'],
+      backdropPath: json['backdrop_path'],
+      mediaType: json['media_type'] ?? 'movie',
+      voteAverage: (json['vote_average'] as num?)?.toDouble(),
+      releaseDate: json['release_date'],
+      popularity: (json['popularity'] as num?)?.toDouble(),
+    );
+  }
+
+  /// Get full poster URL
+  String? get posterUrl => posterPath != null
+      ? 'https://image.tmdb.org/t/p/w500$posterPath'
+      : null;
+
+  /// Get full backdrop URL
+  String? get backdropUrl => backdropPath != null
+      ? 'https://image.tmdb.org/t/p/original$backdropPath'
+      : null;
+
+  /// Get release year
+  int? get releaseYear {
+    if (releaseDate == null) return null;
+    final parts = releaseDate!.split('-');
+    if (parts.isNotEmpty) {
+      return int.tryParse(parts.first);
+    }
+    return null;
+  }
+
+  /// Is this a movie
+  bool get isMovie => mediaType == 'movie';
+
+  /// Is this a TV show
+  bool get isTvShow => mediaType == 'tv';
 }
 
 class MediaClient {
@@ -1319,6 +1385,94 @@ class MediaClient {
     }
   }
 
+  /// Get trending content from TMDB
+  /// mediaType: 'all', 'movie', or 'tv'
+  /// timeWindow: 'day' or 'week'
+  Future<List<TmdbTrendingItem>> getTrending({
+    String mediaType = 'all',
+    String timeWindow = 'week',
+  }) async {
+    try {
+      final response = await _dio.get(
+        '/hubs/trending',
+        queryParameters: {
+          'media_type': mediaType,
+          'time_window': timeWindow,
+        },
+      );
+
+      if (response.data != null && response.data['results'] != null) {
+        final results = response.data['results'] as List;
+        return results
+            .map((item) => TmdbTrendingItem.fromJson(item as Map<String, dynamic>))
+            .toList();
+      }
+    } catch (e) {
+      appLogger.e('Failed to get trending: $e');
+    }
+    return [];
+  }
+
+  /// Get popular movies from TMDB
+  Future<List<TmdbTrendingItem>> getPopularMovies({int page = 1}) async {
+    try {
+      final response = await _dio.get(
+        '/hubs/popular/movies',
+        queryParameters: {'page': page},
+      );
+
+      if (response.data != null && response.data['results'] != null) {
+        final results = response.data['results'] as List;
+        return results
+            .map((item) => TmdbTrendingItem.fromJson(item as Map<String, dynamic>))
+            .toList();
+      }
+    } catch (e) {
+      appLogger.e('Failed to get popular movies: $e');
+    }
+    return [];
+  }
+
+  /// Get popular TV shows from TMDB
+  Future<List<TmdbTrendingItem>> getPopularTV({int page = 1}) async {
+    try {
+      final response = await _dio.get(
+        '/hubs/popular/tv',
+        queryParameters: {'page': page},
+      );
+
+      if (response.data != null && response.data['results'] != null) {
+        final results = response.data['results'] as List;
+        return results
+            .map((item) => TmdbTrendingItem.fromJson(item as Map<String, dynamic>))
+            .toList();
+      }
+    } catch (e) {
+      appLogger.e('Failed to get popular TV: $e');
+    }
+    return [];
+  }
+
+  /// Get top rated movies from TMDB
+  Future<List<TmdbTrendingItem>> getTopRatedMovies({int page = 1}) async {
+    try {
+      final response = await _dio.get(
+        '/hubs/top-rated/movies',
+        queryParameters: {'page': page},
+      );
+
+      if (response.data != null && response.data['results'] != null) {
+        final results = response.data['results'] as List;
+        return results
+            .map((item) => TmdbTrendingItem.fromJson(item as Map<String, dynamic>))
+            .toList();
+      }
+    } catch (e) {
+      appLogger.e('Failed to get top rated movies: $e');
+    }
+    return [];
+  }
+
   /// Get playlist content by playlist ID
   /// Returns the list of metadata items in the playlist
   Future<List<MediaItem>> getPlaylist(String playlistId) async {
@@ -2460,6 +2614,176 @@ class MediaClient {
     } catch (e) {
       appLogger.e('Failed to rerun commercial detection', error: e);
       return false;
+    }
+  }
+
+  // ========== On Later Methods ==========
+
+  /// Get On Later statistics (counts for each category)
+  Future<OnLaterStats?> getOnLaterStats() async {
+    try {
+      final response = await _dio.get('/api/onlater/stats');
+      return OnLaterStats.fromJson(response.data as Map<String, dynamic>);
+    } catch (e) {
+      appLogger.e('Failed to get On Later stats', error: e);
+      return null;
+    }
+  }
+
+  /// Get upcoming movies
+  Future<OnLaterResponse?> getOnLaterMovies({int? hours}) async {
+    try {
+      final params = <String, dynamic>{};
+      if (hours != null) params['hours'] = hours.toString();
+      final response = await _dio.get('/api/onlater/movies', queryParameters: params);
+      return OnLaterResponse.fromJson(response.data as Map<String, dynamic>);
+    } catch (e) {
+      appLogger.e('Failed to get On Later movies', error: e);
+      return null;
+    }
+  }
+
+  /// Get upcoming sports content
+  Future<OnLaterResponse?> getOnLaterSports({String? league, String? team, int? hours}) async {
+    try {
+      final params = <String, dynamic>{};
+      if (league != null) params['league'] = league;
+      if (team != null) params['team'] = team;
+      if (hours != null) params['hours'] = hours.toString();
+      final response = await _dio.get('/api/onlater/sports', queryParameters: params);
+      return OnLaterResponse.fromJson(response.data as Map<String, dynamic>);
+    } catch (e) {
+      appLogger.e('Failed to get On Later sports', error: e);
+      return null;
+    }
+  }
+
+  /// Get upcoming kids content
+  Future<OnLaterResponse?> getOnLaterKids({int? hours}) async {
+    try {
+      final params = <String, dynamic>{};
+      if (hours != null) params['hours'] = hours.toString();
+      final response = await _dio.get('/api/onlater/kids', queryParameters: params);
+      return OnLaterResponse.fromJson(response.data as Map<String, dynamic>);
+    } catch (e) {
+      appLogger.e('Failed to get On Later kids', error: e);
+      return null;
+    }
+  }
+
+  /// Get upcoming news content
+  Future<OnLaterResponse?> getOnLaterNews({int? hours}) async {
+    try {
+      final params = <String, dynamic>{};
+      if (hours != null) params['hours'] = hours.toString();
+      final response = await _dio.get('/api/onlater/news', queryParameters: params);
+      return OnLaterResponse.fromJson(response.data as Map<String, dynamic>);
+    } catch (e) {
+      appLogger.e('Failed to get On Later news', error: e);
+      return null;
+    }
+  }
+
+  /// Get upcoming premieres and new episodes
+  Future<OnLaterResponse?> getOnLaterPremieres({int? hours}) async {
+    try {
+      final params = <String, dynamic>{};
+      if (hours != null) params['hours'] = hours.toString();
+      final response = await _dio.get('/api/onlater/premieres', queryParameters: params);
+      return OnLaterResponse.fromJson(response.data as Map<String, dynamic>);
+    } catch (e) {
+      appLogger.e('Failed to get On Later premieres', error: e);
+      return null;
+    }
+  }
+
+  /// Get tonight's programming (6pm - 2am)
+  Future<OnLaterResponse?> getOnLaterTonight() async {
+    try {
+      final response = await _dio.get('/api/onlater/tonight');
+      return OnLaterResponse.fromJson(response.data as Map<String, dynamic>);
+    } catch (e) {
+      appLogger.e('Failed to get On Later tonight', error: e);
+      return null;
+    }
+  }
+
+  /// Get full week's programming
+  Future<OnLaterResponse?> getOnLaterWeek({String? category}) async {
+    try {
+      final params = <String, dynamic>{};
+      if (category != null) params['category'] = category;
+      final response = await _dio.get('/api/onlater/week', queryParameters: params);
+      return OnLaterResponse.fromJson(response.data as Map<String, dynamic>);
+    } catch (e) {
+      appLogger.e('Failed to get On Later week', error: e);
+      return null;
+    }
+  }
+
+  /// Search upcoming content
+  Future<OnLaterResponse?> searchOnLater(String query, {int? hours}) async {
+    try {
+      final params = <String, dynamic>{'q': query};
+      if (hours != null) params['hours'] = hours.toString();
+      final response = await _dio.get('/api/onlater/search', queryParameters: params);
+      return OnLaterResponse.fromJson(response.data as Map<String, dynamic>);
+    } catch (e) {
+      appLogger.e('Failed to search On Later', error: e);
+      return null;
+    }
+  }
+
+  /// Get upcoming content for a specific channel
+  Future<OnLaterResponse?> getOnLaterByChannel(String channelId, {int? hours}) async {
+    try {
+      final params = <String, dynamic>{};
+      if (hours != null) params['hours'] = hours.toString();
+      final response = await _dio.get('/api/onlater/channels/$channelId', queryParameters: params);
+      return OnLaterResponse.fromJson(response.data as Map<String, dynamic>);
+    } catch (e) {
+      appLogger.e('Failed to get On Later by channel', error: e);
+      return null;
+    }
+  }
+
+  /// Get available sports leagues
+  Future<List<String>> getOnLaterLeagues() async {
+    try {
+      final response = await _dio.get('/api/onlater/leagues');
+      final data = response.data as Map<String, dynamic>;
+      return (data['leagues'] as List?)?.cast<String>() ?? [];
+    } catch (e) {
+      appLogger.e('Failed to get On Later leagues', error: e);
+      return [];
+    }
+  }
+
+  /// Get teams for a specific league
+  Future<List<SportsTeam>> getOnLaterTeamsByLeague(String league) async {
+    try {
+      final response = await _dio.get('/api/onlater/teams/$league');
+      final data = response.data as Map<String, dynamic>;
+      return (data['teams'] as List?)
+          ?.map((t) => SportsTeam.fromJson(t as Map<String, dynamic>))
+          .toList() ?? [];
+    } catch (e) {
+      appLogger.e('Failed to get On Later teams', error: e);
+      return [];
+    }
+  }
+
+  /// Search for sports teams
+  Future<List<SportsTeam>> searchOnLaterTeams(String query) async {
+    try {
+      final response = await _dio.get('/api/onlater/teams/search', queryParameters: {'q': query});
+      final data = response.data as Map<String, dynamic>;
+      return (data['teams'] as List?)
+          ?.map((t) => SportsTeam.fromJson(t as Map<String, dynamic>))
+          .toList() ?? [];
+    } catch (e) {
+      appLogger.e('Failed to search On Later teams', error: e);
+      return [];
     }
   }
 }

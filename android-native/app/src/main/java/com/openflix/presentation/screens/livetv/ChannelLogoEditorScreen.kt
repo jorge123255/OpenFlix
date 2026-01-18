@@ -43,15 +43,21 @@ fun ChannelLogoEditorScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
-    // Logo editor dialog
-    if (uiState.showLogoEditor && uiState.selectedChannel != null) {
-        LogoEditorDialog(
+    // Channel editor dialog
+    if (uiState.showEditor && uiState.selectedChannel != null) {
+        ChannelEditorDialog(
             channel = uiState.selectedChannel!!,
-            currentLogoUrl = uiState.customLogoUrl,
-            onLogoUrlChange = viewModel::setCustomLogoUrl,
-            onSave = viewModel::saveChannelLogo,
-            onReset = viewModel::resetChannelLogo,
-            onDismiss = viewModel::dismissLogoEditor,
+            editName = uiState.editName,
+            editNumber = uiState.editNumber,
+            editLogoUrl = uiState.editLogoUrl,
+            editGroup = uiState.editGroup,
+            onNameChange = viewModel::setEditName,
+            onNumberChange = viewModel::setEditNumber,
+            onLogoUrlChange = viewModel::setEditLogoUrl,
+            onGroupChange = viewModel::setEditGroup,
+            onSave = viewModel::saveChannel,
+            onReset = viewModel::resetFields,
+            onDismiss = viewModel::dismissEditor,
             isSaving = uiState.isSaving
         )
     }
@@ -73,7 +79,7 @@ fun ChannelLogoEditorScreen(
             Spacer(modifier = Modifier.width(24.dp))
 
             Text(
-                text = "Channel Logo Editor",
+                text = "Channel Editor",
                 style = MaterialTheme.typography.displaySmall,
                 color = OpenFlixColors.OnSurface
             )
@@ -280,10 +286,16 @@ private fun ChannelLogoItem(
 }
 
 @Composable
-private fun LogoEditorDialog(
+private fun ChannelEditorDialog(
     channel: Channel,
-    currentLogoUrl: String,
+    editName: String,
+    editNumber: String,
+    editLogoUrl: String,
+    editGroup: String,
+    onNameChange: (String) -> Unit,
+    onNumberChange: (String) -> Unit,
     onLogoUrlChange: (String) -> Unit,
+    onGroupChange: (String) -> Unit,
     onSave: () -> Unit,
     onReset: () -> Unit,
     onDismiss: () -> Unit,
@@ -302,7 +314,7 @@ private fun LogoEditorDialog(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = "Edit Channel Logo",
+                    text = "Edit Channel",
                     color = Color.White,
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold
@@ -310,49 +322,47 @@ private fun LogoEditorDialog(
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                Text(
-                    text = channel.displayName,
-                    color = Color.Gray,
-                    fontSize = 14.sp
-                )
-
-                Spacer(modifier = Modifier.height(24.dp))
-
                 // Logo preview
                 Box(
                     modifier = Modifier
-                        .size(100.dp)
+                        .size(80.dp)
                         .clip(RoundedCornerShape(12.dp))
                         .background(Color.DarkGray),
                     contentAlignment = Alignment.Center
                 ) {
-                    if (currentLogoUrl.isNotBlank()) {
+                    if (editLogoUrl.isNotBlank()) {
                         AsyncImage(
-                            model = currentLogoUrl,
+                            model = editLogoUrl,
                             contentDescription = "Logo preview",
                             modifier = Modifier.fillMaxSize(),
                             contentScale = ContentScale.Fit
                         )
                     } else {
                         Text(
-                            text = channel.name.take(2).uppercase(),
+                            text = editName.take(2).uppercase(),
                             color = Color.White,
-                            fontSize = 28.sp,
+                            fontSize = 24.sp,
                             fontWeight = FontWeight.Bold
                         )
                     }
                 }
 
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(20.dp))
 
-                // Logo URL input
+                // Channel Number input
                 OutlinedTextField(
-                    value = currentLogoUrl,
-                    onValueChange = onLogoUrlChange,
+                    value = editNumber,
+                    onValueChange = { value ->
+                        // Only allow digits
+                        if (value.isEmpty() || value.all { it.isDigit() }) {
+                            onNumberChange(value)
+                        }
+                    },
                     modifier = Modifier.fillMaxWidth(),
-                    label = { Text("Logo URL") },
-                    placeholder = { Text("https://...", color = Color.Gray) },
+                    label = { Text("Channel Number") },
+                    placeholder = { Text("e.g., 5", color = Color.Gray) },
                     singleLine = true,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = OpenFlixColors.Primary,
                         unfocusedBorderColor = Color.Gray.copy(alpha = 0.5f),
@@ -363,7 +373,70 @@ private fun LogoEditorDialog(
                     )
                 )
 
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Channel Name input
+                OutlinedTextField(
+                    value = editName,
+                    onValueChange = onNameChange,
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("Channel Name") },
+                    placeholder = { Text("e.g., ESPN", color = Color.Gray) },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = OpenFlixColors.Primary,
+                        unfocusedBorderColor = Color.Gray.copy(alpha = 0.5f),
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White,
+                        focusedLabelColor = OpenFlixColors.Primary,
+                        unfocusedLabelColor = Color.Gray
+                    )
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Group input
+                OutlinedTextField(
+                    value = editGroup,
+                    onValueChange = onGroupChange,
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("Group") },
+                    placeholder = { Text("e.g., Sports", color = Color.Gray) },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = OpenFlixColors.Primary,
+                        unfocusedBorderColor = Color.Gray.copy(alpha = 0.5f),
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White,
+                        focusedLabelColor = OpenFlixColors.Primary,
+                        unfocusedLabelColor = Color.Gray
+                    )
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Logo URL input
+                OutlinedTextField(
+                    value = editLogoUrl,
+                    onValueChange = onLogoUrlChange,
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("Logo URL") },
+                    placeholder = { Text("https://...", color = Color.Gray) },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = OpenFlixColors.Primary,
+                        unfocusedBorderColor = Color.Gray.copy(alpha = 0.5f),
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White,
+                        focusedLabelColor = OpenFlixColors.Primary,
+                        unfocusedLabelColor = Color.Gray
+                    )
+                )
+
+                Spacer(modifier = Modifier.height(20.dp))
 
                 // Action buttons
                 Row(
@@ -415,7 +488,7 @@ private fun LogoEditorDialog(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(12.dp))
 
                 // Cancel button
                 TextButton(onClick = onDismiss) {

@@ -48,6 +48,12 @@ function DVRSettingsSection() {
     retry: 1,
   })
 
+  const { data: commercialStatus } = useQuery({
+    queryKey: ['commercialDetectionStatus'],
+    queryFn: () => api.getCommercialDetectionStatus(),
+    retry: 1,
+  })
+
   const [maxConcurrent, setMaxConcurrent] = useState(0)
 
   useEffect(() => {
@@ -122,6 +128,36 @@ function DVRSettingsSection() {
           If you have limited tuners or bandwidth, you may want to set a limit.
           When conflicts occur, higher priority recordings will be preferred.
         </p>
+
+        {/* Commercial Detection Status */}
+        <div className="pt-4 border-t border-gray-700">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-medium text-gray-300">Commercial Detection</h3>
+              <p className="text-xs text-gray-500 mt-1">
+                Automatically detect and skip commercials in recordings using Comskip
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              {commercialStatus?.enabled ? (
+                <>
+                  <CheckCircle className="h-4 w-4 text-green-400" />
+                  <span className="text-sm text-green-400">Enabled</span>
+                </>
+              ) : (
+                <>
+                  <XCircle className="h-4 w-4 text-gray-500" />
+                  <span className="text-sm text-gray-500">Not Available</span>
+                </>
+              )}
+            </div>
+          </div>
+          {!commercialStatus?.enabled && (
+            <p className="text-xs text-gray-500 mt-2">
+              Comskip is not installed. Commercial detection will be enabled automatically when Comskip is available.
+            </p>
+          )}
+        </div>
       </div>
     </div>
   )

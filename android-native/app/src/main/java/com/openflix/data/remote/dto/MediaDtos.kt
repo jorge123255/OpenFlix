@@ -172,8 +172,17 @@ data class ProgressUpdateRequest(
 )
 
 data class SearchResponse(
-    @SerializedName("results") val results: List<MediaItemDto>,
-    @SerializedName("total") val total: Int?
+    @SerializedName("MediaContainer") val mediaContainer: SearchMediaContainer?
+)
+
+data class SearchMediaContainer(
+    @SerializedName("Hub") val hubs: List<SearchHub>?
+)
+
+data class SearchHub(
+    @SerializedName("type") val type: String?,
+    @SerializedName("title") val title: String?,
+    @SerializedName("Metadata") val metadata: List<MediaItemDto>?
 )
 
 // === Plex-compatible DTOs ===
@@ -223,4 +232,29 @@ data class DirectoryDto(
     @SerializedName("key") val key: String?,
     @SerializedName("title") val title: String?,
     @SerializedName("type") val type: String?
+)
+
+// === Hubs (Recommendations) DTOs ===
+
+data class HubsResponse(
+    @SerializedName("MediaContainer") val mediaContainer: HubsContainer?
+)
+
+data class HubsContainer(
+    @SerializedName("size") val size: Int?,
+    @SerializedName("librarySectionID") val librarySectionId: Int?,
+    @SerializedName("Hub") val hubs: List<StreamingHubDto>?
+)
+
+data class StreamingHubDto(
+    @SerializedName("key") val key: String?,
+    @SerializedName("hubIdentifier") val hubIdentifier: String?,
+    @SerializedName("type") val type: String?,
+    @SerializedName("title") val title: String = "",
+    @SerializedName("context") val context: String?,  // e.g., "hub.streamingService", "hub.genre"
+    @SerializedName("size") val size: Int?,
+    @SerializedName("more") val more: Boolean?,
+    @SerializedName("style") val style: String?,
+    @SerializedName("promoted") val promoted: Boolean?,
+    @SerializedName("Metadata") val metadata: List<MediaItemDto>?
 )

@@ -12,6 +12,8 @@ import androidx.media3.common.Player
 import androidx.media3.common.TrackSelectionOverride
 import androidx.media3.common.Tracks
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.common.MimeTypes
+import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
@@ -35,6 +37,7 @@ class LiveTVPlayer @Inject constructor(
     private var exoPlayer: ExoPlayer? = null
     private var trackSelector: DefaultTrackSelector? = null
     private var currentSurfaceView: SurfaceView? = null
+    private var httpDataSourceFactory: DefaultHttpDataSource.Factory? = null
 
     // Playback state
     private val _isPlaying = MutableStateFlow(false)
@@ -131,9 +134,20 @@ class LiveTVPlayer @Inject constructor(
             )
         }
 
+        // Create HTTP data source factory with redirect support
+        httpDataSourceFactory = DefaultHttpDataSource.Factory()
+            .setAllowCrossProtocolRedirects(true)
+            .setConnectTimeoutMs(15_000)
+            .setReadTimeoutMs(15_000)
+            .setUserAgent("OpenFlix/1.0 (Android TV)")
+
+        // Create media source factory with redirect-enabled data source
+        val mediaSourceFactory = DefaultMediaSourceFactory(context)
+            .setDataSourceFactory(httpDataSourceFactory!!)
+
         exoPlayer = ExoPlayer.Builder(context)
             .setTrackSelector(trackSelector!!)
-            .setMediaSourceFactory(DefaultMediaSourceFactory(context))
+            .setMediaSourceFactory(mediaSourceFactory)
             .setAudioAttributes(
                 AudioAttributes.Builder()
                     .setUsage(C.USAGE_MEDIA)
@@ -147,7 +161,7 @@ class LiveTVPlayer @Inject constructor(
                 playWhenReady = true
             }
 
-        Timber.d("LiveTVPlayer initialized")
+        Timber.d("LiveTVPlayer initialized with redirect support")
     }
 
     /**
@@ -183,20 +197,37 @@ class LiveTVPlayer @Inject constructor(
         _isLive.value = true
 
         try {
-            val mediaItem = MediaItem.Builder()
+            // Determine the appropriate MIME type based on URL extension
+            // Only set mimeType for known extensions, let ExoPlayer auto-detect otherwise
+            val mimeType: String? = when {
+                url.contains(".m3u8", ignoreCase = true) -> MimeTypes.APPLICATION_M3U8
+                url.contains(".ts", ignoreCase = true) -> MimeTypes.VIDEO_MP2T
+                url.contains(".mpd", ignoreCase = true) -> MimeTypes.APPLICATION_MPD
+                url.contains(".mp4", ignoreCase = true) -> MimeTypes.VIDEO_MP4
+                // Let ExoPlayer auto-detect for proxy URLs and other formats
+                else -> null
+            }
+
+            val mediaItemBuilder = MediaItem.Builder()
                 .setUri(url)
                 .setLiveConfiguration(
                     MediaItem.LiveConfiguration.Builder()
                         .setMaxPlaybackSpeed(1.02f)
                         .build()
                 )
-                .build()
+
+            // Only set MIME type if we determined one
+            if (mimeType != null) {
+                mediaItemBuilder.setMimeType(mimeType)
+            }
+
+            val mediaItem = mediaItemBuilder.build()
 
             player.setMediaItem(mediaItem)
             player.prepare()
             player.play()
             _isPaused.value = false
-            Timber.d("LiveTVPlayer playing: $url")
+            Timber.d("LiveTVPlayer playing (${mimeType ?: "auto"}): $url")
         } catch (e: Exception) {
             Timber.e(e, "Failed to play")
             _error.value = e.message
@@ -452,6 +483,7 @@ class LiveTVPlayer @Inject constructor(
         exoPlayer = null
         trackSelector = null
         currentSurfaceView = null
+        httpDataSourceFactory = null
         _currentUrl.value = null
         Timber.d("LiveTVPlayer released")
     }

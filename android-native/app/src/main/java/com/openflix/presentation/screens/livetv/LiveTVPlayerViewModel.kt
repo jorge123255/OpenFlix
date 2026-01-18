@@ -2,15 +2,18 @@ package com.openflix.presentation.screens.livetv
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.openflix.data.local.ContentType
+import com.openflix.data.local.LastWatchedService
 import com.openflix.data.local.PreferencesManager
+import com.openflix.data.local.WatchStatsService
+import com.openflix.data.repository.DVRRepository
 import com.openflix.data.repository.LiveTVRepository
 import com.openflix.domain.model.Channel
 import com.openflix.domain.model.Program
 import com.openflix.domain.model.StartOverInfo
 import com.openflix.domain.model.TimeShiftMode
-import com.openflix.player.LoadState
-import com.openflix.player.MpvPlayer
-import com.openflix.player.PlayerController
+import com.openflix.player.InstantSwitchManager
+import com.openflix.player.LiveTVPlayer
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -22,21 +25,24 @@ import javax.inject.Inject
 /**
  * ViewModel for LiveTV player screen.
  * Manages channel switching, stream loading, and player state.
+ * Uses LiveTVPlayer (ExoPlayer) for playback to match the screen's surface.
  */
 @HiltViewModel
 class LiveTVPlayerViewModel @Inject constructor(
     private val repository: LiveTVRepository,
-    private val playerController: PlayerController,
-    private val mpvPlayer: MpvPlayer,
-    private val preferencesManager: PreferencesManager
+    private val dvrRepository: DVRRepository,
+    private val liveTVPlayer: LiveTVPlayer,
+    private val instantSwitchManager: InstantSwitchManager,
+    private val preferencesManager: PreferencesManager,
+    private val lastWatchedService: LastWatchedService,
+    private val watchStatsService: WatchStatsService
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(LiveTVPlayerUiState())
     val uiState: StateFlow<LiveTVPlayerUiState> = _uiState.asStateFlow()
 
-    // Expose player states
-    val isPlaying: StateFlow<Boolean> = playerController.isPlaying
-    val playerState = playerController.playerState
+    // Expose player states from LiveTVPlayer
+    val isPlaying: StateFlow<Boolean> = liveTVPlayer.isPlaying
 
     private var allChannels: List<Channel> = emptyList()
     private var currentChannelIndex: Int = 0
@@ -45,19 +51,68 @@ class LiveTVPlayerViewModel @Inject constructor(
     private var sleepTimerJob: Job? = null
     private var liveStreamUrl: String? = null  // Store the original live URL
 
-    init {
-        // Initialize mpv player
-        mpvPlayer.initialize()
+    // Instant switching
+    private var instantSwitchEnabled: Boolean = true  // Can be controlled via settings
 
-        // Observe player state
+    init {
+        // Initialize LiveTVPlayer
+        liveTVPlayer.initialize()
+
+        // Observe LiveTVPlayer state (used when instant switch is disabled)
         viewModelScope.launch {
-            playerController.playerState.collect { state ->
-                _uiState.update { it.copy(
-                    isLoading = state.loadState == LoadState.LOADING,
-                    isBuffering = state.loadState == LoadState.LOADING,
-                    error = state.error,
-                    isMuted = state.isMuted
-                )}
+            liveTVPlayer.isBuffering.collect { buffering ->
+                if (!instantSwitchEnabled) {
+                    _uiState.update { it.copy(
+                        isLoading = buffering,
+                        isBuffering = buffering
+                    )}
+                }
+            }
+        }
+
+        viewModelScope.launch {
+            liveTVPlayer.error.collect { error ->
+                if (!instantSwitchEnabled) {
+                    _uiState.update { it.copy(error = error) }
+                }
+            }
+        }
+
+        viewModelScope.launch {
+            liveTVPlayer.isMuted.collect { muted ->
+                _uiState.update { it.copy(isMuted = muted) }
+            }
+        }
+
+        // Observe InstantSwitchManager state (used when instant switch is enabled)
+        viewModelScope.launch {
+            instantSwitchManager.isBuffering.collect { buffering ->
+                if (instantSwitchEnabled) {
+                    _uiState.update { it.copy(
+                        isLoading = buffering,
+                        isBuffering = buffering
+                    )}
+                }
+            }
+        }
+
+        viewModelScope.launch {
+            instantSwitchManager.error.collect { error ->
+                if (instantSwitchEnabled) {
+                    _uiState.update { it.copy(error = error) }
+                }
+            }
+        }
+
+        viewModelScope.launch {
+            instantSwitchManager.preBufferedChannels.collect { channels ->
+                _uiState.update { it.copy(preBufferedChannelIds = channels) }
+            }
+        }
+
+        viewModelScope.launch {
+            instantSwitchManager.instantSwitchReady.collect { ready ->
+                _uiState.update { it.copy(instantSwitchReady = ready) }
             }
         }
 
@@ -79,6 +134,11 @@ class LiveTVPlayerViewModel @Inject constructor(
                     currentChannelIndex = channels.indexOfFirst { it.id == channelId }
                         .takeIf { it >= 0 } ?: 0
 
+                    // Set up InstantSwitchManager with channel list
+                    if (instantSwitchEnabled) {
+                        instantSwitchManager.setChannels(allChannels)
+                    }
+
                     val channel = if (currentChannelIndex in channels.indices) {
                         channels[currentChannelIndex]
                     } else {
@@ -89,7 +149,8 @@ class LiveTVPlayerViewModel @Inject constructor(
                         _uiState.update { it.copy(
                             channels = channels,
                             currentChannel = channel,
-                            isLoading = false
+                            isLoading = false,
+                            instantSwitchEnabled = instantSwitchEnabled
                         )}
                         playChannel(channel)
                     } else {
@@ -137,15 +198,35 @@ class LiveTVPlayerViewModel @Inject constructor(
             // Store the live URL for later use
             liveStreamUrl = streamUrl
 
-            Timber.d("Playing channel: ${channel.name} - $streamUrl")
-            playerController.playMedia(
-                mediaId = channel.id,
-                url = streamUrl
+            if (instantSwitchEnabled) {
+                // Use InstantSwitchManager for instant channel switching
+                val wasInstant = instantSwitchManager.playChannel(channel)
+                Timber.d("Playing channel: ${channel.name} (instant=$wasInstant)")
+                _uiState.update { it.copy(
+                    currentChannel = channel,
+                    isLoading = !wasInstant,  // Only show loading if not instant
+                    wasInstantSwitch = wasInstant
+                )}
+            } else {
+                // Fallback to regular LiveTVPlayer
+                Timber.d("Playing channel: ${channel.name} - $streamUrl")
+                liveTVPlayer.play(streamUrl)
+                _uiState.update { it.copy(
+                    currentChannel = channel,
+                    isLoading = false,
+                    wasInstantSwitch = false
+                )}
+            }
+
+            // Save as last watched for docked player
+            lastWatchedService.setLastWatchedChannel(channel)
+
+            // Start watch tracking for Live TV
+            watchStatsService.startWatchSession(
+                contentId = channel.id,
+                contentType = ContentType.LIVE_TV,
+                title = channel.name
             )
-            _uiState.update { it.copy(
-                currentChannel = channel,
-                isLoading = false
-            )}
 
             // Check if start over is available for this channel
             checkStartOverAvailability()
@@ -199,6 +280,7 @@ class LiveTVPlayerViewModel @Inject constructor(
 
     /**
      * Cycle through aspect ratio modes
+     * Note: ExoPlayer handles aspect ratio via PlayerView resize modes
      */
     fun cycleAspectRatio() {
         val currentMode = _uiState.value.aspectRatioMode
@@ -207,19 +289,8 @@ class LiveTVPlayerViewModel @Inject constructor(
         val nextMode = modes[nextIndex]
 
         _uiState.update { it.copy(aspectRatioMode = nextMode) }
-
-        // Apply aspect ratio to player using mpv video-aspect-override property
-        // Values: "no" (auto), "16:9", "4:3", or a decimal ratio
-        when (nextMode) {
-            AspectRatioMode.FIT -> mpvPlayer.setAspectRatio("no") // Auto - respect source aspect
-            AspectRatioMode.FILL -> mpvPlayer.setAspectRatio("-1") // Stretch to window
-            AspectRatioMode.ZOOM -> mpvPlayer.setAspectRatio("2.35:1") // Crop to cinematic
-            AspectRatioMode.RATIO_16_9 -> mpvPlayer.setAspectRatio("16:9")
-            AspectRatioMode.RATIO_4_3 -> mpvPlayer.setAspectRatio("4:3")
-            AspectRatioMode.STRETCH -> mpvPlayer.setAspectRatio("-1") // Stretch to window aspect
-        }
-
         Timber.d("Aspect ratio changed to: $nextMode")
+        // Note: Aspect ratio is handled in the UI via PlayerView resize mode
     }
 
     // ============ Quick Track Switching (Tivimate feature) ============
@@ -229,9 +300,9 @@ class LiveTVPlayerViewModel @Inject constructor(
      */
     fun cycleAudioTrack() {
         viewModelScope.launch {
-            val track = mpvPlayer.cycleAudioTrack()
+            val track = liveTVPlayer.cycleAudioTrack()
             val message = if (track != null) {
-                "Audio: ${track.title}"
+                "Audio: ${track.label}"
             } else {
                 "Audio: Default"
             }
@@ -248,9 +319,9 @@ class LiveTVPlayerViewModel @Inject constructor(
      */
     fun cycleSubtitleTrack() {
         viewModelScope.launch {
-            val track = mpvPlayer.cycleSubtitleTrack()
+            val track = liveTVPlayer.cycleSubtitleTrack()
             val message = if (track != null) {
-                "Subtitles: ${track.title}"
+                "Subtitles: ${track.label}"
             } else {
                 "Subtitles: Off"
             }
@@ -288,16 +359,17 @@ class LiveTVPlayerViewModel @Inject constructor(
     }
 
     fun togglePlayPause() {
-        playerController.togglePlayPause()
+        liveTVPlayer.togglePlayPause()
     }
 
     fun setVolume(volume: Int) {
-        playerController.setVolume(volume)
+        // Note: ExoPlayer uses 0-1 range, convert from 0-100
+        liveTVPlayer.getPlayer()?.volume = volume / 100f
         _uiState.update { it.copy(volume = volume) }
     }
 
     fun toggleMute() {
-        playerController.toggleMute()
+        liveTVPlayer.toggleMute()
     }
 
     fun toggleFavorite(channelId: String) {
@@ -416,10 +488,7 @@ class LiveTVPlayerViewModel @Inject constructor(
                 timeShiftOffset = startOverInfo.secondsIntoProgram
             )}
 
-            playerController.playMedia(
-                mediaId = "${channel.id}_startover",
-                url = startOverInfo.streamUrl
-            )
+            liveTVPlayer.play(startOverInfo.streamUrl)
         }
     }
 
@@ -431,8 +500,8 @@ class LiveTVPlayerViewModel @Inject constructor(
 
         if (state.timeShiftMode == TimeShiftMode.LIVE) {
             // First pause - switch to time-shifted mode
-            playerController.togglePlayPause()
-            if (!playerController.isPlaying.value) {
+            liveTVPlayer.togglePlayPause()
+            if (!liveTVPlayer.isPlaying.value) {
                 _uiState.update { it.copy(
                     timeShiftMode = TimeShiftMode.TIME_SHIFTED,
                     isPaused = true
@@ -440,8 +509,8 @@ class LiveTVPlayerViewModel @Inject constructor(
             }
         } else {
             // Already time-shifted, just toggle play/pause
-            playerController.togglePlayPause()
-            _uiState.update { it.copy(isPaused = !playerController.isPlaying.value) }
+            liveTVPlayer.togglePlayPause()
+            _uiState.update { it.copy(isPaused = !liveTVPlayer.isPlaying.value) }
         }
     }
 
@@ -458,7 +527,7 @@ class LiveTVPlayerViewModel @Inject constructor(
         )}
 
         // Seek in the player using relative seek
-        playerController.seekBackward(seconds)
+        liveTVPlayer.seekRelative(-seconds * 1000L)
 
         Timber.d("Seeking back $seconds seconds, new offset: $newOffset")
     }
@@ -479,7 +548,7 @@ class LiveTVPlayerViewModel @Inject constructor(
                 timeShiftOffset = newOffset
             )}
 
-            playerController.seekForward(seconds)
+            liveTVPlayer.seekRelative(seconds * 1000L)
         }
 
         Timber.d("Seeking forward $seconds seconds, new offset: $newOffset")
@@ -498,23 +567,19 @@ class LiveTVPlayerViewModel @Inject constructor(
             isPaused = false
         )}
 
-        // Play the original live stream
-        liveStreamUrl?.let { url ->
-            playerController.playMedia(
-                mediaId = channel.id,
-                url = url
-            )
-        }
+        // Use LiveTVPlayer's goLive to seek to live edge
+        liveTVPlayer.goLive()
     }
 
     /**
      * Seek to a specific position (for scrubber)
      */
     fun seekToPosition(positionMs: Long) {
-        playerController.seekTo(positionMs)
+        liveTVPlayer.seekTo(positionMs)
 
         // Calculate offset from live
-        val durationMs = playerController.duration.value
+        val player = liveTVPlayer.getPlayer()
+        val durationMs = player?.duration ?: 0L
         val offsetMs = durationMs - positionMs
         val offsetSeconds = (offsetMs / 1000).coerceAtLeast(0)
 
@@ -564,7 +629,7 @@ class LiveTVPlayerViewModel @Inject constructor(
 
             // Timer expired - stop playback
             Timber.d("Sleep timer expired - stopping playback")
-            playerController.stop()
+            liveTVPlayer.stop()
             _uiState.update { it.copy(sleepTimerMinutesRemaining = null) }
         }
     }
@@ -652,11 +717,130 @@ class LiveTVPlayerViewModel @Inject constructor(
         )}
     }
 
+    // ============ Quick Recording ============
+
+    /**
+     * Schedule a quick recording for the currently playing program.
+     * Uses the current channel and current program from EPG.
+     */
+    fun scheduleQuickRecording() {
+        val channel = _uiState.value.currentChannel ?: return
+        val currentProgram = _uiState.value.upcomingPrograms.firstOrNull { program ->
+            val now = System.currentTimeMillis() / 1000
+            program.startTime <= now && program.endTime > now
+        }
+
+        viewModelScope.launch {
+            _uiState.update { it.copy(
+                isSchedulingRecording = true,
+                recordingError = null,
+                recordingSuccess = null
+            )}
+
+            val result = dvrRepository.scheduleRecording(
+                channelId = channel.id,
+                programId = currentProgram?.programId ?: currentProgram?.id,
+                startTime = currentProgram?.startTime ?: (System.currentTimeMillis() / 1000),
+                endTime = currentProgram?.endTime ?: (System.currentTimeMillis() / 1000 + 3600), // Default 1 hour
+                type = "single"
+            )
+
+            result.fold(
+                onSuccess = {
+                    val title = currentProgram?.title ?: channel.name
+                    Timber.d("Scheduled recording for: $title")
+                    _uiState.update { it.copy(
+                        isSchedulingRecording = false,
+                        isRecording = true,
+                        recordingSuccess = "Recording scheduled: $title"
+                    )}
+
+                    // Clear success message after 3 seconds
+                    delay(3000)
+                    _uiState.update { it.copy(recordingSuccess = null) }
+                },
+                onFailure = { e ->
+                    Timber.e(e, "Failed to schedule recording")
+                    _uiState.update { it.copy(
+                        isSchedulingRecording = false,
+                        recordingError = e.message ?: "Failed to schedule recording"
+                    )}
+
+                    // Clear error message after 3 seconds
+                    delay(3000)
+                    _uiState.update { it.copy(recordingError = null) }
+                }
+            )
+        }
+    }
+
+    /**
+     * Clear recording messages
+     */
+    fun clearRecordingMessages() {
+        _uiState.update { it.copy(
+            recordingSuccess = null,
+            recordingError = null
+        )}
+    }
+
+    // ============ Instant Switch Controls ============
+
+    /**
+     * Toggle instant switch mode on/off
+     */
+    fun toggleInstantSwitch() {
+        instantSwitchEnabled = !instantSwitchEnabled
+        _uiState.update { it.copy(instantSwitchEnabled = instantSwitchEnabled) }
+
+        if (instantSwitchEnabled) {
+            // Re-initialize instant switch with current channels
+            instantSwitchManager.setChannels(allChannels)
+        } else {
+            // Release instant switch resources
+            instantSwitchManager.release()
+        }
+
+        Timber.d("Instant switch ${if (instantSwitchEnabled) "enabled" else "disabled"}")
+    }
+
+    /**
+     * Set the surface view for video output.
+     * Routes to appropriate player based on instant switch mode.
+     */
+    fun setSurfaceView(surfaceView: android.view.SurfaceView?) {
+        if (instantSwitchEnabled) {
+            instantSwitchManager.setSurfaceView(surfaceView)
+        } else {
+            liveTVPlayer.setSurfaceView(surfaceView)
+        }
+    }
+
+    /**
+     * Get the active ExoPlayer instance
+     */
+    fun getActivePlayer(): androidx.media3.exoplayer.ExoPlayer? {
+        return if (instantSwitchEnabled) {
+            instantSwitchManager.getActivePlayer()
+        } else {
+            liveTVPlayer.getPlayer()
+        }
+    }
+
+    /**
+     * Check if instant switch is available for a specific channel
+     */
+    fun isInstantSwitchAvailable(channelId: String): Boolean {
+        return instantSwitchEnabled && instantSwitchManager.isInstantSwitchAvailable(channelId)
+    }
+
     override fun onCleared() {
         super.onCleared()
         timeshiftUpdateJob?.cancel()
         sleepTimerJob?.cancel()
-        playerController.stop()
+        liveTVPlayer.stop()
+        instantSwitchManager.release()
+        watchStatsService.endWatchSession()
     }
 }
 
@@ -703,7 +887,17 @@ data class LiveTVPlayerUiState(
     // Channel search
     val showChannelSearch: Boolean = false,
     val channelSearchQuery: String = "",
-    val filteredChannels: List<Channel> = emptyList()
+    val filteredChannels: List<Channel> = emptyList(),
+    // Quick recording
+    val isSchedulingRecording: Boolean = false,
+    val isRecording: Boolean = false,
+    val recordingSuccess: String? = null,
+    val recordingError: String? = null,
+    // Instant channel switching
+    val instantSwitchEnabled: Boolean = true,
+    val instantSwitchReady: Boolean = false,
+    val preBufferedChannelIds: Set<String> = emptySet(),
+    val wasInstantSwitch: Boolean = false
 ) {
     val isLive: Boolean get() = timeShiftMode == TimeShiftMode.LIVE
     val isTimeShifted: Boolean get() = timeShiftMode != TimeShiftMode.LIVE

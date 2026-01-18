@@ -4,7 +4,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.openflix.data.repository.DVRRepository
 import com.openflix.domain.model.Recording
+import com.openflix.domain.model.RecordingStats
+import com.openflix.domain.model.RecordingStatsData
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import timber.log.Timber
@@ -17,6 +21,8 @@ class DVRViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(DVRUiState())
     val uiState: StateFlow<DVRUiState> = _uiState.asStateFlow()
+
+    private var statsPollingJob: Job? = null
 
     fun loadRecordings() {
         viewModelScope.launch {
@@ -33,6 +39,12 @@ class DVRViewModel @Inject constructor(
                         )
                     }
                     Timber.d("Loaded ${recordings.size} recordings")
+
+                    // Start polling for stats if there are active recordings
+                    val hasActiveRecordings = recordings.any { it.status.name == "RECORDING" }
+                    if (hasActiveRecordings) {
+                        startStatsPolling()
+                    }
                 },
                 onFailure = { error ->
                     Timber.e(error, "Failed to load recordings")
@@ -67,10 +79,62 @@ class DVRViewModel @Inject constructor(
             )
         }
     }
+
+    private fun startStatsPolling() {
+        // Cancel any existing polling
+        statsPollingJob?.cancel()
+
+        statsPollingJob = viewModelScope.launch {
+            while (true) {
+                loadRecordingStats()
+                delay(5000) // Poll every 5 seconds
+            }
+        }
+    }
+
+    fun stopStatsPolling() {
+        statsPollingJob?.cancel()
+        statsPollingJob = null
+    }
+
+    private suspend fun loadRecordingStats() {
+        val result = dvrRepository.getRecordingStats()
+
+        result.fold(
+            onSuccess = { statsData ->
+                _uiState.update { it.copy(recordingStats = statsData) }
+
+                // If stats show failed recordings, refresh the recordings list
+                val hasFailedRecordings = statsData.stats.any { it.isFailed }
+                if (hasFailedRecordings) {
+                    // Refresh recordings list to get updated statuses
+                    loadRecordings()
+                }
+
+                // Stop polling if no more active recordings
+                if (statsData.activeCount == 0) {
+                    stopStatsPolling()
+                }
+            },
+            onFailure = { error ->
+                Timber.e(error, "Failed to load recording stats")
+            }
+        )
+    }
+
+    fun getStatsForRecording(recordingId: String): RecordingStats? {
+        return _uiState.value.recordingStats?.getStatsForRecording(recordingId)
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        stopStatsPolling()
+    }
 }
 
 data class DVRUiState(
     val isLoading: Boolean = false,
     val recordings: List<Recording> = emptyList(),
+    val recordingStats: RecordingStatsData? = null,
     val error: String? = null
 )

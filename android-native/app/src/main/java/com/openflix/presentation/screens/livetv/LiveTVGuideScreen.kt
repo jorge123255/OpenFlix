@@ -13,8 +13,12 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.Text as M3Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -56,26 +60,35 @@ import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
 import java.util.*
 
-// Premium dark theme with glassmorphism colors
+// OpenFlix theme - dark with cyan accents
 private object Theme {
-    val Background = Color(0xFF050508)
-    val Surface = Color(0xFF0D0D12)
-    val SurfaceElevated = Color(0xFF16161D)
-    val SurfaceHighlight = Color(0xFF22222D)
-    val Glass = Color(0xFF1A1A24)
-    val GlassBorder = Color(0xFF2A2A38)
+    // Base colors - matches OpenFlix dark theme
+    val Background = Color(0xFF0D0D0D)  // Near black
+    val Surface = Color(0xFF1A1A1A)     // Dark gray
+    val SurfaceElevated = Color(0xFF242424)  // Slightly lighter
+    val SurfaceHighlight = Color(0xFF2E2E2E)  // Highlighted/selected
+    val Glass = Color(0xFF1F1F1F)
+    val GlassBorder = Color(0xFF333333)
 
-    val Accent = Color(0xFF00D4AA)
-    val AccentGlow = Color(0xFF00FFD4)
+    // Accent colors - OpenFlix cyan/teal
+    val Accent = Color(0xFF00D4FF)       // OpenFlix cyan
+    val AccentGlow = Color(0xFF4DE8FF)   // Brighter cyan for glow
+    val AccentSelected = Color(0xFF0A3D4D)  // Selected item background
     val AccentRed = Color(0xFFFF3B5C)
     val AccentBlue = Color(0xFF3B82F6)
     val AccentGold = Color(0xFFFFB800)
 
-    val TextPrimary = Color.White
-    val TextSecondary = Color(0xFFB0B0C0)
-    val TextMuted = Color(0xFF606078)
+    // Program cell colors - dark with subtle borders
+    val ProgramCell = Color(0xFF1A1A1A)
+    val ProgramCellAlt = Color(0xFF1F1F1F)
+    val ProgramCellSelected = Color(0xFF2A3A3F)
+    val ProgramCellBorder = Color(0xFF2A2A2A)
 
-    // Category colors - vibrant gradients
+    val TextPrimary = Color.White
+    val TextSecondary = Color(0xFFB0B0B0)
+    val TextMuted = Color(0xFF666666)
+
+    // Category colors - vibrant for contrast
     val Sports = Color(0xFF10B981)
     val SportsGlow = Color(0xFF34D399)
     val Movie = Color(0xFFEF4444)
@@ -84,8 +97,14 @@ private object Theme {
     val NewsGlow = Color(0xFF60A5FA)
     val Kids = Color(0xFFF59E0B)
     val KidsGlow = Color(0xFFFBBF24)
-    val Entertainment = Color(0xFF8B5CF6)
-    val EntertainmentGlow = Color(0xFFA78BFA)
+    val Entertainment = Color(0xFF00D4FF)
+    val EntertainmentGlow = Color(0xFF4DE8FF)
+
+    // Quality badge colors
+    val BadgeUHD = Color(0xFF00D4FF)
+    val BadgeHDR = Color(0xFF10B981)
+    val BadgeDolby = Color(0xFF3B82F6)
+    val BadgeCC = Color(0xFF6B7280)
 }
 
 // Category filter options - FuboTV style
@@ -101,6 +120,14 @@ private enum class Category(val label: String, val icon: ImageVector?, val color
     JUST_ADDED("Just Added", Icons.Default.NewReleases, Theme.AccentBlue)
 }
 
+// Time range options for guide
+private enum class TimeRange(val label: String, val hours: Int) {
+    HOURS_3("3 Hours", 3),
+    HOURS_24("24 Hours", 24),
+    DAYS_7("7 Days", 24 * 7),
+    DAYS_14("14 Days", 24 * 14)
+}
+
 @Composable
 fun LiveTVGuideScreen(
     onBack: () -> Unit,
@@ -108,6 +135,8 @@ fun LiveTVGuideScreen(
     liveTVPlayer: LiveTVPlayer,
     onFullscreenChanged: (Boolean) -> Unit = {},
     onNavigateToMultiview: () -> Unit = {},
+    onNavigateToChannelSurfing: () -> Unit = {},
+    onNavigateToCatchup: () -> Unit = {},
     viewModel: LiveTVGuideViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -116,6 +145,13 @@ fun LiveTVGuideScreen(
     var selectedChannel by remember { mutableStateOf<ChannelWithPrograms?>(null) }
     var selectedProgram by remember { mutableStateOf<Program?>(null) }
     var selectedCategory by remember { mutableStateOf(Category.ALL) }
+    var selectedTimeRange by remember { mutableStateOf(TimeRange.HOURS_3) }
+    var selectedProvider by remember { mutableStateOf<String?>(null) }  // null = All providers
+
+    // Program options dialog state (for recording)
+    var showProgramOptionsDialog by remember { mutableStateOf(false) }
+    var programToRecord by remember { mutableStateOf<Program?>(null) }
+    var channelToRecord by remember { mutableStateOf<Channel?>(null) }
 
     // Use the shared LiveTVPlayer (ExoPlayer) - same player for preview and fullscreen
     val isPlaying by liveTVPlayer.isPlaying.collectAsState()
@@ -170,10 +206,10 @@ fun LiveTVGuideScreen(
 
     val pixelsPerMinute = 5.dp  // Slightly larger cells
     val slotMinutes = 30
-    val totalHours = 3
+    val totalHours = selectedTimeRange.hours
 
     val now = remember { System.currentTimeMillis() / 1000 }
-    val startTime = remember { (now / 1800) * 1800 }
+    val startTime = remember(selectedTimeRange) { (now / 1800) * 1800 }
     val endTime = startTime + (totalHours * 3600)
 
     val timeSlots = remember(startTime) {
@@ -184,11 +220,25 @@ fun LiveTVGuideScreen(
         ((now - startTime) / 60f) * pixelsPerMinute.value
     }
 
-    val channelWidth = 220.dp
+    val channelWidth = 200.dp  // Channels DVR style - compact
 
-    // Filter channels by category
-    val filteredGuide = remember(uiState.guide, selectedCategory) {
-        when (selectedCategory) {
+    // Get unique providers from channels (use sourceName or source as fallback)
+    val availableProviders = remember(uiState.guide) {
+        val providers = uiState.guide
+            .mapNotNull { it.channel.sourceName?.takeIf { s -> s.isNotBlank() } ?: it.channel.source?.takeIf { s -> s.isNotBlank() } }
+            .distinct()
+            .sorted()
+        timber.log.Timber.d("Available providers: $providers (from ${uiState.guide.size} channels)")
+        // Debug: log first few channel sourceNames
+        uiState.guide.take(5).forEach { cwp ->
+            timber.log.Timber.d("Channel ${cwp.channel.name}: sourceName=${cwp.channel.sourceName}, source=${cwp.channel.source}")
+        }
+        providers
+    }
+
+    // Filter channels by category AND provider
+    val filteredGuide = remember(uiState.guide, selectedCategory, selectedProvider) {
+        val categoryFiltered = when (selectedCategory) {
             Category.ALL -> uiState.guide
             Category.FAVORITES -> uiState.guide.filter { it.channel.favorite }
             Category.RECOMMENDED -> uiState.guide.filter { cwp ->
@@ -224,9 +274,20 @@ fun LiveTVGuideScreen(
                 cwp.programs.any { it.isNew || it.isPremiere }
             }
         }
+
+        // Apply provider filter if selected (check sourceName or source)
+        if (selectedProvider != null) {
+            categoryFiltered.filter {
+                val channelProvider = it.channel.sourceName?.takeIf { s -> s.isNotBlank() } ?: it.channel.source
+                channelProvider == selectedProvider
+            }
+        } else {
+            categoryFiltered
+        }
     }
 
-    LaunchedEffect(Unit) { viewModel.loadGuide(startTime, endTime) }
+    // Reload guide when time range changes
+    LaunchedEffect(selectedTimeRange) { viewModel.loadGuide(startTime, endTime) }
 
     LaunchedEffect(filteredGuide) {
         if (selectedChannel == null && filteredGuide.isNotEmpty()) {
@@ -335,6 +396,16 @@ fun LiveTVGuideScreen(
                                 true
                             } else false
                         }
+                        // S key - Channel Surfing mode
+                        Key.S -> {
+                            onNavigateToChannelSurfing()
+                            true
+                        }
+                        // C key - Catch Up TV
+                        Key.C -> {
+                            onNavigateToCatchup()
+                            true
+                        }
                         else -> false
                     }
                 } else false
@@ -365,7 +436,7 @@ fun LiveTVGuideScreen(
             exit = fadeOut()
         ) {
             Column(Modifier.fillMaxSize()) {
-                // Top section: Video preview + Info panel
+                // Top section: Info panel (full width)
                 TopInfoSection(
                     channel = selectedChannel?.channel,
                     program = selectedProgram,
@@ -375,30 +446,83 @@ fun LiveTVGuideScreen(
                     onMuteToggle = { liveTVPlayer.toggleMute() }
                 )
 
-                // Category filter tabs
-                CategoryTabs(
-                    selected = selectedCategory,
-                    onSelect = { selectedCategory = it },
-                    focusRequester = categoryTabsFocusRequester,
-                    onDownPressed = { guideFocusRequester.requestFocus() }
+                // Favorites quick access bar
+                val favoriteChannels = remember(uiState.guide) {
+                    uiState.guide.filter { it.channel.favorite }
+                }
+                if (favoriteChannels.isNotEmpty()) {
+                    FavoritesQuickBar(
+                        favoriteChannels = favoriteChannels,
+                        currentChannelId = currentChannelId,
+                        onChannelClick = { cwp ->
+                            selectedChannel = cwp
+                            selectedProgram = cwp.programs.find { it.isAiring }
+                            currentChannelId = cwp.channel.id
+                            viewModel.trackChannelWatch(cwp.channel)
+                            cwp.channel.streamUrl?.let { liveTVPlayer.play(it) }
+                            isFullscreen = true
+                        },
+                        onLongClick = { cwp ->
+                            // Could show context menu to remove from favorites
+                        }
+                    )
+                }
+
+                // Recent channels quick access bar
+                val recentChannelIds by viewModel.recentChannelIds.collectAsState()
+                val recentChannels = remember(uiState.guide, recentChannelIds) {
+                    recentChannelIds.mapNotNull { id ->
+                        uiState.guide.find { it.channel.id == id }
+                    }.filter { !it.channel.favorite } // Exclude favorites (they have their own bar)
+                }
+                if (recentChannels.isNotEmpty()) {
+                    RecentChannelsBar(
+                        recentChannels = recentChannels,
+                        currentChannelId = currentChannelId,
+                        onChannelClick = { cwp ->
+                            selectedChannel = cwp
+                            selectedProgram = cwp.programs.find { it.isAiring }
+                            currentChannelId = cwp.channel.id
+                            viewModel.trackChannelWatch(cwp.channel)
+                            cwp.channel.streamUrl?.let { liveTVPlayer.play(it) }
+                            isFullscreen = true
+                        }
+                    )
+                }
+
+                // Filter bar with category, time range, and provider filters
+                GuideFilterBar(
+                    selectedCategory = selectedCategory,
+                    onCategorySelect = { selectedCategory = it },
+                    selectedTimeRange = selectedTimeRange,
+                    onTimeRangeSelect = { selectedTimeRange = it },
+                    selectedProvider = selectedProvider,
+                    onProviderSelect = { selectedProvider = it },
+                    availableProviders = availableProviders,
+                    categoryFocusRequester = categoryTabsFocusRequester,
+                    onDownPressed = { guideFocusRequester.requestFocus() },
+                    onRefresh = { viewModel.loadGuide(startTime, endTime) },
+                    isLoading = uiState.isLoading
                 )
 
-                // Time header with scrubbing
-                TimeHeader(
-                    slots = timeSlots,
-                    channelWidth = channelWidth,
-                    pxPerMin = pixelsPerMinute,
-                    slotMins = slotMinutes,
-                    now = now,
-                    onShiftTime = { mins -> viewModel.shiftTime(mins) }
-                )
+                // Guide content area
+                Column(Modifier.weight(1f)) {
+                    // Time header
+                    TimeHeader(
+                            slots = timeSlots,
+                            channelWidth = channelWidth,
+                            pxPerMin = pixelsPerMinute,
+                            slotMins = slotMinutes,
+                            now = now,
+                            onShiftTime = { mins -> viewModel.shiftTime(mins) }
+                        )
 
-                // Grid
-                when {
-                    uiState.isLoading -> LoadingView()
-                    uiState.error != null -> ErrorView(uiState.error!!) { viewModel.loadGuide(startTime, endTime) }
-                    filteredGuide.isEmpty() -> EmptyView(selectedCategory != Category.ALL)
-                    else -> {
+                        // Grid
+                        when {
+                            uiState.isLoading -> LoadingView()
+                            uiState.error != null -> ErrorView(uiState.error!!) { viewModel.loadGuide(startTime, endTime) }
+                            filteredGuide.isEmpty() -> EmptyView(selectedCategory != Category.ALL)
+                            else -> {
                         val displayed = remember(filteredGuide, uiState.displayedCount) {
                             filteredGuide.take(uiState.displayedCount)
                         }
@@ -429,7 +553,13 @@ fun LiveTVGuideScreen(
                                             selectedProgram = cwp.programs.find { it.isAiring }
                                         },
                                         onProgramFocus = { p -> selectedChannel = cwp; selectedProgram = p },
-                                        onSelect = { handleChannelSelect(cwp) }
+                                        onSelect = { handleChannelSelect(cwp) },
+                                        onProgramLongPress = { p ->
+                                            // Show recording options dialog
+                                            programToRecord = p
+                                            channelToRecord = cwp.channel
+                                            showProgramOptionsDialog = true
+                                        }
                                     )
                                 }
 
@@ -478,11 +608,12 @@ fun LiveTVGuideScreen(
                                         )
                                 )
                             }
+                            }
                         }
-                    }
-                }
-            }
-        }
+                    } // End when
+                } // End Column (guide content)
+            } // End Column (main)
+        } // End AnimatedVisibility (guide UI)
 
         // Fullscreen controls overlay (video is rendered separately above)
         // Fullscreen player controls overlay
@@ -524,7 +655,8 @@ fun LiveTVGuideScreen(
                     onSeekBack = { liveTVPlayer.seekBack10() },
                     onSeekForward = { liveTVPlayer.seekForward10() },
                     onGoLive = { liveTVPlayer.goLive() },
-                    onStartOver = { /* TODO */ }
+                    onStartOver = { /* TODO */ },
+                    onCatchup = onNavigateToCatchup
                 )
             }
         }
@@ -557,6 +689,112 @@ fun LiveTVGuideScreen(
                 streamInfo = streamInfo,
                 onDismiss = { showProgramInfo = false }
             )
+        }
+
+        // Program Options Dialog (for recording)
+        if (showProgramOptionsDialog && programToRecord != null) {
+            ProgramOptionsDialog(
+                program = programToRecord!!,
+                channel = channelToRecord,
+                isScheduling = uiState.isSchedulingRecording,
+                onDismiss = {
+                    showProgramOptionsDialog = false
+                    programToRecord = null
+                    channelToRecord = null
+                },
+                onWatch = {
+                    // Watch the program (go to fullscreen)
+                    showProgramOptionsDialog = false
+                    val cwp = selectedChannel
+                    if (cwp != null) {
+                        handleChannelSelect(cwp)
+                    }
+                },
+                onRecord = {
+                    // Schedule single recording
+                    channelToRecord?.id?.let { channelId ->
+                        programToRecord?.let { program ->
+                            viewModel.scheduleRecording(channelId, program, recordSeries = false)
+                        }
+                    }
+                    showProgramOptionsDialog = false
+                    programToRecord = null
+                    channelToRecord = null
+                },
+                onRecordSeries = {
+                    // Schedule series recording
+                    channelToRecord?.id?.let { channelId ->
+                        programToRecord?.let { program ->
+                            viewModel.scheduleRecording(channelId, program, recordSeries = true)
+                        }
+                    }
+                    showProgramOptionsDialog = false
+                    programToRecord = null
+                    channelToRecord = null
+                }
+            )
+        }
+
+        // Recording success/error messages
+        uiState.recordingSuccess?.let { message ->
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 32.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(Theme.Sports.copy(alpha = 0.9f))
+                        .padding(horizontal = 24.dp, vertical = 12.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            Icons.Default.Check,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = message,
+                            color = Color.White,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
+            }
+        }
+
+        uiState.recordingError?.let { error ->
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 32.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(Theme.AccentRed.copy(alpha = 0.9f))
+                        .padding(horizontal = 24.dp, vertical = 12.dp)
+                        .clickable { viewModel.clearRecordingError() }
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            Icons.Default.Error,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = error,
+                            color = Color.White,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
+            }
         }
     }
 }
@@ -990,6 +1228,9 @@ private fun FullscreenControls(
     }
 }
 
+/**
+ * Premium info panel - Channels DVR style with large artwork and detailed badges
+ */
 @Composable
 private fun TopInfoSection(
     channel: Channel?,
@@ -1003,293 +1244,258 @@ private fun TopInfoSection(
         Modifier
             .fillMaxWidth()
             .height(180.dp)
+            .background(Theme.Background)
     ) {
-        // Background art with blur effect
-        program?.art?.let { artUrl ->
-            AsyncImage(
-                model = artUrl,
-                contentDescription = null,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .graphicsLayer { alpha = 0.3f },
-                contentScale = ContentScale.Crop
-            )
-        }
-
-        // Glassmorphism overlay
-        Box(
-            Modifier
-                .fillMaxSize()
-                .background(
-                    Brush.verticalGradient(
-                        listOf(
-                            Theme.Glass.copy(0.95f),
-                            Theme.Glass.copy(0.85f),
-                            Theme.Background
-                        )
-                    )
-                )
-        )
-
         Row(
             Modifier
                 .fillMaxSize()
-                .padding(20.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .padding(start = 20.dp, end = 24.dp, top = 16.dp, bottom = 16.dp),
+            verticalAlignment = Alignment.Top
         ) {
-            // Video Preview Panel
+            // Program Artwork - larger poster style
             Box(
                 Modifier
-                    .size(260.dp, 146.dp)  // 16:9 aspect ratio
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(Theme.SurfaceElevated)
-                    .border(2.dp, if (isPlaying) Theme.Accent else Theme.GlassBorder, RoundedCornerShape(12.dp)),
+                    .width(200.dp)
+                    .height(150.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(Theme.Surface),
                 Alignment.Center
             ) {
-                if (isPlaying) {
-                    // Live video preview using ExoPlayer PlayerView
-                    AndroidView(
-                        factory = { ctx ->
-                            androidx.media3.ui.PlayerView(ctx).apply {
-                                useController = false
-                                liveTVPlayer.getPlayer()?.let { player = it }
-                            }
-                        },
-                        update = { playerView ->
-                            liveTVPlayer.getPlayer()?.let { playerView.player = it }
-                        },
-                        modifier = Modifier.fillMaxSize()
+                val imageUrl = program?.art ?: program?.thumb ?: channel?.logoUrl
+                if (imageUrl != null) {
+                    AsyncImage(
+                        model = imageUrl,
+                        contentDescription = program?.title,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
                     )
-
-                    // Gradient overlay at bottom
-                    Box(
-                        Modifier
-                            .fillMaxWidth()
-                            .height(40.dp)
-                            .align(Alignment.BottomCenter)
-                            .background(
-                                Brush.verticalGradient(
-                                    listOf(Color.Transparent, Color.Black.copy(0.7f))
-                                )
-                            )
-                    )
-
-                    // Mute button
-                    Box(
-                        Modifier
-                            .align(Alignment.BottomEnd)
-                            .padding(8.dp)
-                            .size(32.dp)
-                            .clip(CircleShape)
-                            .background(Color.Black.copy(0.6f))
-                            .clickable { onMuteToggle() },
-                        Alignment.Center
-                    ) {
-                        Icon(
-                            if (isMuted) Icons.Default.VolumeOff else Icons.Default.VolumeUp,
-                            contentDescription = if (isMuted) "Unmute" else "Mute",
-                            modifier = Modifier.size(18.dp),
-                            tint = Color.White
-                        )
-                    }
-
-                    // LIVE badge
-                    Box(
-                        Modifier
-                            .align(Alignment.TopStart)
-                            .padding(8.dp)
-                    ) {
-                        AnimatedLiveBadge()
-                    }
                 } else {
-                    // Static image fallback
-                    val imageUrl = program?.thumb ?: program?.art ?: channel?.logoUrl
-                    if (imageUrl != null) {
-                        AsyncImage(
-                            model = imageUrl,
-                            contentDescription = null,
-                            modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.Crop
-                        )
-                    } else {
-                        Icon(Icons.Default.Tv, null, Modifier.size(48.dp), Theme.TextMuted)
-                    }
-
-                    // Loading indicator
-                    if (channel != null) {
-                        Box(
-                            Modifier
-                                .fillMaxSize()
-                                .background(Color.Black.copy(0.4f)),
-                            Alignment.Center
-                        ) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                PulsingDots()
-                                Spacer(Modifier.height(8.dp))
-                                Text("Loading preview...", color = Theme.TextMuted, fontSize = 11.sp)
-                            }
-                        }
-                    }
-
-                    // LIVE overlay for static image
-                    if (program?.isAiring == true) {
-                        Box(
-                            Modifier
-                                .align(Alignment.TopStart)
-                                .padding(8.dp)
-                        ) {
-                            AnimatedLiveBadge()
-                        }
-                    }
+                    Icon(
+                        Icons.Default.Tv,
+                        contentDescription = null,
+                        modifier = Modifier.size(48.dp),
+                        tint = Theme.TextMuted
+                    )
                 }
             }
 
             Spacer(Modifier.width(20.dp))
 
-            // Channel & Program info
-            Column(Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    // Channel logo
-                    channel?.logoUrl?.let {
-                        Box(
-                            Modifier
-                                .size(36.dp)
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(Theme.SurfaceElevated),
-                            Alignment.Center
-                        ) {
-                            AsyncImage(it, null, Modifier.size(28.dp))
-                        }
-                        Spacer(Modifier.width(12.dp))
-                    }
-
-                    channel?.number?.let {
-                        Text(it, color = Theme.Accent, fontSize = 22.sp, fontWeight = FontWeight.Bold)
-                        Spacer(Modifier.width(10.dp))
-                    }
-
-                    Text(
-                        channel?.name ?: "Select a channel",
-                        color = Theme.TextPrimary,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f, false)
-                    )
-
-                    channel?.let { ch ->
-                        Spacer(Modifier.width(12.dp))
-                        if (ch.hd) {
-                            GlowBadge("HD", Theme.AccentBlue)
-                            Spacer(Modifier.width(8.dp))
-                        }
-                    }
-                }
-
-                program?.let { p ->
-                    Spacer(Modifier.height(12.dp))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        CategoryChip(p)
-                        Spacer(Modifier.width(10.dp))
-                        Text(
-                            p.title,
-                            color = Theme.TextPrimary,
-                            fontSize = 26.sp,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f, false)
-                        )
-                    }
-
-                    // Episode info
-                    (p.episodeInfo ?: p.subtitle)?.let { info ->
-                        Spacer(Modifier.height(4.dp))
-                        Text(info, color = Theme.TextSecondary, fontSize = 14.sp, maxLines = 1)
-                    }
-
-                    // Time + Progress
-                    Spacer(Modifier.height(8.dp))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        val fmt = SimpleDateFormat("h:mm a", Locale.getDefault())
-                        Text(
-                            "${fmt.format(Date(p.startTime * 1000))} - ${fmt.format(Date(p.endTime * 1000))}",
-                            color = Theme.TextSecondary,
-                            fontSize = 13.sp
-                        )
-
-                        if (p.isAiring) {
-                            Spacer(Modifier.width(16.dp))
-                            Box(
-                                Modifier
-                                    .width(80.dp)
-                                    .height(4.dp)
-                                    .clip(RoundedCornerShape(2.dp))
-                                    .background(Theme.SurfaceHighlight)
-                            ) {
-                                Box(
-                                    Modifier
-                                        .fillMaxHeight()
-                                        .fillMaxWidth(p.progress)
-                                        .background(
-                                            Brush.horizontalGradient(
-                                                listOf(Theme.AccentRed, Theme.AccentGold)
-                                            )
-                                        )
-                                )
-                            }
-                            Spacer(Modifier.width(8.dp))
-                            Text(
-                                "${(p.progress * 100).toInt()}%",
-                                color = Theme.AccentGold,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                        }
-                    }
-                }
-            }
-
-            // Description
-            program?.description?.let { desc ->
-                Spacer(Modifier.width(24.dp))
-                Box(
-                    Modifier
-                        .weight(0.6f)
-                        .fillMaxHeight()
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(Theme.Glass.copy(0.5f))
-                        .border(1.dp, Theme.GlassBorder.copy(0.3f), RoundedCornerShape(12.dp))
-                        .padding(12.dp)
+            // Program Info Column
+            Column(
+                Modifier.weight(1f),
+                verticalArrangement = Arrangement.Top
+            ) {
+                // Title and time
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.Top
                 ) {
                     Text(
-                        desc,
+                        text = program?.title ?: channel?.name ?: "Select a program",
+                        color = Theme.TextPrimary,
+                        fontSize = 26.sp,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f)
+                    )
+
+                    // Show time if available
+                    program?.let { p ->
+                        val fmt = SimpleDateFormat("h:mma", Locale.getDefault())
+                        Text(
+                            text = fmt.format(Date(p.startTime * 1000)),
+                            color = Theme.TextSecondary,
+                            fontSize = 14.sp,
+                            modifier = Modifier.padding(start = 12.dp)
+                        )
+                    }
+                }
+
+                // Subtitle/Episode info
+                val subtitle = program?.episodeInfo ?: program?.subtitle
+                if (subtitle != null) {
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        text = subtitle,
+                        color = Theme.TextSecondary,
+                        fontSize = 14.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+
+                Spacer(Modifier.height(10.dp))
+
+                // Badges row - more comprehensive like Channels DVR
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    program?.let { p ->
+                        if (p.isNew || p.isPremiere) {
+                            QualityBadge(if (p.isPremiere) "Premiere" else "New", Theme.Sports)
+                        }
+                    }
+                    channel?.let { ch ->
+                        if (ch.hd) {
+                            QualityBadge("HD", Theme.AccentBlue)
+                        }
+                    }
+                    // Additional badges
+                    QualityBadge("CC", Theme.TextMuted)
+                }
+
+                Spacer(Modifier.height(12.dp))
+
+                // Description
+                program?.description?.let { desc ->
+                    Text(
+                        text = desc,
                         color = Theme.TextSecondary,
                         fontSize = 13.sp,
-                        maxLines = 5,
+                        maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                         lineHeight = 18.sp
                     )
                 }
             }
-
         }
     }
 }
 
+/**
+ * Quality badge component (UHD, HDR, Dolby Atmos style)
+ */
 @Composable
-private fun CategoryTabs(
+private fun QualityBadge(text: String, color: Color) {
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(4.dp))
+            .background(color.copy(alpha = 0.9f))
+            .padding(horizontal = 10.dp, vertical = 4.dp)
+    ) {
+        Text(
+            text = text,
+            color = Color.White,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Bold
+        )
+    }
+}
+
+/**
+ * OpenFlix style vertical category sidebar
+ */
+@Composable
+private fun CategorySidebar(
+    selected: Category,
+    onSelect: (Category) -> Unit,
+    focusRequester: FocusRequester,
+    onRightPressed: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .width(150.dp)
+            .fillMaxHeight()
+            .background(Theme.Surface)
+    ) {
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.spacedBy(0.dp)
+        ) {
+            itemsIndexed(Category.values().toList(), key = { _, cat -> cat.name }) { index, cat ->
+                val isSelected = selected == cat
+                var isFocused by remember { mutableStateOf(false) }
+
+                val bgColor by animateColorAsState(
+                    when {
+                        isFocused -> Theme.SurfaceHighlight
+                        isSelected -> Theme.Surface
+                        else -> Color.Transparent
+                    },
+                    tween(150), "sidebarBg"
+                )
+
+                Surface(
+                    onClick = { onSelect(cat) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .then(if (index == 0) Modifier.focusRequester(focusRequester) else Modifier)
+                        .onFocusChanged { isFocused = it.isFocused }
+                        .onKeyEvent { e ->
+                            if (e.type == KeyEventType.KeyDown && e.key == Key.DirectionRight) {
+                                onRightPressed()
+                                true
+                            } else false
+                        },
+                    shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(0.dp)),
+                    colors = ClickableSurfaceDefaults.colors(
+                        containerColor = bgColor,
+                        focusedContainerColor = Theme.SurfaceHighlight
+                    ),
+                    border = ClickableSurfaceDefaults.border(
+                        focusedBorder = Border(
+                            border = BorderStroke(2.dp, Theme.Accent),
+                            shape = RoundedCornerShape(8.dp)
+                        )
+                    )
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // Icon
+                        cat.icon?.let { icon ->
+                            Icon(
+                                icon,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp),
+                                tint = when {
+                                    isSelected -> Theme.Accent
+                                    isFocused -> cat.color
+                                    else -> Theme.TextMuted
+                                }
+                            )
+                            Spacer(Modifier.width(10.dp))
+                        }
+
+                        // Label
+                        Text(
+                            text = cat.label,
+                            color = when {
+                                isSelected -> Theme.Accent
+                                isFocused -> Theme.TextPrimary
+                                else -> Theme.TextSecondary
+                            },
+                            fontSize = 13.sp,
+                            fontWeight = if (isSelected) FontWeight.Medium else FontWeight.Normal
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Horizontal category filter row - compact chips style
+ */
+@Composable
+private fun CategoryFilterRow(
     selected: Category,
     onSelect: (Category) -> Unit,
     focusRequester: FocusRequester,
     onDownPressed: () -> Unit
 ) {
-    // FuboTV-style scrollable filter tabs
     LazyRow(
         modifier = Modifier
             .fillMaxWidth()
-            .height(52.dp)
+            .height(48.dp)
             .background(Theme.Surface),
         contentPadding = PaddingValues(horizontal = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -1298,15 +1504,6 @@ private fun CategoryTabs(
         itemsIndexed(Category.values().toList(), key = { _, cat -> cat.name }) { index, cat ->
             val isSelected = selected == cat
             var isFocused by remember { mutableStateOf(false) }
-
-            val bgColor by animateColorAsState(
-                when {
-                    isSelected -> Theme.SurfaceHighlight
-                    isFocused -> Theme.SurfaceElevated
-                    else -> Theme.Surface
-                },
-                tween(150), "tabBg"
-            )
 
             Surface(
                 onClick = { onSelect(cat) },
@@ -1321,42 +1518,39 @@ private fun CategoryTabs(
                     },
                 shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(20.dp)),
                 colors = ClickableSurfaceDefaults.colors(
-                    containerColor = bgColor,
+                    containerColor = if (isSelected) Theme.Accent.copy(alpha = 0.2f) else Theme.SurfaceElevated,
                     focusedContainerColor = Theme.SurfaceHighlight
                 ),
                 border = ClickableSurfaceDefaults.border(
-                    border = if (isSelected) Border(border = BorderStroke(1.dp, Theme.TextMuted.copy(0.3f)), shape = RoundedCornerShape(20.dp)) else Border.None,
-                    focusedBorder = Border(border = BorderStroke(2.dp, Theme.Accent), shape = RoundedCornerShape(20.dp))
+                    border = if (isSelected) Border(
+                        border = BorderStroke(1.5.dp, Theme.Accent),
+                        shape = RoundedCornerShape(20.dp)
+                    ) else Border.None,
+                    focusedBorder = Border(
+                        border = BorderStroke(2.dp, Theme.Accent),
+                        shape = RoundedCornerShape(20.dp)
+                    )
                 ),
                 scale = ClickableSurfaceDefaults.scale(focusedScale = 1.05f)
             ) {
                 Row(
-                    Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Checkmark for selected "All" tab (FuboTV style)
-                    if (cat == Category.ALL && isSelected) {
+                    cat.icon?.let { icon ->
                         Icon(
-                            Icons.Default.Check,
-                            null,
-                            Modifier.size(16.dp),
-                            Theme.Accent
-                        )
-                        Spacer(Modifier.width(6.dp))
-                    } else if (cat.icon != null) {
-                        Icon(
-                            cat.icon,
-                            null,
-                            Modifier.size(16.dp),
-                            if (isSelected || isFocused) cat.color else Theme.TextMuted
+                            icon,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                            tint = if (isSelected) Theme.Accent else Theme.TextSecondary
                         )
                         Spacer(Modifier.width(6.dp))
                     }
                     Text(
-                        cat.label,
-                        color = if (isSelected) Theme.TextPrimary else Theme.TextSecondary,
-                        fontSize = 14.sp,
-                        fontWeight = if (isSelected) FontWeight.Medium else FontWeight.Normal
+                        text = cat.label,
+                        color = if (isSelected) Theme.Accent else Theme.TextPrimary,
+                        fontSize = 13.sp,
+                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal
                     )
                 }
             }
@@ -1364,6 +1558,279 @@ private fun CategoryTabs(
     }
 }
 
+/**
+ * Complete filter bar with categories, time range, and provider selector
+ */
+@Composable
+private fun GuideFilterBar(
+    selectedCategory: Category,
+    onCategorySelect: (Category) -> Unit,
+    selectedTimeRange: TimeRange,
+    onTimeRangeSelect: (TimeRange) -> Unit,
+    selectedProvider: String?,
+    onProviderSelect: (String?) -> Unit,
+    availableProviders: List<String>,
+    categoryFocusRequester: FocusRequester,
+    onDownPressed: () -> Unit,
+    onRefresh: () -> Unit = {},
+    isLoading: Boolean = false
+) {
+    var showTimeRangeDropdown by remember { mutableStateOf(false) }
+    var showProviderDropdown by remember { mutableStateOf(false) }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(56.dp)
+            .background(Theme.Surface)
+            .padding(horizontal = 16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        // Category chips (scrollable)
+        LazyRow(
+            modifier = Modifier.weight(1f),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            itemsIndexed(Category.values().toList(), key = { _, cat -> cat.name }) { index, cat ->
+                val isSelected = selectedCategory == cat
+                var isFocused by remember { mutableStateOf(false) }
+
+                Surface(
+                    onClick = { onCategorySelect(cat) },
+                    modifier = Modifier
+                        .then(if (index == 0) Modifier.focusRequester(categoryFocusRequester) else Modifier)
+                        .onFocusChanged { isFocused = it.isFocused }
+                        .onKeyEvent { e ->
+                            if (e.type == KeyEventType.KeyDown && e.key == Key.DirectionDown) {
+                                onDownPressed()
+                                true
+                            } else false
+                        },
+                    shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(20.dp)),
+                    colors = ClickableSurfaceDefaults.colors(
+                        containerColor = if (isSelected) Theme.Accent.copy(alpha = 0.2f) else Theme.SurfaceElevated,
+                        focusedContainerColor = Theme.SurfaceHighlight
+                    ),
+                    border = ClickableSurfaceDefaults.border(
+                        border = if (isSelected) Border(
+                            border = BorderStroke(1.5.dp, Theme.Accent),
+                            shape = RoundedCornerShape(20.dp)
+                        ) else Border.None,
+                        focusedBorder = Border(
+                            border = BorderStroke(2.dp, Theme.Accent),
+                            shape = RoundedCornerShape(20.dp)
+                        )
+                    ),
+                    scale = ClickableSurfaceDefaults.scale(focusedScale = 1.05f)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        cat.icon?.let { icon ->
+                            Icon(
+                                icon,
+                                contentDescription = null,
+                                modifier = Modifier.size(14.dp),
+                                tint = if (isSelected) Theme.Accent else Theme.TextSecondary
+                            )
+                            Spacer(Modifier.width(4.dp))
+                        }
+                        Text(
+                            text = cat.label,
+                            color = if (isSelected) Theme.Accent else Theme.TextPrimary,
+                            fontSize = 12.sp,
+                            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal
+                        )
+                    }
+                }
+            }
+        }
+
+        // Divider
+        Box(
+            Modifier
+                .width(1.dp)
+                .height(24.dp)
+                .background(Theme.TextMuted.copy(alpha = 0.3f))
+        )
+
+        // Time Range dropdown button
+        Box {
+            Surface(
+                onClick = { showTimeRangeDropdown = !showTimeRangeDropdown },
+                shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(8.dp)),
+                colors = ClickableSurfaceDefaults.colors(
+                    containerColor = Theme.SurfaceElevated,
+                    focusedContainerColor = Theme.SurfaceHighlight
+                ),
+                border = ClickableSurfaceDefaults.border(
+                    focusedBorder = Border(
+                        border = BorderStroke(2.dp, Theme.Accent),
+                        shape = RoundedCornerShape(8.dp)
+                    )
+                )
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        Icons.Default.Schedule,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                        tint = Theme.TextSecondary
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        text = selectedTimeRange.label,
+                        color = Theme.TextPrimary,
+                        fontSize = 12.sp
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    Icon(
+                        Icons.Default.ArrowDropDown,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                        tint = Theme.TextSecondary
+                    )
+                }
+            }
+
+            DropdownMenu(
+                expanded = showTimeRangeDropdown,
+                onDismissRequest = { showTimeRangeDropdown = false }
+            ) {
+                TimeRange.values().forEach { range ->
+                    DropdownMenuItem(
+                        text = { Text(range.label) },
+                        onClick = {
+                            onTimeRangeSelect(range)
+                            showTimeRangeDropdown = false
+                        },
+                        leadingIcon = if (range == selectedTimeRange) {
+                            { Icon(Icons.Default.Check, null, tint = Theme.Accent) }
+                        } else null
+                    )
+                }
+            }
+        }
+
+        // Provider dropdown button
+        Box {
+                Surface(
+                    onClick = { showProviderDropdown = !showProviderDropdown },
+                    shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(8.dp)),
+                    colors = ClickableSurfaceDefaults.colors(
+                        containerColor = if (selectedProvider != null) Theme.Accent.copy(alpha = 0.2f) else Theme.SurfaceElevated,
+                        focusedContainerColor = Theme.SurfaceHighlight
+                    ),
+                    border = ClickableSurfaceDefaults.border(
+                        border = if (selectedProvider != null) Border(
+                            border = BorderStroke(1.5.dp, Theme.Accent),
+                            shape = RoundedCornerShape(8.dp)
+                        ) else Border.None,
+                        focusedBorder = Border(
+                            border = BorderStroke(2.dp, Theme.Accent),
+                            shape = RoundedCornerShape(8.dp)
+                        )
+                    )
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            Icons.Default.FilterList,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                            tint = if (selectedProvider != null) Theme.Accent else Theme.TextSecondary
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            text = selectedProvider ?: "All Sources",
+                            color = if (selectedProvider != null) Theme.Accent else Theme.TextPrimary,
+                            fontSize = 12.sp,
+                            maxLines = 1
+                        )
+                        Spacer(Modifier.width(4.dp))
+                        Icon(
+                            Icons.Default.ArrowDropDown,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                            tint = if (selectedProvider != null) Theme.Accent else Theme.TextSecondary
+                        )
+                    }
+                }
+
+                DropdownMenu(
+                    expanded = showProviderDropdown,
+                    onDismissRequest = { showProviderDropdown = false }
+                ) {
+                    // "All Sources" option
+                    DropdownMenuItem(
+                        text = { Text("All Sources") },
+                        onClick = {
+                            onProviderSelect(null)
+                            showProviderDropdown = false
+                        },
+                        leadingIcon = if (selectedProvider == null) {
+                            { Icon(Icons.Default.Check, null, tint = Theme.Accent) }
+                        } else null
+                    )
+
+                    // Individual providers
+                    availableProviders.forEach { provider ->
+                        DropdownMenuItem(
+                            text = { Text(provider) },
+                            onClick = {
+                                onProviderSelect(provider)
+                                showProviderDropdown = false
+                            },
+                            leadingIcon = if (provider == selectedProvider) {
+                                { Icon(Icons.Default.Check, null, tint = Theme.Accent) }
+                            } else null
+                        )
+                    }
+                }
+            }
+
+            // Refresh button
+            Surface(
+                onClick = { if (!isLoading) onRefresh() },
+                shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(8.dp)),
+                colors = ClickableSurfaceDefaults.colors(
+                    containerColor = if (isLoading) Theme.Accent.copy(alpha = 0.2f) else Theme.SurfaceElevated,
+                    focusedContainerColor = Theme.SurfaceHighlight
+                ),
+                border = ClickableSurfaceDefaults.border(
+                    focusedBorder = Border(
+                        border = BorderStroke(1.5.dp, Theme.Accent),
+                        shape = RoundedCornerShape(8.dp)
+                    )
+                ),
+                scale = ClickableSurfaceDefaults.scale(focusedScale = 1.05f)
+            ) {
+                Box(
+                    modifier = Modifier.padding(8.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Default.Refresh,
+                        contentDescription = "Refresh Guide",
+                        modifier = Modifier.size(20.dp),
+                        tint = if (isLoading) Theme.Accent else Theme.TextSecondary
+                    )
+                }
+            }
+    }
+}
+
+/**
+ * OpenFlix style time header
+ */
 @Composable
 private fun TimeHeader(
     slots: List<Long>,
@@ -1373,7 +1840,7 @@ private fun TimeHeader(
     now: Long,
     onShiftTime: (Int) -> Unit
 ) {
-    val dayFmt = SimpleDateFormat("EEEE", Locale.getDefault())
+    val dayFmt = SimpleDateFormat("EEE, MMM d", Locale.getDefault())
     val isToday = remember(slots.firstOrNull()) {
         val cal = Calendar.getInstance()
         val today = cal.get(Calendar.DAY_OF_YEAR)
@@ -1384,78 +1851,62 @@ private fun TimeHeader(
     Row(
         Modifier
             .fillMaxWidth()
-            .height(44.dp)
+            .height(40.dp)
             .background(Theme.SurfaceElevated)
     ) {
-        // FuboTV-style "Today >" button
-        Surface(
-            onClick = { onShiftTime(-30) },
-            modifier = Modifier.width(channelWidth).fillMaxHeight(),
-            shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(0.dp)),
-            colors = ClickableSurfaceDefaults.colors(Theme.Surface, focusedContainerColor = Theme.SurfaceHighlight)
+        // Date/channel header
+        Box(
+            Modifier
+                .width(channelWidth)
+                .fillMaxHeight()
+                .background(Theme.Surface),
+            contentAlignment = Alignment.CenterStart
         ) {
             Row(
-                Modifier.fillMaxSize().padding(horizontal = 16.dp),
+                Modifier.padding(horizontal = 12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Day indicator with arrow
                 Text(
-                    if (isToday) "Today" else dayFmt.format(Date((slots.firstOrNull() ?: 0) * 1000)),
+                    text = if (isToday) "Today" else dayFmt.format(Date((slots.firstOrNull() ?: 0) * 1000)),
                     color = Theme.TextPrimary,
-                    fontSize = 14.sp,
+                    fontSize = 13.sp,
                     fontWeight = FontWeight.Medium
-                )
-                Spacer(Modifier.width(8.dp))
-                Icon(
-                    Icons.Default.ChevronRight,
-                    null,
-                    Modifier.size(18.dp),
-                    Theme.TextMuted
                 )
             }
         }
 
+        // Time slots
         Row(
             Modifier
                 .weight(1f)
                 .horizontalScroll(rememberScrollState())
         ) {
-            val fmt = SimpleDateFormat("h:mma", Locale.getDefault())
-            var isFirstSlot = true
+            val fmt = SimpleDateFormat("h:mm a", Locale.getDefault())
             slots.forEach { ts ->
                 val w = pxPerMin * slotMins
-                val isCurrent = now in ts until (ts + slotMins * 60)
 
                 Box(
                     Modifier
                         .width(w)
                         .fillMaxHeight()
                         .drawBehind {
-                            drawLine(Theme.GlassBorder.copy(0.5f), Offset(0f, 0f), Offset(0f, size.height), 1f)
-                        }
-                        .background(Color.Transparent),
-                    Alignment.CenterStart
+                            // Vertical divider line
+                            drawLine(
+                                Theme.ProgramCellBorder.copy(0.3f),
+                                Offset(0f, 0f),
+                                Offset(0f, size.height),
+                                1f
+                            )
+                        },
+                    contentAlignment = Alignment.CenterStart
                 ) {
-                    Column(Modifier.padding(start = 12.dp)) {
-                        // FuboTV style: "Now Playing" for current, time for others
-                        if (isCurrent && isFirstSlot) {
-                            Text(
-                                "Now Playing",
-                                color = Theme.TextPrimary,
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Medium
-                            )
-                        } else {
-                            Text(
-                                fmt.format(Date(ts * 1000)).lowercase(),
-                                color = Theme.TextSecondary,
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Normal
-                            )
-                        }
-                    }
+                    Text(
+                        text = fmt.format(Date(ts * 1000)),
+                        color = Theme.TextSecondary,
+                        fontSize = 12.sp,
+                        modifier = Modifier.padding(start = 8.dp)
+                    )
                 }
-                isFirstSlot = false
             }
         }
     }
@@ -1474,7 +1925,8 @@ private fun GuideRow(
     onUpPressed: () -> Unit = {},
     onChannelFocus: () -> Unit,
     onProgramFocus: (Program) -> Unit,
-    onSelect: () -> Unit
+    onSelect: () -> Unit,
+    onProgramLongPress: (Program) -> Unit = {}
 ) {
     val programs = remember(data.programs, startTime, endTime) {
         data.programs.filter { it.endTime > startTime && it.startTime < endTime }
@@ -1483,7 +1935,7 @@ private fun GuideRow(
     Row(
         Modifier
             .fillMaxWidth()
-            .height(88.dp)  // FuboTV-style row height
+            .height(56.dp)  // Channels DVR style - compact rows
             .background(if (isSelected) Theme.Surface.copy(0.6f) else Color.Transparent)
     ) {
         // Find current airing program for thumbnail
@@ -1540,7 +1992,8 @@ private fun GuideRow(
                         isFirstRow = isFirstRow,
                         onUpPressed = onUpPressed,
                         onFocus = { onProgramFocus(p) },
-                        onClick = onSelect
+                        onClick = onSelect,
+                        onLongPress = { onProgramLongPress(p) }
                     )
                 }
             }
@@ -1556,6 +2009,9 @@ private fun GuideRow(
     )
 }
 
+/**
+ * Clean channel cell - Channels DVR style with network logo and number
+ */
 @Composable
 private fun ChannelCell(
     ch: Channel,
@@ -1577,21 +2033,11 @@ private fun ChannelCell(
         tween(150), "chBg"
     )
 
-    // Create a focus requester for redirecting UP navigation
-    val tabsFocusRequester = remember { FocusRequester() }
-
-    // Try to capture the category tabs focus requester on first composition
-    LaunchedEffect(isFirstRow) {
-        if (isFirstRow) {
-            // Will be set via callback
-        }
-    }
-
     Surface(
         onClick = onClick,
         modifier = Modifier
             .width(width)
-            .height(88.dp)  // FuboTV-style height
+            .height(56.dp)  // More compact like Channels DVR
             .onFocusChanged {
                 focused = it.isFocused
                 if (it.isFocused) onFocus()
@@ -1609,85 +2055,67 @@ private fun ChannelCell(
         shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(0.dp)),
         colors = ClickableSurfaceDefaults.colors(bg, focusedContainerColor = Theme.SurfaceHighlight),
         border = ClickableSurfaceDefaults.border(
-            focusedBorder = Border(border = BorderStroke(2.dp, Theme.Accent), shape = RoundedCornerShape(0.dp))
+            border = Border(
+                border = BorderStroke(0.5.dp, Theme.GlassBorder),
+                shape = RoundedCornerShape(0.dp)
+            ),
+            focusedBorder = Border(border = BorderStroke(2.dp, Theme.Accent), shape = RoundedCornerShape(4.dp))
         )
     ) {
         Row(
             Modifier
                 .fillMaxSize()
-                .padding(horizontal = 12.dp, vertical = 8.dp),
+                .padding(horizontal = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Favorite star (FuboTV style - left side)
-            if (ch.favorite) {
-                Icon(Icons.Default.Star, null, Modifier.size(14.dp), Theme.AccentGold)
-                Spacer(Modifier.width(6.dp))
-            }
-
-            // Channel logo
+            // Network logo - clean white/light background like Channels DVR
             Box(
                 Modifier
-                    .size(44.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(Theme.Background),
+                    .size(40.dp)
+                    .clip(RoundedCornerShape(4.dp))
+                    .background(Color.White),
                 Alignment.Center
             ) {
-                AsyncImage(ch.logoUrl, null, Modifier.size(36.dp), contentScale = ContentScale.Fit)
-            }
-
-            Spacer(Modifier.width(10.dp))
-
-            // FuboTV style: Program thumbnail next to channel logo
-            val thumbUrl = currentProgram?.thumb ?: currentProgram?.art ?: ch.nowPlaying?.thumb
-            if (thumbUrl != null) {
-                Box(
-                    Modifier
-                        .size(80.dp, 56.dp)
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(Theme.SurfaceElevated)
-                ) {
-                    AsyncImage(
-                        thumbUrl,
-                        null,
-                        Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop
-                    )
-                    // LIVE badge overlay
-                    if (currentProgram?.isLive == true || currentProgram?.isAiring == true) {
-                        Box(
-                            Modifier
-                                .align(Alignment.BottomStart)
-                                .padding(4.dp)
-                        ) {
-                            Box(
-                                Modifier
-                                    .clip(RoundedCornerShape(3.dp))
-                                    .background(Theme.AccentRed)
-                                    .padding(horizontal = 5.dp, vertical = 2.dp)
-                            ) {
-                                Text("LIVE", color = Color.White, fontSize = 8.sp, fontWeight = FontWeight.Bold)
-                            }
-                        }
-                    }
-                }
-                Spacer(Modifier.width(10.dp))
-            }
-
-            // Channel info column
-            Column(Modifier.weight(1f)) {
-                Text(
-                    ch.name,
-                    color = Theme.TextPrimary,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Medium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                AsyncImage(
+                    model = ch.logoUrl,
+                    contentDescription = ch.name,
+                    modifier = Modifier
+                        .size(36.dp)
+                        .padding(2.dp),
+                    contentScale = ContentScale.Fit
                 )
             }
+
+            Spacer(Modifier.width(8.dp))
+
+            // Channel number - prominent like Channels DVR
+            ch.number?.let { num ->
+                Text(
+                    text = num,
+                    color = Theme.TextSecondary,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier.width(32.dp)
+                )
+            }
+
+            // Channel name
+            Text(
+                text = ch.name,
+                color = Theme.TextPrimary,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Normal,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f)
+            )
         }
     }
 }
 
+/**
+ * Clean program cell - Channels DVR style
+ */
 @Composable
 private fun ProgramCell(
     p: Program,
@@ -1696,49 +2124,57 @@ private fun ProgramCell(
     isFirstRow: Boolean = false,
     onUpPressed: () -> Unit = {},
     onFocus: () -> Unit,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onLongPress: () -> Unit = {}
 ) {
     var focused by remember { mutableStateOf(false) }
 
-    val catColor = when {
-        p.isSports -> Theme.Sports
-        p.isMovie -> Theme.Movie
-        p.isKids -> Theme.Kids
-        else -> Theme.Entertainment
-    }
-
-    val catGlow = when {
-        p.isSports -> Theme.SportsGlow
-        p.isMovie -> Theme.MovieGlow
-        p.isKids -> Theme.KidsGlow
-        else -> Theme.EntertainmentGlow
-    }
-
     val bg by animateColorAsState(
         when {
-            focused -> catColor.copy(0.4f)
-            isLive -> catColor.copy(0.2f)
+            focused -> Theme.SurfaceHighlight
             else -> Theme.Surface
         },
         tween(150), "progBg"
     )
 
-    val scale by animateFloatAsState(
-        targetValue = if (focused) 1.03f else 1f,
-        animationSpec = spring(dampingRatio = 0.7f),
-        label = "scale"
-    )
+    // Track long-press state for D-pad center button
+    var pressStartTime by remember { mutableStateOf(0L) }
+    val longPressThreshold = 500L
 
     Surface(
         onClick = onClick,
+        onLongClick = onLongPress,
         modifier = Modifier
             .width(width)
             .fillMaxHeight()
-            .padding(3.dp)
-            .scale(scale)
+            .padding(horizontal = 0.5.dp, vertical = 0.5.dp)
             .onFocusChanged {
                 focused = it.isFocused
                 if (it.isFocused) onFocus()
+            }
+            .onKeyEvent { e ->
+                when {
+                    e.key == Key.DirectionCenter || e.key == Key.Enter -> {
+                        when (e.type) {
+                            KeyEventType.KeyDown -> {
+                                if (pressStartTime == 0L) {
+                                    pressStartTime = System.currentTimeMillis()
+                                } else if (System.currentTimeMillis() - pressStartTime > longPressThreshold) {
+                                    onLongPress()
+                                    pressStartTime = 0L
+                                    true
+                                } else false
+                                false
+                            }
+                            KeyEventType.KeyUp -> {
+                                pressStartTime = 0L
+                                false
+                            }
+                            else -> false
+                        }
+                    }
+                    else -> false
+                }
             }
             .then(
                 if (isFirstRow) {
@@ -1750,122 +2186,65 @@ private fun ProgramCell(
                     }
                 } else Modifier
             ),
-        shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(14.dp)),
-        colors = ClickableSurfaceDefaults.colors(bg, focusedContainerColor = catColor.copy(0.4f)),
+        shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(0.dp)),
+        colors = ClickableSurfaceDefaults.colors(bg, focusedContainerColor = Theme.SurfaceHighlight),
         border = ClickableSurfaceDefaults.border(
-            focusedBorder = Border(border = BorderStroke(2.dp, catGlow), shape = RoundedCornerShape(14.dp))
-        ),
-        glow = ClickableSurfaceDefaults.glow(
-            focusedGlow = Glow(catColor.copy(0.3f), 8.dp)
+            border = Border(
+                border = BorderStroke(0.5.dp, Theme.GlassBorder),
+                shape = RoundedCornerShape(0.dp)
+            ),
+            focusedBorder = Border(
+                border = BorderStroke(2.dp, Theme.Accent),
+                shape = RoundedCornerShape(4.dp)
+            )
         )
     ) {
-        Box(Modifier.fillMaxSize()) {
-            // Category accent bar
-            Box(
-                Modifier
-                    .width(4.dp)
-                    .fillMaxHeight()
-                    .clip(RoundedCornerShape(topStart = 14.dp, bottomStart = 14.dp))
-                    .background(
-                        Brush.verticalGradient(listOf(catGlow, catColor))
-                    )
+        Column(
+            Modifier
+                .fillMaxSize()
+                .padding(horizontal = 10.dp, vertical = 6.dp),
+            verticalArrangement = Arrangement.SpaceBetween
+        ) {
+            // Title - clean and simple
+            Text(
+                text = p.title,
+                color = Theme.TextPrimary,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Normal,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                lineHeight = 16.sp
             )
 
-            Column(
-                Modifier
-                    .fillMaxSize()
-                    .padding(start = 14.dp, end = 12.dp, top = 12.dp, bottom = 12.dp)
+            // Bottom row: time only (clean like Channels DVR)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
             ) {
-                Row(
-                    Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    if (isLive) {
-                        AnimatedLiveBadge(small = true)
-                        Spacer(Modifier.width(8.dp))
-                    }
-
-                    // Category icon
-                    CategoryIconSmall(p)
-                    Spacer(Modifier.width(6.dp))
-
-                    Text(
-                        p.title,
-                        color = Theme.TextPrimary,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f)
-                    )
-
-                    // Recording indicator
-                    if (p.hasRecording) {
-                        Spacer(Modifier.width(6.dp))
-                        Icon(Icons.Default.FiberManualRecord, null, Modifier.size(12.dp), Theme.AccentRed)
-                    }
-                }
-
-                // Episode info with "New" badge (FuboTV style)
-                Row(
-                    Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    (p.episodeInfo ?: p.subtitle)?.let { info ->
-                        Text(
-                            info,
-                            color = Theme.TextSecondary,
-                            fontSize = 11.sp,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f, false)
-                        )
-                    }
-
-                    // FuboTV-style "New" badge
-                    if (p.isNew || p.isPremiere) {
-                        if (p.episodeInfo != null || p.subtitle != null) {
-                            Spacer(Modifier.width(8.dp))
-                        }
-                        Box(
-                            Modifier
-                                .clip(RoundedCornerShape(3.dp))
-                                .background(Theme.SurfaceHighlight)
-                                .border(1.dp, Theme.TextMuted.copy(0.3f), RoundedCornerShape(3.dp))
-                                .padding(horizontal = 6.dp, vertical = 2.dp)
-                        ) {
-                            Text(
-                                "New",
-                                color = Theme.TextSecondary,
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Medium
-                            )
-                        }
-                    }
-                }
-
-                Spacer(Modifier.weight(1f))
-
-                // Time display (smaller, more subtle)
-                val fmt = SimpleDateFormat("h:mma", Locale.getDefault())
+                val fmt = SimpleDateFormat("h:mm", Locale.getDefault())
                 Text(
-                    fmt.format(Date(p.startTime * 1000)).lowercase(),
+                    text = fmt.format(Date(p.startTime * 1000)),
                     color = Theme.TextMuted,
-                    fontSize = 10.sp
+                    fontSize = 11.sp
                 )
 
-                if (isLive) {
-                    Spacer(Modifier.height(4.dp))
-                    @Suppress("DEPRECATION")
-                    LinearProgressIndicator(
-                        progress = p.progress,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(3.dp)
-                            .clip(RoundedCornerShape(1.5.dp)),
-                        color = catGlow,
-                        trackColor = Theme.TextMuted.copy(0.2f)
-                    )
+                // Progress indicator for live - subtle underline
+                if (isLive && p.progress > 0) {
+                    Spacer(Modifier.width(8.dp))
+                    Box(
+                        Modifier
+                            .weight(1f)
+                            .height(2.dp)
+                            .clip(RoundedCornerShape(1.dp))
+                            .background(Theme.GlassBorder)
+                    ) {
+                        Box(
+                            Modifier
+                                .fillMaxHeight()
+                                .fillMaxWidth(p.progress)
+                                .background(Theme.Accent)
+                        )
+                    }
                 }
             }
         }
@@ -2088,6 +2467,659 @@ private fun EmptyView(isFiltered: Boolean) {
                 color = Theme.TextSecondary,
                 fontSize = 16.sp
             )
+        }
+    }
+}
+
+/**
+ * Program Options Dialog - shown when user long-presses or selects a program
+ * with the option to Record or Record Series
+ */
+@Composable
+fun ProgramOptionsDialog(
+    program: Program,
+    channel: Channel?,
+    isScheduling: Boolean,
+    onDismiss: () -> Unit,
+    onWatch: () -> Unit,
+    onRecord: () -> Unit,
+    onRecordSeries: () -> Unit
+) {
+    val focusRequester = remember { FocusRequester() }
+
+    LaunchedEffect(Unit) {
+        focusRequester.requestFocus()
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.85f))
+            .clickable { onDismiss() },
+        contentAlignment = Alignment.Center
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth(0.5f)
+                .clip(RoundedCornerShape(16.dp))
+                .background(Theme.Surface)
+                .border(1.dp, Theme.GlassBorder, RoundedCornerShape(16.dp))
+                .clickable { /* Prevent click through */ }
+        ) {
+            Column(
+                modifier = Modifier.padding(24.dp)
+            ) {
+                // Header with program info
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Program thumbnail
+                    program.thumb?.let { thumbUrl ->
+                        AsyncImage(
+                            model = thumbUrl,
+                            contentDescription = null,
+                            modifier = Modifier
+                                .size(100.dp, 56.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(Theme.SurfaceElevated),
+                            contentScale = ContentScale.Crop
+                        )
+                        Spacer(modifier = Modifier.width(16.dp))
+                    }
+
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = program.title,
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
+
+                        program.episodeInfo?.let { info ->
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = info,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = Theme.TextSecondary
+                            )
+                        }
+
+                        // Time info
+                        val timeFormat = SimpleDateFormat("h:mm a", Locale.getDefault())
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "${timeFormat.format(Date(program.startTime * 1000))} - ${timeFormat.format(Date(program.endTime * 1000))}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Theme.TextMuted
+                        )
+
+                        channel?.let { ch ->
+                            Text(
+                                text = ch.name,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Theme.Accent
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // Action buttons
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    // Watch Now button
+                    Surface(
+                        onClick = onWatch,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .focusRequester(focusRequester),
+                        shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(12.dp)),
+                        colors = ClickableSurfaceDefaults.colors(
+                            containerColor = Theme.Accent,
+                            focusedContainerColor = Theme.AccentGlow
+                        ),
+                        scale = ClickableSurfaceDefaults.scale(focusedScale = 1.02f)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                Icons.Default.PlayArrow,
+                                contentDescription = null,
+                                tint = Color.Black,
+                                modifier = Modifier.size(24.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "Watch Now",
+                                color = Color.Black,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 16.sp
+                            )
+                        }
+                    }
+
+                    // Record button
+                    Surface(
+                        onClick = onRecord,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(12.dp)),
+                        colors = ClickableSurfaceDefaults.colors(
+                            containerColor = Theme.SurfaceElevated,
+                            focusedContainerColor = Theme.AccentRed.copy(alpha = 0.3f)
+                        ),
+                        border = ClickableSurfaceDefaults.border(
+                            focusedBorder = Border(
+                                border = BorderStroke(2.dp, Theme.AccentRed),
+                                shape = RoundedCornerShape(12.dp)
+                            )
+                        ),
+                        scale = ClickableSurfaceDefaults.scale(focusedScale = 1.02f)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                Icons.Default.FiberManualRecord,
+                                contentDescription = null,
+                                tint = Theme.AccentRed,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = if (isScheduling) "Scheduling..." else "Record",
+                                color = Color.White,
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 16.sp
+                            )
+                        }
+                    }
+
+                    // Record Series button (only for TV shows with series ID)
+                    if (program.seriesId != null) {
+                        Surface(
+                            onClick = onRecordSeries,
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(12.dp)),
+                            colors = ClickableSurfaceDefaults.colors(
+                                containerColor = Theme.SurfaceElevated,
+                                focusedContainerColor = Theme.AccentRed.copy(alpha = 0.3f)
+                            ),
+                            border = ClickableSurfaceDefaults.border(
+                                focusedBorder = Border(
+                                    border = BorderStroke(2.dp, Theme.AccentRed),
+                                    shape = RoundedCornerShape(12.dp)
+                                )
+                            ),
+                            scale = ClickableSurfaceDefaults.scale(focusedScale = 1.02f)
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    Icons.Default.PlaylistAdd,
+                                    contentDescription = null,
+                                    tint = Theme.AccentRed,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = if (isScheduling) "Scheduling..." else "Record Series",
+                                    color = Color.White,
+                                    fontWeight = FontWeight.SemiBold,
+                                    fontSize = 16.sp
+                                )
+                            }
+                        }
+                    }
+
+                    // Cancel button
+                    Surface(
+                        onClick = onDismiss,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(12.dp)),
+                        colors = ClickableSurfaceDefaults.colors(
+                            containerColor = Color.Transparent,
+                            focusedContainerColor = Theme.SurfaceHighlight
+                        ),
+                        scale = ClickableSurfaceDefaults.scale(focusedScale = 1.02f)
+                    ) {
+                        Text(
+                            text = "Cancel",
+                            color = Theme.TextSecondary,
+                            fontSize = 14.sp,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp),
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                }
+
+                // Hint
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = "Press BACK to close",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Theme.TextMuted,
+                    modifier = Modifier.align(Alignment.CenterHorizontally)
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Favorites Quick Access Bar - Shows favorite channels for quick switching
+ */
+@Composable
+private fun FavoritesQuickBar(
+    favoriteChannels: List<ChannelWithPrograms>,
+    currentChannelId: String?,
+    onChannelClick: (ChannelWithPrograms) -> Unit,
+    onLongClick: (ChannelWithPrograms) -> Unit = {},
+    modifier: Modifier = Modifier
+) {
+    if (favoriteChannels.isEmpty()) return
+
+    Column(modifier = modifier.fillMaxWidth()) {
+        // Header
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                Icons.Default.Star,
+                contentDescription = null,
+                tint = Theme.AccentGold,
+                modifier = Modifier.size(18.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = "FAVORITES",
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Bold,
+                color = Theme.AccentGold,
+                letterSpacing = 1.sp
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Box(
+                modifier = Modifier
+                    .background(Theme.AccentGold.copy(alpha = 0.2f), RoundedCornerShape(4.dp))
+                    .padding(horizontal = 6.dp, vertical = 2.dp)
+            ) {
+                Text(
+                    text = "${favoriteChannels.size}",
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = Theme.AccentGold
+                )
+            }
+        }
+
+        // Channel strip
+        LazyRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp)
+        ) {
+            items(favoriteChannels, key = { it.channel.id }) { cwp ->
+                FavoriteChannelCard(
+                    channelWithPrograms = cwp,
+                    isSelected = cwp.channel.id == currentChannelId,
+                    onClick = { onChannelClick(cwp) },
+                    onLongClick = { onLongClick(cwp) }
+                )
+            }
+        }
+
+        // Divider
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 8.dp)
+                .height(1.dp)
+                .background(Theme.GlassBorder)
+        )
+    }
+}
+
+@Composable
+private fun FavoriteChannelCard(
+    channelWithPrograms: ChannelWithPrograms,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit
+) {
+    val channel = channelWithPrograms.channel
+    val nowPlaying = channelWithPrograms.programs.find { it.isAiring }
+    var isFocused by remember { mutableStateOf(false) }
+
+    Surface(
+        onClick = onClick,
+        onLongClick = onLongClick,
+        modifier = Modifier
+            .width(180.dp)
+            .onFocusChanged { isFocused = it.isFocused },
+        shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(12.dp)),
+        colors = ClickableSurfaceDefaults.colors(
+            containerColor = if (isSelected) Theme.AccentSelected else Theme.Surface,
+            focusedContainerColor = Theme.Accent.copy(alpha = 0.2f)
+        ),
+        border = ClickableSurfaceDefaults.border(
+            focusedBorder = Border(
+                border = BorderStroke(2.dp, Theme.Accent),
+                shape = RoundedCornerShape(12.dp)
+            ),
+            border = if (isSelected) Border(
+                border = BorderStroke(2.dp, Theme.Accent.copy(alpha = 0.5f)),
+                shape = RoundedCornerShape(12.dp)
+            ) else Border.None
+        ),
+        scale = ClickableSurfaceDefaults.scale(focusedScale = 1.05f),
+        glow = ClickableSurfaceDefaults.glow(
+            focusedGlow = Glow(
+                elevationColor = Theme.Accent.copy(alpha = 0.3f),
+                elevation = 8.dp
+            )
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Channel logo
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(Theme.SurfaceElevated),
+                contentAlignment = Alignment.Center
+            ) {
+                if (channel.logoUrl != null) {
+                    AsyncImage(
+                        model = channel.logoUrl,
+                        contentDescription = channel.name,
+                        modifier = Modifier.size(36.dp),
+                        contentScale = ContentScale.Fit
+                    )
+                } else {
+                    Text(
+                        text = channel.name.take(2).uppercase(),
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = Theme.Accent
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.width(10.dp))
+
+            // Channel info
+            Column(modifier = Modifier.weight(1f)) {
+                // Channel number and name
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    channel.number?.let { number ->
+                        Text(
+                            text = number,
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = if (isFocused || isSelected) Theme.Accent else Theme.TextPrimary
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                    }
+                    Text(
+                        text = channel.name,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Theme.TextSecondary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+
+                // Now playing
+                nowPlaying?.let { program ->
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = program.title,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Theme.TextMuted,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        fontSize = 11.sp
+                    )
+
+                    // Progress bar
+                    Spacer(modifier = Modifier.height(4.dp))
+                    LinearProgressIndicator(
+                        progress = program.progress,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(2.dp)
+                            .clip(RoundedCornerShape(1.dp)),
+                        color = Theme.Accent,
+                        trackColor = Theme.SurfaceHighlight
+                    )
+                }
+            }
+
+            // Live indicator if currently selected/playing
+            if (isSelected) {
+                Spacer(modifier = Modifier.width(6.dp))
+                Box(
+                    modifier = Modifier
+                        .size(8.dp)
+                        .clip(CircleShape)
+                        .background(Theme.AccentRed)
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Recent Channels Quick Access Bar - Shows recently watched channels
+ */
+@Composable
+private fun RecentChannelsBar(
+    recentChannels: List<ChannelWithPrograms>,
+    currentChannelId: String?,
+    onChannelClick: (ChannelWithPrograms) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    if (recentChannels.isEmpty()) return
+
+    Column(modifier = modifier.fillMaxWidth()) {
+        // Header
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                Icons.Default.History,
+                contentDescription = null,
+                tint = Theme.Accent,
+                modifier = Modifier.size(18.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = "RECENT",
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Bold,
+                color = Theme.Accent,
+                letterSpacing = 1.sp
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Box(
+                modifier = Modifier
+                    .background(Theme.Accent.copy(alpha = 0.2f), RoundedCornerShape(4.dp))
+                    .padding(horizontal = 6.dp, vertical = 2.dp)
+            ) {
+                Text(
+                    text = "${recentChannels.size}",
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = Theme.Accent
+                )
+            }
+        }
+
+        // Channel strip
+        LazyRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp)
+        ) {
+            items(recentChannels, key = { it.channel.id }) { cwp ->
+                RecentChannelCard(
+                    channelWithPrograms = cwp,
+                    isSelected = cwp.channel.id == currentChannelId,
+                    onClick = { onChannelClick(cwp) }
+                )
+            }
+        }
+
+        // Divider
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 8.dp)
+                .height(1.dp)
+                .background(Theme.GlassBorder)
+        )
+    }
+}
+
+@Composable
+private fun RecentChannelCard(
+    channelWithPrograms: ChannelWithPrograms,
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    val channel = channelWithPrograms.channel
+    val nowPlaying = channelWithPrograms.programs.find { it.isAiring }
+    var isFocused by remember { mutableStateOf(false) }
+
+    Surface(
+        onClick = onClick,
+        modifier = Modifier
+            .width(160.dp)
+            .onFocusChanged { isFocused = it.isFocused },
+        shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(10.dp)),
+        colors = ClickableSurfaceDefaults.colors(
+            containerColor = if (isSelected) Theme.AccentSelected else Theme.Surface,
+            focusedContainerColor = Theme.Accent.copy(alpha = 0.15f)
+        ),
+        border = ClickableSurfaceDefaults.border(
+            focusedBorder = Border(
+                border = BorderStroke(2.dp, Theme.Accent),
+                shape = RoundedCornerShape(10.dp)
+            ),
+            border = if (isSelected) Border(
+                border = BorderStroke(1.dp, Theme.Accent.copy(alpha = 0.4f)),
+                shape = RoundedCornerShape(10.dp)
+            ) else Border.None
+        ),
+        scale = ClickableSurfaceDefaults.scale(focusedScale = 1.05f)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Channel logo (smaller for recent)
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(RoundedCornerShape(6.dp))
+                    .background(Theme.SurfaceElevated),
+                contentAlignment = Alignment.Center
+            ) {
+                if (channel.logoUrl != null) {
+                    AsyncImage(
+                        model = channel.logoUrl,
+                        contentDescription = channel.name,
+                        modifier = Modifier.size(28.dp),
+                        contentScale = ContentScale.Fit
+                    )
+                } else {
+                    Text(
+                        text = channel.name.take(2).uppercase(),
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = Theme.Accent
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            // Channel info
+            Column(modifier = Modifier.weight(1f)) {
+                // Channel number and name
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    channel.number?.let { number ->
+                        Text(
+                            text = number,
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = if (isFocused || isSelected) Theme.Accent else Theme.TextPrimary
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                    }
+                    Text(
+                        text = channel.name,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Theme.TextSecondary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        fontSize = 11.sp
+                    )
+                }
+
+                // Now playing (compact)
+                nowPlaying?.let { program ->
+                    Text(
+                        text = program.title,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Theme.TextMuted,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        fontSize = 10.sp
+                    )
+                }
+            }
+
+            // Playing indicator
+            if (isSelected) {
+                Box(
+                    modifier = Modifier
+                        .size(6.dp)
+                        .clip(CircleShape)
+                        .background(Theme.AccentRed)
+                )
+            }
         }
     }
 }

@@ -20,7 +20,7 @@ class MediaRepository @Inject constructor(
 
     // Cache the server URL for building image URLs
     private suspend fun getServerBaseUrl(): String {
-        return preferencesManager.serverUrl.first() ?: "http://192.168.1.185:32400"
+        return preferencesManager.serverUrl.first() ?: "http://127.0.0.1:32400"
     }
 
     // Build full URL for relative paths
@@ -44,36 +44,34 @@ class MediaRepository @Inject constructor(
             if (response.isSuccessful && response.body() != null) {
                 val sections = response.body()!!.mediaContainer?.directories ?: emptyList()
 
-                // Load items for each section
-                val hubs = sections.mapNotNull { section ->
+                // Load hubs for each section using the hubs endpoint (includes content ratings)
+                val hubs = sections.flatMap { section ->
                     try {
-                        val mediaResponse = api.getAllLibraryMedia(
-                            libraryId = section.key,
-                            start = 0,
-                            size = 12  // Load first 12 items for home display
-                        )
-                        if (mediaResponse.isSuccessful && mediaResponse.body() != null) {
-                            val items = mediaResponse.body()!!.mediaContainer?.metadata?.map { it.toDomain(baseUrl) } ?: emptyList()
-                            Hub(
-                                id = section.key,
-                                key = "/library/sections/${section.key}/all",
-                                hubKey = section.key,
-                                type = section.type,
-                                hubType = section.type,
-                                title = section.title,
-                                style = "shelf",
-                                promoted = sections.indexOf(section) == 0,  // First section is promoted
-                                size = section.count ?: 0,
-                                more = (section.count ?: 0) > 12,
-                                items = items
-                            )
+                        val hubsResponse = api.getLibraryHubs(section.key)
+                        if (hubsResponse.isSuccessful && hubsResponse.body() != null) {
+                            hubsResponse.body()!!.mediaContainer?.hubs?.map { hubDto ->
+                                Hub(
+                                    id = hubDto.hubIdentifier ?: hubDto.key ?: section.key,
+                                    key = hubDto.key ?: "/library/sections/${section.key}/all",
+                                    hubKey = hubDto.hubIdentifier ?: section.key,
+                                    type = hubDto.type ?: section.type,
+                                    hubType = hubDto.type ?: section.type,
+                                    title = hubDto.title.ifEmpty { section.title },
+                                    style = hubDto.style ?: "shelf",
+                                    promoted = hubDto.promoted ?: false,
+                                    size = hubDto.size ?: 0,
+                                    more = hubDto.more ?: false,
+                                    items = hubDto.metadata?.map { it.toDomain(baseUrl) } ?: emptyList(),
+                                    context = hubDto.context
+                                )
+                            } ?: emptyList()
                         } else {
-                            Timber.w("Failed to load items for section ${section.key}")
-                            null
+                            Timber.w("Failed to load hubs for section ${section.key}")
+                            emptyList()
                         }
                     } catch (e: Exception) {
-                        Timber.e(e, "Error loading items for section ${section.key}")
-                        null
+                        Timber.e(e, "Error loading hubs for section ${section.key}")
+                        emptyList()
                     }
                 }
 
@@ -85,6 +83,43 @@ class MediaRepository @Inject constructor(
         } catch (e: Exception) {
             Timber.e(e, "Error getting home content")
             Result.failure(e)
+        }
+    }
+
+    /**
+     * Get streaming service hubs (Netflix, Disney+, HBO Max, etc.)
+     */
+    suspend fun getStreamingServiceHubs(): Result<List<Hub>> {
+        return try {
+            val baseUrl = getServerBaseUrl()
+            val response = api.getAllStreamingServices()
+            if (response.isSuccessful && response.body() != null) {
+                val hubs = response.body()!!.mediaContainer?.hubs?.map { hubDto: com.openflix.data.remote.dto.StreamingHubDto ->
+                    Hub(
+                        id = hubDto.hubIdentifier ?: hubDto.key ?: "",
+                        key = hubDto.key ?: "",
+                        hubKey = hubDto.hubIdentifier ?: "",
+                        type = hubDto.type ?: "movie",
+                        hubType = hubDto.type,
+                        title = hubDto.title,
+                        style = hubDto.style ?: "shelf",
+                        promoted = hubDto.promoted ?: false,
+                        size = hubDto.size ?: 0,
+                        more = hubDto.more ?: false,
+                        items = hubDto.metadata?.map { it.toDomain(baseUrl) } ?: emptyList(),
+                        context = hubDto.context
+                    )
+                } ?: emptyList()
+
+                Timber.d("Loaded ${hubs.size} streaming service hubs")
+                Result.success(hubs)
+            } else {
+                Timber.w("Failed to get streaming services: ${response.code()}")
+                Result.success(emptyList()) // Return empty list instead of failure
+            }
+        } catch (e: Exception) {
+            Timber.e(e, "Error getting streaming services")
+            Result.success(emptyList()) // Return empty list on error
         }
     }
 
@@ -261,11 +296,18 @@ class MediaRepository @Inject constructor(
 
     suspend fun getShowSeasons(showId: String): Result<List<Season>> {
         return try {
-            val response = api.getShowSeasons(showId)
+            val baseUrl = getServerBaseUrl()
+            val response = api.getMetadataChildren(showId)
             if (response.isSuccessful && response.body() != null) {
-                val seasons = response.body()!!.map { it.toDomain() }
+                val metadata = response.body()!!.mediaContainer?.metadata ?: emptyList()
+                val seasons = metadata
+                    .filter { it.type == "season" }
+                    .map { it.toSeason(baseUrl) }
+                    .sortedBy { it.index }
+                Timber.d("Loaded ${seasons.size} seasons for show $showId")
                 Result.success(seasons)
             } else {
+                Timber.w("Failed to get show seasons: ${response.code()}")
                 Result.failure(Exception("Failed to get show seasons"))
             }
         } catch (e: Exception) {
@@ -276,11 +318,18 @@ class MediaRepository @Inject constructor(
 
     suspend fun getSeasonEpisodes(seasonId: String): Result<List<Episode>> {
         return try {
-            val response = api.getSeasonEpisodes(seasonId)
+            val baseUrl = getServerBaseUrl()
+            val response = api.getMetadataChildren(seasonId)
             if (response.isSuccessful && response.body() != null) {
-                val episodes = response.body()!!.map { it.toDomain() }
+                val metadata = response.body()!!.mediaContainer?.metadata ?: emptyList()
+                val episodes = metadata
+                    .filter { it.type == "episode" }
+                    .map { it.toEpisode(baseUrl) }
+                    .sortedBy { it.index }
+                Timber.d("Loaded ${episodes.size} episodes for season $seasonId")
                 Result.success(episodes)
             } else {
+                Timber.w("Failed to get season episodes: ${response.code()}")
                 Result.failure(Exception("Failed to get season episodes"))
             }
         } catch (e: Exception) {
@@ -294,7 +343,11 @@ class MediaRepository @Inject constructor(
             val baseUrl = getServerBaseUrl()
             val response = api.globalSearch(query)
             if (response.isSuccessful && response.body() != null) {
-                val items = response.body()!!.results.map { it.toDomain(baseUrl) }
+                // Flatten all hubs' metadata into a single list
+                val items = response.body()!!.mediaContainer?.hubs
+                    ?.flatMap { hub -> hub.metadata?.map { it.toDomain(baseUrl) } ?: emptyList() }
+                    ?: emptyList()
+                Timber.d("Search returned ${items.size} results for: $query")
                 Result.success(items)
             } else {
                 Result.failure(Exception("Search failed"))
@@ -325,20 +378,26 @@ class MediaRepository @Inject constructor(
     suspend fun getPlaybackUrl(mediaId: String): Result<String> {
         return try {
             val baseUrl = getServerBaseUrl()
+            Timber.d("getPlaybackUrl: baseUrl=$baseUrl, mediaId=$mediaId")
             // Get metadata which contains the media file info
             val response = api.getMetadata(mediaId)
+            Timber.d("getPlaybackUrl: response code=${response.code()}, isSuccessful=${response.isSuccessful}")
             if (response.isSuccessful && response.body() != null) {
                 val metadata = response.body()!!.mediaContainer?.metadata?.firstOrNull()
+                Timber.d("getPlaybackUrl: metadata title=${metadata?.title}, media count=${metadata?.media?.size}")
                 // Get the first part's key for playback
                 val partKey = metadata?.media?.firstOrNull()?.part?.firstOrNull()?.key
+                Timber.d("getPlaybackUrl: partKey=$partKey")
                 if (partKey != null) {
                     val playbackUrl = baseUrl.trimEnd('/') + partKey
                     Timber.d("Playback URL: $playbackUrl")
                     Result.success(playbackUrl)
                 } else {
+                    Timber.e("No playback file found - media=${metadata?.media}, parts=${metadata?.media?.firstOrNull()?.part}")
                     Result.failure(Exception("No playback file found"))
                 }
             } else {
+                Timber.e("Failed to get playback URL - response: ${response.errorBody()?.string()}")
                 Result.failure(Exception("Failed to get playback URL"))
             }
         } catch (e: Exception) {
@@ -370,6 +429,9 @@ class MediaRepository @Inject constructor(
         audienceRating = audienceRating,
         studio = studio,
         genres = genres?.map { it.tag } ?: emptyList(),
+        directors = directors?.map { it.tag } ?: emptyList(),
+        writers = writers?.map { it.tag } ?: emptyList(),
+        cast = roles?.map { CastMember(name = it.tag, role = it.role, thumb = buildFullUrl(baseUrl, it.thumb)) } ?: emptyList(),
         librarySectionId = librarySectionId?.toString(),
         librarySectionTitle = librarySectionTitle,
         parentRatingKey = parentRatingKey?.toString(),
@@ -410,5 +472,33 @@ class MediaRepository @Inject constructor(
         originallyAvailableAt = originallyAvailableAt,
         parentRatingKey = parentRatingKey,
         grandparentRatingKey = grandparentRatingKey
+    )
+
+    // Convert MediaItemDto to Season (for use with /library/metadata/{id}/children)
+    private fun MediaItemDto.toSeason(baseUrl: String) = Season(
+        id = id,
+        ratingKey = ratingKey?.toString(),
+        title = title.ifEmpty { "Season ${index ?: 0}" },
+        index = index ?: 0,
+        thumb = buildFullUrl(baseUrl, thumb),
+        leafCount = leafCount,
+        viewedLeafCount = viewedLeafCount,
+        parentRatingKey = parentRatingKey?.toString()
+    )
+
+    // Convert MediaItemDto to Episode (for use with /library/metadata/{id}/children)
+    private fun MediaItemDto.toEpisode(baseUrl: String) = Episode(
+        id = id,
+        ratingKey = ratingKey?.toString(),
+        title = title,
+        index = index ?: 0,
+        parentIndex = parentIndex,
+        summary = summary,
+        thumb = buildFullUrl(baseUrl, thumb),
+        duration = duration,
+        viewOffset = viewOffset,
+        originallyAvailableAt = originallyAvailableAt,
+        parentRatingKey = parentRatingKey?.toString(),
+        grandparentRatingKey = grandparentRatingKey?.toString()
     )
 }
