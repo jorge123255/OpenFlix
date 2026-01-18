@@ -247,6 +247,12 @@ func loadEnvOverrides(cfg *Config) {
 	if recordingDir := os.Getenv("OPENFLIX_RECORDING_DIR"); recordingDir != "" {
 		cfg.DVR.RecordingDir = recordingDir
 	}
+	if comskipPath := os.Getenv("OPENFLIX_COMSKIP_PATH"); comskipPath != "" {
+		cfg.DVR.ComskipPath = comskipPath
+	}
+	if comskipINI := os.Getenv("OPENFLIX_COMSKIP_INI"); comskipINI != "" {
+		cfg.DVR.ComskipINIPath = comskipINI
+	}
 	// VOD settings
 	if vodAPIURL := os.Getenv("OPENFLIX_VOD_API_URL"); vodAPIURL != "" {
 		cfg.VOD.APIURL = vodAPIURL
