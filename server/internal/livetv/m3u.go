@@ -491,27 +491,3 @@ func (p *M3UParser) MapChannelNumbers(content string, preview bool) (*MapNumbers
 
 	return result, nil
 }
-
-// normalizeChannelName normalizes a channel name for fuzzy matching
-// Removes common suffixes like HD, SD, 4K, FHD, etc. and normalizes spacing
-func normalizeChannelName(name string) string {
-	// Convert to lowercase
-	name = strings.ToLower(name)
-
-	// Remove common suffixes
-	suffixes := []string{
-		" hd", " sd", " fhd", " uhd", " 4k", " 2k", " 1080p", " 720p",
-		" (hd)", " (sd)", " (4k)", " (fhd)",
-		" us", " usa", " uk", " east", " west", " pacific", " central",
-	}
-	for _, suffix := range suffixes {
-		name = strings.TrimSuffix(name, suffix)
-	}
-
-	// Remove special characters and normalize spaces
-	name = regexp.MustCompile(`[^a-z0-9\s]`).ReplaceAllString(name, "")
-	name = regexp.MustCompile(`\s+`).ReplaceAllString(name, " ")
-	name = strings.TrimSpace(name)
-
-	return name
-}
