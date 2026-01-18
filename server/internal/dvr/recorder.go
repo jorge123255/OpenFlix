@@ -575,9 +575,74 @@ func (r *Recorder) onRecordingComplete(recordingID uint) {
 
 	r.db.Save(&recording)
 
-	// Run commercial detection asynchronously if enabled
-	if r.commercialDetect && recording.Status == "completed" {
-		go r.runCommercialDetection(&recording)
+	// Post-process recording to fix A/V sync, then run commercial detection
+	if recording.Status == "completed" {
+		go r.postProcessRecording(&recording)
+	}
+}
+
+// postProcessRecording remuxes the recording to fix A/V sync issues from IPTV streams
+func (r *Recorder) postProcessRecording(recording *models.Recording) {
+	logger.Log.WithField("recording_id", recording.ID).Info("Post-processing recording: converting to MP4 for better compatibility")
+
+	// Output to MP4 format for better Android hardware decoding compatibility
+	// Android's MediaCodec has much better support for MP4 than MPEG-TS
+	originalPath := recording.FilePath
+	mp4Path := strings.TrimSuffix(originalPath, filepath.Ext(originalPath)) + ".mp4"
+	tempFile := mp4Path + ".tmp"
+
+	// Use ffmpeg to convert TS to MP4 with timestamp regeneration
+	// This fixes A/V sync issues and ensures Android compatibility
+	cmd := exec.Command(r.ffmpegPath,
+		"-fflags", "+genpts+igndts",    // Regenerate PTS, ignore bad DTS
+		"-i", originalPath,
+		"-map", "0:v:0",                // First video stream
+		"-map", "0:a:0?",               // First audio stream (optional)
+		"-c", "copy",                   // Copy codecs (fast remux, no transcode)
+		"-f", "mp4",
+		"-movflags", "+faststart",      // Move moov atom to start for streaming
+		"-y",                           // Overwrite output
+		tempFile,
+	)
+
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		logger.Log.WithFields(map[string]interface{}{
+			"recording_id": recording.ID,
+			"error":        err.Error(),
+			"output":       string(output),
+		}).Warn("Failed to convert recording to MP4, keeping original TS file")
+		// Clean up temp file if it exists
+		os.Remove(tempFile)
+	} else {
+		// Rename temp to final MP4
+		if err := os.Rename(tempFile, mp4Path); err != nil {
+			logger.Log.WithError(err).Warn("Failed to rename temp file to MP4")
+			os.Remove(tempFile)
+		} else {
+			// Update recording with new file path
+			recording.FilePath = mp4Path
+			if info, err := os.Stat(mp4Path); err == nil {
+				recording.FileSize = info.Size()
+			}
+			if err := r.db.Save(recording).Error; err != nil {
+				logger.Log.WithError(err).Warn("Failed to update recording path in database")
+			} else {
+				// Remove original TS file after successful conversion
+				if err := os.Remove(originalPath); err != nil {
+					logger.Log.WithError(err).Warn("Failed to remove original TS file")
+				}
+				logger.Log.WithFields(map[string]interface{}{
+					"recording_id": recording.ID,
+					"new_path":     mp4Path,
+				}).Info("Recording converted to MP4 successfully")
+			}
+		}
+	}
+
+	// Run commercial detection after post-processing
+	if r.commercialDetect {
+		r.runCommercialDetection(recording)
 	}
 }
 
@@ -628,6 +693,22 @@ func (r *Recorder) RerunCommercialDetection(recordingID uint) error {
 // IsCommercialDetectionEnabled returns whether commercial detection is available
 func (r *Recorder) IsCommercialDetectionEnabled() bool {
 	return r.commercialDetect
+}
+
+// ReprocessRecording remuxes an existing recording to fix A/V sync issues
+func (r *Recorder) ReprocessRecording(recordingID uint) error {
+	var recording models.Recording
+	if err := r.db.First(&recording, recordingID).Error; err != nil {
+		return err
+	}
+
+	if recording.Status != "completed" {
+		return fmt.Errorf("recording is not completed")
+	}
+
+	// Run post-processing asynchronously
+	go r.postProcessRecording(&recording)
+	return nil
 }
 
 // GetActiveRecordings returns currently active recordings
