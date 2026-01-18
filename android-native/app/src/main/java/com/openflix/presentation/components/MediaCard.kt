@@ -24,6 +24,9 @@ import androidx.compose.ui.unit.dp
 import androidx.tv.material3.*
 import coil.compose.AsyncImage
 import com.openflix.domain.model.MediaItem
+import com.openflix.domain.model.backdropUrl
+import com.openflix.domain.model.posterUrl
+import com.openflix.domain.model.watchProgress
 import com.openflix.presentation.theme.OpenFlixColors
 
 /**

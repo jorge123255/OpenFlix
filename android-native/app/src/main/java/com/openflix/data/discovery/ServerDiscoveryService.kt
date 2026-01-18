@@ -33,15 +33,19 @@ class ServerDiscoveryService @Inject constructor() {
         const val HTTP_TIMEOUT = 2000  // 2 seconds for HTTP probes
 
         // Known addresses to probe (for emulator and common setups)
+        // Network IPs are prioritized over emulator localhost (10.0.2.2)
         val PROBE_ADDRESSES = listOf(
-            "192.168.1.180",   // OpenFlix server (primary)
-            "10.0.2.2",        // Android emulator host
-            "192.168.1.185",   // Fallback
-            "192.168.1.1",     // Common router/server
+            "192.168.1.185",   // OpenFlix server (primary - Unraid)
+            "192.168.1.180",   // OpenFlix server (fallback)
             "192.168.1.100",   // Common server address
+            "192.168.1.1",     // Common router/server
+            "10.0.2.2",        // Android emulator host (last resort)
             "localhost",
             "127.0.0.1"
         )
+
+        // Addresses that should be deprioritized when other servers are found
+        val EMULATOR_ADDRESSES = setOf("10.0.2.2", "localhost", "127.0.0.1")
 
         const val DEFAULT_PORT = 32400
     }
@@ -119,15 +123,28 @@ class ServerDiscoveryService @Inject constructor() {
         }
 
         probeJobs.awaitAll().filterNotNull().forEach { server ->
-            if (servers.none { it.machineId == server.machineId || it.host == server.host }) {
+            // Check if this server is already in the list
+            val existingIndex = servers.indexOfFirst { it.machineId == server.machineId }
+            if (existingIndex >= 0) {
+                // Replace if new server has a better (non-emulator) address
+                val existing = servers[existingIndex]
+                if (existing.host in EMULATOR_ADDRESSES && server.host !in EMULATOR_ADDRESSES) {
+                    servers[existingIndex] = server
+                    Timber.d("Replaced emulator server with network server: ${server.name} at ${server.host}:${server.port}")
+                }
+            } else if (servers.none { it.host == server.host }) {
                 servers.add(server)
                 Timber.d("Discovered server via HTTP: ${server.name} at ${server.host}:${server.port}")
             }
         }
 
-        _discoveredServers.value = servers
+        // Final pass: remove emulator addresses if network alternatives exist
+        val networkServers = servers.filter { it.host !in EMULATOR_ADDRESSES }
+        val finalServers = if (networkServers.isNotEmpty()) networkServers else servers
+
+        _discoveredServers.value = finalServers
         _isDiscovering.value = false
-        servers
+        finalServers
     }
 
     /**

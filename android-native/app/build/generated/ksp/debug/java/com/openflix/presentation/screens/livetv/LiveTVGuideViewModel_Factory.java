@@ -1,5 +1,7 @@
 package com.openflix.presentation.screens.livetv;
 
+import com.openflix.data.local.LastWatchedService;
+import com.openflix.data.repository.DVRRepository;
 import com.openflix.data.repository.LiveTVRepository;
 import dagger.internal.DaggerGenerated;
 import dagger.internal.Factory;
@@ -24,20 +26,31 @@ import javax.inject.Provider;
 public final class LiveTVGuideViewModel_Factory implements Factory<LiveTVGuideViewModel> {
   private final Provider<LiveTVRepository> repositoryProvider;
 
-  public LiveTVGuideViewModel_Factory(Provider<LiveTVRepository> repositoryProvider) {
+  private final Provider<DVRRepository> dvrRepositoryProvider;
+
+  private final Provider<LastWatchedService> lastWatchedServiceProvider;
+
+  public LiveTVGuideViewModel_Factory(Provider<LiveTVRepository> repositoryProvider,
+      Provider<DVRRepository> dvrRepositoryProvider,
+      Provider<LastWatchedService> lastWatchedServiceProvider) {
     this.repositoryProvider = repositoryProvider;
+    this.dvrRepositoryProvider = dvrRepositoryProvider;
+    this.lastWatchedServiceProvider = lastWatchedServiceProvider;
   }
 
   @Override
   public LiveTVGuideViewModel get() {
-    return newInstance(repositoryProvider.get());
+    return newInstance(repositoryProvider.get(), dvrRepositoryProvider.get(), lastWatchedServiceProvider.get());
   }
 
-  public static LiveTVGuideViewModel_Factory create(Provider<LiveTVRepository> repositoryProvider) {
-    return new LiveTVGuideViewModel_Factory(repositoryProvider);
+  public static LiveTVGuideViewModel_Factory create(Provider<LiveTVRepository> repositoryProvider,
+      Provider<DVRRepository> dvrRepositoryProvider,
+      Provider<LastWatchedService> lastWatchedServiceProvider) {
+    return new LiveTVGuideViewModel_Factory(repositoryProvider, dvrRepositoryProvider, lastWatchedServiceProvider);
   }
 
-  public static LiveTVGuideViewModel newInstance(LiveTVRepository repository) {
-    return new LiveTVGuideViewModel(repository);
+  public static LiveTVGuideViewModel newInstance(LiveTVRepository repository,
+      DVRRepository dvrRepository, LastWatchedService lastWatchedService) {
+    return new LiveTVGuideViewModel(repository, dvrRepository, lastWatchedService);
   }
 }

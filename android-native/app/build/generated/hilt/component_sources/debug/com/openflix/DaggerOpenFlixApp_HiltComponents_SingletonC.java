@@ -11,7 +11,9 @@ import androidx.lifecycle.ViewModel;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.openflix.data.discovery.ServerDiscoveryService;
+import com.openflix.data.local.LastWatchedService;
 import com.openflix.data.local.PreferencesManager;
+import com.openflix.data.local.WatchStatsService;
 import com.openflix.data.remote.api.AuthInterceptor;
 import com.openflix.data.remote.api.OpenFlixApi;
 import com.openflix.data.repository.AuthRepository;
@@ -33,12 +35,17 @@ import com.openflix.di.NetworkModule_ProvideOpenFlixApiFactory;
 import com.openflix.di.NetworkModule_ProvideRetrofitFactory;
 import com.openflix.di.PlayerModule_ProvideLiveTVPlayerFactory;
 import com.openflix.di.PlayerModule_ProvideMpvPlayerFactory;
-import com.openflix.di.PlayerModule_ProvidePlayerControllerFactory;
+import com.openflix.player.InstantSwitchManager;
 import com.openflix.player.LiveTVPlayer;
 import com.openflix.player.MpvPlayer;
-import com.openflix.player.PlayerController;
+import com.openflix.presentation.screens.allmedia.AllMediaViewModel;
+import com.openflix.presentation.screens.allmedia.AllMediaViewModel_HiltModules_KeyModule_ProvideFactory;
 import com.openflix.presentation.screens.auth.AuthViewModel;
 import com.openflix.presentation.screens.auth.AuthViewModel_HiltModules_KeyModule_ProvideFactory;
+import com.openflix.presentation.screens.catchup.CatchupViewModel;
+import com.openflix.presentation.screens.catchup.CatchupViewModel_HiltModules_KeyModule_ProvideFactory;
+import com.openflix.presentation.screens.dvr.DVRPlayerViewModel;
+import com.openflix.presentation.screens.dvr.DVRPlayerViewModel_HiltModules_KeyModule_ProvideFactory;
 import com.openflix.presentation.screens.dvr.DVRViewModel;
 import com.openflix.presentation.screens.dvr.DVRViewModel_HiltModules_KeyModule_ProvideFactory;
 import com.openflix.presentation.screens.epg.EPGGuideViewModel;
@@ -49,6 +56,8 @@ import com.openflix.presentation.screens.livetv.ArchivePlayerViewModel;
 import com.openflix.presentation.screens.livetv.ArchivePlayerViewModel_HiltModules_KeyModule_ProvideFactory;
 import com.openflix.presentation.screens.livetv.ChannelLogoEditorViewModel;
 import com.openflix.presentation.screens.livetv.ChannelLogoEditorViewModel_HiltModules_KeyModule_ProvideFactory;
+import com.openflix.presentation.screens.livetv.ChannelSurfingViewModel;
+import com.openflix.presentation.screens.livetv.ChannelSurfingViewModel_HiltModules_KeyModule_ProvideFactory;
 import com.openflix.presentation.screens.livetv.LiveTVGuideViewModel;
 import com.openflix.presentation.screens.livetv.LiveTVGuideViewModel_HiltModules_KeyModule_ProvideFactory;
 import com.openflix.presentation.screens.livetv.LiveTVPlayerViewModel;
@@ -59,6 +68,10 @@ import com.openflix.presentation.screens.livetv.MultiviewViewModel;
 import com.openflix.presentation.screens.livetv.MultiviewViewModel_HiltModules_KeyModule_ProvideFactory;
 import com.openflix.presentation.screens.media.MediaDetailViewModel;
 import com.openflix.presentation.screens.media.MediaDetailViewModel_HiltModules_KeyModule_ProvideFactory;
+import com.openflix.presentation.screens.movies.MoviesViewModel;
+import com.openflix.presentation.screens.movies.MoviesViewModel_HiltModules_KeyModule_ProvideFactory;
+import com.openflix.presentation.screens.onlater.OnLaterViewModel;
+import com.openflix.presentation.screens.onlater.OnLaterViewModel_HiltModules_KeyModule_ProvideFactory;
 import com.openflix.presentation.screens.player.VideoPlayerViewModel;
 import com.openflix.presentation.screens.player.VideoPlayerViewModel_HiltModules_KeyModule_ProvideFactory;
 import com.openflix.presentation.screens.search.SearchViewModel;
@@ -67,6 +80,12 @@ import com.openflix.presentation.screens.settings.RemoteMappingViewModel;
 import com.openflix.presentation.screens.settings.RemoteMappingViewModel_HiltModules_KeyModule_ProvideFactory;
 import com.openflix.presentation.screens.settings.SettingsViewModel;
 import com.openflix.presentation.screens.settings.SettingsViewModel_HiltModules_KeyModule_ProvideFactory;
+import com.openflix.presentation.screens.teampass.TeamPassViewModel;
+import com.openflix.presentation.screens.teampass.TeamPassViewModel_HiltModules_KeyModule_ProvideFactory;
+import com.openflix.presentation.screens.tvshows.TVShowsViewModel;
+import com.openflix.presentation.screens.tvshows.TVShowsViewModel_HiltModules_KeyModule_ProvideFactory;
+import com.openflix.presentation.screens.watchstats.WatchStatsViewModel;
+import com.openflix.presentation.screens.watchstats.WatchStatsViewModel_HiltModules_KeyModule_ProvideFactory;
 import dagger.hilt.android.ActivityRetainedLifecycle;
 import dagger.hilt.android.ViewModelLifecycle;
 import dagger.hilt.android.internal.builders.ActivityComponentBuilder;
@@ -425,7 +444,7 @@ public final class DaggerOpenFlixApp_HiltComponents_SingletonC {
 
     @Override
     public Set<String> getViewModelKeys() {
-      return ImmutableSet.<String>of(ArchivePlayerViewModel_HiltModules_KeyModule_ProvideFactory.provide(), AuthViewModel_HiltModules_KeyModule_ProvideFactory.provide(), ChannelLogoEditorViewModel_HiltModules_KeyModule_ProvideFactory.provide(), DVRViewModel_HiltModules_KeyModule_ProvideFactory.provide(), DiscoverViewModel_HiltModules_KeyModule_ProvideFactory.provide(), EPGGuideViewModel_HiltModules_KeyModule_ProvideFactory.provide(), LiveTVGuideViewModel_HiltModules_KeyModule_ProvideFactory.provide(), LiveTVPlayerViewModel_HiltModules_KeyModule_ProvideFactory.provide(), LiveTVViewModel_HiltModules_KeyModule_ProvideFactory.provide(), MediaDetailViewModel_HiltModules_KeyModule_ProvideFactory.provide(), MultiviewViewModel_HiltModules_KeyModule_ProvideFactory.provide(), RemoteMappingViewModel_HiltModules_KeyModule_ProvideFactory.provide(), SearchViewModel_HiltModules_KeyModule_ProvideFactory.provide(), SettingsViewModel_HiltModules_KeyModule_ProvideFactory.provide(), VideoPlayerViewModel_HiltModules_KeyModule_ProvideFactory.provide());
+      return ImmutableSet.<String>of(AllMediaViewModel_HiltModules_KeyModule_ProvideFactory.provide(), ArchivePlayerViewModel_HiltModules_KeyModule_ProvideFactory.provide(), AuthViewModel_HiltModules_KeyModule_ProvideFactory.provide(), CatchupViewModel_HiltModules_KeyModule_ProvideFactory.provide(), ChannelLogoEditorViewModel_HiltModules_KeyModule_ProvideFactory.provide(), ChannelSurfingViewModel_HiltModules_KeyModule_ProvideFactory.provide(), DVRPlayerViewModel_HiltModules_KeyModule_ProvideFactory.provide(), DVRViewModel_HiltModules_KeyModule_ProvideFactory.provide(), DiscoverViewModel_HiltModules_KeyModule_ProvideFactory.provide(), EPGGuideViewModel_HiltModules_KeyModule_ProvideFactory.provide(), LiveTVGuideViewModel_HiltModules_KeyModule_ProvideFactory.provide(), LiveTVPlayerViewModel_HiltModules_KeyModule_ProvideFactory.provide(), LiveTVViewModel_HiltModules_KeyModule_ProvideFactory.provide(), MediaDetailViewModel_HiltModules_KeyModule_ProvideFactory.provide(), MoviesViewModel_HiltModules_KeyModule_ProvideFactory.provide(), MultiviewViewModel_HiltModules_KeyModule_ProvideFactory.provide(), OnLaterViewModel_HiltModules_KeyModule_ProvideFactory.provide(), RemoteMappingViewModel_HiltModules_KeyModule_ProvideFactory.provide(), SearchViewModel_HiltModules_KeyModule_ProvideFactory.provide(), SettingsViewModel_HiltModules_KeyModule_ProvideFactory.provide(), TVShowsViewModel_HiltModules_KeyModule_ProvideFactory.provide(), TeamPassViewModel_HiltModules_KeyModule_ProvideFactory.provide(), VideoPlayerViewModel_HiltModules_KeyModule_ProvideFactory.provide(), WatchStatsViewModel_HiltModules_KeyModule_ProvideFactory.provide());
     }
 
     @Override
@@ -446,22 +465,33 @@ public final class DaggerOpenFlixApp_HiltComponents_SingletonC {
     private MainActivity injectMainActivity2(MainActivity instance) {
       MainActivity_MembersInjector.injectMpvPlayer(instance, singletonCImpl.provideMpvPlayerProvider.get());
       MainActivity_MembersInjector.injectLiveTVPlayer(instance, singletonCImpl.provideLiveTVPlayerProvider.get());
+      MainActivity_MembersInjector.injectLastWatchedService(instance, singletonCImpl.lastWatchedServiceProvider.get());
       return instance;
     }
   }
 
   private static final class ViewModelCImpl extends OpenFlixApp_HiltComponents.ViewModelC {
+    private final SavedStateHandle savedStateHandle;
+
     private final SingletonCImpl singletonCImpl;
 
     private final ActivityRetainedCImpl activityRetainedCImpl;
 
     private final ViewModelCImpl viewModelCImpl = this;
 
+    private Provider<AllMediaViewModel> allMediaViewModelProvider;
+
     private Provider<ArchivePlayerViewModel> archivePlayerViewModelProvider;
 
     private Provider<AuthViewModel> authViewModelProvider;
 
+    private Provider<CatchupViewModel> catchupViewModelProvider;
+
     private Provider<ChannelLogoEditorViewModel> channelLogoEditorViewModelProvider;
+
+    private Provider<ChannelSurfingViewModel> channelSurfingViewModelProvider;
+
+    private Provider<DVRPlayerViewModel> dVRPlayerViewModelProvider;
 
     private Provider<DVRViewModel> dVRViewModelProvider;
 
@@ -477,7 +507,11 @@ public final class DaggerOpenFlixApp_HiltComponents_SingletonC {
 
     private Provider<MediaDetailViewModel> mediaDetailViewModelProvider;
 
+    private Provider<MoviesViewModel> moviesViewModelProvider;
+
     private Provider<MultiviewViewModel> multiviewViewModelProvider;
+
+    private Provider<OnLaterViewModel> onLaterViewModelProvider;
 
     private Provider<RemoteMappingViewModel> remoteMappingViewModelProvider;
 
@@ -485,14 +519,20 @@ public final class DaggerOpenFlixApp_HiltComponents_SingletonC {
 
     private Provider<SettingsViewModel> settingsViewModelProvider;
 
+    private Provider<TVShowsViewModel> tVShowsViewModelProvider;
+
+    private Provider<TeamPassViewModel> teamPassViewModelProvider;
+
     private Provider<VideoPlayerViewModel> videoPlayerViewModelProvider;
+
+    private Provider<WatchStatsViewModel> watchStatsViewModelProvider;
 
     private ViewModelCImpl(SingletonCImpl singletonCImpl,
         ActivityRetainedCImpl activityRetainedCImpl, SavedStateHandle savedStateHandleParam,
         ViewModelLifecycle viewModelLifecycleParam) {
       this.singletonCImpl = singletonCImpl;
       this.activityRetainedCImpl = activityRetainedCImpl;
-
+      this.savedStateHandle = savedStateHandleParam;
       initialize(savedStateHandleParam, viewModelLifecycleParam);
 
     }
@@ -500,26 +540,35 @@ public final class DaggerOpenFlixApp_HiltComponents_SingletonC {
     @SuppressWarnings("unchecked")
     private void initialize(final SavedStateHandle savedStateHandleParam,
         final ViewModelLifecycle viewModelLifecycleParam) {
-      this.archivePlayerViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 0);
-      this.authViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 1);
-      this.channelLogoEditorViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 2);
-      this.dVRViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 3);
-      this.discoverViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 4);
-      this.ePGGuideViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 5);
-      this.liveTVGuideViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 6);
-      this.liveTVPlayerViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 7);
-      this.liveTVViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 8);
-      this.mediaDetailViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 9);
-      this.multiviewViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 10);
-      this.remoteMappingViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 11);
-      this.searchViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 12);
-      this.settingsViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 13);
-      this.videoPlayerViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 14);
+      this.allMediaViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 0);
+      this.archivePlayerViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 1);
+      this.authViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 2);
+      this.catchupViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 3);
+      this.channelLogoEditorViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 4);
+      this.channelSurfingViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 5);
+      this.dVRPlayerViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 6);
+      this.dVRViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 7);
+      this.discoverViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 8);
+      this.ePGGuideViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 9);
+      this.liveTVGuideViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 10);
+      this.liveTVPlayerViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 11);
+      this.liveTVViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 12);
+      this.mediaDetailViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 13);
+      this.moviesViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 14);
+      this.multiviewViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 15);
+      this.onLaterViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 16);
+      this.remoteMappingViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 17);
+      this.searchViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 18);
+      this.settingsViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 19);
+      this.tVShowsViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 20);
+      this.teamPassViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 21);
+      this.videoPlayerViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 22);
+      this.watchStatsViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 23);
     }
 
     @Override
     public Map<String, javax.inject.Provider<ViewModel>> getHiltViewModelMap() {
-      return ImmutableMap.<String, javax.inject.Provider<ViewModel>>builderWithExpectedSize(15).put("com.openflix.presentation.screens.livetv.ArchivePlayerViewModel", ((Provider) archivePlayerViewModelProvider)).put("com.openflix.presentation.screens.auth.AuthViewModel", ((Provider) authViewModelProvider)).put("com.openflix.presentation.screens.livetv.ChannelLogoEditorViewModel", ((Provider) channelLogoEditorViewModelProvider)).put("com.openflix.presentation.screens.dvr.DVRViewModel", ((Provider) dVRViewModelProvider)).put("com.openflix.presentation.screens.home.DiscoverViewModel", ((Provider) discoverViewModelProvider)).put("com.openflix.presentation.screens.epg.EPGGuideViewModel", ((Provider) ePGGuideViewModelProvider)).put("com.openflix.presentation.screens.livetv.LiveTVGuideViewModel", ((Provider) liveTVGuideViewModelProvider)).put("com.openflix.presentation.screens.livetv.LiveTVPlayerViewModel", ((Provider) liveTVPlayerViewModelProvider)).put("com.openflix.presentation.screens.livetv.LiveTVViewModel", ((Provider) liveTVViewModelProvider)).put("com.openflix.presentation.screens.media.MediaDetailViewModel", ((Provider) mediaDetailViewModelProvider)).put("com.openflix.presentation.screens.livetv.MultiviewViewModel", ((Provider) multiviewViewModelProvider)).put("com.openflix.presentation.screens.settings.RemoteMappingViewModel", ((Provider) remoteMappingViewModelProvider)).put("com.openflix.presentation.screens.search.SearchViewModel", ((Provider) searchViewModelProvider)).put("com.openflix.presentation.screens.settings.SettingsViewModel", ((Provider) settingsViewModelProvider)).put("com.openflix.presentation.screens.player.VideoPlayerViewModel", ((Provider) videoPlayerViewModelProvider)).build();
+      return ImmutableMap.<String, javax.inject.Provider<ViewModel>>builderWithExpectedSize(24).put("com.openflix.presentation.screens.allmedia.AllMediaViewModel", ((Provider) allMediaViewModelProvider)).put("com.openflix.presentation.screens.livetv.ArchivePlayerViewModel", ((Provider) archivePlayerViewModelProvider)).put("com.openflix.presentation.screens.auth.AuthViewModel", ((Provider) authViewModelProvider)).put("com.openflix.presentation.screens.catchup.CatchupViewModel", ((Provider) catchupViewModelProvider)).put("com.openflix.presentation.screens.livetv.ChannelLogoEditorViewModel", ((Provider) channelLogoEditorViewModelProvider)).put("com.openflix.presentation.screens.livetv.ChannelSurfingViewModel", ((Provider) channelSurfingViewModelProvider)).put("com.openflix.presentation.screens.dvr.DVRPlayerViewModel", ((Provider) dVRPlayerViewModelProvider)).put("com.openflix.presentation.screens.dvr.DVRViewModel", ((Provider) dVRViewModelProvider)).put("com.openflix.presentation.screens.home.DiscoverViewModel", ((Provider) discoverViewModelProvider)).put("com.openflix.presentation.screens.epg.EPGGuideViewModel", ((Provider) ePGGuideViewModelProvider)).put("com.openflix.presentation.screens.livetv.LiveTVGuideViewModel", ((Provider) liveTVGuideViewModelProvider)).put("com.openflix.presentation.screens.livetv.LiveTVPlayerViewModel", ((Provider) liveTVPlayerViewModelProvider)).put("com.openflix.presentation.screens.livetv.LiveTVViewModel", ((Provider) liveTVViewModelProvider)).put("com.openflix.presentation.screens.media.MediaDetailViewModel", ((Provider) mediaDetailViewModelProvider)).put("com.openflix.presentation.screens.movies.MoviesViewModel", ((Provider) moviesViewModelProvider)).put("com.openflix.presentation.screens.livetv.MultiviewViewModel", ((Provider) multiviewViewModelProvider)).put("com.openflix.presentation.screens.onlater.OnLaterViewModel", ((Provider) onLaterViewModelProvider)).put("com.openflix.presentation.screens.settings.RemoteMappingViewModel", ((Provider) remoteMappingViewModelProvider)).put("com.openflix.presentation.screens.search.SearchViewModel", ((Provider) searchViewModelProvider)).put("com.openflix.presentation.screens.settings.SettingsViewModel", ((Provider) settingsViewModelProvider)).put("com.openflix.presentation.screens.tvshows.TVShowsViewModel", ((Provider) tVShowsViewModelProvider)).put("com.openflix.presentation.screens.teampass.TeamPassViewModel", ((Provider) teamPassViewModelProvider)).put("com.openflix.presentation.screens.player.VideoPlayerViewModel", ((Provider) videoPlayerViewModelProvider)).put("com.openflix.presentation.screens.watchstats.WatchStatsViewModel", ((Provider) watchStatsViewModelProvider)).build();
     }
 
     @Override
@@ -548,50 +597,77 @@ public final class DaggerOpenFlixApp_HiltComponents_SingletonC {
       @Override
       public T get() {
         switch (id) {
-          case 0: // com.openflix.presentation.screens.livetv.ArchivePlayerViewModel 
+          case 0: // com.openflix.presentation.screens.allmedia.AllMediaViewModel 
+          return (T) new AllMediaViewModel(singletonCImpl.provideMediaRepositoryProvider.get(), viewModelCImpl.savedStateHandle);
+
+          case 1: // com.openflix.presentation.screens.livetv.ArchivePlayerViewModel 
           return (T) new ArchivePlayerViewModel(singletonCImpl.provideLiveTVRepositoryProvider.get(), singletonCImpl.provideMpvPlayerProvider.get());
 
-          case 1: // com.openflix.presentation.screens.auth.AuthViewModel 
+          case 2: // com.openflix.presentation.screens.auth.AuthViewModel 
           return (T) new AuthViewModel(singletonCImpl.provideAuthRepositoryProvider.get(), singletonCImpl.serverDiscoveryServiceProvider.get());
 
-          case 2: // com.openflix.presentation.screens.livetv.ChannelLogoEditorViewModel 
+          case 3: // com.openflix.presentation.screens.catchup.CatchupViewModel 
+          return (T) new CatchupViewModel(singletonCImpl.provideLiveTVRepositoryProvider.get());
+
+          case 4: // com.openflix.presentation.screens.livetv.ChannelLogoEditorViewModel 
           return (T) new ChannelLogoEditorViewModel(singletonCImpl.provideLiveTVRepositoryProvider.get());
 
-          case 3: // com.openflix.presentation.screens.dvr.DVRViewModel 
+          case 5: // com.openflix.presentation.screens.livetv.ChannelSurfingViewModel 
+          return (T) new ChannelSurfingViewModel(singletonCImpl.provideLiveTVRepositoryProvider.get());
+
+          case 6: // com.openflix.presentation.screens.dvr.DVRPlayerViewModel 
+          return (T) new DVRPlayerViewModel(singletonCImpl.provideDVRRepositoryProvider.get(), singletonCImpl.watchStatsServiceProvider.get());
+
+          case 7: // com.openflix.presentation.screens.dvr.DVRViewModel 
           return (T) new DVRViewModel(singletonCImpl.provideDVRRepositoryProvider.get());
 
-          case 4: // com.openflix.presentation.screens.home.DiscoverViewModel 
-          return (T) new DiscoverViewModel(singletonCImpl.provideMediaRepositoryProvider.get());
+          case 8: // com.openflix.presentation.screens.home.DiscoverViewModel 
+          return (T) new DiscoverViewModel(singletonCImpl.provideMediaRepositoryProvider.get(), singletonCImpl.provideLiveTVRepositoryProvider.get());
 
-          case 5: // com.openflix.presentation.screens.epg.EPGGuideViewModel 
+          case 9: // com.openflix.presentation.screens.epg.EPGGuideViewModel 
           return (T) new EPGGuideViewModel(singletonCImpl.provideLiveTVRepositoryProvider.get());
 
-          case 6: // com.openflix.presentation.screens.livetv.LiveTVGuideViewModel 
-          return (T) new LiveTVGuideViewModel(singletonCImpl.provideLiveTVRepositoryProvider.get());
+          case 10: // com.openflix.presentation.screens.livetv.LiveTVGuideViewModel 
+          return (T) new LiveTVGuideViewModel(singletonCImpl.provideLiveTVRepositoryProvider.get(), singletonCImpl.provideDVRRepositoryProvider.get(), singletonCImpl.lastWatchedServiceProvider.get());
 
-          case 7: // com.openflix.presentation.screens.livetv.LiveTVPlayerViewModel 
-          return (T) new LiveTVPlayerViewModel(singletonCImpl.provideLiveTVRepositoryProvider.get(), singletonCImpl.providePlayerControllerProvider.get(), singletonCImpl.provideMpvPlayerProvider.get(), singletonCImpl.providePreferencesManagerProvider.get());
+          case 11: // com.openflix.presentation.screens.livetv.LiveTVPlayerViewModel 
+          return (T) new LiveTVPlayerViewModel(singletonCImpl.provideLiveTVRepositoryProvider.get(), singletonCImpl.provideDVRRepositoryProvider.get(), singletonCImpl.provideLiveTVPlayerProvider.get(), singletonCImpl.instantSwitchManagerProvider.get(), singletonCImpl.providePreferencesManagerProvider.get(), singletonCImpl.lastWatchedServiceProvider.get(), singletonCImpl.watchStatsServiceProvider.get());
 
-          case 8: // com.openflix.presentation.screens.livetv.LiveTVViewModel 
+          case 12: // com.openflix.presentation.screens.livetv.LiveTVViewModel 
           return (T) new LiveTVViewModel(singletonCImpl.provideLiveTVRepositoryProvider.get());
 
-          case 9: // com.openflix.presentation.screens.media.MediaDetailViewModel 
+          case 13: // com.openflix.presentation.screens.media.MediaDetailViewModel 
           return (T) new MediaDetailViewModel(singletonCImpl.provideMediaRepositoryProvider.get());
 
-          case 10: // com.openflix.presentation.screens.livetv.MultiviewViewModel 
+          case 14: // com.openflix.presentation.screens.movies.MoviesViewModel 
+          return (T) new MoviesViewModel(singletonCImpl.provideMediaRepositoryProvider.get());
+
+          case 15: // com.openflix.presentation.screens.livetv.MultiviewViewModel 
           return (T) new MultiviewViewModel(ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule), singletonCImpl.provideLiveTVRepositoryProvider.get());
 
-          case 11: // com.openflix.presentation.screens.settings.RemoteMappingViewModel 
+          case 16: // com.openflix.presentation.screens.onlater.OnLaterViewModel 
+          return (T) new OnLaterViewModel(singletonCImpl.provideLiveTVRepositoryProvider.get(), singletonCImpl.provideDVRRepositoryProvider.get());
+
+          case 17: // com.openflix.presentation.screens.settings.RemoteMappingViewModel 
           return (T) new RemoteMappingViewModel(singletonCImpl.providePreferencesManagerProvider.get());
 
-          case 12: // com.openflix.presentation.screens.search.SearchViewModel 
+          case 18: // com.openflix.presentation.screens.search.SearchViewModel 
           return (T) new SearchViewModel(singletonCImpl.provideMediaRepositoryProvider.get());
 
-          case 13: // com.openflix.presentation.screens.settings.SettingsViewModel 
+          case 19: // com.openflix.presentation.screens.settings.SettingsViewModel 
           return (T) new SettingsViewModel(singletonCImpl.provideSettingsRepositoryProvider.get());
 
-          case 14: // com.openflix.presentation.screens.player.VideoPlayerViewModel 
-          return (T) new VideoPlayerViewModel(singletonCImpl.provideMediaRepositoryProvider.get());
+          case 20: // com.openflix.presentation.screens.tvshows.TVShowsViewModel 
+          return (T) new TVShowsViewModel(singletonCImpl.provideMediaRepositoryProvider.get());
+
+          case 21: // com.openflix.presentation.screens.teampass.TeamPassViewModel 
+          return (T) new TeamPassViewModel(singletonCImpl.provideLiveTVRepositoryProvider.get());
+
+          case 22: // com.openflix.presentation.screens.player.VideoPlayerViewModel 
+          return (T) new VideoPlayerViewModel(singletonCImpl.provideMediaRepositoryProvider.get(), singletonCImpl.watchStatsServiceProvider.get());
+
+          case 23: // com.openflix.presentation.screens.watchstats.WatchStatsViewModel 
+          return (T) new WatchStatsViewModel(singletonCImpl.watchStatsServiceProvider.get());
 
           default: throw new AssertionError(id);
         }
@@ -683,6 +759,8 @@ public final class DaggerOpenFlixApp_HiltComponents_SingletonC {
 
     private Provider<LiveTVPlayer> provideLiveTVPlayerProvider;
 
+    private Provider<LastWatchedService> lastWatchedServiceProvider;
+
     private Provider<HttpLoggingInterceptor> provideLoggingInterceptorProvider;
 
     private Provider<AuthInterceptor> provideAuthInterceptorProvider;
@@ -693,6 +771,8 @@ public final class DaggerOpenFlixApp_HiltComponents_SingletonC {
 
     private Provider<OpenFlixApi> provideOpenFlixApiProvider;
 
+    private Provider<MediaRepository> provideMediaRepositoryProvider;
+
     private Provider<LiveTVRepository> provideLiveTVRepositoryProvider;
 
     private Provider<AuthRepository> provideAuthRepositoryProvider;
@@ -701,9 +781,9 @@ public final class DaggerOpenFlixApp_HiltComponents_SingletonC {
 
     private Provider<DVRRepository> provideDVRRepositoryProvider;
 
-    private Provider<MediaRepository> provideMediaRepositoryProvider;
+    private Provider<WatchStatsService> watchStatsServiceProvider;
 
-    private Provider<PlayerController> providePlayerControllerProvider;
+    private Provider<InstantSwitchManager> instantSwitchManagerProvider;
 
     private SingletonCImpl(ApplicationContextModule applicationContextModuleParam) {
       this.applicationContextModule = applicationContextModuleParam;
@@ -718,17 +798,19 @@ public final class DaggerOpenFlixApp_HiltComponents_SingletonC {
       this.provideSettingsRepositoryProvider = DoubleCheck.provider(new SwitchingProvider<SettingsRepository>(singletonCImpl, 1));
       this.provideMpvPlayerProvider = DoubleCheck.provider(new SwitchingProvider<MpvPlayer>(singletonCImpl, 0));
       this.provideLiveTVPlayerProvider = DoubleCheck.provider(new SwitchingProvider<LiveTVPlayer>(singletonCImpl, 4));
-      this.provideLoggingInterceptorProvider = DoubleCheck.provider(new SwitchingProvider<HttpLoggingInterceptor>(singletonCImpl, 9));
-      this.provideAuthInterceptorProvider = DoubleCheck.provider(new SwitchingProvider<AuthInterceptor>(singletonCImpl, 10));
-      this.provideOkHttpClientProvider = DoubleCheck.provider(new SwitchingProvider<OkHttpClient>(singletonCImpl, 8));
-      this.provideRetrofitProvider = DoubleCheck.provider(new SwitchingProvider<Retrofit>(singletonCImpl, 7));
-      this.provideOpenFlixApiProvider = DoubleCheck.provider(new SwitchingProvider<OpenFlixApi>(singletonCImpl, 6));
-      this.provideLiveTVRepositoryProvider = DoubleCheck.provider(new SwitchingProvider<LiveTVRepository>(singletonCImpl, 5));
-      this.provideAuthRepositoryProvider = DoubleCheck.provider(new SwitchingProvider<AuthRepository>(singletonCImpl, 11));
-      this.serverDiscoveryServiceProvider = DoubleCheck.provider(new SwitchingProvider<ServerDiscoveryService>(singletonCImpl, 12));
-      this.provideDVRRepositoryProvider = DoubleCheck.provider(new SwitchingProvider<DVRRepository>(singletonCImpl, 13));
-      this.provideMediaRepositoryProvider = DoubleCheck.provider(new SwitchingProvider<MediaRepository>(singletonCImpl, 14));
-      this.providePlayerControllerProvider = DoubleCheck.provider(new SwitchingProvider<PlayerController>(singletonCImpl, 15));
+      this.lastWatchedServiceProvider = DoubleCheck.provider(new SwitchingProvider<LastWatchedService>(singletonCImpl, 5));
+      this.provideLoggingInterceptorProvider = DoubleCheck.provider(new SwitchingProvider<HttpLoggingInterceptor>(singletonCImpl, 10));
+      this.provideAuthInterceptorProvider = DoubleCheck.provider(new SwitchingProvider<AuthInterceptor>(singletonCImpl, 11));
+      this.provideOkHttpClientProvider = DoubleCheck.provider(new SwitchingProvider<OkHttpClient>(singletonCImpl, 9));
+      this.provideRetrofitProvider = DoubleCheck.provider(new SwitchingProvider<Retrofit>(singletonCImpl, 8));
+      this.provideOpenFlixApiProvider = DoubleCheck.provider(new SwitchingProvider<OpenFlixApi>(singletonCImpl, 7));
+      this.provideMediaRepositoryProvider = DoubleCheck.provider(new SwitchingProvider<MediaRepository>(singletonCImpl, 6));
+      this.provideLiveTVRepositoryProvider = DoubleCheck.provider(new SwitchingProvider<LiveTVRepository>(singletonCImpl, 12));
+      this.provideAuthRepositoryProvider = DoubleCheck.provider(new SwitchingProvider<AuthRepository>(singletonCImpl, 13));
+      this.serverDiscoveryServiceProvider = DoubleCheck.provider(new SwitchingProvider<ServerDiscoveryService>(singletonCImpl, 14));
+      this.provideDVRRepositoryProvider = DoubleCheck.provider(new SwitchingProvider<DVRRepository>(singletonCImpl, 15));
+      this.watchStatsServiceProvider = DoubleCheck.provider(new SwitchingProvider<WatchStatsService>(singletonCImpl, 16));
+      this.instantSwitchManagerProvider = DoubleCheck.provider(new SwitchingProvider<InstantSwitchManager>(singletonCImpl, 17));
     }
 
     @Override
@@ -779,38 +861,44 @@ public final class DaggerOpenFlixApp_HiltComponents_SingletonC {
           case 4: // com.openflix.player.LiveTVPlayer 
           return (T) PlayerModule_ProvideLiveTVPlayerFactory.provideLiveTVPlayer(ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule));
 
-          case 5: // com.openflix.data.repository.LiveTVRepository 
-          return (T) NetworkModule_ProvideLiveTVRepositoryFactory.provideLiveTVRepository(singletonCImpl.provideOpenFlixApiProvider.get(), singletonCImpl.providePreferencesManagerProvider.get());
+          case 5: // com.openflix.data.local.LastWatchedService 
+          return (T) new LastWatchedService(ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule));
 
-          case 6: // com.openflix.data.remote.api.OpenFlixApi 
-          return (T) NetworkModule_ProvideOpenFlixApiFactory.provideOpenFlixApi(singletonCImpl.provideRetrofitProvider.get());
-
-          case 7: // retrofit2.Retrofit 
-          return (T) NetworkModule_ProvideRetrofitFactory.provideRetrofit(singletonCImpl.provideOkHttpClientProvider.get(), singletonCImpl.providePreferencesManagerProvider.get());
-
-          case 8: // okhttp3.OkHttpClient 
-          return (T) NetworkModule_ProvideOkHttpClientFactory.provideOkHttpClient(singletonCImpl.provideLoggingInterceptorProvider.get(), singletonCImpl.provideAuthInterceptorProvider.get());
-
-          case 9: // okhttp3.logging.HttpLoggingInterceptor 
-          return (T) NetworkModule_ProvideLoggingInterceptorFactory.provideLoggingInterceptor();
-
-          case 10: // com.openflix.data.remote.api.AuthInterceptor 
-          return (T) NetworkModule_ProvideAuthInterceptorFactory.provideAuthInterceptor(singletonCImpl.providePreferencesManagerProvider.get());
-
-          case 11: // com.openflix.data.repository.AuthRepository 
-          return (T) NetworkModule_ProvideAuthRepositoryFactory.provideAuthRepository(singletonCImpl.provideOpenFlixApiProvider.get(), singletonCImpl.providePreferencesManagerProvider.get());
-
-          case 12: // com.openflix.data.discovery.ServerDiscoveryService 
-          return (T) new ServerDiscoveryService();
-
-          case 13: // com.openflix.data.repository.DVRRepository 
-          return (T) NetworkModule_ProvideDVRRepositoryFactory.provideDVRRepository(singletonCImpl.provideOpenFlixApiProvider.get(), singletonCImpl.providePreferencesManagerProvider.get());
-
-          case 14: // com.openflix.data.repository.MediaRepository 
+          case 6: // com.openflix.data.repository.MediaRepository 
           return (T) NetworkModule_ProvideMediaRepositoryFactory.provideMediaRepository(singletonCImpl.provideOpenFlixApiProvider.get(), singletonCImpl.providePreferencesManagerProvider.get());
 
-          case 15: // com.openflix.player.PlayerController 
-          return (T) PlayerModule_ProvidePlayerControllerFactory.providePlayerController(singletonCImpl.provideMpvPlayerProvider.get());
+          case 7: // com.openflix.data.remote.api.OpenFlixApi 
+          return (T) NetworkModule_ProvideOpenFlixApiFactory.provideOpenFlixApi(singletonCImpl.provideRetrofitProvider.get());
+
+          case 8: // retrofit2.Retrofit 
+          return (T) NetworkModule_ProvideRetrofitFactory.provideRetrofit(singletonCImpl.provideOkHttpClientProvider.get(), singletonCImpl.providePreferencesManagerProvider.get());
+
+          case 9: // okhttp3.OkHttpClient 
+          return (T) NetworkModule_ProvideOkHttpClientFactory.provideOkHttpClient(singletonCImpl.provideLoggingInterceptorProvider.get(), singletonCImpl.provideAuthInterceptorProvider.get());
+
+          case 10: // okhttp3.logging.HttpLoggingInterceptor 
+          return (T) NetworkModule_ProvideLoggingInterceptorFactory.provideLoggingInterceptor();
+
+          case 11: // com.openflix.data.remote.api.AuthInterceptor 
+          return (T) NetworkModule_ProvideAuthInterceptorFactory.provideAuthInterceptor(singletonCImpl.providePreferencesManagerProvider.get());
+
+          case 12: // com.openflix.data.repository.LiveTVRepository 
+          return (T) NetworkModule_ProvideLiveTVRepositoryFactory.provideLiveTVRepository(singletonCImpl.provideOpenFlixApiProvider.get(), singletonCImpl.providePreferencesManagerProvider.get());
+
+          case 13: // com.openflix.data.repository.AuthRepository 
+          return (T) NetworkModule_ProvideAuthRepositoryFactory.provideAuthRepository(singletonCImpl.provideOpenFlixApiProvider.get(), singletonCImpl.providePreferencesManagerProvider.get());
+
+          case 14: // com.openflix.data.discovery.ServerDiscoveryService 
+          return (T) new ServerDiscoveryService();
+
+          case 15: // com.openflix.data.repository.DVRRepository 
+          return (T) NetworkModule_ProvideDVRRepositoryFactory.provideDVRRepository(singletonCImpl.provideOpenFlixApiProvider.get(), singletonCImpl.providePreferencesManagerProvider.get());
+
+          case 16: // com.openflix.data.local.WatchStatsService 
+          return (T) new WatchStatsService(ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule));
+
+          case 17: // com.openflix.player.InstantSwitchManager 
+          return (T) new InstantSwitchManager(ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule));
 
           default: throw new AssertionError(id);
         }

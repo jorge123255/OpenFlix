@@ -24,6 +24,7 @@ import com.openflix.presentation.theme.OpenFlixColors
 fun LiveTVScreen(
     onChannelClick: (String) -> Unit,
     onGuideClick: () -> Unit,
+    onCatchupClick: () -> Unit = {},
     viewModel: LiveTVViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -49,8 +50,13 @@ fun LiveTVScreen(
                 color = OpenFlixColors.OnSurface
             )
 
-            Button(onClick = onGuideClick) {
-                Text("Guide")
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Button(onClick = onCatchupClick) {
+                    Text("Catch Up")
+                }
+                Button(onClick = onGuideClick) {
+                    Text("Guide")
+                }
             }
         }
 

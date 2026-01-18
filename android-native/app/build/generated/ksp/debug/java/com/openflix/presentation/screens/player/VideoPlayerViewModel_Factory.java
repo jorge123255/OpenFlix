@@ -1,5 +1,6 @@
 package com.openflix.presentation.screens.player;
 
+import com.openflix.data.local.WatchStatsService;
 import com.openflix.data.repository.MediaRepository;
 import dagger.internal.DaggerGenerated;
 import dagger.internal.Factory;
@@ -24,20 +25,26 @@ import javax.inject.Provider;
 public final class VideoPlayerViewModel_Factory implements Factory<VideoPlayerViewModel> {
   private final Provider<MediaRepository> repositoryProvider;
 
-  public VideoPlayerViewModel_Factory(Provider<MediaRepository> repositoryProvider) {
+  private final Provider<WatchStatsService> watchStatsServiceProvider;
+
+  public VideoPlayerViewModel_Factory(Provider<MediaRepository> repositoryProvider,
+      Provider<WatchStatsService> watchStatsServiceProvider) {
     this.repositoryProvider = repositoryProvider;
+    this.watchStatsServiceProvider = watchStatsServiceProvider;
   }
 
   @Override
   public VideoPlayerViewModel get() {
-    return newInstance(repositoryProvider.get());
+    return newInstance(repositoryProvider.get(), watchStatsServiceProvider.get());
   }
 
-  public static VideoPlayerViewModel_Factory create(Provider<MediaRepository> repositoryProvider) {
-    return new VideoPlayerViewModel_Factory(repositoryProvider);
+  public static VideoPlayerViewModel_Factory create(Provider<MediaRepository> repositoryProvider,
+      Provider<WatchStatsService> watchStatsServiceProvider) {
+    return new VideoPlayerViewModel_Factory(repositoryProvider, watchStatsServiceProvider);
   }
 
-  public static VideoPlayerViewModel newInstance(MediaRepository repository) {
-    return new VideoPlayerViewModel(repository);
+  public static VideoPlayerViewModel newInstance(MediaRepository repository,
+      WatchStatsService watchStatsService) {
+    return new VideoPlayerViewModel(repository, watchStatsService);
   }
 }

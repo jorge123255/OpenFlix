@@ -1,5 +1,6 @@
 package com.openflix.presentation.screens.home;
 
+import com.openflix.data.repository.LiveTVRepository;
 import com.openflix.data.repository.MediaRepository;
 import dagger.internal.DaggerGenerated;
 import dagger.internal.Factory;
@@ -24,21 +25,26 @@ import javax.inject.Provider;
 public final class DiscoverViewModel_Factory implements Factory<DiscoverViewModel> {
   private final Provider<MediaRepository> mediaRepositoryProvider;
 
-  public DiscoverViewModel_Factory(Provider<MediaRepository> mediaRepositoryProvider) {
+  private final Provider<LiveTVRepository> liveTVRepositoryProvider;
+
+  public DiscoverViewModel_Factory(Provider<MediaRepository> mediaRepositoryProvider,
+      Provider<LiveTVRepository> liveTVRepositoryProvider) {
     this.mediaRepositoryProvider = mediaRepositoryProvider;
+    this.liveTVRepositoryProvider = liveTVRepositoryProvider;
   }
 
   @Override
   public DiscoverViewModel get() {
-    return newInstance(mediaRepositoryProvider.get());
+    return newInstance(mediaRepositoryProvider.get(), liveTVRepositoryProvider.get());
   }
 
-  public static DiscoverViewModel_Factory create(
-      Provider<MediaRepository> mediaRepositoryProvider) {
-    return new DiscoverViewModel_Factory(mediaRepositoryProvider);
+  public static DiscoverViewModel_Factory create(Provider<MediaRepository> mediaRepositoryProvider,
+      Provider<LiveTVRepository> liveTVRepositoryProvider) {
+    return new DiscoverViewModel_Factory(mediaRepositoryProvider, liveTVRepositoryProvider);
   }
 
-  public static DiscoverViewModel newInstance(MediaRepository mediaRepository) {
-    return new DiscoverViewModel(mediaRepository);
+  public static DiscoverViewModel newInstance(MediaRepository mediaRepository,
+      LiveTVRepository liveTVRepository) {
+    return new DiscoverViewModel(mediaRepository, liveTVRepository);
   }
 }

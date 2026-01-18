@@ -1,18 +1,18 @@
 [
     {
-        "merged": "/Users/georgeszulc/.gradle/daemon/8.4/com.openflix.app-merged_res-4:/drawable_banner.xml.flat",
-        "source": "/Users/georgeszulc/.gradle/daemon/8.4/com.openflix.app-main-6:/drawable/banner.xml"
+        "merged": "com.openflix.app-merged_res-4:/xml_searchable.xml.flat",
+        "source": "com.openflix.app-main-6:/xml/searchable.xml"
     },
     {
-        "merged": "/Users/georgeszulc/.gradle/daemon/8.4/com.openflix.app-merged_res-4:/xml_searchable.xml.flat",
-        "source": "/Users/georgeszulc/.gradle/daemon/8.4/com.openflix.app-main-6:/xml/searchable.xml"
-    },
-    {
-        "merged": "/Users/georgeszulc/.gradle/daemon/8.4/com.openflix.app-merged_res-4:/mipmap-hdpi_ic_launcher.xml.flat",
-        "source": "/Users/georgeszulc/.gradle/daemon/8.4/com.openflix.app-main-6:/mipmap-hdpi/ic_launcher.xml"
+        "merged": "com.openflix.app-merged_res-4:/mipmap-hdpi_ic_launcher.xml.flat",
+        "source": "com.openflix.app-main-6:/mipmap-hdpi/ic_launcher.xml"
     },
     {
         "merged": "com.openflix.app-merged_res-4:/drawable-xhdpi_tv_banner.png.flat",
         "source": "com.openflix.app-main-6:/drawable-xhdpi/tv_banner.png"
+    },
+    {
+        "merged": "com.openflix.app-merged_res-4:/drawable_banner.xml.flat",
+        "source": "com.openflix.app-main-6:/drawable/banner.xml"
     }
 ]

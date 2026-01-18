@@ -9,7 +9,9 @@ import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -29,11 +31,18 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.tv.material3.*
 import coil.compose.AsyncImage
+import com.openflix.data.local.LastWatchedService
 import com.openflix.player.LiveTVPlayer
 import com.openflix.player.MpvPlayer
+import com.openflix.presentation.screens.catchup.CatchupScreen
 import com.openflix.presentation.screens.dvr.DVRScreen
+import com.openflix.presentation.screens.watchstats.WatchStatsScreen
 import com.openflix.presentation.screens.livetv.LiveTVGuideScreen
+import com.openflix.presentation.screens.movies.MoviesScreen
+import com.openflix.presentation.screens.onlater.OnLaterScreen
 import com.openflix.presentation.screens.settings.SettingsScreen
+import com.openflix.presentation.screens.teampass.TeamPassScreen
+import com.openflix.presentation.screens.tvshows.TVShowsScreen
 import com.openflix.presentation.theme.OpenFlixColors
 
 /**
@@ -45,16 +54,23 @@ fun MainScreen(
     onNavigateToMediaDetail: (String) -> Unit,
     onNavigateToPlayer: (String) -> Unit,
     onNavigateToLiveTVPlayer: (String) -> Unit,
+    onNavigateToDVRPlayer: (recordingId: String, mode: String) -> Unit = { id, _ -> },
     onNavigateToSettings: () -> Unit,
     onNavigateToSearch: () -> Unit,
     onNavigateToMultiview: () -> Unit = {},
+    onNavigateToChannelSurfing: () -> Unit = {},
+    onNavigateToCatchup: () -> Unit = {},
+    onNavigateToArchivePlayer: (channelId: String, startTime: Long) -> Unit = { _, _ -> },
+    onNavigateToBrowseAll: (libraryId: String, mediaType: String) -> Unit = { _, _ -> },
     mpvPlayer: MpvPlayer,
-    liveTVPlayer: LiveTVPlayer
+    liveTVPlayer: LiveTVPlayer,
+    lastWatchedService: LastWatchedService? = null
 ) {
     var selectedTab by remember { mutableStateOf(MainTab.HOME) }
     var isSidebarExpanded by remember { mutableStateOf(false) }
     var isSidebarFocused by remember { mutableStateOf(false) }
     var isLiveTVFullscreen by remember { mutableStateOf(false) }
+    val sidebarFocusRequester = remember { FocusRequester() }
 
     // Auto-expand sidebar when any item is focused
     val sidebarWidth by animateDpAsState(
@@ -76,7 +92,8 @@ fun MainScreen(
                 width = sidebarWidth,
                 onTabSelected = { selectedTab = it },
                 onSearchClick = onNavigateToSearch,
-                onFocusChanged = { isSidebarFocused = it }
+                onFocusChanged = { isSidebarFocused = it },
+                focusRequester = sidebarFocusRequester
             )
         }
 
@@ -89,19 +106,55 @@ fun MainScreen(
             when (selectedTab) {
                 MainTab.HOME -> DiscoverScreen(
                     onMediaClick = onNavigateToMediaDetail,
-                    onPlayClick = onNavigateToPlayer
+                    onPlayClick = onNavigateToPlayer,
+                    liveTVPlayer = liveTVPlayer,
+                    lastWatchedService = lastWatchedService,
+                    onNavigateToLiveTVPlayer = onNavigateToLiveTVPlayer,
+                    onNavigateToSidebar = {
+                        try { sidebarFocusRequester.requestFocus() } catch (_: Exception) {}
+                    }
+                )
+                MainTab.MOVIES -> MoviesScreen(
+                    onMediaClick = onNavigateToMediaDetail,
+                    onPlayClick = onNavigateToPlayer,
+                    onBrowseAll = { onNavigateToBrowseAll("all", "movie") }
+                )
+                MainTab.TV_SHOWS -> TVShowsScreen(
+                    onMediaClick = onNavigateToMediaDetail,
+                    onPlayClick = onNavigateToPlayer,
+                    onBrowseAll = { onNavigateToBrowseAll("all", "show") }
                 )
                 MainTab.LIVE_TV -> LiveTVGuideScreen(
                     onBack = { selectedTab = MainTab.HOME },
                     onChannelSelected = onNavigateToLiveTVPlayer,
                     liveTVPlayer = liveTVPlayer,
                     onFullscreenChanged = { isLiveTVFullscreen = it },
-                    onNavigateToMultiview = onNavigateToMultiview
+                    onNavigateToMultiview = onNavigateToMultiview,
+                    onNavigateToChannelSurfing = onNavigateToChannelSurfing,
+                    onNavigateToCatchup = onNavigateToCatchup
                 )
-                MainTab.DVR -> DVRScreen(
-                    onRecordingClick = { recordingId ->
-                        onNavigateToPlayer(recordingId)
+                MainTab.CATCHUP -> CatchupScreen(
+                    onBack = { selectedTab = MainTab.LIVE_TV },
+                    onPlayProgram = { channelId, startTime ->
+                        onNavigateToArchivePlayer(channelId, startTime)
                     }
+                )
+                MainTab.ON_LATER -> OnLaterScreen(
+                    onProgramClick = { item ->
+                        // Navigate to Live TV player with the channel
+                        item.channel?.let { channel ->
+                            onNavigateToLiveTVPlayer(channel.id.toString())
+                        }
+                    }
+                )
+                MainTab.TEAM_PASS -> TeamPassScreen()
+                MainTab.DVR -> DVRScreen(
+                    onRecordingClick = { recordingId, mode ->
+                        onNavigateToDVRPlayer(recordingId, mode)
+                    }
+                )
+                MainTab.WATCH_STATS -> WatchStatsScreen(
+                    onBack = { selectedTab = MainTab.HOME }
                 )
                 MainTab.SETTINGS -> SettingsScreen(
                     onBack = { selectedTab = MainTab.HOME },
@@ -124,7 +177,8 @@ private fun ModernSidebar(
     width: androidx.compose.ui.unit.Dp,
     onTabSelected: (MainTab) -> Unit,
     onSearchClick: () -> Unit,
-    onFocusChanged: (Boolean) -> Unit
+    onFocusChanged: (Boolean) -> Unit,
+    focusRequester: FocusRequester = remember { FocusRequester() }
 ) {
     var hasFocusedChild by remember { mutableStateOf(false) }
 
@@ -132,6 +186,7 @@ private fun ModernSidebar(
         modifier = Modifier
             .width(width)
             .fillMaxHeight()
+            .focusRequester(focusRequester)
             .background(
                 brush = Brush.horizontalGradient(
                     colors = listOf(
@@ -172,29 +227,33 @@ private fun ModernSidebar(
             )
         }
 
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
-        // Navigation Items
-        MainTab.entries.forEach { tab ->
+        // Navigation Items - scrollable for all tabs
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .verticalScroll(rememberScrollState())
+        ) {
+            MainTab.entries.forEach { tab ->
+                SidebarNavItem(
+                    tab = tab,
+                    isSelected = selectedTab == tab,
+                    isExpanded = isExpanded,
+                    onClick = { onTabSelected(tab) }
+                )
+            }
+
+            // Search button at bottom of scrollable area
             SidebarNavItem(
-                tab = tab,
-                isSelected = selectedTab == tab,
+                icon = Icons.Outlined.Search,
+                selectedIcon = Icons.Filled.Search,
+                label = "Search",
+                isSelected = false,
                 isExpanded = isExpanded,
-                onClick = { onTabSelected(tab) }
+                onClick = onSearchClick
             )
         }
-
-        Spacer(modifier = Modifier.weight(1f))
-
-        // Search button at bottom
-        SidebarNavItem(
-            icon = Icons.Outlined.Search,
-            selectedIcon = Icons.Filled.Search,
-            label = "Search",
-            isSelected = false,
-            isExpanded = isExpanded,
-            onClick = onSearchClick
-        )
     }
 }
 
@@ -308,7 +367,13 @@ enum class MainTab(
     val selectedIcon: ImageVector
 ) {
     HOME("Home", Icons.Outlined.Home, Icons.Filled.Home),
+    MOVIES("Movies", Icons.Outlined.Movie, Icons.Filled.Movie),
+    TV_SHOWS("TV Shows", Icons.Outlined.Tv, Icons.Filled.Tv),
     LIVE_TV("Live TV", Icons.Outlined.LiveTv, Icons.Filled.LiveTv),
+    CATCHUP("Catch Up", Icons.Outlined.History, Icons.Filled.History),
+    ON_LATER("On Later", Icons.Outlined.Schedule, Icons.Filled.Schedule),
+    TEAM_PASS("Team Pass", Icons.Outlined.SportsFootball, Icons.Filled.SportsFootball),
     DVR("DVR", Icons.Outlined.FiberManualRecord, Icons.Filled.FiberManualRecord),
+    WATCH_STATS("Stats", Icons.Outlined.Analytics, Icons.Filled.Analytics),
     SETTINGS("Settings", Icons.Outlined.Settings, Icons.Filled.Settings)
 }

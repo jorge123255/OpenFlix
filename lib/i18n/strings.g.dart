@@ -4,9 +4,9 @@
 /// To regenerate, run: `dart run slang`
 ///
 /// Locales: 6
-/// Strings: 4603 (767 per locale)
+/// Strings: 4608 (768 per locale)
 ///
-/// Built on 2026-01-04 at 20:19 UTC
+/// Built on 2026-01-07 at 17:06 UTC
 
 // coverage:ignore-file
 // ignore_for_file: type=lint
@@ -863,6 +863,11 @@ class _StringsLibrariesEn {
 	String get manageLibraries => 'Manage Libraries';
 	String get sort => 'Sort';
 	String get sortBy => 'Sort By';
+	String get sortByTitle => 'Title';
+	String get sortByDateAdded => 'Date Added';
+	String get sortByYear => 'Release Year';
+	String get sortByRating => 'Rating';
+	String get browseAll => 'Browse All';
 	String get filters => 'Filters';
 	String loadingLibraryWithCount({required Object count}) => 'Loading library... (${count} items loaded)';
 	String get confirmActionMessage => 'Are you sure you want to perform this action?';
@@ -8014,6 +8019,11 @@ extension on Translations {
 			case 'libraries.manageLibraries': return 'Manage Libraries';
 			case 'libraries.sort': return 'Sort';
 			case 'libraries.sortBy': return 'Sort By';
+			case 'libraries.sortByTitle': return 'Title';
+			case 'libraries.sortByDateAdded': return 'Date Added';
+			case 'libraries.sortByYear': return 'Release Year';
+			case 'libraries.sortByRating': return 'Rating';
+			case 'libraries.browseAll': return 'Browse All';
 			case 'libraries.filters': return 'Filters';
 			case 'libraries.loadingLibraryWithCount': return ({required Object count}) => 'Loading library... (${count} items loaded)';
 			case 'libraries.confirmActionMessage': return 'Are you sure you want to perform this action?';

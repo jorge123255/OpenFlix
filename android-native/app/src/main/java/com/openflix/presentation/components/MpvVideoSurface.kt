@@ -24,8 +24,11 @@ fun MpvVideoSurface(
 ) {
     val context = LocalContext.current
 
-    val surfaceView = remember(force4K) {
+    // Use Unit key to ensure surface is never recreated during recomposition
+    val surfaceView = remember {
         SurfaceView(context).apply {
+            // Keep surface alive when window loses focus
+            holder.setKeepScreenOn(true)
             // Request hardware acceleration and optimal pixel format
             holder.setFormat(PixelFormat.TRANSLUCENT)
 

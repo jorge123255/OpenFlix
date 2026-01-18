@@ -1,9 +1,12 @@
 package com.openflix.presentation.screens.livetv;
 
+import com.openflix.data.local.LastWatchedService;
 import com.openflix.data.local.PreferencesManager;
+import com.openflix.data.local.WatchStatsService;
+import com.openflix.data.repository.DVRRepository;
 import com.openflix.data.repository.LiveTVRepository;
-import com.openflix.player.MpvPlayer;
-import com.openflix.player.PlayerController;
+import com.openflix.player.InstantSwitchManager;
+import com.openflix.player.LiveTVPlayer;
 import dagger.internal.DaggerGenerated;
 import dagger.internal.Factory;
 import dagger.internal.QualifierMetadata;
@@ -27,35 +30,51 @@ import javax.inject.Provider;
 public final class LiveTVPlayerViewModel_Factory implements Factory<LiveTVPlayerViewModel> {
   private final Provider<LiveTVRepository> repositoryProvider;
 
-  private final Provider<PlayerController> playerControllerProvider;
+  private final Provider<DVRRepository> dvrRepositoryProvider;
 
-  private final Provider<MpvPlayer> mpvPlayerProvider;
+  private final Provider<LiveTVPlayer> liveTVPlayerProvider;
+
+  private final Provider<InstantSwitchManager> instantSwitchManagerProvider;
 
   private final Provider<PreferencesManager> preferencesManagerProvider;
 
+  private final Provider<LastWatchedService> lastWatchedServiceProvider;
+
+  private final Provider<WatchStatsService> watchStatsServiceProvider;
+
   public LiveTVPlayerViewModel_Factory(Provider<LiveTVRepository> repositoryProvider,
-      Provider<PlayerController> playerControllerProvider, Provider<MpvPlayer> mpvPlayerProvider,
-      Provider<PreferencesManager> preferencesManagerProvider) {
+      Provider<DVRRepository> dvrRepositoryProvider, Provider<LiveTVPlayer> liveTVPlayerProvider,
+      Provider<InstantSwitchManager> instantSwitchManagerProvider,
+      Provider<PreferencesManager> preferencesManagerProvider,
+      Provider<LastWatchedService> lastWatchedServiceProvider,
+      Provider<WatchStatsService> watchStatsServiceProvider) {
     this.repositoryProvider = repositoryProvider;
-    this.playerControllerProvider = playerControllerProvider;
-    this.mpvPlayerProvider = mpvPlayerProvider;
+    this.dvrRepositoryProvider = dvrRepositoryProvider;
+    this.liveTVPlayerProvider = liveTVPlayerProvider;
+    this.instantSwitchManagerProvider = instantSwitchManagerProvider;
     this.preferencesManagerProvider = preferencesManagerProvider;
+    this.lastWatchedServiceProvider = lastWatchedServiceProvider;
+    this.watchStatsServiceProvider = watchStatsServiceProvider;
   }
 
   @Override
   public LiveTVPlayerViewModel get() {
-    return newInstance(repositoryProvider.get(), playerControllerProvider.get(), mpvPlayerProvider.get(), preferencesManagerProvider.get());
+    return newInstance(repositoryProvider.get(), dvrRepositoryProvider.get(), liveTVPlayerProvider.get(), instantSwitchManagerProvider.get(), preferencesManagerProvider.get(), lastWatchedServiceProvider.get(), watchStatsServiceProvider.get());
   }
 
   public static LiveTVPlayerViewModel_Factory create(Provider<LiveTVRepository> repositoryProvider,
-      Provider<PlayerController> playerControllerProvider, Provider<MpvPlayer> mpvPlayerProvider,
-      Provider<PreferencesManager> preferencesManagerProvider) {
-    return new LiveTVPlayerViewModel_Factory(repositoryProvider, playerControllerProvider, mpvPlayerProvider, preferencesManagerProvider);
+      Provider<DVRRepository> dvrRepositoryProvider, Provider<LiveTVPlayer> liveTVPlayerProvider,
+      Provider<InstantSwitchManager> instantSwitchManagerProvider,
+      Provider<PreferencesManager> preferencesManagerProvider,
+      Provider<LastWatchedService> lastWatchedServiceProvider,
+      Provider<WatchStatsService> watchStatsServiceProvider) {
+    return new LiveTVPlayerViewModel_Factory(repositoryProvider, dvrRepositoryProvider, liveTVPlayerProvider, instantSwitchManagerProvider, preferencesManagerProvider, lastWatchedServiceProvider, watchStatsServiceProvider);
   }
 
   public static LiveTVPlayerViewModel newInstance(LiveTVRepository repository,
-      PlayerController playerController, MpvPlayer mpvPlayer,
-      PreferencesManager preferencesManager) {
-    return new LiveTVPlayerViewModel(repository, playerController, mpvPlayer, preferencesManager);
+      DVRRepository dvrRepository, LiveTVPlayer liveTVPlayer,
+      InstantSwitchManager instantSwitchManager, PreferencesManager preferencesManager,
+      LastWatchedService lastWatchedService, WatchStatsService watchStatsService) {
+    return new LiveTVPlayerViewModel(repository, dvrRepository, liveTVPlayer, instantSwitchManager, preferencesManager, lastWatchedService, watchStatsService);
   }
 }

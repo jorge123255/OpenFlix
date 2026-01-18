@@ -50,6 +50,9 @@ data class MediaItem(
     val audienceRating: Double?,
     val studio: String?,
     val genres: List<String>,
+    val directors: List<String>,
+    val writers: List<String>,
+    val cast: List<CastMember>,
     val librarySectionId: String?,
     val librarySectionTitle: String?,
 
@@ -65,32 +68,39 @@ data class MediaItem(
     val leafCount: Int?,  // episode count
     val viewedLeafCount: Int?,
     val childCount: Int?  // season count for shows
-) {
-    val isWatched: Boolean
-        get() = viewCount != null && viewCount > 0
+)
 
-    val watchProgress: Float
-        get() {
-            val offset = viewOffset ?: 0L
-            val total = duration ?: 1L
-            return if (total > 0) (offset.toFloat() / total.toFloat()).coerceIn(0f, 1f) else 0f
-        }
+data class CastMember(
+    val name: String,
+    val role: String?,
+    val thumb: String?
+)
 
-    val displayTitle: String
-        get() = when (type) {
-            MediaType.EPISODE -> "$grandparentTitle - S${parentIndex}E$index - $title"
-            else -> title
-        }
+// Extension properties for MediaItem
+val MediaItem.isWatched: Boolean
+    get() = viewCount != null && viewCount > 0
 
-    val posterUrl: String?
-        get() = when (type) {
-            MediaType.EPISODE -> grandparentThumb ?: thumb
-            else -> thumb
-        }
+val MediaItem.watchProgress: Float
+    get() {
+        val offset = viewOffset ?: 0L
+        val total = duration ?: 1L
+        return if (total > 0) (offset.toFloat() / total.toFloat()).coerceIn(0f, 1f) else 0f
+    }
 
-    val backdropUrl: String?
-        get() = art ?: grandparentArt
-}
+val MediaItem.displayTitle: String
+    get() = when (type) {
+        MediaType.EPISODE -> "$grandparentTitle - S${parentIndex}E$index - $title"
+        else -> title
+    }
+
+val MediaItem.posterUrl: String?
+    get() = when (type) {
+        MediaType.EPISODE -> grandparentThumb ?: thumb
+        else -> thumb
+    }
+
+val MediaItem.backdropUrl: String?
+    get() = art ?: grandparentArt
 
 data class Hub(
     val id: String,
@@ -103,7 +113,8 @@ data class Hub(
     val promoted: Boolean,
     val size: Int,
     val more: Boolean,
-    val items: List<MediaItem>
+    val items: List<MediaItem>,
+    val context: String? = null  // e.g., "hub.streamingService", "hub.genre"
 )
 
 data class Library(

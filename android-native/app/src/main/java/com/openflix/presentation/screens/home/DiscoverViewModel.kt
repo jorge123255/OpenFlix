@@ -2,7 +2,9 @@ package com.openflix.presentation.screens.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.openflix.data.repository.LiveTVRepository
 import com.openflix.data.repository.MediaRepository
+import com.openflix.domain.model.Channel
 import com.openflix.domain.model.Hub
 import com.openflix.domain.model.MediaItem
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -13,7 +15,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class DiscoverViewModel @Inject constructor(
-    private val mediaRepository: MediaRepository
+    private val mediaRepository: MediaRepository,
+    private val liveTVRepository: LiveTVRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(DiscoverUiState())
@@ -23,10 +26,15 @@ class DiscoverViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
 
-            val result = mediaRepository.getHomeHubs()
+            // Load library hubs and streaming services in parallel
+            val hubsResult = mediaRepository.getHomeHubs()
+            val streamingResult = mediaRepository.getStreamingServiceHubs()
 
-            result.fold(
+            hubsResult.fold(
                 onSuccess = { hubs ->
+                    // Get streaming services
+                    val streamingHubs = streamingResult.getOrDefault(emptyList())
+
                     // Find a featured item from the first hub or promoted hub
                     val featuredItem = hubs
                         .firstOrNull { it.promoted || it.style == "hero" }
@@ -37,10 +45,11 @@ class DiscoverViewModel @Inject constructor(
                         it.copy(
                             isLoading = false,
                             hubs = hubs,
+                            streamingServiceHubs = streamingHubs,
                             featuredItem = featuredItem
                         )
                     }
-                    Timber.d("Loaded ${hubs.size} hubs")
+                    Timber.d("Loaded ${hubs.size} hubs and ${streamingHubs.size} streaming service hubs")
                 },
                 onFailure = { error ->
                     Timber.e(error, "Failed to load home content")
@@ -58,11 +67,30 @@ class DiscoverViewModel @Inject constructor(
     fun refresh() {
         loadHomeContent()
     }
+
+    /**
+     * Load channels for mini guide
+     */
+    fun loadChannels(onLoaded: (List<Channel>) -> Unit) {
+        viewModelScope.launch {
+            liveTVRepository.getChannels().fold(
+                onSuccess = { channels ->
+                    Timber.d("Loaded ${channels.size} channels for mini guide")
+                    onLoaded(channels.filter { !it.hidden })
+                },
+                onFailure = { error ->
+                    Timber.e(error, "Failed to load channels")
+                    onLoaded(emptyList())
+                }
+            )
+        }
+    }
 }
 
 data class DiscoverUiState(
     val isLoading: Boolean = false,
     val hubs: List<Hub> = emptyList(),
+    val streamingServiceHubs: List<Hub> = emptyList(),
     val featuredItem: MediaItem? = null,
     val error: String? = null
 )

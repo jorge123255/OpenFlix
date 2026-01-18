@@ -2,7 +2,12 @@ package com.openflix.presentation.screens.player
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.openflix.data.local.ContentType
+import com.openflix.data.local.WatchStatsService
 import com.openflix.data.repository.MediaRepository
+import com.openflix.domain.model.MediaType
+import com.openflix.domain.model.backdropUrl
+import com.openflix.domain.model.posterUrl
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -15,16 +20,19 @@ import javax.inject.Inject
  */
 @HiltViewModel
 class VideoPlayerViewModel @Inject constructor(
-    private val repository: MediaRepository
+    private val repository: MediaRepository,
+    private val watchStatsService: WatchStatsService
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(VideoPlayerUiState())
     val uiState: StateFlow<VideoPlayerUiState> = _uiState.asStateFlow()
 
     fun loadMedia(mediaId: String) {
+        Timber.d("loadMedia called with mediaId: $mediaId")
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
 
+            Timber.d("Fetching media item for ID: $mediaId")
             repository.getMediaItem(mediaId).fold(
                 onSuccess = { mediaItem ->
                     Timber.d("Loaded media: ${mediaItem.title}")
@@ -33,6 +41,19 @@ class VideoPlayerViewModel @Inject constructor(
                     repository.getPlaybackUrl(mediaId).fold(
                         onSuccess = { url ->
                             Timber.d("Got playback URL: $url")
+
+                            // Start watch tracking
+                            val contentType = when (mediaItem.type) {
+                                MediaType.MOVIE -> ContentType.MOVIE
+                                MediaType.SHOW, MediaType.EPISODE -> ContentType.TV_SHOW
+                                else -> ContentType.MOVIE
+                            }
+                            watchStatsService.startWatchSession(
+                                contentId = mediaItem.id,
+                                contentType = contentType,
+                                title = mediaItem.title
+                            )
+
                             _uiState.update { it.copy(
                                 isLoading = false,
                                 mediaInfo = MediaInfo(
@@ -78,6 +99,15 @@ class VideoPlayerViewModel @Inject constructor(
                 }
             )
         }
+    }
+
+    fun endWatchSession() {
+        watchStatsService.endWatchSession()
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        endWatchSession()
     }
 }
 

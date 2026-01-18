@@ -3,21 +3,30 @@ package com.openflix;
 import com.openflix.di.AppModule;
 import com.openflix.di.NetworkModule;
 import com.openflix.di.PlayerModule;
+import com.openflix.presentation.screens.allmedia.AllMediaViewModel_HiltModules;
 import com.openflix.presentation.screens.auth.AuthViewModel_HiltModules;
+import com.openflix.presentation.screens.catchup.CatchupViewModel_HiltModules;
+import com.openflix.presentation.screens.dvr.DVRPlayerViewModel_HiltModules;
 import com.openflix.presentation.screens.dvr.DVRViewModel_HiltModules;
 import com.openflix.presentation.screens.epg.EPGGuideViewModel_HiltModules;
 import com.openflix.presentation.screens.home.DiscoverViewModel_HiltModules;
 import com.openflix.presentation.screens.livetv.ArchivePlayerViewModel_HiltModules;
 import com.openflix.presentation.screens.livetv.ChannelLogoEditorViewModel_HiltModules;
+import com.openflix.presentation.screens.livetv.ChannelSurfingViewModel_HiltModules;
 import com.openflix.presentation.screens.livetv.LiveTVGuideViewModel_HiltModules;
 import com.openflix.presentation.screens.livetv.LiveTVPlayerViewModel_HiltModules;
 import com.openflix.presentation.screens.livetv.LiveTVViewModel_HiltModules;
 import com.openflix.presentation.screens.livetv.MultiviewViewModel_HiltModules;
 import com.openflix.presentation.screens.media.MediaDetailViewModel_HiltModules;
+import com.openflix.presentation.screens.movies.MoviesViewModel_HiltModules;
+import com.openflix.presentation.screens.onlater.OnLaterViewModel_HiltModules;
 import com.openflix.presentation.screens.player.VideoPlayerViewModel_HiltModules;
 import com.openflix.presentation.screens.search.SearchViewModel_HiltModules;
 import com.openflix.presentation.screens.settings.RemoteMappingViewModel_HiltModules;
 import com.openflix.presentation.screens.settings.SettingsViewModel_HiltModules;
+import com.openflix.presentation.screens.teampass.TeamPassViewModel_HiltModules;
+import com.openflix.presentation.screens.tvshows.TVShowsViewModel_HiltModules;
+import com.openflix.presentation.screens.watchstats.WatchStatsViewModel_HiltModules;
 import dagger.Binds;
 import dagger.Component;
 import dagger.Module;
@@ -171,9 +180,13 @@ public final class OpenFlixApp_HiltComponents {
 
   @Subcomponent(
       modules = {
+          AllMediaViewModel_HiltModules.KeyModule.class,
           ArchivePlayerViewModel_HiltModules.KeyModule.class,
           AuthViewModel_HiltModules.KeyModule.class,
+          CatchupViewModel_HiltModules.KeyModule.class,
           ChannelLogoEditorViewModel_HiltModules.KeyModule.class,
+          ChannelSurfingViewModel_HiltModules.KeyModule.class,
+          DVRPlayerViewModel_HiltModules.KeyModule.class,
           DVRViewModel_HiltModules.KeyModule.class,
           DiscoverViewModel_HiltModules.KeyModule.class,
           EPGGuideViewModel_HiltModules.KeyModule.class,
@@ -183,13 +196,18 @@ public final class OpenFlixApp_HiltComponents {
           LiveTVPlayerViewModel_HiltModules.KeyModule.class,
           LiveTVViewModel_HiltModules.KeyModule.class,
           MediaDetailViewModel_HiltModules.KeyModule.class,
+          MoviesViewModel_HiltModules.KeyModule.class,
           MultiviewViewModel_HiltModules.KeyModule.class,
+          OnLaterViewModel_HiltModules.KeyModule.class,
           ActivityCBuilderModule.class,
           ViewModelCBuilderModule.class,
           RemoteMappingViewModel_HiltModules.KeyModule.class,
           SearchViewModel_HiltModules.KeyModule.class,
           SettingsViewModel_HiltModules.KeyModule.class,
-          VideoPlayerViewModel_HiltModules.KeyModule.class
+          TVShowsViewModel_HiltModules.KeyModule.class,
+          TeamPassViewModel_HiltModules.KeyModule.class,
+          VideoPlayerViewModel_HiltModules.KeyModule.class,
+          WatchStatsViewModel_HiltModules.KeyModule.class
       }
   )
   @ActivityRetainedScoped
@@ -225,9 +243,13 @@ public final class OpenFlixApp_HiltComponents {
 
   @Subcomponent(
       modules = {
+          AllMediaViewModel_HiltModules.BindsModule.class,
           ArchivePlayerViewModel_HiltModules.BindsModule.class,
           AuthViewModel_HiltModules.BindsModule.class,
+          CatchupViewModel_HiltModules.BindsModule.class,
           ChannelLogoEditorViewModel_HiltModules.BindsModule.class,
+          ChannelSurfingViewModel_HiltModules.BindsModule.class,
+          DVRPlayerViewModel_HiltModules.BindsModule.class,
           DVRViewModel_HiltModules.BindsModule.class,
           DiscoverViewModel_HiltModules.BindsModule.class,
           EPGGuideViewModel_HiltModules.BindsModule.class,
@@ -236,11 +258,16 @@ public final class OpenFlixApp_HiltComponents {
           LiveTVPlayerViewModel_HiltModules.BindsModule.class,
           LiveTVViewModel_HiltModules.BindsModule.class,
           MediaDetailViewModel_HiltModules.BindsModule.class,
+          MoviesViewModel_HiltModules.BindsModule.class,
           MultiviewViewModel_HiltModules.BindsModule.class,
+          OnLaterViewModel_HiltModules.BindsModule.class,
           RemoteMappingViewModel_HiltModules.BindsModule.class,
           SearchViewModel_HiltModules.BindsModule.class,
           SettingsViewModel_HiltModules.BindsModule.class,
-          VideoPlayerViewModel_HiltModules.BindsModule.class
+          TVShowsViewModel_HiltModules.BindsModule.class,
+          TeamPassViewModel_HiltModules.BindsModule.class,
+          VideoPlayerViewModel_HiltModules.BindsModule.class,
+          WatchStatsViewModel_HiltModules.BindsModule.class
       }
   )
   @ViewModelScoped

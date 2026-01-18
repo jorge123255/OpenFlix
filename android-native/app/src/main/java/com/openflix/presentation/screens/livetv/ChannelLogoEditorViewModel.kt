@@ -2,6 +2,7 @@ package com.openflix.presentation.screens.livetv
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.openflix.data.remote.dto.UpdateChannelRequest
 import com.openflix.data.repository.LiveTVRepository
 import com.openflix.domain.model.Channel
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -70,59 +71,95 @@ class ChannelLogoEditorViewModel @Inject constructor(
         _uiState.update {
             it.copy(
                 selectedChannel = channel,
-                customLogoUrl = channel.logo ?: "",
-                showLogoEditor = true
+                editName = channel.name,
+                editNumber = channel.number ?: "",
+                editLogoUrl = channel.logo ?: "",
+                editGroup = channel.group ?: "",
+                showEditor = true
             )
         }
     }
 
-    fun dismissLogoEditor() {
+    fun dismissEditor() {
         _uiState.update {
             it.copy(
                 selectedChannel = null,
-                customLogoUrl = "",
-                showLogoEditor = false
+                editName = "",
+                editNumber = "",
+                editLogoUrl = "",
+                editGroup = "",
+                showEditor = false
             )
         }
     }
 
-    fun setCustomLogoUrl(url: String) {
-        _uiState.update { it.copy(customLogoUrl = url) }
+    // Legacy method for backward compatibility
+    fun dismissLogoEditor() = dismissEditor()
+
+    fun setEditName(name: String) {
+        _uiState.update { it.copy(editName = name) }
     }
 
-    fun saveChannelLogo() {
+    fun setEditNumber(number: String) {
+        _uiState.update { it.copy(editNumber = number) }
+    }
+
+    fun setEditLogoUrl(url: String) {
+        _uiState.update { it.copy(editLogoUrl = url) }
+    }
+
+    fun setEditGroup(group: String) {
+        _uiState.update { it.copy(editGroup = group) }
+    }
+
+    // Legacy method for backward compatibility
+    fun setCustomLogoUrl(url: String) = setEditLogoUrl(url)
+
+    fun saveChannel() {
         val channel = _uiState.value.selectedChannel ?: return
-        val logoUrl = _uiState.value.customLogoUrl
+        val state = _uiState.value
 
         viewModelScope.launch {
             _uiState.update { it.copy(isSaving = true) }
 
-            liveTVRepository.updateChannelLogo(channel.id, logoUrl)
+            // Build the update request with changed fields
+            val numberInt = state.editNumber.toIntOrNull()
+            val request = UpdateChannelRequest(
+                name = if (state.editName != channel.name && state.editName.isNotBlank()) state.editName else null,
+                number = if (state.editNumber != (channel.number ?: "") && numberInt != null) numberInt else null,
+                logo = if (state.editLogoUrl != (channel.logo ?: "")) state.editLogoUrl else null,
+                group = if (state.editGroup != (channel.group ?: "")) state.editGroup else null
+            )
+
+            liveTVRepository.updateChannel(channel.id, request)
                 .onSuccess { updatedChannel ->
-                    Timber.d("Channel logo updated: ${updatedChannel.name}")
+                    Timber.d("Channel updated: ${updatedChannel.name}")
                     // Update the channel in the list
-                    _uiState.update { state ->
-                        val updatedChannels = state.channels.map {
+                    _uiState.update { currentState ->
+                        val updatedChannels = currentState.channels.map {
                             if (it.id == updatedChannel.id) updatedChannel else it
                         }
-                        state.copy(
+                        currentState.copy(
                             channels = updatedChannels,
-                            filteredChannels = if (state.searchQuery.isBlank()) {
+                            filteredChannels = if (currentState.searchQuery.isBlank()) {
                                 updatedChannels
                             } else {
                                 updatedChannels.filter { ch ->
-                                    ch.name.contains(state.searchQuery, ignoreCase = true)
+                                    ch.name.contains(currentState.searchQuery, ignoreCase = true)
                                 }
                             },
                             isSaving = false,
-                            showLogoEditor = false,
+                            showEditor = false,
                             selectedChannel = null,
-                            customLogoUrl = ""
+                            editName = "",
+                            editNumber = "",
+                            editLogoUrl = "",
+                            editGroup = ""
                         )
                     }
                 }
                 .onFailure { error ->
-                    Timber.e(error, "Failed to update channel logo")
+                    Timber.e(error, "Failed to update channel")
                     _uiState.update {
                         it.copy(
                             isSaving = false,
@@ -133,9 +170,24 @@ class ChannelLogoEditorViewModel @Inject constructor(
         }
     }
 
+    // Legacy method for backward compatibility
+    fun saveChannelLogo() = saveChannel()
+
+    fun resetFields() {
+        val channel = _uiState.value.selectedChannel ?: return
+        _uiState.update {
+            it.copy(
+                editName = channel.name,
+                editNumber = channel.number ?: "",
+                editLogoUrl = channel.logo ?: "",
+                editGroup = channel.group ?: ""
+            )
+        }
+    }
+
+    // Legacy method for backward compatibility
     fun resetChannelLogo() {
-        // Reset to empty logo (will use default)
-        _uiState.update { it.copy(customLogoUrl = "") }
+        _uiState.update { it.copy(editLogoUrl = "") }
     }
 
     fun clearError() {
@@ -148,9 +200,22 @@ data class ChannelLogoEditorUiState(
     val filteredChannels: List<Channel> = emptyList(),
     val searchQuery: String = "",
     val selectedChannel: Channel? = null,
-    val customLogoUrl: String = "",
-    val showLogoEditor: Boolean = false,
+    // Edit fields
+    val editName: String = "",
+    val editNumber: String = "",
+    val editLogoUrl: String = "",
+    val editGroup: String = "",
+    val showEditor: Boolean = false,
     val isLoading: Boolean = false,
     val isSaving: Boolean = false,
-    val error: String? = null
-)
+    val error: String? = null,
+    // Legacy aliases for backward compatibility
+    val customLogoUrl: String = "",
+    val showLogoEditor: Boolean = false
+) {
+    // Sync legacy fields with new fields
+    fun withSyncedLegacyFields() = copy(
+        customLogoUrl = editLogoUrl,
+        showLogoEditor = showEditor
+    )
+}
