@@ -191,7 +191,12 @@ class ApiClient {
     await this.client.post(`/livetv/sources/${id}/refresh`)
   }
 
-  async mapChannelNumbers(data: { url?: string; content?: string; preview?: boolean }): Promise<MapNumbersResult> {
+  async mapChannelNumbers(data: {
+    url?: string;
+    content?: string;
+    preview?: boolean;
+    manualMappings?: Array<{ m3uName: string; m3uNumber: number; channelId: number }>;
+  }): Promise<MapNumbersResult> {
     const response = await this.client.post<MapNumbersResult>('/livetv/channels/map-numbers', data)
     return response.data
   }

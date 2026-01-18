@@ -385,9 +385,14 @@ func (s *Server) bulkMapChannels(c *gin.Context) {
 // mapChannelNumbersFromM3U maps channel numbers from an M3U file to existing channels
 func (s *Server) mapChannelNumbersFromM3U(c *gin.Context) {
 	var req struct {
-		URL     string `json:"url,omitempty"`
-		Content string `json:"content,omitempty"`
-		Preview bool   `json:"preview"`
+		URL            string `json:"url,omitempty"`
+		Content        string `json:"content,omitempty"`
+		Preview        bool   `json:"preview"`
+		ManualMappings []struct {
+			M3UName   string `json:"m3uName"`
+			M3UNumber int    `json:"m3uNumber"`
+			ChannelID int    `json:"channelId"`
+		} `json:"manualMappings,omitempty"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -431,6 +436,31 @@ func (s *Server) mapChannelNumbersFromM3U(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
+	}
+
+	// Apply manual mappings if not in preview mode
+	if !req.Preview && len(req.ManualMappings) > 0 {
+		for _, mapping := range req.ManualMappings {
+			var channel models.Channel
+			if err := s.db.First(&channel, mapping.ChannelID).Error; err != nil {
+				continue // Skip if channel not found
+			}
+			// Update channel number
+			channel.Number = mapping.M3UNumber
+			if err := s.db.Save(&channel).Error; err != nil {
+				continue // Skip if update fails
+			}
+			// Add to result
+			result.Matched++
+			result.Results = append(result.Results, livetv.ChannelNumberMapping{
+				M3UName:          mapping.M3UName,
+				M3UNumber:        mapping.M3UNumber,
+				MatchedChannelID: &channel.ID,
+				MatchedName:      channel.Name,
+				MatchType:        "manual",
+				Applied:          true,
+			})
+		}
 	}
 
 	c.JSON(http.StatusOK, result)

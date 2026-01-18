@@ -614,6 +614,20 @@ function MapChannelNumbersModal({
   const [isApplying, setIsApplying] = useState(false)
   const [error, setError] = useState('')
   const fileInputRef = useRef<HTMLInputElement>(null)
+  // Manual mappings: { m3uName: channelId }
+  const [manualMappings, setManualMappings] = useState<Record<string, number>>({})
+
+  // Fetch existing channels for manual matching dropdown
+  const { data: existingChannels } = useQuery({
+    queryKey: ['channels'],
+    queryFn: async () => {
+      const response = await fetch('/livetv/channels', {
+        headers: { 'X-Plex-Token': api.getToken() || '' },
+      })
+      const data = await response.json()
+      return (data.channels || []) as Channel[]
+    },
+  })
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -652,9 +666,22 @@ function MapChannelNumbersModal({
     setError('')
 
     try {
-      const data = inputMode === 'url' ? { url: m3uUrl, preview: false } : { content: m3uContent, preview: false }
+      // Build manual mappings array from the unmatched results
+      const manualMappingsArray = Object.entries(manualMappings).map(([m3uName, channelId]) => {
+        const unmatched = unmatchedResults.find((r: any) => r.m3uName === m3uName)
+        return {
+          m3uName,
+          m3uNumber: unmatched?.m3uNumber || 0,
+          channelId,
+        }
+      })
+
+      const data = inputMode === 'url'
+        ? { url: m3uUrl, preview: false, manualMappings: manualMappingsArray }
+        : { content: m3uContent, preview: false, manualMappings: manualMappingsArray }
       const result = await api.mapChannelNumbers(data)
       setPreview(result)
+      setManualMappings({}) // Clear manual mappings after apply
       queryClient.invalidateQueries({ queryKey: ['channels'] })
     } catch (err: any) {
       setError(err.response?.data?.error || err.message || 'Failed to apply mappings')
@@ -837,19 +864,50 @@ function MapChannelNumbersModal({
 
               {unmatchedResults.length > 0 && (
                 <div>
-                  <h3 className="text-sm font-medium text-yellow-400 mb-2">Unmatched ({unmatchedResults.length})</h3>
+                  <h3 className="text-sm font-medium text-yellow-400 mb-2">
+                    Unmatched ({unmatchedResults.length})
+                    {Object.keys(manualMappings).length > 0 && (
+                      <span className="text-green-400 ml-2">
+                        - {Object.keys(manualMappings).length} manually matched
+                      </span>
+                    )}
+                  </h3>
                   <div className="space-y-1">
-                    {unmatchedResults.slice(0, 20).map((r: any, idx: number) => (
-                      <div key={idx} className="text-sm text-gray-500 p-2 bg-gray-700/30 rounded">
-                        <span className="font-mono mr-2">{r.m3uNumber}</span>
-                        {r.m3uName}
+                    {unmatchedResults.map((r: any, idx: number) => (
+                      <div key={idx} className="flex items-center gap-2 text-sm p-2 bg-gray-700/30 rounded">
+                        <span className="text-indigo-400 font-mono w-12 flex-shrink-0">{r.m3uNumber}</span>
+                        <span className="text-white flex-shrink-0 min-w-[120px]">{r.m3uName}</span>
+                        <span className="text-gray-500 mx-2">→</span>
+                        <select
+                          value={manualMappings[r.m3uName] || ''}
+                          onChange={(e) => {
+                            const value = e.target.value
+                            setManualMappings(prev => {
+                              if (value === '') {
+                                const { [r.m3uName]: _, ...rest } = prev
+                                return rest
+                              }
+                              return { ...prev, [r.m3uName]: parseInt(value) }
+                            })
+                          }}
+                          className={`flex-1 px-2 py-1 bg-gray-700 border rounded text-sm ${
+                            manualMappings[r.m3uName]
+                              ? 'border-green-500 text-green-300'
+                              : 'border-gray-600 text-gray-400'
+                          }`}
+                        >
+                          <option value="">Select channel...</option>
+                          {existingChannels?.map((ch: Channel) => (
+                            <option key={ch.id} value={ch.id}>
+                              {ch.number} - {ch.name}
+                            </option>
+                          ))}
+                        </select>
+                        {manualMappings[r.m3uName] && (
+                          <Check className="h-4 w-4 text-green-400 flex-shrink-0" />
+                        )}
                       </div>
                     ))}
-                    {unmatchedResults.length > 20 && (
-                      <div className="text-xs text-gray-500 text-center py-2">
-                        ... and {unmatchedResults.length - 20} more
-                      </div>
-                    )}
                   </div>
                 </div>
               )}
@@ -865,7 +923,7 @@ function MapChannelNumbersModal({
               </button>
               <button
                 onClick={handleApply}
-                disabled={isApplying || preview.matched === 0}
+                disabled={isApplying || (preview.matched === 0 && Object.keys(manualMappings).length === 0)}
                 className="flex-1 py-2 px-4 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg flex items-center justify-center gap-2"
               >
                 {isApplying ? (
@@ -876,7 +934,7 @@ function MapChannelNumbersModal({
                 ) : (
                   <>
                     <Check className="h-4 w-4" />
-                    Apply {preview.matched} Mappings
+                    Apply {preview.matched + Object.keys(manualMappings).length} Mappings
                   </>
                 )}
               </button>
