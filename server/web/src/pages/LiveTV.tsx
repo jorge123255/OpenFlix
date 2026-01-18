@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
-import { Tv, Plus, Trash2, RefreshCw, FileText, Radio, Search, Edit, X, Check, Settings, MapPin, Zap, AlertCircle, Film, Monitor, Download, Clock, Archive } from 'lucide-react'
+import { Tv, Plus, Trash2, RefreshCw, FileText, Radio, Search, Edit, X, Check, Settings, MapPin, Zap, AlertCircle, Film, Monitor, Download, Clock, Archive, Layers, ArrowUp, ArrowDown, ChevronDown, ChevronRight, Wand2 } from 'lucide-react'
 import { EPGSourceCard } from '../components/EPGSourceCard'
 import {
   useM3USources,
@@ -594,6 +594,239 @@ function EditChannelModal({
             </button>
           </div>
         </form>
+      </div>
+    </div>
+  )
+}
+
+function MapChannelNumbersModal({
+  onClose,
+}: {
+  onClose: () => void
+}) {
+  const queryClient = useQueryClient()
+  const [m3uUrl, setM3uUrl] = useState('')
+  const [m3uContent, setM3uContent] = useState('')
+  const [inputMode, setInputMode] = useState<'url' | 'paste'>('url')
+  const [preview, setPreview] = useState<any>(null)
+  const [isPreviewLoading, setIsPreviewLoading] = useState(false)
+  const [isApplying, setIsApplying] = useState(false)
+  const [error, setError] = useState('')
+
+  const handlePreview = async () => {
+    setIsPreviewLoading(true)
+    setError('')
+    setPreview(null)
+
+    try {
+      const data = inputMode === 'url' ? { url: m3uUrl, preview: true } : { content: m3uContent, preview: true }
+      const result = await api.mapChannelNumbers(data)
+      setPreview(result)
+    } catch (err: any) {
+      setError(err.response?.data?.error || err.message || 'Failed to parse M3U')
+    } finally {
+      setIsPreviewLoading(false)
+    }
+  }
+
+  const handleApply = async () => {
+    setIsApplying(true)
+    setError('')
+
+    try {
+      const data = inputMode === 'url' ? { url: m3uUrl, preview: false } : { content: m3uContent, preview: false }
+      const result = await api.mapChannelNumbers(data)
+      setPreview(result)
+      queryClient.invalidateQueries({ queryKey: ['channels'] })
+    } catch (err: any) {
+      setError(err.response?.data?.error || err.message || 'Failed to apply mappings')
+    } finally {
+      setIsApplying(false)
+    }
+  }
+
+  const matchedResults = preview?.results?.filter((r: any) => r.matchType !== 'none') || []
+  const unmatchedResults = preview?.results?.filter((r: any) => r.matchType === 'none') || []
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="bg-gray-800 rounded-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-white">Import Channel Numbers from M3U</h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-white">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <p className="text-gray-400 text-sm mb-4">
+          Import channel numbers from an M3U file to apply to your existing channels.
+          Only channel numbers will be updated - stream URLs will not be modified.
+        </p>
+
+        {/* Input Mode Tabs */}
+        <div className="flex gap-2 mb-4">
+          <button
+            onClick={() => setInputMode('url')}
+            className={`px-4 py-2 rounded-lg text-sm ${
+              inputMode === 'url'
+                ? 'bg-indigo-600 text-white'
+                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+            }`}
+          >
+            URL
+          </button>
+          <button
+            onClick={() => setInputMode('paste')}
+            className={`px-4 py-2 rounded-lg text-sm ${
+              inputMode === 'paste'
+                ? 'bg-indigo-600 text-white'
+                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+            }`}
+          >
+            Paste Content
+          </button>
+        </div>
+
+        {/* Input Field */}
+        {inputMode === 'url' ? (
+          <div className="mb-4">
+            <input
+              type="url"
+              value={m3uUrl}
+              onChange={(e) => setM3uUrl(e.target.value)}
+              placeholder="https://example.com/channels.m3u"
+              className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
+            />
+          </div>
+        ) : (
+          <div className="mb-4">
+            <textarea
+              value={m3uContent}
+              onChange={(e) => setM3uContent(e.target.value)}
+              placeholder="#EXTM3U&#10;#EXTINF:-1 tvg-chno=&quot;5&quot;,Channel Name&#10;http://..."
+              className="w-full h-32 px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white font-mono text-sm"
+            />
+          </div>
+        )}
+
+        {error && (
+          <div className="mb-4 p-3 bg-red-900/50 border border-red-500 rounded-lg text-red-300 text-sm">
+            {error}
+          </div>
+        )}
+
+        {/* Preview Button */}
+        {!preview && (
+          <button
+            onClick={handlePreview}
+            disabled={isPreviewLoading || (!m3uUrl && !m3uContent)}
+            className="w-full mb-4 py-2 px-4 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg flex items-center justify-center gap-2"
+          >
+            {isPreviewLoading ? (
+              <>
+                <RefreshCw className="h-4 w-4 animate-spin" />
+                Parsing...
+              </>
+            ) : (
+              <>
+                <Search className="h-4 w-4" />
+                Preview Matches
+              </>
+            )}
+          </button>
+        )}
+
+        {/* Preview Results */}
+        {preview && (
+          <div className="flex-1 overflow-hidden flex flex-col">
+            {/* Summary */}
+            <div className="flex gap-4 mb-4">
+              <div className="flex-1 p-3 bg-green-900/30 border border-green-500/50 rounded-lg">
+                <div className="text-green-400 text-lg font-semibold">{preview.matched}</div>
+                <div className="text-green-300 text-xs">Matched</div>
+              </div>
+              <div className="flex-1 p-3 bg-yellow-900/30 border border-yellow-500/50 rounded-lg">
+                <div className="text-yellow-400 text-lg font-semibold">{preview.unmatched}</div>
+                <div className="text-yellow-300 text-xs">Unmatched</div>
+              </div>
+            </div>
+
+            {/* Results List */}
+            <div className="flex-1 overflow-y-auto mb-4">
+              {matchedResults.length > 0 && (
+                <div className="mb-4">
+                  <h3 className="text-sm font-medium text-white mb-2">Matched Channels</h3>
+                  <div className="space-y-1">
+                    {matchedResults.slice(0, 50).map((r: any, idx: number) => (
+                      <div key={idx} className="flex items-center justify-between text-sm bg-gray-700/50 p-2 rounded">
+                        <div className="flex items-center gap-2">
+                          <span className="text-indigo-400 font-mono w-12">{r.m3uNumber}</span>
+                          <span className="text-white">{r.m3uName}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-gray-400">
+                          <span className="text-xs bg-gray-600 px-1.5 py-0.5 rounded">{r.matchType}</span>
+                          <span>→ {r.matchedName}</span>
+                          {r.applied && <Check className="h-3 w-3 text-green-400" />}
+                        </div>
+                      </div>
+                    ))}
+                    {matchedResults.length > 50 && (
+                      <div className="text-xs text-gray-500 text-center py-2">
+                        ... and {matchedResults.length - 50} more
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {unmatchedResults.length > 0 && (
+                <div>
+                  <h3 className="text-sm font-medium text-yellow-400 mb-2">Unmatched ({unmatchedResults.length})</h3>
+                  <div className="space-y-1">
+                    {unmatchedResults.slice(0, 20).map((r: any, idx: number) => (
+                      <div key={idx} className="text-sm text-gray-500 p-2 bg-gray-700/30 rounded">
+                        <span className="font-mono mr-2">{r.m3uNumber}</span>
+                        {r.m3uName}
+                      </div>
+                    ))}
+                    {unmatchedResults.length > 20 && (
+                      <div className="text-xs text-gray-500 text-center py-2">
+                        ... and {unmatchedResults.length - 20} more
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex gap-3">
+              <button
+                onClick={() => setPreview(null)}
+                className="flex-1 py-2 px-4 bg-gray-700 hover:bg-gray-600 text-white rounded-lg"
+              >
+                Back
+              </button>
+              <button
+                onClick={handleApply}
+                disabled={isApplying || preview.matched === 0}
+                className="flex-1 py-2 px-4 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg flex items-center justify-center gap-2"
+              >
+                {isApplying ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                    Applying...
+                  </>
+                ) : (
+                  <>
+                    <Check className="h-4 w-4" />
+                    Apply {preview.matched} Mappings
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )
@@ -1557,6 +1790,484 @@ function EPGProgramsTab({ epgSources }: { epgSources: any[] }) {
   )
 }
 
+// Channel Group Card Component
+function ChannelGroupCard({
+  group,
+  channels,
+  onEdit,
+  onDelete,
+  onAddMember,
+  onUpdatePriority,
+  onRemoveMember,
+}: {
+  group: any
+  channels: Channel[]
+  onEdit: () => void
+  onDelete: () => void
+  onAddMember: (channelId: number, priority: number) => void
+  onUpdatePriority: (channelId: number, priority: number) => void
+  onRemoveMember: (channelId: number) => void
+}) {
+  const [isExpanded, setIsExpanded] = useState(false)
+  const [showAddChannel, setShowAddChannel] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+
+  const memberChannelIds = new Set(group.members?.map((m: any) => m.channelId) || [])
+  const availableChannels = channels.filter(
+    (ch) => ch.enabled && !memberChannelIds.has(ch.id)
+  )
+  const filteredAvailable = availableChannels.filter((ch) =>
+    ch.name.toLowerCase().includes(searchQuery.toLowerCase())
+  )
+
+  return (
+    <div className="bg-gray-800 rounded-xl overflow-hidden">
+      {/* Header */}
+      <div
+        className="p-4 flex items-center justify-between cursor-pointer hover:bg-gray-750"
+        onClick={() => setIsExpanded(!isExpanded)}
+      >
+        <div className="flex items-center gap-4">
+          <button className="text-gray-400">
+            {isExpanded ? (
+              <ChevronDown className="h-5 w-5" />
+            ) : (
+              <ChevronRight className="h-5 w-5" />
+            )}
+          </button>
+          {group.logo ? (
+            <img
+              src={group.logo}
+              alt={group.name}
+              className="w-10 h-10 object-contain bg-gray-700 rounded"
+            />
+          ) : (
+            <div className="w-10 h-10 bg-gray-700 rounded flex items-center justify-center">
+              <Layers className="h-5 w-5 text-gray-500" />
+            </div>
+          )}
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-white font-medium">{group.name}</span>
+              <span className="text-gray-500 text-sm">#{group.displayNumber}</span>
+              {!group.enabled && (
+                <span className="px-2 py-0.5 bg-gray-700 text-gray-400 text-xs rounded">
+                  Disabled
+                </span>
+              )}
+            </div>
+            <div className="text-sm text-gray-400">
+              {group.members?.length || 0} source{(group.members?.length || 0) !== 1 ? 's' : ''}
+              {group.channelId && ` • EPG: ${group.channelId}`}
+            </div>
+          </div>
+        </div>
+        <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+          <button
+            onClick={onEdit}
+            className="p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded"
+            title="Edit group"
+          >
+            <Edit className="h-4 w-4" />
+          </button>
+          <button
+            onClick={onDelete}
+            className="p-2 text-gray-400 hover:text-red-400 hover:bg-gray-700 rounded"
+            title="Delete group"
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+
+      {/* Expanded content */}
+      {isExpanded && (
+        <div className="border-t border-gray-700 p-4">
+          {/* Members list */}
+          {group.members?.length > 0 ? (
+            <div className="space-y-2 mb-4">
+              <div className="text-xs text-gray-500 uppercase tracking-wider mb-2">
+                Priority Order (failover from top to bottom)
+              </div>
+              {group.members
+                .sort((a: any, b: any) => a.priority - b.priority)
+                .map((member: any, index: number) => (
+                  <div
+                    key={member.channelId}
+                    className="flex items-center justify-between bg-gray-750 rounded-lg p-3"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="text-gray-500 text-sm font-mono w-6">
+                        {index + 1}.
+                      </span>
+                      {member.channel?.logo ? (
+                        <img
+                          src={member.channel.logo}
+                          alt={member.channel.name}
+                          className="w-8 h-8 object-contain bg-gray-700 rounded"
+                        />
+                      ) : (
+                        <div className="w-8 h-8 bg-gray-700 rounded flex items-center justify-center">
+                          <Radio className="h-4 w-4 text-gray-500" />
+                        </div>
+                      )}
+                      <div>
+                        <div className="text-white text-sm">{member.channel?.name}</div>
+                        <div className="text-gray-500 text-xs">
+                          {member.channel?.sourceName || 'Unknown source'}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() =>
+                          onUpdatePriority(member.channelId, Math.max(0, member.priority - 1))
+                        }
+                        disabled={index === 0}
+                        className="p-1.5 text-gray-400 hover:text-white hover:bg-gray-700 rounded disabled:opacity-30"
+                        title="Move up"
+                      >
+                        <ArrowUp className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() =>
+                          onUpdatePriority(member.channelId, member.priority + 1)
+                        }
+                        disabled={index === (group.members?.length || 0) - 1}
+                        className="p-1.5 text-gray-400 hover:text-white hover:bg-gray-700 rounded disabled:opacity-30"
+                        title="Move down"
+                      >
+                        <ArrowDown className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => onRemoveMember(member.channelId)}
+                        className="p-1.5 text-gray-400 hover:text-red-400 hover:bg-gray-700 rounded"
+                        title="Remove from group"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+            </div>
+          ) : (
+            <div className="text-center py-4 text-gray-400 mb-4">
+              No channels in this group. Add channels to enable failover.
+            </div>
+          )}
+
+          {/* Add channel section */}
+          {showAddChannel ? (
+            <div className="bg-gray-750 rounded-lg p-3">
+              <div className="flex items-center gap-2 mb-3">
+                <Search className="h-4 w-4 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search channels to add..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="flex-1 bg-transparent text-white placeholder-gray-500 outline-none text-sm"
+                  autoFocus
+                />
+                <button
+                  onClick={() => {
+                    setShowAddChannel(false)
+                    setSearchQuery('')
+                  }}
+                  className="p-1 text-gray-400 hover:text-white"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              <div className="max-h-48 overflow-y-auto space-y-1">
+                {filteredAvailable.length > 0 ? (
+                  filteredAvailable.slice(0, 20).map((channel) => (
+                    <button
+                      key={channel.id}
+                      onClick={() => {
+                        onAddMember(channel.id, group.members?.length || 0)
+                        setSearchQuery('')
+                      }}
+                      className="w-full flex items-center gap-3 p-2 hover:bg-gray-700 rounded text-left"
+                    >
+                      {channel.logo ? (
+                        <img
+                          src={channel.logo}
+                          alt={channel.name}
+                          className="w-6 h-6 object-contain bg-gray-700 rounded"
+                        />
+                      ) : (
+                        <div className="w-6 h-6 bg-gray-700 rounded flex items-center justify-center">
+                          <Radio className="h-3 w-3 text-gray-500" />
+                        </div>
+                      )}
+                      <span className="text-sm text-white">{channel.name}</span>
+                      <span className="text-xs text-gray-500">#{channel.number}</span>
+                    </button>
+                  ))
+                ) : (
+                  <div className="text-center py-2 text-gray-500 text-sm">
+                    {searchQuery ? 'No matching channels' : 'No available channels'}
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : (
+            <button
+              onClick={() => setShowAddChannel(true)}
+              className="w-full py-2 border border-dashed border-gray-600 rounded-lg text-gray-400 hover:text-white hover:border-gray-500 flex items-center justify-center gap-2"
+            >
+              <Plus className="h-4 w-4" />
+              Add Channel Source
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Create/Edit Channel Group Modal
+function ChannelGroupModal({
+  group,
+  onClose,
+  onSave,
+  isLoading,
+}: {
+  group?: any
+  onClose: () => void
+  onSave: (data: { name: string; displayNumber: number; logo?: string; channelId?: string; enabled?: boolean }) => void
+  isLoading: boolean
+}) {
+  const [name, setName] = useState(group?.name || '')
+  const [displayNumber, setDisplayNumber] = useState(group?.displayNumber?.toString() || '')
+  const [logo, setLogo] = useState(group?.logo || '')
+  const [channelId, setChannelId] = useState(group?.channelId || '')
+  const [enabled, setEnabled] = useState(group?.enabled ?? true)
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    onSave({
+      name,
+      displayNumber: parseInt(displayNumber) || 0,
+      logo: logo || undefined,
+      channelId: channelId || undefined,
+      enabled,
+    })
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="bg-gray-800 rounded-xl p-6 w-full max-w-md">
+        <h2 className="text-lg font-semibold text-white mb-4">
+          {group ? 'Edit Channel Group' : 'Create Channel Group'}
+        </h2>
+        <form onSubmit={handleSubmit}>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Group Name
+              </label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
+                placeholder="ESPN"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Channel Number
+              </label>
+              <input
+                type="number"
+                value={displayNumber}
+                onChange={(e) => setDisplayNumber(e.target.value)}
+                className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
+                placeholder="100"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Logo URL (optional)
+              </label>
+              <input
+                type="url"
+                value={logo}
+                onChange={(e) => setLogo(e.target.value)}
+                className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
+                placeholder="https://example.com/logo.png"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                EPG Channel ID (optional)
+              </label>
+              <input
+                type="text"
+                value={channelId}
+                onChange={(e) => setChannelId(e.target.value)}
+                className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
+                placeholder="ESPN.us"
+              />
+            </div>
+
+            {group && (
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setEnabled(!enabled)}
+                  className={`w-5 h-5 rounded border flex items-center justify-center ${
+                    enabled
+                      ? 'bg-indigo-600 border-indigo-600'
+                      : 'border-gray-500 hover:border-gray-400'
+                  }`}
+                >
+                  {enabled && <Check className="h-3 w-3 text-white" />}
+                </button>
+                <span className="text-sm text-gray-300">Enabled</span>
+              </div>
+            )}
+          </div>
+
+          <div className="mt-6 flex gap-3">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isLoading || !name || !displayNumber}
+              className="flex-1 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-600 text-white rounded-lg"
+            >
+              {isLoading ? 'Saving...' : group ? 'Save Changes' : 'Create Group'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
+// Auto-Detect Duplicates Modal
+function AutoDetectModal({
+  results,
+  onClose,
+  onCreateGroup,
+  isCreating,
+}: {
+  results: any[]
+  onClose: () => void
+  onCreateGroup: (group: any) => void
+  isCreating: boolean
+}) {
+  const [createdNames, setCreatedNames] = useState<Set<string>>(new Set())
+
+  if (!results || results.length === 0) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+        <div className="bg-gray-800 rounded-xl p-6 w-full max-w-md text-center">
+          <Layers className="h-12 w-12 text-gray-600 mx-auto mb-4" />
+          <h2 className="text-lg font-semibold text-white mb-2">No Duplicates Found</h2>
+          <p className="text-gray-400 mb-4">
+            No duplicate channels were detected across your sources.
+          </p>
+          <button
+            onClick={onClose}
+            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="bg-gray-800 rounded-xl p-6 w-full max-w-2xl max-h-[80vh] flex flex-col">
+        <h2 className="text-lg font-semibold text-white mb-2">Detected Duplicate Channels</h2>
+        <p className="text-gray-400 text-sm mb-4">
+          Found {results.length} channel{results.length !== 1 ? 's' : ''} with duplicates across sources.
+          Create groups to enable automatic failover.
+        </p>
+
+        <div className="flex-1 overflow-y-auto space-y-3">
+          {results.map((group, index) => (
+            <div key={index} className="bg-gray-750 rounded-lg p-4">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-3">
+                  {group.channels[0]?.logo ? (
+                    <img
+                      src={group.channels[0].logo}
+                      alt={group.name}
+                      className="w-8 h-8 object-contain bg-gray-700 rounded"
+                    />
+                  ) : (
+                    <div className="w-8 h-8 bg-gray-700 rounded flex items-center justify-center">
+                      <Radio className="h-4 w-4 text-gray-500" />
+                    </div>
+                  )}
+                  <div>
+                    <div className="text-white font-medium">{group.name}</div>
+                    <div className="text-gray-500 text-xs">
+                      {group.channels.length} sources found
+                    </div>
+                  </div>
+                </div>
+                {createdNames.has(group.name) ? (
+                  <span className="px-3 py-1 bg-green-600/20 text-green-400 text-sm rounded-lg">
+                    Created
+                  </span>
+                ) : (
+                  <button
+                    onClick={() => {
+                      onCreateGroup(group)
+                      setCreatedNames((prev) => new Set([...prev, group.name]))
+                    }}
+                    disabled={isCreating}
+                    className="px-3 py-1 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-600 text-white text-sm rounded-lg"
+                  >
+                    Create Group
+                  </button>
+                )}
+              </div>
+              <div className="space-y-1 pl-11">
+                {group.channels.map((ch: any, idx: number) => (
+                  <div key={ch.id} className="text-sm text-gray-400 flex items-center gap-2">
+                    <span className="text-gray-600">{idx + 1}.</span>
+                    <span>{ch.name}</span>
+                    <span className="text-gray-600">•</span>
+                    <span className="text-gray-500">{ch.sourceName || 'Unknown'}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-4 pt-4 border-t border-gray-700 flex justify-end">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg"
+          >
+            Done
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export function LiveTVPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
@@ -1567,14 +2278,19 @@ export function LiveTVPage() {
   const deleteEPG = useDeleteEPGSource()
   const refreshEPG = useRefreshEPG()
   const [showAddModal, setShowAddModal] = useState<'m3u' | 'epg' | 'xtream' | null>(null)
-  const [activeTab, setActiveTab] = useState<'sources' | 'channels' | 'programs'>('sources')
+  const [activeTab, setActiveTab] = useState<'sources' | 'channels' | 'programs' | 'groups'>('sources')
   const [channelSearch, setChannelSearch] = useState('')
   const [editingChannel, setEditingChannel] = useState<Channel | null>(null)
+  const [showMapNumbersModal, setShowMapNumbersModal] = useState(false)
   const [editingM3USource, setEditingM3USource] = useState<any | null>(null)
   const [editingXtreamSource, setEditingXtreamSource] = useState<any | null>(null)
   const [editingEPGSource, setEditingEPGSource] = useState<any | null>(null)
   const [refreshingEPGId, setRefreshingEPGId] = useState<number | null>(null)
   const [refreshingXtreamId, setRefreshingXtreamId] = useState<number | null>(null)
+  // Channel Groups state
+  const [editingGroup, setEditingGroup] = useState<any | null>(null)
+  const [showCreateGroupModal, setShowCreateGroupModal] = useState(false)
+  const [showAutoDetectModal, setShowAutoDetectModal] = useState(false)
 
   // Xtream sources
   const { data: xtreamSources, isLoading: loadingXtream } = useQuery({
@@ -1727,6 +2443,78 @@ export function LiveTVPage() {
     },
   })
 
+  // Channel Groups
+  const { data: channelGroups, isLoading: loadingGroups } = useQuery({
+    queryKey: ['channelGroups'],
+    queryFn: () => api.getChannelGroups(),
+    enabled: activeTab === 'groups',
+  })
+
+  const createGroup = useMutation({
+    mutationFn: (data: { name: string; displayNumber: number; logo?: string; channelId?: string }) =>
+      api.createChannelGroup(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['channelGroups'] })
+      setShowCreateGroupModal(false)
+    },
+  })
+
+  const updateGroup = useMutation({
+    mutationFn: ({ id, data }: { id: number; data: { name?: string; displayNumber?: number; logo?: string; channelId?: string; enabled?: boolean } }) =>
+      api.updateChannelGroup(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['channelGroups'] })
+      setEditingGroup(null)
+    },
+  })
+
+  const deleteGroup = useMutation({
+    mutationFn: (id: number) => api.deleteChannelGroup(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['channelGroups'] })
+    },
+  })
+
+  const addMember = useMutation({
+    mutationFn: ({ groupId, channelId, priority }: { groupId: number; channelId: number; priority: number }) =>
+      api.addChannelToGroup(groupId, channelId, priority),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['channelGroups'] })
+    },
+  })
+
+  const updateMemberPriority = useMutation({
+    mutationFn: ({ groupId, channelId, priority }: { groupId: number; channelId: number; priority: number }) =>
+      api.updateGroupMemberPriority(groupId, channelId, priority),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['channelGroups'] })
+    },
+  })
+
+  const removeMember = useMutation({
+    mutationFn: ({ groupId, channelId }: { groupId: number; channelId: number }) =>
+      api.removeChannelFromGroup(groupId, channelId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['channelGroups'] })
+    },
+  })
+
+  const [autoDetectResults, setAutoDetectResults] = useState<any[] | null>(null)
+  const [isAutoDetecting, setIsAutoDetecting] = useState(false)
+
+  const handleAutoDetect = async () => {
+    setIsAutoDetecting(true)
+    try {
+      const result = await api.autoDetectDuplicates()
+      setAutoDetectResults(result.duplicates)
+      setShowAutoDetectModal(true)
+    } catch (error) {
+      console.error('Failed to auto-detect duplicates:', error)
+    } finally {
+      setIsAutoDetecting(false)
+    }
+  }
+
   const filteredChannels = channelsData?.filter(
     (ch) =>
       ch.name.toLowerCase().includes(channelSearch.toLowerCase()) ||
@@ -1790,6 +2578,16 @@ export function LiveTVPage() {
           }`}
         >
           EPG Programs
+        </button>
+        <button
+          onClick={() => setActiveTab('groups')}
+          className={`pb-3 px-1 text-sm font-medium border-b-2 transition-colors ${
+            activeTab === 'groups'
+              ? 'border-indigo-500 text-white'
+              : 'border-transparent text-gray-400 hover:text-white'
+          }`}
+        >
+          Channel Groups
         </button>
       </div>
 
@@ -2052,9 +2850,9 @@ export function LiveTVPage() {
 
       {activeTab === 'channels' && (
         <div>
-          {/* Search */}
-          <div className="mb-4">
-            <div className="relative">
+          {/* Search and Actions */}
+          <div className="mb-4 flex gap-3">
+            <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
               <input
                 type="text"
@@ -2064,6 +2862,13 @@ export function LiveTVPage() {
                 className="w-full pl-10 pr-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-400"
               />
             </div>
+            <button
+              onClick={() => setShowMapNumbersModal(true)}
+              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg flex items-center gap-2 whitespace-nowrap"
+            >
+              <FileText className="h-4 w-4" />
+              Import Numbers
+            </button>
           </div>
 
           {loadingChannels ? (
@@ -2166,6 +2971,87 @@ export function LiveTVPage() {
         </div>
       )}
 
+      {activeTab === 'groups' && (
+        <div>
+          {/* Header with actions */}
+          <div className="mb-4 flex items-center justify-between">
+            <div className="text-sm text-gray-400">
+              {channelGroups?.length || 0} channel group{channelGroups?.length !== 1 ? 's' : ''}
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={handleAutoDetect}
+                disabled={isAutoDetecting}
+                className="px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 text-white rounded-lg flex items-center gap-2"
+              >
+                {isAutoDetecting ? (
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Wand2 className="h-4 w-4" />
+                )}
+                Auto-Detect Duplicates
+              </button>
+              <button
+                onClick={() => setShowCreateGroupModal(true)}
+                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg flex items-center gap-2"
+              >
+                <Plus className="h-4 w-4" />
+                Create Group
+              </button>
+            </div>
+          </div>
+
+          {loadingGroups ? (
+            <div className="text-gray-400">Loading channel groups...</div>
+          ) : channelGroups?.length ? (
+            <div className="space-y-4">
+              {channelGroups.map((group) => (
+                <ChannelGroupCard
+                  key={group.id}
+                  group={group}
+                  channels={channelsData || []}
+                  onEdit={() => setEditingGroup(group)}
+                  onDelete={() => {
+                    if (confirm(`Delete group "${group.name}"?`)) {
+                      deleteGroup.mutate(group.id)
+                    }
+                  }}
+                  onAddMember={(channelId: number, priority: number) =>
+                    addMember.mutate({ groupId: group.id, channelId, priority })
+                  }
+                  onUpdatePriority={(channelId: number, priority: number) =>
+                    updateMemberPriority.mutate({ groupId: group.id, channelId, priority })
+                  }
+                  onRemoveMember={(channelId: number) =>
+                    removeMember.mutate({ groupId: group.id, channelId })
+                  }
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12 bg-gray-800 rounded-xl">
+              <Layers className="h-12 w-12 text-gray-600 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-white mb-2">No Channel Groups</h3>
+              <p className="text-gray-400 mb-4">
+                Create groups to combine duplicate channels from different sources with automatic failover.
+              </p>
+              <button
+                onClick={handleAutoDetect}
+                disabled={isAutoDetecting}
+                className="px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 text-white rounded-lg inline-flex items-center gap-2"
+              >
+                {isAutoDetecting ? (
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Wand2 className="h-4 w-4" />
+                )}
+                Auto-Detect Duplicates
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
       {showAddModal === 'm3u' && (
         <AddSourceModal type="m3u" onClose={() => setShowAddModal(null)} />
       )}
@@ -2186,6 +3072,10 @@ export function LiveTVPage() {
         />
       )}
 
+      {showMapNumbersModal && (
+        <MapChannelNumbersModal onClose={() => setShowMapNumbersModal(false)} />
+      )}
+
       {editingM3USource && (
         <EditM3USourceModal
           source={editingM3USource}
@@ -2204,6 +3094,47 @@ export function LiveTVPage() {
         <EditEPGSourceModal
           source={editingEPGSource}
           onClose={() => setEditingEPGSource(null)}
+        />
+      )}
+
+      {showCreateGroupModal && (
+        <ChannelGroupModal
+          onClose={() => setShowCreateGroupModal(false)}
+          onSave={(data) => createGroup.mutate(data)}
+          isLoading={createGroup.isPending}
+        />
+      )}
+
+      {editingGroup && (
+        <ChannelGroupModal
+          group={editingGroup}
+          onClose={() => setEditingGroup(null)}
+          onSave={(data) => updateGroup.mutate({ id: editingGroup.id, data })}
+          isLoading={updateGroup.isPending}
+        />
+      )}
+
+      {showAutoDetectModal && autoDetectResults && (
+        <AutoDetectModal
+          results={autoDetectResults}
+          onClose={() => {
+            setShowAutoDetectModal(false)
+            setAutoDetectResults(null)
+          }}
+          onCreateGroup={async (group) => {
+            // Create the group first
+            const newGroup = await api.createChannelGroup({
+              name: group.name,
+              displayNumber: group.channels[0]?.number || 0,
+              logo: group.channels[0]?.logo,
+            })
+            // Then add all channels as members
+            for (let i = 0; i < group.channels.length; i++) {
+              await api.addChannelToGroup(newGroup.id, group.channels[i].id, i)
+            }
+            queryClient.invalidateQueries({ queryKey: ['channelGroups'] })
+          }}
+          isCreating={false}
         />
       )}
     </div>

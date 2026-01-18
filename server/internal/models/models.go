@@ -387,6 +387,31 @@ type Channel struct {
 	UpdatedAt   time.Time
 }
 
+// ChannelGroup represents a logical channel with multiple stream sources for failover
+type ChannelGroup struct {
+	ID            uint      `gorm:"primaryKey" json:"id"`
+	Name          string    `gorm:"size:255;uniqueIndex" json:"name"`
+	DisplayNumber int       `json:"displayNumber"`
+	Logo          string    `gorm:"size:2000" json:"logo,omitempty"`
+	ChannelID     string    `gorm:"size:255" json:"channelId"` // EPG mapping
+	Enabled       bool      `gorm:"default:true" json:"enabled"`
+	CreatedAt     time.Time `json:"createdAt"`
+	UpdatedAt     time.Time `json:"updatedAt"`
+
+	Members []ChannelGroupMember `gorm:"foreignKey:ChannelGroupID" json:"members,omitempty"`
+}
+
+// ChannelGroupMember links a channel to a group with priority for failover
+type ChannelGroupMember struct {
+	ID             uint      `gorm:"primaryKey" json:"id"`
+	ChannelGroupID uint      `gorm:"index;uniqueIndex:idx_group_channel" json:"channelGroupId"`
+	ChannelID      uint      `gorm:"index;uniqueIndex:idx_group_channel" json:"channelId"`
+	Priority       int       `gorm:"default:0" json:"priority"` // 0 = highest priority
+	CreatedAt      time.Time `json:"createdAt"`
+
+	Channel Channel `gorm:"foreignKey:ChannelID" json:"channel,omitempty"`
+}
+
 // Program represents an EPG program entry
 type Program struct {
 	ID            uint      `gorm:"primaryKey" json:"id"`
@@ -472,6 +497,9 @@ type Recording struct {
 	ConflictGroupID *uint      `gorm:"index" json:"conflictGroupId,omitempty"`   // Groups conflicting recordings
 	CreatedAt       time.Time  `json:"createdAt"`
 	UpdatedAt       time.Time  `json:"updatedAt"`
+
+	// Commercial segments (preloaded for Android app)
+	Commercials []CommercialSegment `gorm:"foreignKey:RecordingID" json:"commercials,omitempty"`
 }
 
 // SeriesRule represents a series recording rule

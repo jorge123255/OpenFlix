@@ -429,14 +429,26 @@ func (s *Server) setupRouter() {
 		livetv.GET("/channels", s.getChannels)
 		livetv.GET("/channels/:id", s.getChannel)
 		livetv.PUT("/channels/:id", s.updateChannel)
-		livetv.POST("/channels/bulk-map", s.bulkMapChannels)       // Bulk map multiple channels
-		livetv.POST("/channels/auto-detect", s.autoDetectChannels) // Auto-detect EPG mappings
+		livetv.POST("/channels/bulk-map", s.bulkMapChannels)         // Bulk map multiple channels
+		livetv.POST("/channels/auto-detect", s.autoDetectChannels)   // Auto-detect EPG mappings
+		livetv.POST("/channels/map-numbers", s.mapChannelNumbersFromM3U) // Map channel numbers from M3U
 		livetv.DELETE("/channels/:id/epg-mapping", s.unmapChannel) // Remove EPG mapping
 		livetv.GET("/channels/:id/suggestions", s.getSuggestedMatches) // Get suggested EPG matches
 		livetv.POST("/channels/:id/favorite", s.toggleChannelFavorite)
 		livetv.POST("/channels/:id/refresh-epg", s.refreshChannelEPG) // Refresh EPG mapping
 		livetv.GET("/channels/:id/stream", s.proxyChannelStream)        // Proxy channel stream for web playback
 		livetv.GET("/channels/:id/hls-segment", s.proxyHLSSegment)    // Proxy HLS segments for web playback
+
+		// Channel Groups (Failover)
+		livetv.GET("/channel-groups", s.getChannelGroups)
+		livetv.POST("/channel-groups", s.createChannelGroup)
+		livetv.PUT("/channel-groups/:id", s.updateChannelGroup)
+		livetv.DELETE("/channel-groups/:id", s.deleteChannelGroup)
+		livetv.POST("/channel-groups/:id/members", s.addChannelToGroup)
+		livetv.PUT("/channel-groups/:id/members/:channelId", s.updateGroupMemberPriority)
+		livetv.DELETE("/channel-groups/:id/members/:channelId", s.removeChannelFromGroup)
+		livetv.POST("/channel-groups/auto-detect", s.autoDetectDuplicates)
+		livetv.GET("/channel-groups/:id/stream", s.proxyChannelGroupStream) // Failover stream
 
 		// Guide (EPG)
 		livetv.GET("/guide", s.getGuide)
@@ -539,6 +551,7 @@ func (s *Server) setupRouter() {
 		dvrGroup.GET("/commercials/status", s.getCommercialDetectionStatus)
 		dvrGroup.GET("/recordings/:id/commercials", s.getCommercialSegments)
 		dvrGroup.POST("/recordings/:id/commercials/detect", s.rerunCommercialDetection)
+		dvrGroup.POST("/recordings/:id/reprocess", s.reprocessRecording)
 
 		// Recording Playback
 		dvrGroup.GET("/stream/:id", s.streamRecording)

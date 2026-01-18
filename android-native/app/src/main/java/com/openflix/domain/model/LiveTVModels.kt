@@ -38,6 +38,46 @@ data class Channel(
         get() = sourceName ?: group ?: "Unknown"
 }
 
+/**
+ * Represents a group of channels from different providers for failover streaming.
+ * When the primary channel stream fails, the system automatically tries the next channel.
+ */
+data class ChannelGroup(
+    val id: Int,
+    val name: String,
+    val displayNumber: Int,
+    val logo: String?,
+    val channelId: String?,  // EPG channel ID for mapping
+    val enabled: Boolean,
+    val members: List<ChannelGroupMember>,
+    val createdAt: Long?,
+    val updatedAt: Long?
+) {
+    val memberCount: Int
+        get() = members.size
+
+    val primaryChannel: ChannelGroupMember?
+        get() = members.minByOrNull { it.priority }
+
+    val displayName: String
+        get() = if (displayNumber > 0) "$displayNumber - $name" else name
+}
+
+/**
+ * Represents a channel member within a channel group, with priority for failover ordering.
+ */
+data class ChannelGroupMember(
+    val id: Int,
+    val channelGroupId: Int,
+    val channelId: Int,
+    val priority: Int,  // 0 = highest priority (primary)
+    val createdAt: Long?,
+    val channel: Channel?  // Optional channel details
+) {
+    val isPrimary: Boolean
+        get() = priority == 0
+}
+
 data class Program(
     val id: String?,
     val title: String,
@@ -148,10 +188,12 @@ data class Recording(
     val title: String,
     val subtitle: String?,
     val description: String?,
+    val summary: String?,
     val thumb: String?,
     val art: String?,
     val channelId: String?,
     val channelName: String?,
+    val channelLogo: String?,
     val startTime: Long,
     val endTime: Long,
     val duration: Long?,
@@ -163,7 +205,12 @@ data class Recording(
     val seriesId: String?,
     val programId: String?,
     val viewOffset: Long?,
-    val commercials: List<Commercial>
+    val commercials: List<Commercial>,
+    val genres: String?,
+    val contentRating: String?,
+    val year: Int?,
+    val rating: Double?,
+    val isMovie: Boolean
 ) {
     val displayTitle: String
         get() = if (!subtitle.isNullOrBlank()) "$title - $subtitle" else title
@@ -189,6 +236,13 @@ data class Recording(
                 else -> "%.1f KB".format(size / 1_000.0)
             }
         }
+
+    // Best available image for display
+    val posterUrl: String?
+        get() = thumb ?: art ?: channelLogo
+
+    val backdropUrl: String?
+        get() = art ?: thumb
 }
 
 enum class RecordingStatus {
@@ -196,6 +250,8 @@ enum class RecordingStatus {
     COMPLETED,
     FAILED,
     PENDING,
+    SCHEDULED,
+    CANCELLED,
     UNKNOWN;
 
     companion object {
@@ -205,6 +261,8 @@ enum class RecordingStatus {
                 "completed" -> COMPLETED
                 "failed" -> FAILED
                 "pending" -> PENDING
+                "scheduled" -> SCHEDULED
+                "cancelled" -> CANCELLED
                 else -> UNKNOWN
             }
         }
@@ -230,6 +288,48 @@ data class ScheduledRecording(
 ) {
     val isSeries: Boolean
         get() = type == "series"
+}
+
+// ============ DVR Conflicts ============
+
+data class ConflictGroup(
+    val recordings: List<Recording>
+)
+
+data class ConflictsData(
+    val conflicts: List<ConflictGroup>,
+    val hasConflicts: Boolean,
+    val totalCount: Int
+)
+
+// ============ Live Recording Stats ============
+
+data class RecordingStats(
+    val id: Long,
+    val title: String,
+    val fileSize: Long,
+    val fileSizeFormatted: String,
+    val elapsedSeconds: Long,
+    val elapsedFormatted: String,
+    val totalSeconds: Long,
+    val remainingSeconds: Long,
+    val progressPercent: Double,
+    val bitrate: String?,
+    val isHealthy: Boolean,
+    val isFailed: Boolean,
+    val failureReason: String?
+) {
+    val progressFloat: Float
+        get() = (progressPercent / 100.0).toFloat().coerceIn(0f, 1f)
+}
+
+data class RecordingStatsData(
+    val stats: List<RecordingStats>,
+    val activeCount: Int
+) {
+    fun getStatsForRecording(recordingId: String): RecordingStats? {
+        return stats.find { it.id.toString() == recordingId }
+    }
 }
 
 // ============ Time-Shift / Catch-Up TV Models ============
@@ -345,3 +445,135 @@ data class ArchiveStatus(
     val totalChannels: Int,
     val activeRecording: Int
 )
+
+// ============ On Later Models ============
+
+/**
+ * Program shown in On Later browse feature.
+ */
+data class OnLaterProgram(
+    val id: Long,
+    val channelId: String,
+    val title: String,
+    val subtitle: String?,
+    val description: String?,
+    val start: Long,  // Unix timestamp
+    val end: Long,
+    val icon: String?,
+    val art: String?,
+    val category: String?,
+    val isMovie: Boolean,
+    val isSports: Boolean,
+    val isKids: Boolean,
+    val isNews: Boolean,
+    val isPremiere: Boolean,
+    val isNew: Boolean,
+    val isLive: Boolean,
+    val teams: String?,
+    val league: String?,
+    val rating: String?
+) {
+    val durationMinutes: Int
+        get() = ((end - start) / 60).toInt()
+
+    val isUpcoming: Boolean
+        get() = start > System.currentTimeMillis() / 1000
+}
+
+/**
+ * Channel info for On Later display.
+ */
+data class OnLaterChannel(
+    val id: Long,
+    val name: String,
+    val logo: String?,
+    val number: Int
+)
+
+/**
+ * Combined program and channel for On Later.
+ */
+data class OnLaterItem(
+    val program: OnLaterProgram,
+    val channel: OnLaterChannel?,
+    val hasRecording: Boolean,
+    val recordingId: Long?
+)
+
+/**
+ * Statistics for On Later categories.
+ */
+data class OnLaterStats(
+    val movies: Int,
+    val sports: Int,
+    val kids: Int,
+    val news: Int,
+    val premieres: Int
+)
+
+/**
+ * Category types for On Later browsing.
+ */
+enum class OnLaterCategory {
+    TONIGHT,
+    MOVIES,
+    SPORTS,
+    KIDS,
+    NEWS,
+    PREMIERES,
+    WEEK
+}
+
+// ============ Team Pass Models ============
+
+/**
+ * Team Pass for auto-recording sports games.
+ */
+data class TeamPass(
+    val id: Long,
+    val userId: Long,
+    val teamName: String,
+    val teamAliases: String?,
+    val league: String,
+    val channelIds: String?,
+    val prePadding: Int,
+    val postPadding: Int,
+    val keepCount: Int,
+    val priority: Int,
+    val enabled: Boolean,
+    val upcomingCount: Int?,
+    val logoUrl: String?
+)
+
+/**
+ * Statistics for Team Pass.
+ */
+data class TeamPassStats(
+    val totalPasses: Int,
+    val activePasses: Int,
+    val upcomingGames: Int,
+    val scheduledRecordings: Int
+)
+
+/**
+ * Sports team for Team Pass selection.
+ */
+data class SportsTeam(
+    val name: String,
+    val city: String,
+    val nickname: String,
+    val league: String?,
+    val aliases: List<String>,
+    val logoUrl: String?
+)
+
+/**
+ * Sports leagues.
+ */
+enum class SportsLeague(val displayName: String) {
+    NFL("NFL"),
+    NBA("NBA"),
+    MLB("MLB"),
+    NHL("NHL"),
+    MLS("MLS")
+}

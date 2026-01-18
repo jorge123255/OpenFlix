@@ -20,6 +20,10 @@ import type {
   ConflictResponse,
   RecordingStatsResponse,
   CommercialsResponse,
+  MapNumbersResult,
+  ChannelGroup,
+  ChannelGroupMember,
+  DuplicateGroup,
 } from '../types'
 
 const TOKEN_KEY = 'openflix_token'
@@ -185,6 +189,53 @@ class ApiClient {
 
   async refreshM3USource(id: number): Promise<void> {
     await this.client.post(`/livetv/sources/${id}/refresh`)
+  }
+
+  async mapChannelNumbers(data: { url?: string; content?: string; preview?: boolean }): Promise<MapNumbersResult> {
+    const response = await this.client.post<MapNumbersResult>('/livetv/channels/map-numbers', data)
+    return response.data
+  }
+
+  // Channel Groups (Failover)
+  async getChannelGroups(): Promise<ChannelGroup[]> {
+    const response = await this.client.get<{ groups: ChannelGroup[] }>('/livetv/channel-groups')
+    return response.data.groups || []
+  }
+
+  async createChannelGroup(data: { name: string; displayNumber?: number; logo?: string; channelId?: string }): Promise<ChannelGroup> {
+    const response = await this.client.post<ChannelGroup>('/livetv/channel-groups', data)
+    return response.data
+  }
+
+  async updateChannelGroup(id: number, data: Partial<{ name: string; displayNumber: number; logo: string; channelId: string; enabled: boolean }>): Promise<ChannelGroup> {
+    const response = await this.client.put<ChannelGroup>(`/livetv/channel-groups/${id}`, data)
+    return response.data
+  }
+
+  async deleteChannelGroup(id: number): Promise<void> {
+    await this.client.delete(`/livetv/channel-groups/${id}`)
+  }
+
+  async addChannelToGroup(groupId: number, channelId: number, priority?: number): Promise<ChannelGroupMember> {
+    const response = await this.client.post<ChannelGroupMember>(`/livetv/channel-groups/${groupId}/members`, {
+      channelId,
+      priority: priority ?? 0,
+    })
+    return response.data
+  }
+
+  async updateGroupMemberPriority(groupId: number, channelId: number, priority: number): Promise<ChannelGroupMember> {
+    const response = await this.client.put<ChannelGroupMember>(`/livetv/channel-groups/${groupId}/members/${channelId}`, { priority })
+    return response.data
+  }
+
+  async removeChannelFromGroup(groupId: number, channelId: number): Promise<void> {
+    await this.client.delete(`/livetv/channel-groups/${groupId}/members/${channelId}`)
+  }
+
+  async autoDetectDuplicates(): Promise<{ duplicates: DuplicateGroup[] }> {
+    const response = await this.client.post<{ duplicates: DuplicateGroup[] }>('/livetv/channel-groups/auto-detect')
+    return response.data
   }
 
   async getEPGSources(): Promise<EPGSource[]> {
@@ -400,6 +451,15 @@ class ApiClient {
   async getRecordingCommercials(recordingId: number): Promise<CommercialsResponse> {
     const response = await this.client.get<CommercialsResponse>(`/dvr/recordings/${recordingId}/commercials`)
     return response.data
+  }
+
+  async getCommercialDetectionStatus(): Promise<{ enabled: boolean }> {
+    const response = await this.client.get<{ enabled: boolean }>('/dvr/commercials/status')
+    return response.data
+  }
+
+  async runCommercialDetection(recordingId: number): Promise<void> {
+    await this.client.post(`/dvr/recordings/${recordingId}/commercials/detect`)
   }
 
   async getRecordingStreamUrl(recordingId: number): Promise<string> {
