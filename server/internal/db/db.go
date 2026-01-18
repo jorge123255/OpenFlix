@@ -77,6 +77,8 @@ func Migrate(db *gorm.DB) error {
 		&models.XtreamSource{},
 		&models.EPGSource{},
 		&models.Channel{},
+		&models.ChannelGroup{},
+		&models.ChannelGroupMember{},
 		&models.Program{},
 
 		// DVR

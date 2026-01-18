@@ -8,7 +8,7 @@ import com.google.gson.annotations.SerializedName
 
 data class ChannelDto(
     @SerializedName("id") val id: String,
-    @SerializedName("channelId") val uuid: String?,  // Maps to channelId from server
+    @SerializedName("tvgId") val uuid: String?,  // Maps to tvgId from server (EPG channel ID)
     @SerializedName("number") val number: Int?,  // Server sends int
     @SerializedName("name") val name: String,
     @SerializedName("title") val title: String?,
@@ -145,26 +145,39 @@ data class DRMInfoDto(
 
 // DVR-related DTOs
 data class RecordingDto(
-    @SerializedName("id") val id: String,
+    @SerializedName("id") val id: Int,  // Server returns int
     @SerializedName("title") val title: String,
     @SerializedName("subtitle") val subtitle: String?,
     @SerializedName("description") val description: String?,
+    @SerializedName("summary") val summary: String?,
     @SerializedName("thumb") val thumb: String?,
     @SerializedName("art") val art: String?,
-    @SerializedName("channel_id") val channelId: String?,
-    @SerializedName("channel_name") val channelName: String?,
-    @SerializedName("start_time") val startTime: Long,
-    @SerializedName("end_time") val endTime: Long,
+    @SerializedName("channelId") val channelId: Int?,  // camelCase, server returns int
+    @SerializedName("channelName") val channelName: String?,
+    @SerializedName("channelLogo") val channelLogo: String?,
+    @SerializedName("startTime") val startTime: String,  // ISO 8601 string
+    @SerializedName("endTime") val endTime: String,  // ISO 8601 string
     @SerializedName("duration") val duration: Long?,
-    @SerializedName("file_path") val filePath: String?,
-    @SerializedName("file_size") val fileSize: Long?,
-    @SerializedName("status") val status: String?,  // recording, completed, failed
-    @SerializedName("season_number") val seasonNumber: Int?,
-    @SerializedName("episode_number") val episodeNumber: Int?,
-    @SerializedName("series_id") val seriesId: String?,
-    @SerializedName("program_id") val programId: String?,
-    @SerializedName("view_offset") val viewOffset: Long?,
-    @SerializedName("commercials") val commercials: List<CommercialDto>?
+    @SerializedName("filePath") val filePath: String?,
+    @SerializedName("fileSize") val fileSize: Long?,
+    @SerializedName("status") val status: String?,  // scheduled, recording, completed, failed
+    @SerializedName("seasonNumber") val seasonNumber: Int?,
+    @SerializedName("episodeNumber") val episodeNumber: Int?,
+    @SerializedName("seriesId") val seriesId: String?,
+    @SerializedName("programId") val programId: Int?,  // Server returns int
+    @SerializedName("viewOffset") val viewOffset: Long?,
+    @SerializedName("commercials") val commercials: List<CommercialDto>?,
+    @SerializedName("category") val category: String?,
+    @SerializedName("episodeNum") val episodeNum: String?,
+    @SerializedName("seriesRecord") val seriesRecord: Boolean?,
+    @SerializedName("seriesRuleId") val seriesRuleId: Int?,
+    @SerializedName("genres") val genres: String?,
+    @SerializedName("contentRating") val contentRating: String?,
+    @SerializedName("year") val year: Int?,
+    @SerializedName("rating") val rating: Double?,
+    @SerializedName("isMovie") val isMovie: Boolean?,
+    @SerializedName("createdAt") val createdAt: String?,
+    @SerializedName("updatedAt") val updatedAt: String?
 )
 
 data class CommercialDto(
@@ -305,4 +318,268 @@ data class ArchiveStatusResponse(
     @SerializedName("channels") val channels: List<ArchiveChannelStatusDto>,
     @SerializedName("totalChannels") val totalChannels: Int,
     @SerializedName("activeRecording") val activeRecording: Int
+)
+
+// ============ On Later DTOs ============
+
+data class OnLaterProgramDto(
+    @SerializedName("id") val id: Long,
+    @SerializedName("channelId") val channelId: String,
+    @SerializedName("title") val title: String,
+    @SerializedName("subtitle") val subtitle: String?,
+    @SerializedName("description") val description: String?,
+    @SerializedName("start") val start: String,
+    @SerializedName("end") val end: String,
+    @SerializedName("icon") val icon: String?,
+    @SerializedName("art") val art: String?,
+    @SerializedName("category") val category: String?,
+    @SerializedName("isMovie") val isMovie: Boolean,
+    @SerializedName("isSports") val isSports: Boolean,
+    @SerializedName("isKids") val isKids: Boolean,
+    @SerializedName("isNews") val isNews: Boolean,
+    @SerializedName("isPremiere") val isPremiere: Boolean,
+    @SerializedName("isNew") val isNew: Boolean,
+    @SerializedName("isLive") val isLive: Boolean,
+    @SerializedName("teams") val teams: String?,
+    @SerializedName("league") val league: String?,
+    @SerializedName("rating") val rating: String?
+)
+
+data class OnLaterChannelDto(
+    @SerializedName("id") val id: Long,
+    @SerializedName("name") val name: String,
+    @SerializedName("logo") val logo: String?,
+    @SerializedName("number") val number: Int
+)
+
+data class OnLaterItemDto(
+    @SerializedName("program") val program: OnLaterProgramDto,
+    @SerializedName("channel") val channel: OnLaterChannelDto?,
+    @SerializedName("hasRecording") val hasRecording: Boolean,
+    @SerializedName("recordingId") val recordingId: Long?
+)
+
+data class OnLaterResponse(
+    @SerializedName("items") val items: List<OnLaterItemDto>,
+    @SerializedName("totalCount") val totalCount: Int,
+    @SerializedName("startTime") val startTime: String,
+    @SerializedName("endTime") val endTime: String
+)
+
+data class OnLaterStatsDto(
+    @SerializedName("movies") val movies: Int,
+    @SerializedName("sports") val sports: Int,
+    @SerializedName("kids") val kids: Int,
+    @SerializedName("news") val news: Int,
+    @SerializedName("premieres") val premieres: Int
+)
+
+data class LeaguesResponse(
+    @SerializedName("leagues") val leagues: List<String>
+)
+
+// ============ Team Pass DTOs ============
+
+data class TeamPassDto(
+    @SerializedName("id") val id: Long,
+    @SerializedName("userId") val userId: Long,
+    @SerializedName("teamName") val teamName: String,
+    @SerializedName("teamAliases") val teamAliases: String?,
+    @SerializedName("league") val league: String,
+    @SerializedName("channelIds") val channelIds: String?,
+    @SerializedName("prePadding") val prePadding: Int,
+    @SerializedName("postPadding") val postPadding: Int,
+    @SerializedName("keepCount") val keepCount: Int,
+    @SerializedName("priority") val priority: Int,
+    @SerializedName("enabled") val enabled: Boolean,
+    @SerializedName("createdAt") val createdAt: String?,
+    @SerializedName("updatedAt") val updatedAt: String?,
+    @SerializedName("upcomingCount") val upcomingCount: Int?,
+    @SerializedName("logoUrl") val logoUrl: String?
+)
+
+data class TeamPassListResponse(
+    @SerializedName("teamPasses") val teamPasses: List<TeamPassDto>
+)
+
+data class TeamPassRequest(
+    @SerializedName("teamName") val teamName: String,
+    @SerializedName("league") val league: String,
+    @SerializedName("channelIds") val channelIds: String? = null,
+    @SerializedName("prePadding") val prePadding: Int = 5,
+    @SerializedName("postPadding") val postPadding: Int = 60,
+    @SerializedName("keepCount") val keepCount: Int = 0,
+    @SerializedName("priority") val priority: Int = 0,
+    @SerializedName("enabled") val enabled: Boolean = true
+)
+
+data class TeamPassWithGamesResponse(
+    @SerializedName("teamPass") val teamPass: TeamPassDto,
+    @SerializedName("games") val games: List<OnLaterItemDto>?
+)
+
+data class TeamPassStatsDto(
+    @SerializedName("totalPasses") val totalPasses: Int,
+    @SerializedName("activePasses") val activePasses: Int,
+    @SerializedName("upcomingGames") val upcomingGames: Int,
+    @SerializedName("scheduledRecordings") val scheduledRecordings: Int
+)
+
+data class SportsTeamDto(
+    @SerializedName("name") val name: String,
+    @SerializedName("city") val city: String,
+    @SerializedName("nickname") val nickname: String,
+    @SerializedName("league") val league: String?,
+    @SerializedName("aliases") val aliases: List<String>?,
+    @SerializedName("logoUrl") val logoUrl: String?
+)
+
+data class TeamsSearchResponse(
+    @SerializedName("teams") val teams: List<SportsTeamDto>
+)
+
+data class LeagueTeamsResponse(
+    @SerializedName("teams") val teams: List<SportsTeamDto>,
+    @SerializedName("league") val league: String
+)
+
+data class SportsLeaguesResponse(
+    @SerializedName("leagues") val leagues: List<String>
+)
+
+// ============ DVR Conflict DTOs ============
+
+data class ConflictGroupDto(
+    @SerializedName("recordings") val recordings: List<RecordingDto>
+)
+
+data class ConflictsResponse(
+    @SerializedName("conflicts") val conflicts: List<ConflictGroupDto>,
+    @SerializedName("hasConflicts") val hasConflicts: Boolean,
+    @SerializedName("totalCount") val totalCount: Int
+)
+
+data class ResolveConflictRequest(
+    @SerializedName("keepRecordingId") val keepRecordingId: Long,
+    @SerializedName("cancelRecordingId") val cancelRecordingId: Long
+)
+
+// Live Recording Stats DTOs
+data class RecordingStatsResponse(
+    @SerializedName("stats") val stats: List<RecordingStatsDto>,
+    @SerializedName("activeCount") val activeCount: Int
+)
+
+data class RecordingStatsDto(
+    @SerializedName("id") val id: Long,
+    @SerializedName("title") val title: String,
+    @SerializedName("fileSize") val fileSize: Long,
+    @SerializedName("fileSizeFormatted") val fileSizeFormatted: String,
+    @SerializedName("elapsedSeconds") val elapsedSeconds: Long,
+    @SerializedName("elapsedFormatted") val elapsedFormatted: String,
+    @SerializedName("totalSeconds") val totalSeconds: Long,
+    @SerializedName("remainingSeconds") val remainingSeconds: Long,
+    @SerializedName("progressPercent") val progressPercent: Double,
+    @SerializedName("bitrate") val bitrate: String?,
+    @SerializedName("isHealthy") val isHealthy: Boolean,
+    @SerializedName("isFailed") val isFailed: Boolean,
+    @SerializedName("failureReason") val failureReason: String?
+)
+
+// ============ Channel Groups (Failover) DTOs ============
+
+/**
+ * DTO for a channel group that supports failover between multiple sources.
+ */
+data class ChannelGroupDto(
+    @SerializedName("id") val id: Int,
+    @SerializedName("name") val name: String,
+    @SerializedName("displayNumber") val displayNumber: Int,
+    @SerializedName("logo") val logo: String?,
+    @SerializedName("channelId") val channelId: String?,  // EPG channel ID
+    @SerializedName("enabled") val enabled: Boolean,
+    @SerializedName("createdAt") val createdAt: String?,
+    @SerializedName("updatedAt") val updatedAt: String?,
+    @SerializedName("members") val members: List<ChannelGroupMemberDto>?
+)
+
+/**
+ * DTO for a channel member within a group with priority for failover.
+ */
+data class ChannelGroupMemberDto(
+    @SerializedName("id") val id: Int,
+    @SerializedName("channelGroupId") val channelGroupId: Int,
+    @SerializedName("channelId") val channelId: Int,
+    @SerializedName("priority") val priority: Int,
+    @SerializedName("createdAt") val createdAt: String?,
+    @SerializedName("channel") val channel: ChannelGroupChannelDto?
+)
+
+/**
+ * Simplified channel info within a group member.
+ */
+data class ChannelGroupChannelDto(
+    @SerializedName("id") val id: Int,
+    @SerializedName("name") val name: String,
+    @SerializedName("logo") val logo: String?,
+    @SerializedName("sourceName") val sourceName: String?,
+    @SerializedName("streamUrl") val streamUrl: String?
+)
+
+/**
+ * Response wrapper for channel groups list.
+ */
+data class ChannelGroupsResponse(
+    @SerializedName("groups") val groups: List<ChannelGroupDto>
+)
+
+/**
+ * Request to create a channel group.
+ */
+data class CreateChannelGroupRequest(
+    @SerializedName("name") val name: String,
+    @SerializedName("displayNumber") val displayNumber: Int,
+    @SerializedName("logo") val logo: String? = null,
+    @SerializedName("channelId") val channelId: String? = null
+)
+
+/**
+ * Request to update a channel group.
+ */
+data class UpdateChannelGroupRequest(
+    @SerializedName("name") val name: String? = null,
+    @SerializedName("displayNumber") val displayNumber: Int? = null,
+    @SerializedName("logo") val logo: String? = null,
+    @SerializedName("channelId") val channelId: String? = null,
+    @SerializedName("enabled") val enabled: Boolean? = null
+)
+
+/**
+ * Request to add a channel to a group.
+ */
+data class AddGroupMemberRequest(
+    @SerializedName("channelId") val channelId: Int,
+    @SerializedName("priority") val priority: Int = 0
+)
+
+/**
+ * Request to update a group member's priority.
+ */
+data class UpdateGroupMemberPriorityRequest(
+    @SerializedName("priority") val priority: Int
+)
+
+/**
+ * Response for auto-detected duplicate channels.
+ */
+data class DuplicateGroupDto(
+    @SerializedName("name") val name: String,
+    @SerializedName("channels") val channels: List<ChannelDto>
+)
+
+/**
+ * Response for auto-detect duplicates.
+ */
+data class AutoDetectDuplicatesResponse(
+    @SerializedName("groups") val groups: List<DuplicateGroupDto>
 )

@@ -382,6 +382,440 @@ func (s *Server) bulkMapChannels(c *gin.Context) {
 	})
 }
 
+// mapChannelNumbersFromM3U maps channel numbers from an M3U file to existing channels
+func (s *Server) mapChannelNumbersFromM3U(c *gin.Context) {
+	var req struct {
+		URL     string `json:"url,omitempty"`
+		Content string `json:"content,omitempty"`
+		Preview bool   `json:"preview"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if req.URL == "" && req.Content == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Either url or content is required"})
+		return
+	}
+
+	var m3uContent string
+	if req.URL != "" {
+		// Fetch from URL
+		client := &http.Client{Timeout: 30 * time.Second}
+		resp, err := client.Get(req.URL)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Failed to fetch M3U: %v", err)})
+			return
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Failed to fetch M3U: status %d", resp.StatusCode)})
+			return
+		}
+
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read M3U content"})
+			return
+		}
+		m3uContent = string(body)
+	} else {
+		m3uContent = req.Content
+	}
+
+	// Use the M3U parser to map channel numbers
+	parser := livetv.NewM3UParser(s.db)
+	result, err := parser.MapChannelNumbers(m3uContent, req.Preview)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, result)
+}
+
+// ============ Channel Groups (Failover) ============
+
+// getChannelGroups returns all channel groups
+func (s *Server) getChannelGroups(c *gin.Context) {
+	var groups []models.ChannelGroup
+	if err := s.db.Preload("Members").Preload("Members.Channel").Find(&groups).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch channel groups"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"groups": groups})
+}
+
+// createChannelGroup creates a new channel group
+func (s *Server) createChannelGroup(c *gin.Context) {
+	var req struct {
+		Name          string `json:"name" binding:"required"`
+		DisplayNumber int    `json:"displayNumber"`
+		Logo          string `json:"logo"`
+		ChannelID     string `json:"channelId"` // EPG mapping
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	group := models.ChannelGroup{
+		Name:          req.Name,
+		DisplayNumber: req.DisplayNumber,
+		Logo:          req.Logo,
+		ChannelID:     req.ChannelID,
+		Enabled:       true,
+	}
+
+	if err := s.db.Create(&group).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create channel group"})
+		return
+	}
+
+	c.JSON(http.StatusCreated, group)
+}
+
+// updateChannelGroup updates a channel group
+func (s *Server) updateChannelGroup(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid group ID"})
+		return
+	}
+
+	var group models.ChannelGroup
+	if err := s.db.First(&group, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Channel group not found"})
+		return
+	}
+
+	var req struct {
+		Name          *string `json:"name"`
+		DisplayNumber *int    `json:"displayNumber"`
+		Logo          *string `json:"logo"`
+		ChannelID     *string `json:"channelId"`
+		Enabled       *bool   `json:"enabled"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if req.Name != nil {
+		group.Name = *req.Name
+	}
+	if req.DisplayNumber != nil {
+		group.DisplayNumber = *req.DisplayNumber
+	}
+	if req.Logo != nil {
+		group.Logo = *req.Logo
+	}
+	if req.ChannelID != nil {
+		group.ChannelID = *req.ChannelID
+	}
+	if req.Enabled != nil {
+		group.Enabled = *req.Enabled
+	}
+
+	if err := s.db.Save(&group).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update channel group"})
+		return
+	}
+
+	c.JSON(http.StatusOK, group)
+}
+
+// deleteChannelGroup deletes a channel group
+func (s *Server) deleteChannelGroup(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid group ID"})
+		return
+	}
+
+	// Delete members first
+	if err := s.db.Where("channel_group_id = ?", id).Delete(&models.ChannelGroupMember{}).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete group members"})
+		return
+	}
+
+	// Delete the group
+	if err := s.db.Delete(&models.ChannelGroup{}, id).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete channel group"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Channel group deleted"})
+}
+
+// addChannelToGroup adds a channel to a group
+func (s *Server) addChannelToGroup(c *gin.Context) {
+	groupID, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid group ID"})
+		return
+	}
+
+	var req struct {
+		ChannelID uint `json:"channelId" binding:"required"`
+		Priority  int  `json:"priority"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Verify group exists
+	var group models.ChannelGroup
+	if err := s.db.First(&group, groupID).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Channel group not found"})
+		return
+	}
+
+	// Verify channel exists
+	var channel models.Channel
+	if err := s.db.First(&channel, req.ChannelID).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Channel not found"})
+		return
+	}
+
+	member := models.ChannelGroupMember{
+		ChannelGroupID: uint(groupID),
+		ChannelID:      req.ChannelID,
+		Priority:       req.Priority,
+	}
+
+	if err := s.db.Create(&member).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to add channel to group"})
+		return
+	}
+
+	// Load channel data
+	s.db.Preload("Channel").First(&member, member.ID)
+	c.JSON(http.StatusCreated, member)
+}
+
+// updateGroupMemberPriority updates a member's priority
+func (s *Server) updateGroupMemberPriority(c *gin.Context) {
+	groupID, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid group ID"})
+		return
+	}
+
+	channelID, err := strconv.ParseUint(c.Param("channelId"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid channel ID"})
+		return
+	}
+
+	var req struct {
+		Priority int `json:"priority"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	var member models.ChannelGroupMember
+	if err := s.db.Where("channel_group_id = ? AND channel_id = ?", groupID, channelID).First(&member).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Member not found"})
+		return
+	}
+
+	member.Priority = req.Priority
+	if err := s.db.Save(&member).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update priority"})
+		return
+	}
+
+	c.JSON(http.StatusOK, member)
+}
+
+// removeChannelFromGroup removes a channel from a group
+func (s *Server) removeChannelFromGroup(c *gin.Context) {
+	groupID, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid group ID"})
+		return
+	}
+
+	channelID, err := strconv.ParseUint(c.Param("channelId"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid channel ID"})
+		return
+	}
+
+	result := s.db.Where("channel_group_id = ? AND channel_id = ?", groupID, channelID).Delete(&models.ChannelGroupMember{})
+	if result.Error != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to remove channel from group"})
+		return
+	}
+
+	if result.RowsAffected == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Member not found"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Channel removed from group"})
+}
+
+// autoDetectDuplicates finds channels that might be duplicates based on name similarity
+func (s *Server) autoDetectDuplicates(c *gin.Context) {
+	var channels []models.Channel
+	if err := s.db.Where("enabled = ?", true).Find(&channels).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch channels"})
+		return
+	}
+
+	// Group by normalized name
+	type DuplicateGroup struct {
+		Name     string            `json:"name"`
+		Channels []models.Channel  `json:"channels"`
+	}
+
+	nameGroups := make(map[string][]models.Channel)
+	for _, ch := range channels {
+		normalized := normalizeForGrouping(ch.Name)
+		nameGroups[normalized] = append(nameGroups[normalized], ch)
+	}
+
+	// Only return groups with multiple channels
+	var duplicates []DuplicateGroup
+	for name, chans := range nameGroups {
+		if len(chans) > 1 {
+			duplicates = append(duplicates, DuplicateGroup{
+				Name:     name,
+				Channels: chans,
+			})
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{"duplicates": duplicates})
+}
+
+// normalizeForGrouping normalizes channel name for duplicate detection
+func normalizeForGrouping(name string) string {
+	name = strings.ToLower(name)
+	// Remove common suffixes and prefixes
+	suffixes := []string{
+		" hd", " sd", " fhd", " uhd", " 4k", " 2k", " 1080p", " 720p",
+		" (hd)", " (sd)", " (4k)", " (fhd)",
+		" us", " usa", " uk", " east", " west", " pacific", " central",
+	}
+	for _, suffix := range suffixes {
+		name = strings.TrimSuffix(name, suffix)
+	}
+	// Remove special characters
+	name = strings.Map(func(r rune) rune {
+		if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') || r == ' ' {
+			return r
+		}
+		return -1
+	}, name)
+	// Normalize spaces
+	parts := strings.Fields(name)
+	return strings.Join(parts, " ")
+}
+
+// proxyChannelGroupStream streams with failover - tries each member in priority order
+func (s *Server) proxyChannelGroupStream(c *gin.Context) {
+	groupID, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid group ID"})
+		return
+	}
+
+	// Get members ordered by priority
+	var members []models.ChannelGroupMember
+	if err := s.db.Where("channel_group_id = ?", groupID).
+		Order("priority ASC").
+		Preload("Channel").
+		Find(&members).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch group members"})
+		return
+	}
+
+	if len(members) == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "No channels in group"})
+		return
+	}
+
+	// Try each stream in priority order
+	for i, member := range members {
+		if member.Channel.StreamURL == "" {
+			log.Printf("Channel %s has no stream URL, skipping", member.Channel.Name)
+			continue
+		}
+
+		log.Printf("Trying stream %d/%d: %s (%s)", i+1, len(members), member.Channel.Name, member.Channel.SourceName)
+
+		// Create request to upstream stream
+		req, err := http.NewRequestWithContext(c.Request.Context(), "GET", member.Channel.StreamURL, nil)
+		if err != nil {
+			log.Printf("Failed to create request for %s: %v", member.Channel.Name, err)
+			continue
+		}
+
+		// Copy relevant headers
+		if ua := c.GetHeader("User-Agent"); ua != "" {
+			req.Header.Set("User-Agent", ua)
+		}
+
+		client := &http.Client{
+			Timeout: 10 * time.Second, // Timeout for initial connection
+			CheckRedirect: func(req *http.Request, via []*http.Request) error {
+				return http.ErrUseLastResponse
+			},
+		}
+
+		resp, err := client.Do(req)
+		if err != nil {
+			log.Printf("Stream failed for %s: %v, trying next...", member.Channel.Name, err)
+			continue
+		}
+
+		// Check for successful response
+		if resp.StatusCode >= 400 {
+			resp.Body.Close()
+			log.Printf("Stream returned %d for %s, trying next...", resp.StatusCode, member.Channel.Name)
+			continue
+		}
+
+		// Handle redirect
+		if resp.StatusCode >= 300 && resp.StatusCode < 400 {
+			location := resp.Header.Get("Location")
+			resp.Body.Close()
+			if location != "" {
+				c.Redirect(resp.StatusCode, location)
+				return
+			}
+			continue
+		}
+
+		// Success! Copy the response
+		log.Printf("Stream successful from %s (%s)", member.Channel.Name, member.Channel.SourceName)
+
+		// Copy headers
+		for key, values := range resp.Header {
+			for _, value := range values {
+				c.Header(key, value)
+			}
+		}
+		c.Status(resp.StatusCode)
+
+		// Stream the body
+		defer resp.Body.Close()
+		io.Copy(c.Writer, resp.Body)
+		return
+	}
+
+	// All streams failed
+	c.JSON(http.StatusServiceUnavailable, gin.H{"error": "All streams failed"})
+}
+
 // unmapChannel removes EPG mapping from a channel
 func (s *Server) unmapChannel(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
@@ -912,12 +1346,20 @@ func (s *Server) getGuide(c *gin.Context) {
 	end := now.Add(24 * time.Hour)
 
 	if startStr := c.Query("start"); startStr != "" {
-		if t, err := time.Parse(time.RFC3339, startStr); err == nil {
+		// Try parsing as Unix timestamp first (Android app sends seconds)
+		if ts, err := strconv.ParseInt(startStr, 10, 64); err == nil {
+			start = time.Unix(ts, 0)
+		} else if t, err := time.Parse(time.RFC3339, startStr); err == nil {
+			// Fall back to RFC3339 format
 			start = t
 		}
 	}
 	if endStr := c.Query("end"); endStr != "" {
-		if t, err := time.Parse(time.RFC3339, endStr); err == nil {
+		// Try parsing as Unix timestamp first (Android app sends seconds)
+		if ts, err := strconv.ParseInt(endStr, 10, 64); err == nil {
+			end = time.Unix(ts, 0)
+		} else if t, err := time.Parse(time.RFC3339, endStr); err == nil {
+			// Fall back to RFC3339 format
 			end = t
 		}
 	}

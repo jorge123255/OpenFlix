@@ -163,6 +163,56 @@ export interface Channel {
   channelId?: string // EPG channel ID for mapping
 }
 
+// Channel number mapping types
+export interface ChannelNumberMapping {
+  m3uName: string
+  m3uNumber: number
+  matchedChannelId?: number
+  matchedName?: string
+  matchType: 'tvg_id' | 'exact' | 'fuzzy' | 'none'
+  applied: boolean
+  oldNumber?: number
+}
+
+export interface MapNumbersResult {
+  matched: number
+  unmatched: number
+  results: ChannelNumberMapping[]
+}
+
+// Channel Groups (Failover)
+export interface ChannelGroupMember {
+  id: number
+  channelGroupId: number
+  channelId: number
+  priority: number
+  createdAt: string
+  channel?: {
+    id: number
+    name: string
+    logo?: string
+    sourceName?: string
+    streamUrl: string
+  }
+}
+
+export interface ChannelGroup {
+  id: number
+  name: string
+  displayNumber: number
+  logo?: string
+  channelId?: string // EPG mapping
+  enabled: boolean
+  createdAt: string
+  updatedAt: string
+  members?: ChannelGroupMember[]
+}
+
+export interface DuplicateGroup {
+  name: string
+  channels: Channel[]
+}
+
 export interface EPGChannel {
   channelId: string
   sampleTitle: string

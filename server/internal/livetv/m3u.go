@@ -376,3 +376,142 @@ func (p *M3UParser) RefreshSource(source *models.M3USource) error {
 
 	return p.db.Save(source).Error
 }
+
+// ChannelNumberMapping represents a mapping result between M3U and existing channels
+type ChannelNumberMapping struct {
+	M3UName          string `json:"m3uName"`
+	M3UNumber        int    `json:"m3uNumber"`
+	MatchedChannelID *uint  `json:"matchedChannelId,omitempty"`
+	MatchedName      string `json:"matchedName,omitempty"`
+	MatchType        string `json:"matchType"` // "tvg_id", "exact", "fuzzy", "none"
+	Applied          bool   `json:"applied"`
+	OldNumber        int    `json:"oldNumber,omitempty"`
+}
+
+// MapNumbersResult contains the results of channel number mapping
+type MapNumbersResult struct {
+	Matched   int                    `json:"matched"`
+	Unmatched int                    `json:"unmatched"`
+	Results   []ChannelNumberMapping `json:"results"`
+}
+
+// MapChannelNumbers maps channel numbers from an M3U to existing channels without importing streams
+func (p *M3UParser) MapChannelNumbers(content string, preview bool) (*MapNumbersResult, error) {
+	// Parse the M3U to get channel names and numbers
+	parsedChannels, err := p.ParseM3U(content)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse M3U: %w", err)
+	}
+
+	// Get all existing channels
+	var existingChannels []models.Channel
+	if err := p.db.Find(&existingChannels).Error; err != nil {
+		return nil, fmt.Errorf("failed to fetch existing channels: %w", err)
+	}
+
+	// Build lookup maps for matching
+	// 1. TVG-ID lookup (highest priority)
+	tvgIdLookup := make(map[string]*models.Channel)
+	// 2. Exact name lookup (case-insensitive)
+	exactNameLookup := make(map[string]*models.Channel)
+	// 3. Normalized name lookup for fuzzy matching
+	normalizedNameLookup := make(map[string]*models.Channel)
+
+	for i := range existingChannels {
+		ch := &existingChannels[i]
+		if ch.TVGId != "" {
+			tvgIdLookup[strings.ToLower(ch.TVGId)] = ch
+		}
+		exactNameLookup[strings.ToLower(ch.Name)] = ch
+		normalizedNameLookup[normalizeChannelName(ch.Name)] = ch
+	}
+
+	result := &MapNumbersResult{
+		Results: make([]ChannelNumberMapping, 0, len(parsedChannels)),
+	}
+
+	for _, parsed := range parsedChannels {
+		if parsed.Number == 0 {
+			continue // Skip channels without numbers
+		}
+
+		mapping := ChannelNumberMapping{
+			M3UName:   parsed.Name,
+			M3UNumber: parsed.Number,
+			MatchType: "none",
+		}
+
+		var matchedChannel *models.Channel
+
+		// Priority 1: Match by TVG-ID
+		if parsed.TVGId != "" {
+			if ch, ok := tvgIdLookup[strings.ToLower(parsed.TVGId)]; ok {
+				matchedChannel = ch
+				mapping.MatchType = "tvg_id"
+			}
+		}
+
+		// Priority 2: Exact name match (case-insensitive)
+		if matchedChannel == nil {
+			if ch, ok := exactNameLookup[strings.ToLower(parsed.Name)]; ok {
+				matchedChannel = ch
+				mapping.MatchType = "exact"
+			}
+		}
+
+		// Priority 3: Fuzzy match (normalized name)
+		if matchedChannel == nil {
+			normalizedName := normalizeChannelName(parsed.Name)
+			if ch, ok := normalizedNameLookup[normalizedName]; ok {
+				matchedChannel = ch
+				mapping.MatchType = "fuzzy"
+			}
+		}
+
+		if matchedChannel != nil {
+			mapping.MatchedChannelID = &matchedChannel.ID
+			mapping.MatchedName = matchedChannel.Name
+			mapping.OldNumber = matchedChannel.Number
+			result.Matched++
+
+			// Apply the mapping if not in preview mode
+			if !preview && matchedChannel.Number != parsed.Number {
+				matchedChannel.Number = parsed.Number
+				if err := p.db.Save(matchedChannel).Error; err != nil {
+					return nil, fmt.Errorf("failed to update channel %d: %w", matchedChannel.ID, err)
+				}
+				mapping.Applied = true
+			}
+		} else {
+			result.Unmatched++
+		}
+
+		result.Results = append(result.Results, mapping)
+	}
+
+	return result, nil
+}
+
+// normalizeChannelName normalizes a channel name for fuzzy matching
+// Removes common suffixes like HD, SD, 4K, FHD, etc. and normalizes spacing
+func normalizeChannelName(name string) string {
+	// Convert to lowercase
+	name = strings.ToLower(name)
+
+	// Remove common suffixes
+	suffixes := []string{
+		" hd", " sd", " fhd", " uhd", " 4k", " 2k", " 1080p", " 720p",
+		" (hd)", " (sd)", " (4k)", " (fhd)",
+		" us", " usa", " uk", " east", " west", " pacific", " central",
+	}
+	for _, suffix := range suffixes {
+		name = strings.TrimSuffix(name, suffix)
+	}
+
+	// Remove special characters and normalize spaces
+	name = regexp.MustCompile(`[^a-z0-9\s]`).ReplaceAllString(name, "")
+	name = regexp.MustCompile(`\s+`).ReplaceAllString(name, " ")
+	name = strings.TrimSpace(name)
+
+	return name
+}
