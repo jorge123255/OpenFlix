@@ -1,7 +1,7 @@
-import { useState } from 'react'
+import React, { useState, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
-import { Tv, Plus, Trash2, RefreshCw, FileText, Radio, Search, Edit, X, Check, Settings, MapPin, Zap, AlertCircle, Film, Monitor, Download, Clock, Archive, Layers, ArrowUp, ArrowDown, ChevronDown, ChevronRight, Wand2 } from 'lucide-react'
+import { Tv, Plus, Trash2, RefreshCw, FileText, Radio, Search, Edit, X, Check, Settings, MapPin, Zap, AlertCircle, Film, Monitor, Download, Clock, Archive, Layers, ArrowUp, ArrowDown, ChevronDown, ChevronRight, Wand2, Upload } from 'lucide-react'
 import { EPGSourceCard } from '../components/EPGSourceCard'
 import {
   useM3USources,
@@ -607,11 +607,29 @@ function MapChannelNumbersModal({
   const queryClient = useQueryClient()
   const [m3uUrl, setM3uUrl] = useState('')
   const [m3uContent, setM3uContent] = useState('')
-  const [inputMode, setInputMode] = useState<'url' | 'paste'>('url')
+  const [inputMode, setInputMode] = useState<'url' | 'file' | 'paste'>('file')
+  const [fileName, setFileName] = useState('')
   const [preview, setPreview] = useState<any>(null)
   const [isPreviewLoading, setIsPreviewLoading] = useState(false)
   const [isApplying, setIsApplying] = useState(false)
   const [error, setError] = useState('')
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      setFileName(file.name)
+      const reader = new FileReader()
+      reader.onload = (event) => {
+        const content = event.target?.result as string
+        setM3uContent(content)
+      }
+      reader.onerror = () => {
+        setError('Failed to read file')
+      }
+      reader.readAsText(file)
+    }
+  }
 
   const handlePreview = async () => {
     setIsPreviewLoading(true)
@@ -666,6 +684,16 @@ function MapChannelNumbersModal({
         {/* Input Mode Tabs */}
         <div className="flex gap-2 mb-4">
           <button
+            onClick={() => setInputMode('file')}
+            className={`px-4 py-2 rounded-lg text-sm ${
+              inputMode === 'file'
+                ? 'bg-indigo-600 text-white'
+                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+            }`}
+          >
+            Upload File
+          </button>
+          <button
             onClick={() => setInputMode('url')}
             className={`px-4 py-2 rounded-lg text-sm ${
               inputMode === 'url'
@@ -688,7 +716,35 @@ function MapChannelNumbersModal({
         </div>
 
         {/* Input Field */}
-        {inputMode === 'url' ? (
+        {inputMode === 'file' ? (
+          <div className="mb-4">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".m3u,.m3u8,text/plain"
+              onChange={handleFileSelect}
+              className="hidden"
+            />
+            <div
+              onClick={() => fileInputRef.current?.click()}
+              className="w-full p-6 bg-gray-700 border-2 border-dashed border-gray-600 rounded-lg text-center cursor-pointer hover:border-indigo-500 hover:bg-gray-700/70 transition-colors"
+            >
+              {fileName ? (
+                <div>
+                  <FileText className="h-8 w-8 text-indigo-400 mx-auto mb-2" />
+                  <p className="text-white font-medium">{fileName}</p>
+                  <p className="text-gray-400 text-sm mt-1">Click to choose a different file</p>
+                </div>
+              ) : (
+                <div>
+                  <Upload className="h-8 w-8 text-gray-500 mx-auto mb-2" />
+                  <p className="text-gray-300">Click to select an M3U file</p>
+                  <p className="text-gray-500 text-sm mt-1">.m3u or .m3u8</p>
+                </div>
+              )}
+            </div>
+          </div>
+        ) : inputMode === 'url' ? (
           <div className="mb-4">
             <input
               type="url"
