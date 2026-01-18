@@ -17,6 +17,35 @@ import (
 
 // ============ DVR Recordings ============
 
+// CommercialResponse represents a commercial segment in Android-compatible format
+type CommercialResponse struct {
+	Start int64 `json:"start"` // milliseconds
+	End   int64 `json:"end"`   // milliseconds
+}
+
+// RecordingResponse wraps a recording with Android-compatible commercial format
+type RecordingResponse struct {
+	models.Recording
+	Commercials []CommercialResponse `json:"commercials"`
+}
+
+// toRecordingResponse converts a Recording with CommercialSegments to Android-compatible format
+func toRecordingResponse(r models.Recording) RecordingResponse {
+	commercials := make([]CommercialResponse, len(r.Commercials))
+	for i, c := range r.Commercials {
+		commercials[i] = CommercialResponse{
+			Start: int64(c.StartTime * 1000), // Convert seconds to milliseconds
+			End:   int64(c.EndTime * 1000),
+		}
+	}
+	// Clear the original commercials to avoid duplicate data
+	r.Commercials = nil
+	return RecordingResponse{
+		Recording:   r,
+		Commercials: commercials,
+	}
+}
+
 // getRecordings returns all recordings for the user
 func (s *Server) getRecordings(c *gin.Context) {
 	userID := c.GetUint("userID")
@@ -36,12 +65,18 @@ func (s *Server) getRecordings(c *gin.Context) {
 	}
 
 	var recordings []models.Recording
-	if err := query.Order("start_time DESC").Find(&recordings).Error; err != nil {
+	if err := query.Preload("Commercials").Order("start_time DESC").Find(&recordings).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch recordings"})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"recordings": recordings})
+	// Convert to Android-compatible format
+	responses := make([]RecordingResponse, len(recordings))
+	for i, r := range recordings {
+		responses[i] = toRecordingResponse(r)
+	}
+
+	c.JSON(http.StatusOK, gin.H{"recordings": responses})
 }
 
 // scheduleRecording creates a new recording
@@ -616,6 +651,42 @@ func (s *Server) getCommercialDetectionStatus(c *gin.Context) {
 	})
 }
 
+// reprocessRecording remuxes a recording to fix A/V sync issues
+func (s *Server) reprocessRecording(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid recording ID"})
+		return
+	}
+
+	var recording models.Recording
+	if err := s.db.First(&recording, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Recording not found"})
+		return
+	}
+
+	if recording.Status != "completed" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Recording must be completed to reprocess"})
+		return
+	}
+
+	if s.recorder == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "DVR recorder not available"})
+		return
+	}
+
+	// Trigger reprocessing asynchronously
+	if err := s.recorder.ReprocessRecording(uint(id)); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusAccepted, gin.H{
+		"message":     "Recording reprocessing started (fixing A/V sync)",
+		"recordingId": id,
+	})
+}
+
 // calculateTotalCommercialTime sums up the duration of all commercial segments
 func calculateTotalCommercialTime(segments []models.CommercialSegment) float64 {
 	var total float64
@@ -979,21 +1050,17 @@ func (s *Server) getRecordingHLSSegment(c *gin.Context) {
 		return
 	}
 
-	// Use ffmpeg to extract the segment - try copy first (fast remux), fallback to transcode
-	// DVR recordings from IPTV are usually already H.264/AAC so copy should work
+	// Use ffmpeg to extract the segment
+	// Source file should already be remuxed with proper timestamps
+	// Use fast copy mode for quick segment generation
 	cmd := exec.Command("ffmpeg",
-		"-ss", startTime,
+		"-ss", startTime,        // Input seeking (fast)
 		"-i", recording.FilePath,
 		"-t", duration,
 		"-map", "0:v:0",         // First video stream
-		"-map", "0:a:0?",        // First audio stream (optional, may not exist)
-		"-c:v", "copy",          // Copy video codec (fast, no re-encode)
-		"-c:a", "aac",           // Re-encode audio to ensure compatibility
-		"-b:a", "128k",
-		"-ac", "2",              // Stereo audio
+		"-map", "0:a:0?",        // First audio stream (optional)
+		"-c", "copy",            // Copy both codecs (fast)
 		"-f", "mpegts",
-		"-muxdelay", "0",
-		"-muxpreload", "0",
 		"-")
 
 	output, err := cmd.Output()
