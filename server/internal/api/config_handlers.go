@@ -14,6 +14,9 @@ type ConfigExport struct {
 	Version     string    `json:"version"`
 	ExportedAt  time.Time `json:"exportedAt"`
 
+	// Server Settings (key-value pairs)
+	Settings []models.Setting `json:"settings"`
+
 	// Live TV Sources
 	M3USources    []M3USourceExport    `json:"m3uSources"`
 	XtreamSources []XtreamSourceExport `json:"xtreamSources"`
@@ -26,12 +29,17 @@ type ConfigExport struct {
 	// DVR
 	SeriesRules []models.SeriesRule `json:"seriesRules"`
 	TeamPasses  []models.TeamPass   `json:"teamPasses"`
+	Recordings  []RecordingExport   `json:"recordings"`
 
 	// Libraries
 	Libraries []LibraryExport `json:"libraries"`
 
 	// Users
 	Users []UserExport `json:"users"`
+
+	// User Data
+	WatchHistory []models.WatchHistory `json:"watchHistory"`
+	PlayQueues   []PlayQueueExport     `json:"playQueues"`
 
 	// Playlists and Collections
 	Playlists   []PlaylistExport   `json:"playlists"`
@@ -100,12 +108,27 @@ type CollectionExport struct {
 	ItemIDs []uint `json:"itemIds"`
 }
 
+// RecordingExport includes recording metadata
+type RecordingExport struct {
+	models.Recording
+	ChannelName string `json:"channelName,omitempty"`
+}
+
+// PlayQueueExport includes queue items
+type PlayQueueExport struct {
+	models.PlayQueue
+	ItemIDs []uint `json:"itemIds"`
+}
+
 // exportConfig exports the full server configuration
 func (s *Server) exportConfig(c *gin.Context) {
 	export := ConfigExport{
 		Version:    "1.0",
 		ExportedAt: time.Now(),
 	}
+
+	// Export Settings (key-value pairs)
+	s.db.Find(&export.Settings)
 
 	// Export M3U Sources
 	var m3uSources []models.M3USource
@@ -171,6 +194,21 @@ func (s *Server) exportConfig(c *gin.Context) {
 	// Export Team Passes
 	s.db.Find(&export.TeamPasses)
 
+	// Export Recordings with channel name
+	var recordings []models.Recording
+	s.db.Find(&recordings)
+	for _, rec := range recordings {
+		recExport := RecordingExport{Recording: rec}
+		// Get channel name
+		if rec.ChannelID > 0 {
+			var ch models.Channel
+			if s.db.First(&ch, rec.ChannelID).Error == nil {
+				recExport.ChannelName = ch.Name
+			}
+		}
+		export.Recordings = append(export.Recordings, recExport)
+	}
+
 	// Export Libraries with paths
 	var libraries []models.Library
 	s.db.Preload("Paths").Find(&libraries)
@@ -195,6 +233,20 @@ func (s *Server) exportConfig(c *gin.Context) {
 			IsAdmin:     u.IsAdmin,
 			Profiles:    u.Profiles,
 		})
+	}
+
+	// Export Watch History
+	s.db.Find(&export.WatchHistory)
+
+	// Export Play Queues with items
+	var playQueues []models.PlayQueue
+	s.db.Preload("Items").Find(&playQueues)
+	for _, pq := range playQueues {
+		pqExport := PlayQueueExport{PlayQueue: pq}
+		for _, item := range pq.Items {
+			pqExport.ItemIDs = append(pqExport.ItemIDs, item.MediaItemID)
+		}
+		export.PlayQueues = append(export.PlayQueues, pqExport)
 	}
 
 	// Export Playlists with items
@@ -237,6 +289,7 @@ func (s *Server) importConfig(c *gin.Context) {
 	preview := c.Query("preview") == "true"
 
 	result := gin.H{
+		"settings":      len(importData.Settings),
 		"m3uSources":    len(importData.M3USources),
 		"xtreamSources": len(importData.XtreamSources),
 		"epgSources":    len(importData.EPGSources),
@@ -244,8 +297,11 @@ func (s *Server) importConfig(c *gin.Context) {
 		"channelGroups": len(importData.ChannelGroups),
 		"seriesRules":   len(importData.SeriesRules),
 		"teamPasses":    len(importData.TeamPasses),
+		"recordings":    len(importData.Recordings),
 		"libraries":     len(importData.Libraries),
 		"users":         len(importData.Users),
+		"watchHistory":  len(importData.WatchHistory),
+		"playQueues":    len(importData.PlayQueues),
 		"playlists":     len(importData.Playlists),
 		"collections":   len(importData.Collections),
 	}
@@ -263,6 +319,25 @@ func (s *Server) importConfig(c *gin.Context) {
 	// Track import stats
 	imported := make(map[string]int)
 	errors := []string{}
+
+	// Import Settings (upsert by key)
+	for _, setting := range importData.Settings {
+		var existing models.Setting
+		if s.db.Where("key = ?", setting.Key).First(&existing).Error == nil {
+			existing.Value = setting.Value
+			if err := s.db.Save(&existing).Error; err != nil {
+				errors = append(errors, fmt.Sprintf("Setting %s: %v", setting.Key, err))
+			} else {
+				imported["settings"]++
+			}
+		} else {
+			if err := s.db.Create(&setting).Error; err != nil {
+				errors = append(errors, fmt.Sprintf("Setting %s: %v", setting.Key, err))
+			} else {
+				imported["settings"]++
+			}
+		}
+	}
 
 	// Import M3U Sources
 	for _, src := range importData.M3USources {
@@ -429,6 +504,31 @@ func (s *Server) importConfig(c *gin.Context) {
 		}
 	}
 
+	// Import Recordings (by title + start time)
+	for _, rec := range importData.Recordings {
+		var existing models.Recording
+		if s.db.Where("title = ? AND start_time = ?", rec.Title, rec.StartTime).First(&existing).Error == nil {
+			// Update existing recording metadata
+			existing.Status = rec.Status
+			existing.FilePath = rec.FilePath
+			existing.FileSize = rec.FileSize
+			existing.Duration = rec.Duration
+			if err := s.db.Save(&existing).Error; err != nil {
+				errors = append(errors, fmt.Sprintf("Recording %s: %v", rec.Title, err))
+			} else {
+				imported["recordings"]++
+			}
+		} else {
+			newRec := rec.Recording
+			newRec.ID = 0
+			if err := s.db.Create(&newRec).Error; err != nil {
+				errors = append(errors, fmt.Sprintf("Recording %s: %v", rec.Title, err))
+			} else {
+				imported["recordings"]++
+			}
+		}
+	}
+
 	// Import Libraries
 	for _, lib := range importData.Libraries {
 		var existing models.Library
@@ -462,6 +562,63 @@ func (s *Server) importConfig(c *gin.Context) {
 		}
 	}
 
+	// Import Watch History (by user + media item)
+	for _, wh := range importData.WatchHistory {
+		var existing models.WatchHistory
+		if s.db.Where("user_id = ? AND media_item_id = ?", wh.UserID, wh.MediaItemID).First(&existing).Error == nil {
+			// Update existing
+			existing.Position = wh.Position
+			existing.Duration = wh.Duration
+			existing.Completed = wh.Completed
+			existing.WatchedAt = wh.WatchedAt
+			if err := s.db.Save(&existing).Error; err != nil {
+				errors = append(errors, fmt.Sprintf("WatchHistory user %d item %d: %v", wh.UserID, wh.MediaItemID, err))
+			} else {
+				imported["watchHistory"]++
+			}
+		} else {
+			newWh := wh
+			newWh.ID = 0
+			if err := s.db.Create(&newWh).Error; err != nil {
+				errors = append(errors, fmt.Sprintf("WatchHistory user %d item %d: %v", wh.UserID, wh.MediaItemID, err))
+			} else {
+				imported["watchHistory"]++
+			}
+		}
+	}
+
+	// Import Play Queues (by user + name)
+	for _, pq := range importData.PlayQueues {
+		var existing models.PlayQueue
+		if s.db.Where("user_id = ? AND name = ?", pq.UserID, pq.Name).First(&existing).Error == nil {
+			// Update existing - just update current item
+			existing.CurrentItemID = pq.CurrentItemID
+			existing.CurrentPosition = pq.CurrentPosition
+			if err := s.db.Save(&existing).Error; err != nil {
+				errors = append(errors, fmt.Sprintf("PlayQueue %s: %v", pq.Name, err))
+			} else {
+				imported["playQueues"]++
+			}
+		} else {
+			newPq := pq.PlayQueue
+			newPq.ID = 0
+			newPq.Items = nil
+			if err := s.db.Create(&newPq).Error; err != nil {
+				errors = append(errors, fmt.Sprintf("PlayQueue %s: %v", pq.Name, err))
+			} else {
+				// Add items
+				for i, itemID := range pq.ItemIDs {
+					s.db.Create(&models.PlayQueueItem{
+						PlayQueueID: newPq.ID,
+						MediaItemID: itemID,
+						Position:    i,
+					})
+				}
+				imported["playQueues"]++
+			}
+		}
+	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"success":  true,
 		"imported": imported,
@@ -471,9 +628,11 @@ func (s *Server) importConfig(c *gin.Context) {
 
 // getConfigStats returns summary stats for the configuration
 func (s *Server) getConfigStats(c *gin.Context) {
-	var m3uCount, xtreamCount, epgCount, channelCount, groupCount int64
-	var ruleCount, passCount, libCount, userCount int64
+	var settingsCount, m3uCount, xtreamCount, epgCount, channelCount, groupCount int64
+	var ruleCount, passCount, recordingCount, libCount, userCount int64
+	var watchHistoryCount, playQueueCount, playlistCount, collectionCount int64
 
+	s.db.Model(&models.Setting{}).Count(&settingsCount)
 	s.db.Model(&models.M3USource{}).Count(&m3uCount)
 	s.db.Model(&models.XtreamSource{}).Count(&xtreamCount)
 	s.db.Model(&models.EPGSource{}).Count(&epgCount)
@@ -481,10 +640,16 @@ func (s *Server) getConfigStats(c *gin.Context) {
 	s.db.Model(&models.ChannelGroup{}).Count(&groupCount)
 	s.db.Model(&models.SeriesRule{}).Count(&ruleCount)
 	s.db.Model(&models.TeamPass{}).Count(&passCount)
+	s.db.Model(&models.Recording{}).Count(&recordingCount)
 	s.db.Model(&models.Library{}).Count(&libCount)
 	s.db.Model(&models.User{}).Count(&userCount)
+	s.db.Model(&models.WatchHistory{}).Count(&watchHistoryCount)
+	s.db.Model(&models.PlayQueue{}).Count(&playQueueCount)
+	s.db.Model(&models.Playlist{}).Count(&playlistCount)
+	s.db.Model(&models.Collection{}).Count(&collectionCount)
 
 	c.JSON(http.StatusOK, gin.H{
+		"settings":      settingsCount,
 		"m3uSources":    m3uCount,
 		"xtreamSources": xtreamCount,
 		"epgSources":    epgCount,
@@ -492,7 +657,12 @@ func (s *Server) getConfigStats(c *gin.Context) {
 		"channelGroups": groupCount,
 		"seriesRules":   ruleCount,
 		"teamPasses":    passCount,
+		"recordings":    recordingCount,
 		"libraries":     libCount,
 		"users":         userCount,
+		"watchHistory":  watchHistoryCount,
+		"playQueues":    playQueueCount,
+		"playlists":     playlistCount,
+		"collections":   collectionCount,
 	})
 }
