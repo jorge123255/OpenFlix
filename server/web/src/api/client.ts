@@ -798,6 +798,7 @@ export interface DVRSettings {
 
 // Configuration Export/Import
 export interface ConfigStats {
+  settings: number
   m3uSources: number
   xtreamSources: number
   epgSources: number
@@ -805,8 +806,13 @@ export interface ConfigStats {
   channelGroups: number
   seriesRules: number
   teamPasses: number
+  recordings: number
   libraries: number
   users: number
+  watchHistory: number
+  playQueues: number
+  playlists: number
+  collections: number
 }
 
 export interface ImportResult {

@@ -351,7 +351,7 @@ function ConfigBackupSection() {
 
         {/* Current Stats */}
         {!statsLoading && stats && (
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-4 bg-gray-900 rounded-lg">
+          <div className="grid grid-cols-3 sm:grid-cols-5 gap-3 p-4 bg-gray-900 rounded-lg">
             <div className="text-center">
               <div className="text-xl font-semibold text-white">{stats.channels}</div>
               <div className="text-xs text-gray-500">Channels</div>
@@ -362,11 +362,35 @@ function ConfigBackupSection() {
             </div>
             <div className="text-center">
               <div className="text-xl font-semibold text-white">{stats.epgSources}</div>
-              <div className="text-xs text-gray-500">EPG Sources</div>
+              <div className="text-xs text-gray-500">EPG</div>
             </div>
             <div className="text-center">
               <div className="text-xl font-semibold text-white">{stats.libraries}</div>
               <div className="text-xs text-gray-500">Libraries</div>
+            </div>
+            <div className="text-center">
+              <div className="text-xl font-semibold text-white">{stats.recordings}</div>
+              <div className="text-xs text-gray-500">Recordings</div>
+            </div>
+            <div className="text-center">
+              <div className="text-xl font-semibold text-white">{stats.users}</div>
+              <div className="text-xs text-gray-500">Users</div>
+            </div>
+            <div className="text-center">
+              <div className="text-xl font-semibold text-white">{stats.playlists}</div>
+              <div className="text-xs text-gray-500">Playlists</div>
+            </div>
+            <div className="text-center">
+              <div className="text-xl font-semibold text-white">{stats.seriesRules + stats.teamPasses}</div>
+              <div className="text-xs text-gray-500">DVR Rules</div>
+            </div>
+            <div className="text-center">
+              <div className="text-xl font-semibold text-white">{stats.watchHistory}</div>
+              <div className="text-xs text-gray-500">Watch History</div>
+            </div>
+            <div className="text-center">
+              <div className="text-xl font-semibold text-white">{stats.settings}</div>
+              <div className="text-xs text-gray-500">Settings</div>
             </div>
           </div>
         )}
