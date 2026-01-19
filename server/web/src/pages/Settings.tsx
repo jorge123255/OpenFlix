@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react'
-import { Save, CheckCircle, XCircle, Loader } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { Save, CheckCircle, XCircle, Loader, Download, Upload, AlertCircle } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { api, type ServerSettings, type DVRSettings } from '../api/client'
+import { api, type ServerSettings, type DVRSettings, type ImportResult, type ConfigStats } from '../api/client'
 
 function useServerConfig() {
   return useQuery({
@@ -259,6 +259,235 @@ function VODSettingsSection({
   )
 }
 
+function ConfigBackupSection() {
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [isExporting, setIsExporting] = useState(false)
+  const [isImporting, setIsImporting] = useState(false)
+  const [importResult, setImportResult] = useState<ImportResult | null>(null)
+  const [pendingImport, setPendingImport] = useState<unknown | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  const { data: stats, isLoading: statsLoading } = useQuery<ConfigStats>({
+    queryKey: ['configStats'],
+    queryFn: () => api.getConfigStats(),
+    retry: 1,
+  })
+
+  const handleExport = async () => {
+    setIsExporting(true)
+    setError(null)
+    try {
+      const blob = await api.exportConfig()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `openflix-config-${new Date().toISOString().split('T')[0]}.json`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+    } catch (err: any) {
+      setError(err.message || 'Failed to export configuration')
+    } finally {
+      setIsExporting(false)
+    }
+  }
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setError(null)
+    setImportResult(null)
+    setIsImporting(true)
+
+    try {
+      const text = await file.text()
+      const data = JSON.parse(text)
+
+      // Preview first
+      const preview = await api.importConfig(data, true)
+      setImportResult(preview)
+      setPendingImport(data)
+    } catch (err: any) {
+      setError(err.message || 'Failed to parse configuration file')
+    } finally {
+      setIsImporting(false)
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
+    }
+  }
+
+  const confirmImport = async () => {
+    if (!pendingImport) return
+
+    setIsImporting(true)
+    setError(null)
+
+    try {
+      const result = await api.importConfig(pendingImport, false)
+      setImportResult(result)
+      setPendingImport(null)
+    } catch (err: any) {
+      setError(err.message || 'Failed to import configuration')
+    } finally {
+      setIsImporting(false)
+    }
+  }
+
+  const cancelImport = () => {
+    setPendingImport(null)
+    setImportResult(null)
+  }
+
+  return (
+    <div className="bg-gray-800 rounded-xl p-6 mb-6">
+      <h2 className="text-lg font-semibold text-white mb-4">Configuration Backup</h2>
+      <div className="space-y-4">
+        <p className="text-sm text-gray-400">
+          Export your entire OpenFlix configuration including channels, sources, EPG, libraries, users, playlists, and more.
+        </p>
+
+        {/* Current Stats */}
+        {!statsLoading && stats && (
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-4 bg-gray-900 rounded-lg">
+            <div className="text-center">
+              <div className="text-xl font-semibold text-white">{stats.channels}</div>
+              <div className="text-xs text-gray-500">Channels</div>
+            </div>
+            <div className="text-center">
+              <div className="text-xl font-semibold text-white">{stats.m3uSources + stats.xtreamSources}</div>
+              <div className="text-xs text-gray-500">Sources</div>
+            </div>
+            <div className="text-center">
+              <div className="text-xl font-semibold text-white">{stats.epgSources}</div>
+              <div className="text-xs text-gray-500">EPG Sources</div>
+            </div>
+            <div className="text-center">
+              <div className="text-xl font-semibold text-white">{stats.libraries}</div>
+              <div className="text-xs text-gray-500">Libraries</div>
+            </div>
+          </div>
+        )}
+
+        {/* Export/Import Buttons */}
+        <div className="flex gap-3">
+          <button
+            onClick={handleExport}
+            disabled={isExporting}
+            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-800 text-white rounded-lg"
+          >
+            {isExporting ? (
+              <Loader className="h-4 w-4 animate-spin" />
+            ) : (
+              <Download className="h-4 w-4" />
+            )}
+            {isExporting ? 'Exporting...' : 'Export Configuration'}
+          </button>
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".json"
+            onChange={handleFileSelect}
+            className="hidden"
+          />
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isImporting}
+            className="flex items-center gap-2 px-4 py-2 bg-gray-700 hover:bg-gray-600 disabled:bg-gray-800 text-white rounded-lg"
+          >
+            {isImporting ? (
+              <Loader className="h-4 w-4 animate-spin" />
+            ) : (
+              <Upload className="h-4 w-4" />
+            )}
+            {isImporting ? 'Processing...' : 'Import Configuration'}
+          </button>
+        </div>
+
+        {/* Error Display */}
+        {error && (
+          <div className="flex items-center gap-2 p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
+            <XCircle className="h-4 w-4 text-red-400 flex-shrink-0" />
+            <span className="text-red-400 text-sm">{error}</span>
+          </div>
+        )}
+
+        {/* Import Preview */}
+        {importResult && pendingImport !== null && (
+          <div className="p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
+            <div className="flex items-start gap-2 mb-3">
+              <AlertCircle className="h-5 w-5 text-yellow-400 flex-shrink-0 mt-0.5" />
+              <div>
+                <h3 className="font-medium text-yellow-400">Import Preview</h3>
+                <p className="text-sm text-gray-400 mt-1">
+                  This will import the following items. Existing items with the same ID will be updated.
+                </p>
+              </div>
+            </div>
+
+            {importResult.version && (
+              <p className="text-xs text-gray-500 mb-2">
+                Export version: {importResult.version} | Exported: {importResult.exportedAt ? new Date(importResult.exportedAt).toLocaleString() : 'Unknown'}
+              </p>
+            )}
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
+              {importResult.counts && (Object.entries(importResult.counts) as [string, number][]).map(([key, value]) =>
+                value > 0 ? (
+                  <div key={key} className="text-center p-2 bg-gray-800 rounded">
+                    <div className="text-lg font-semibold text-white">{value}</div>
+                    <div className="text-xs text-gray-500 capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}</div>
+                  </div>
+                ) : null
+              )}
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                onClick={confirmImport}
+                disabled={isImporting}
+                className="flex items-center gap-2 px-4 py-2 bg-yellow-600 hover:bg-yellow-700 disabled:bg-yellow-800 text-white rounded-lg"
+              >
+                {isImporting ? <Loader className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
+                {isImporting ? 'Importing...' : 'Confirm Import'}
+              </button>
+              <button
+                onClick={cancelImport}
+                disabled={isImporting}
+                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Import Success */}
+        {importResult && importResult.success && pendingImport === null && (
+          <div className="flex items-center gap-2 p-3 bg-green-500/10 border border-green-500/30 rounded-lg">
+            <CheckCircle className="h-4 w-4 text-green-400 flex-shrink-0" />
+            <span className="text-green-400 text-sm">
+              Configuration imported successfully!
+              {importResult.imported && (
+                <span className="text-gray-400 ml-2">
+                  ({Object.entries(importResult.imported).filter(([, v]) => v > 0).map(([k, v]) => `${v} ${k}`).join(', ')})
+                </span>
+              )}
+            </span>
+          </div>
+        )}
+
+        <p className="text-xs text-gray-500">
+          Note: Passwords and sensitive credentials are not included in exports for security.
+        </p>
+      </div>
+    </div>
+  )
+}
+
 export function SettingsPage() {
   const { data: config, isLoading, error } = useServerConfig()
   const queryClient = useQueryClient()
@@ -413,6 +642,8 @@ transcode:
         vodApiUrl={formData.vod_api_url || ''}
         onUrlChange={(url) => updateField('vod_api_url', url)}
       />
+
+      <ConfigBackupSection />
 
       <div className="bg-gray-800 rounded-xl p-6">
         <h2 className="text-lg font-semibold text-white mb-4">Other Settings</h2>

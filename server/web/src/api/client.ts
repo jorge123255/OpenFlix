@@ -201,6 +201,25 @@ class ApiClient {
     return response.data
   }
 
+  // Configuration Export/Import
+  async exportConfig(): Promise<Blob> {
+    const response = await this.client.get('/config/export', {
+      responseType: 'blob',
+    })
+    return response.data
+  }
+
+  async getConfigStats(): Promise<ConfigStats> {
+    const response = await this.client.get<ConfigStats>('/config/stats')
+    return response.data
+  }
+
+  async importConfig(data: unknown, preview: boolean = false): Promise<ImportResult> {
+    const url = preview ? '/config/import?preview=true' : '/config/import'
+    const response = await this.client.post<ImportResult>(url, data)
+    return response.data
+  }
+
   // Channel Groups (Failover)
   async getChannelGroups(): Promise<ChannelGroup[]> {
     const response = await this.client.get<{ groups: ChannelGroup[] }>('/livetv/channel-groups')
@@ -775,6 +794,29 @@ export interface VODDownloadQueue {
 // DVR Settings
 export interface DVRSettings {
   maxConcurrentRecordings: number  // 0 = unlimited
+}
+
+// Configuration Export/Import
+export interface ConfigStats {
+  m3uSources: number
+  xtreamSources: number
+  epgSources: number
+  channels: number
+  channelGroups: number
+  seriesRules: number
+  teamPasses: number
+  libraries: number
+  users: number
+}
+
+export interface ImportResult {
+  success?: boolean
+  preview?: boolean
+  counts?: ConfigStats
+  imported?: Record<string, number>
+  errors?: string[]
+  version?: string
+  exportedAt?: string
 }
 
 export const api = new ApiClient()
