@@ -567,10 +567,10 @@ func (s *Server) importConfig(c *gin.Context) {
 		var existing models.WatchHistory
 		if s.db.Where("user_id = ? AND media_item_id = ?", wh.UserID, wh.MediaItemID).First(&existing).Error == nil {
 			// Update existing
-			existing.Position = wh.Position
-			existing.Duration = wh.Duration
+			existing.ViewOffset = wh.ViewOffset
+			existing.ViewCount = wh.ViewCount
 			existing.Completed = wh.Completed
-			existing.WatchedAt = wh.WatchedAt
+			existing.LastViewedAt = wh.LastViewedAt
 			if err := s.db.Save(&existing).Error; err != nil {
 				errors = append(errors, fmt.Sprintf("WatchHistory user %d item %d: %v", wh.UserID, wh.MediaItemID, err))
 			} else {
@@ -587,15 +587,15 @@ func (s *Server) importConfig(c *gin.Context) {
 		}
 	}
 
-	// Import Play Queues (by user + name)
+	// Import Play Queues (by user + source URI)
 	for _, pq := range importData.PlayQueues {
 		var existing models.PlayQueue
-		if s.db.Where("user_id = ? AND name = ?", pq.UserID, pq.Name).First(&existing).Error == nil {
-			// Update existing - just update current item
-			existing.CurrentItemID = pq.CurrentItemID
-			existing.CurrentPosition = pq.CurrentPosition
+		if s.db.Where("user_id = ? AND source_uri = ?", pq.UserID, pq.SourceURI).First(&existing).Error == nil {
+			// Update existing - just update selected item
+			existing.SelectedItemID = pq.SelectedItemID
+			existing.SelectedItemOffset = pq.SelectedItemOffset
 			if err := s.db.Save(&existing).Error; err != nil {
-				errors = append(errors, fmt.Sprintf("PlayQueue %s: %v", pq.Name, err))
+				errors = append(errors, fmt.Sprintf("PlayQueue user %d: %v", pq.UserID, err))
 			} else {
 				imported["playQueues"]++
 			}
@@ -604,14 +604,14 @@ func (s *Server) importConfig(c *gin.Context) {
 			newPq.ID = 0
 			newPq.Items = nil
 			if err := s.db.Create(&newPq).Error; err != nil {
-				errors = append(errors, fmt.Sprintf("PlayQueue %s: %v", pq.Name, err))
+				errors = append(errors, fmt.Sprintf("PlayQueue user %d: %v", pq.UserID, err))
 			} else {
 				// Add items
 				for i, itemID := range pq.ItemIDs {
 					s.db.Create(&models.PlayQueueItem{
 						PlayQueueID: newPq.ID,
 						MediaItemID: itemID,
-						Position:    i,
+						Order:       i,
 					})
 				}
 				imported["playQueues"]++
