@@ -653,6 +653,15 @@ func (s *Server) setupRouter() {
 	plex.GET("/prefs", s.getServerPrefs)
 	r.GET("/prefs", s.authRequired(), s.getServerPrefs)
 
+	// ============ Configuration Export/Import ============
+	configGroup := r.Group("/config")
+	configGroup.Use(s.authRequired())
+	{
+		configGroup.GET("/export", s.exportConfig)
+		configGroup.POST("/import", s.importConfig)
+		configGroup.GET("/stats", s.getConfigStats)
+	}
+
 	// ============ Media Streaming ============
 	// Direct file access
 	r.GET("/library/parts/:partId/file", s.authRequired(), s.streamMedia)
