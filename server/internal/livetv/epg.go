@@ -430,10 +430,15 @@ func (p *EPGParser) ImportProgramsFromEPGSource(source *models.EPGSource, xmltv 
 	// Delete old programs (before today)
 	p.db.Where("start < ?", now.Add(-24*time.Hour)).Delete(&models.Program{})
 
-	// Count unique channels in the EPG
+	// Build channel name map from XMLTV channels (ID -> DisplayName)
 	channelSet := make(map[string]bool)
+	channelNames := make(map[string]string)
 	for _, ch := range xmltv.Channels {
 		channelSet[ch.ID] = true
+		// Get the first display name as the channel name (call sign)
+		if len(ch.DisplayName) > 0 {
+			channelNames[ch.ID] = ch.DisplayName[0].Value
+		}
 	}
 
 	for _, prog := range xmltv.Programmes {
@@ -494,6 +499,10 @@ func (p *EPGParser) ImportProgramsFromEPGSource(source *models.EPGSource, xmltv 
 			existing.Category = category
 			existing.EpisodeNum = episodeNum
 			existing.Icon = icon
+			// Set call sign from channel display name
+			if name, ok := channelNames[prog.Channel]; ok {
+				existing.CallSign = name
+			}
 			// Classify content
 			p.classifier.ClassifyProgram(&existing)
 			p.db.Save(&existing)
@@ -508,6 +517,10 @@ func (p *EPGParser) ImportProgramsFromEPGSource(source *models.EPGSource, xmltv 
 				Category:    category,
 				EpisodeNum:  episodeNum,
 				Icon:        icon,
+			}
+			// Set call sign from channel display name
+			if name, ok := channelNames[prog.Channel]; ok {
+				program.CallSign = name
 			}
 			// Classify content
 			p.classifier.ClassifyProgram(&program)
