@@ -2559,7 +2559,7 @@ func (s *Server) updateEPGSource(c *gin.Context) {
 	c.JSON(http.StatusOK, source)
 }
 
-// deleteEPGSource deletes an EPG source
+// deleteEPGSource deletes an EPG source and clears associated programs
 func (s *Server) deleteEPGSource(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
@@ -2567,12 +2567,28 @@ func (s *Server) deleteEPGSource(c *gin.Context) {
 		return
 	}
 
+	// Delete the EPG source
 	if err := s.db.Delete(&models.EPGSource{}, id).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete EPG source"})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "EPG source deleted"})
+	// Check if there are any remaining EPG sources
+	var remainingCount int64
+	s.db.Model(&models.EPGSource{}).Count(&remainingCount)
+
+	// If no EPG sources remain, delete all programs
+	programsDeleted := int64(0)
+	if remainingCount == 0 {
+		result := s.db.Delete(&models.Program{}, "1 = 1")
+		programsDeleted = result.RowsAffected
+		log.Printf("Deleted all %d programs (no EPG sources remaining)", programsDeleted)
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message":         "EPG source deleted",
+		"programsDeleted": programsDeleted,
+	})
 }
 
 // refreshEPGSource refreshes programs from an EPG source
