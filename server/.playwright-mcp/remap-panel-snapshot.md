@@ -1,0 +1,13979 @@
+### Open tabs
+- 0: (current) [OpenFlix Admin] (http://192.168.1.185:32400/ui/tvguide)
+- 1: [DVR Tuner] (http://192.168.1.85:7070/)
+- 2: [DVR Tuner] (http://192.168.1.39:7070/)
+- 3: [DVR Tuner] (http://192.168.1.39:7073/)
+
+### Page state
+- Page URL: http://192.168.1.185:32400/ui/tvguide
+- Page Title: OpenFlix Admin
+- Page Snapshot:
+```yaml
+- generic [ref=e3]:
+  - complementary [ref=e4]:
+    - generic [ref=e6]: OpenFlix
+    - navigation [ref=e7]:
+      - link "Dashboard" [ref=e8] [cursor=pointer]:
+        - /url: /ui
+        - img [ref=e9]
+        - text: Dashboard
+      - link "Users" [ref=e14] [cursor=pointer]:
+        - /url: /ui/users
+        - img [ref=e15]
+        - text: Users
+      - link "Libraries" [ref=e20] [cursor=pointer]:
+        - /url: /ui/libraries
+        - img [ref=e21]
+        - text: Libraries
+      - link "Media" [ref=e23] [cursor=pointer]:
+        - /url: /ui/media
+        - img [ref=e24]
+        - text: Media
+      - link "Live TV" [ref=e26] [cursor=pointer]:
+        - /url: /ui/livetv
+        - img [ref=e27]
+        - text: Live TV
+      - link "TV Guide" [ref=e30] [cursor=pointer]:
+        - /url: /ui/tvguide
+        - img [ref=e31]
+        - text: TV Guide
+      - link "On Later" [ref=e33] [cursor=pointer]:
+        - /url: /ui/onlater
+        - img [ref=e34]
+        - text: On Later
+      - link "Team Pass" [ref=e37] [cursor=pointer]:
+        - /url: /ui/teampass
+        - img [ref=e38]
+        - text: Team Pass
+      - link "DVR" [ref=e44] [cursor=pointer]:
+        - /url: /ui/dvr
+        - img [ref=e45]
+        - text: DVR
+      - link "VOD" [ref=e48] [cursor=pointer]:
+        - /url: /ui/vod
+        - img [ref=e49]
+        - text: VOD
+      - link "Transcode" [ref=e53] [cursor=pointer]:
+        - /url: /ui/transcode
+        - img [ref=e54]
+        - text: Transcode
+      - link "Logs" [ref=e57] [cursor=pointer]:
+        - /url: /ui/logs
+        - img [ref=e58]
+        - text: Logs
+      - link "Downloads" [ref=e61] [cursor=pointer]:
+        - /url: /ui/downloads
+        - img [ref=e62]
+        - text: Downloads
+      - link "Settings" [ref=e65] [cursor=pointer]:
+        - /url: /ui/settings
+        - img [ref=e66]
+        - text: Settings
+    - generic [ref=e69]:
+      - generic [ref=e70]:
+        - generic [ref=e71]: U
+        - generic [ref=e72]:
+          - paragraph
+          - paragraph [ref=e73]: User
+      - button "Sign out" [ref=e74]:
+        - img [ref=e75]
+        - text: Sign out
+  - main [ref=e79]:
+    - generic [ref=e80]:
+      - generic [ref=e81]:
+        - generic [ref=e82]:
+          - heading "TV Guide" [level=1] [ref=e83]
+          - paragraph [ref=e84]: Browse the program schedule and record shows
+        - generic [ref=e85]:
+          - button "Refresh EPG data" [ref=e86]:
+            - img [ref=e87]
+          - button [ref=e93]:
+            - img [ref=e94]
+          - button "Now" [ref=e96]
+          - button [ref=e97]:
+            - img [ref=e98]
+      - generic [ref=e100]:
+        - generic [ref=e101]:
+          - generic [ref=e102]: "Provider:"
+          - combobox [ref=e103]:
+            - option "All Groups (429 channels)" [selected]
+            - option "Away Locals (5) - 2 need EPG"
+            - option "Documentary (13)"
+            - option "Entertainment (274) - 14 need EPG"
+            - option "Kids (10)"
+            - option "Movies (44)"
+            - option "News (14)"
+            - option "Sports (69) - 18 need EPG"
+        - generic [ref=e104] [cursor=pointer]:
+          - checkbox "Show only channels without EPG(34)" [ref=e130]
+          - generic [ref=e106]:
+            - text: Show only channels without EPG
+            - generic [ref=e131]: (34)
+        - button "Auto-Detect EPG" [ref=e132]:
+          - img [ref=e133]
+          - text: Auto-Detect EPG
+        - generic [ref=e110]: Movies
+        - generic [ref=e113]: TVShow
+        - generic [ref=e116]: Sports
+        - generic [ref=e119]: News
+        - generic [ref=e122]: Kids
+        - generic [ref=e125]: Documentary
+      - generic [ref=e126]:
+        - generic [ref=e127]:
+          - generic [ref=e136]: 429 Channels
+          - generic [ref=e138]:
+            - generic [ref=e140]: 4:00 PM
+            - generic [ref=e142]: 4:30 PM
+            - generic [ref=e144]: 5:00 PM
+            - generic [ref=e146]: 5:30 PM
+            - generic [ref=e148]: 6:00 PM
+            - generic [ref=e150]: 6:30 PM
+            - generic [ref=e152]: 7:00 PM
+            - generic [ref=e154]: 7:30 PM
+            - generic [ref=e156]: 8:00 PM
+            - generic [ref=e158]: 8:30 PM
+            - generic [ref=e160]: 9:00 PM
+            - generic [ref=e162]: 9:30 PM
+        - generic [ref=e165]:
+          - generic [ref=e167]:
+            - generic [ref=e168] [cursor=pointer]:
+              - button "Watch Now" [ref=e169]:
+                - img [ref=e170]
+              - img "IL WBBM CBS 2 A3 HD" [ref=e172]
+              - generic [ref=e173]:
+                - generic [ref=e174]: IL WBBM CBS 2 A3 HD
+                - generic [ref=e175]:
+                  - text: Ch 2
+                  - generic [ref=e176]: • DirectTV_39
+                  - generic [ref=e177]: • No EPG
+                  - button "Map" [ref=e178]:
+                    - img [ref=e179]
+                    - text: Map
+            - generic [ref=e182] [cursor=pointer]:
+              - button "Watch Now" [ref=e183]:
+                - img [ref=e184]
+              - img "A3 New York 05 WNYW Fox" [ref=e186]
+              - generic [ref=e187]:
+                - generic [ref=e188]: A3 New York 05 WNYW Fox
+                - generic [ref=e189]:
+                  - text: Ch 5
+                  - generic [ref=e190]: • DirectTV_39
+                  - button "Re-map" [ref=e191]:
+                    - img [ref=e192]
+                    - text: Re-map
+            - generic [ref=e195] [cursor=pointer]:
+              - button "Watch Now" [ref=e196]:
+                - img [ref=e197]
+              - img "A3 New York 07 WABC ABC" [ref=e199]
+              - generic [ref=e200]:
+                - generic [ref=e201]: A3 New York 07 WABC ABC
+                - generic [ref=e202]:
+                  - text: Ch 7
+                  - generic [ref=e203]: • DirectTV_39
+                  - button "Re-map" [ref=e204]:
+                    - img [ref=e205]
+                    - text: Re-map
+            - generic [ref=e208] [cursor=pointer]:
+              - button "Watch Now" [ref=e209]:
+                - img [ref=e210]
+              - img "NY WNET PBS 13 A3 HD" [ref=e212]
+              - generic [ref=e213]:
+                - generic [ref=e214]: NY WNET PBS 13 A3 HD
+                - generic [ref=e215]:
+                  - text: Ch 13
+                  - generic [ref=e216]: • DirectTV_39
+                  - button "Re-map" [ref=e217]:
+                    - img [ref=e218]
+                    - text: Re-map
+            - generic [ref=e221] [cursor=pointer]:
+              - button "Watch Now" [ref=e222]:
+                - img [ref=e223]
+              - img "NY WEDW PBS 49 A3 HD" [ref=e225]
+              - generic [ref=e226]:
+                - generic [ref=e227]: NY WEDW PBS 49 A3 HD
+                - generic [ref=e228]:
+                  - text: Ch 49
+                  - generic [ref=e229]: • DirectTV_39
+                  - button "Re-map" [ref=e230]:
+                    - img [ref=e231]
+                    - text: Re-map
+            - generic [ref=e234] [cursor=pointer]:
+              - button "Watch Now" [ref=e235]:
+                - img [ref=e236]
+              - img "NY WNJN PBS 50 A3 HD" [ref=e238]
+              - generic [ref=e239]:
+                - generic [ref=e240]: NY WNJN PBS 50 A3 HD
+                - generic [ref=e241]:
+                  - text: Ch 50
+                  - generic [ref=e242]: • DirectTV_39
+                  - button "Re-map" [ref=e243]:
+                    - img [ref=e244]
+                    - text: Re-map
+            - generic [ref=e247] [cursor=pointer]:
+              - button "Watch Now" [ref=e248]:
+                - img [ref=e249]
+              - img "MeTV" [ref=e251]
+              - generic [ref=e252]:
+                - generic [ref=e253]: MeTV
+                - generic [ref=e254]:
+                  - text: Ch 77
+                  - generic [ref=e255]: • DirectTV_39
+                  - button "Re-map" [ref=e256]:
+                    - img [ref=e257]
+                    - text: Re-map
+            - generic [ref=e260] [cursor=pointer]:
+              - button "Watch Now" [ref=e261]:
+                - img [ref=e262]
+              - img "COZI TV" [ref=e264]
+              - generic [ref=e265]:
+                - generic [ref=e266]: COZI TV
+                - generic [ref=e267]:
+                  - text: Ch 80
+                  - generic [ref=e268]: • DirectTV_39
+                  - button "Re-map" [ref=e269]:
+                    - img [ref=e270]
+                    - text: Re-map
+            - generic [ref=e273] [cursor=pointer]:
+              - button "Watch Now" [ref=e274]:
+                - img [ref=e275]
+              - img "GRIT" [ref=e277]
+              - generic [ref=e278]:
+                - generic [ref=e279]: GRIT
+                - generic [ref=e280]:
+                  - text: Ch 81
+                  - generic [ref=e281]: • DirectTV_39
+                  - button "Re-map" [ref=e282]:
+                    - img [ref=e283]
+                    - text: Re-map
+            - generic [ref=e286] [cursor=pointer]:
+              - button "Watch Now" [ref=e287]:
+                - img [ref=e288]
+              - img "BounceTV" [ref=e290]
+              - generic [ref=e291]:
+                - generic [ref=e292]: BounceTV
+                - generic [ref=e293]:
+                  - text: Ch 82
+                  - generic [ref=e294]: • DirectTV_39
+                  - button "Re-map" [ref=e295]:
+                    - img [ref=e296]
+                    - text: Re-map
+            - generic [ref=e299] [cursor=pointer]:
+              - button "Watch Now" [ref=e300]:
+                - img [ref=e301]
+              - img "GET" [ref=e303]
+              - generic [ref=e304]:
+                - generic [ref=e305]: GET
+                - generic [ref=e306]:
+                  - text: Ch 83
+                  - generic [ref=e307]: • DirectTV_39
+                  - button "Re-map" [ref=e308]:
+                    - img [ref=e309]
+                    - text: Re-map
+            - generic [ref=e312] [cursor=pointer]:
+              - button "Watch Now" [ref=e313]:
+                - img [ref=e314]
+              - img "Start TV" [ref=e316]
+              - generic [ref=e317]:
+                - generic [ref=e318]: Start TV
+                - generic [ref=e319]:
+                  - text: Ch 84
+                  - generic [ref=e320]: • DirectTV_39
+                  - button "Re-map" [ref=e321]:
+                    - img [ref=e322]
+                    - text: Re-map
+            - generic [ref=e325] [cursor=pointer]:
+              - button "Watch Now" [ref=e326]:
+                - img [ref=e327]
+              - img "True CRMZ" [ref=e329]
+              - generic [ref=e330]:
+                - generic [ref=e331]: True CRMZ
+                - generic [ref=e332]:
+                  - text: Ch 85
+                  - generic [ref=e333]: • DirectTV_39
+                  - button "Re-map" [ref=e334]:
+                    - img [ref=e335]
+                    - text: Re-map
+            - generic [ref=e338] [cursor=pointer]:
+              - button "Watch Now" [ref=e339]:
+                - img [ref=e340]
+              - img "MovieSphere Gold" [ref=e342]
+              - generic [ref=e343]:
+                - generic [ref=e344]: MovieSphere Gold
+                - generic [ref=e345]:
+                  - text: Ch 86
+                  - generic [ref=e346]: • DirectTV_39
+                  - button "Re-map" [ref=e347]:
+                    - img [ref=e348]
+                    - text: Re-map
+            - generic [ref=e351] [cursor=pointer]:
+              - button "Watch Now" [ref=e352]:
+                - img [ref=e353]
+              - img "CNN HD" [ref=e355]
+              - generic [ref=e356]:
+                - generic [ref=e357]: CNN HD
+                - generic [ref=e358]:
+                  - text: Ch 202
+                  - generic [ref=e359]: • DirectTV_39
+                  - button "Re-map" [ref=e360]:
+                    - img [ref=e361]
+                    - text: Re-map
+            - generic [ref=e364] [cursor=pointer]:
+              - button "Watch Now" [ref=e365]:
+                - img [ref=e366]
+              - img "HLN HD" [ref=e368]
+              - generic [ref=e369]:
+                - generic [ref=e370]: HLN HD
+                - generic [ref=e371]:
+                  - text: Ch 204
+                  - generic [ref=e372]: • DirectTV_39
+                  - button "Re-map" [ref=e373]:
+                    - img [ref=e374]
+                    - text: Re-map
+            - generic [ref=e377] [cursor=pointer]:
+              - button "Watch Now" [ref=e378]:
+                - img [ref=e379]
+              - img "ESPN HD" [ref=e381]
+              - generic [ref=e382]:
+                - generic [ref=e383]: ESPN HD
+                - generic [ref=e384]:
+                  - text: Ch 206
+                  - generic [ref=e385]: • DirectTV_39
+                  - button "Re-map" [ref=e386]:
+                    - img [ref=e387]
+                    - text: Re-map
+            - generic [ref=e390] [cursor=pointer]:
+              - button "Watch Now" [ref=e391]:
+                - img [ref=e392]
+              - img "ESPNews HD" [ref=e394]
+              - generic [ref=e395]:
+                - generic [ref=e396]: ESPNews HD
+                - generic [ref=e397]:
+                  - text: Ch 207
+                  - generic [ref=e398]: • DirectTV_39
+                  - button "Re-map" [ref=e399]:
+                    - img [ref=e400]
+                    - text: Re-map
+            - generic [ref=e403] [cursor=pointer]:
+              - button "Watch Now" [ref=e404]:
+                - img [ref=e405]
+              - img "ESPNU HD" [ref=e407]
+              - generic [ref=e408]:
+                - generic [ref=e409]: ESPNU HD
+                - generic [ref=e410]:
+                  - text: Ch 208
+                  - generic [ref=e411]: • DirectTV_39
+                  - button "Re-map" [ref=e412]:
+                    - img [ref=e413]
+                    - text: Re-map
+            - generic [ref=e416] [cursor=pointer]:
+              - button "Watch Now" [ref=e417]:
+                - img [ref=e418]
+              - img "ESPN2 HD" [ref=e420]
+              - generic [ref=e421]:
+                - generic [ref=e422]: ESPN2 HD
+                - generic [ref=e423]:
+                  - text: Ch 209
+                  - generic [ref=e424]: • DirectTV_39
+                  - button "Re-map" [ref=e425]:
+                    - img [ref=e426]
+                    - text: Re-map
+            - generic [ref=e429] [cursor=pointer]:
+              - button "Watch Now" [ref=e430]:
+                - img [ref=e431]
+              - img "ESPN+ 1" [ref=e433]
+              - generic [ref=e434]:
+                - generic [ref=e435]: ESPN+ 1
+                - generic [ref=e436]:
+                  - text: Ch 210
+                  - generic [ref=e437]: • DirectTV_39
+                  - generic [ref=e438]: • No EPG
+                  - button "Map" [ref=e439]:
+                    - img [ref=e440]
+                    - text: Map
+            - generic [ref=e443] [cursor=pointer]:
+              - button "Watch Now" [ref=e444]:
+                - img [ref=e445]
+              - img "ESPN+ 2" [ref=e447]
+              - generic [ref=e448]:
+                - generic [ref=e449]: ESPN+ 2
+                - generic [ref=e450]:
+                  - text: Ch 210
+                  - generic [ref=e451]: • DirectTV_39
+                  - generic [ref=e452]: • No EPG
+                  - button "Map" [ref=e453]:
+                    - img [ref=e454]
+                    - text: Map
+            - generic [ref=e457] [cursor=pointer]:
+              - button "Watch Now" [ref=e458]:
+                - img [ref=e459]
+              - img "ESPN+ 3" [ref=e461]
+              - generic [ref=e462]:
+                - generic [ref=e463]: ESPN+ 3
+                - generic [ref=e464]:
+                  - text: Ch 210
+                  - generic [ref=e465]: • DirectTV_39
+                  - generic [ref=e466]: • No EPG
+                  - button "Map" [ref=e467]:
+                    - img [ref=e468]
+                    - text: Map
+            - generic [ref=e471] [cursor=pointer]:
+              - button "Watch Now" [ref=e472]:
+                - img [ref=e473]
+              - img "ESPN+ 4" [ref=e475]
+              - generic [ref=e476]:
+                - generic [ref=e477]: ESPN+ 4
+                - generic [ref=e478]:
+                  - text: Ch 210
+                  - generic [ref=e479]: • DirectTV_39
+                  - button "Re-map" [ref=e480]:
+                    - img [ref=e481]
+                    - text: Re-map
+            - generic [ref=e484] [cursor=pointer]:
+              - button "Watch Now" [ref=e485]:
+                - img [ref=e486]
+              - img "ESPN+ 5" [ref=e488]
+              - generic [ref=e489]:
+                - generic [ref=e490]: ESPN+ 5
+                - generic [ref=e491]:
+                  - text: Ch 210
+                  - generic [ref=e492]: • DirectTV_39
+                  - generic [ref=e493]: • No EPG
+                  - button "Map" [ref=e494]:
+                    - img [ref=e495]
+                    - text: Map
+            - generic [ref=e498] [cursor=pointer]:
+              - button "Watch Now" [ref=e499]:
+                - img [ref=e500]
+              - img "ESPN+ 6" [ref=e502]
+              - generic [ref=e503]:
+                - generic [ref=e504]: ESPN+ 6
+                - generic [ref=e505]:
+                  - text: Ch 210
+                  - generic [ref=e506]: • DirectTV_39
+                  - generic [ref=e507]: • No EPG
+                  - button "Map" [ref=e508]:
+                    - img [ref=e509]
+                    - text: Map
+            - generic [ref=e512] [cursor=pointer]:
+              - button "Watch Now" [ref=e513]:
+                - img [ref=e514]
+              - img "ESPN+ 7" [ref=e516]
+              - generic [ref=e517]:
+                - generic [ref=e518]: ESPN+ 7
+                - generic [ref=e519]:
+                  - text: Ch 210
+                  - generic [ref=e520]: • DirectTV_39
+                  - generic [ref=e521]: • No EPG
+                  - button "Map" [ref=e522]:
+                    - img [ref=e523]
+                    - text: Map
+            - generic [ref=e526] [cursor=pointer]:
+              - button "Watch Now" [ref=e527]:
+                - img [ref=e528]
+              - img "NFL Network HD" [ref=e530]
+              - generic [ref=e531]:
+                - generic [ref=e532]: NFL Network HD
+                - generic [ref=e533]:
+                  - text: Ch 212
+                  - generic [ref=e534]: • DirectTV_39
+                  - button "Re-map" [ref=e535]:
+                    - img [ref=e536]
+                    - text: Re-map
+            - generic [ref=e539] [cursor=pointer]:
+              - button "Watch Now" [ref=e540]:
+                - img [ref=e541]
+              - img "MLB Network HD" [ref=e543]
+              - generic [ref=e544]:
+                - generic [ref=e545]: MLB Network HD
+                - generic [ref=e546]:
+                  - text: Ch 213
+                  - generic [ref=e547]: • DirectTV_39
+                  - button "Re-map" [ref=e548]:
+                    - img [ref=e549]
+                    - text: Re-map
+            - generic [ref=e552] [cursor=pointer]:
+              - button "Watch Now" [ref=e553]:
+                - img [ref=e554]
+              - img "RACER Network" [ref=e556]
+              - generic [ref=e557]:
+                - generic [ref=e558]: RACER Network
+                - generic [ref=e559]:
+                  - text: Ch 214
+                  - generic [ref=e560]: • DirectTV_39
+                  - button "Re-map" [ref=e561]:
+                    - img [ref=e562]
+                    - text: Re-map
+            - generic [ref=e565] [cursor=pointer]:
+              - button "Watch Now" [ref=e566]:
+                - img [ref=e567]
+              - img "NHL Network Alternate HD" [ref=e569]
+              - generic [ref=e570]:
+                - generic [ref=e571]: NHL Network Alternate HD
+                - generic [ref=e572]:
+                  - text: Ch 215
+                  - generic [ref=e573]: • DirectTV_39
+                  - button "Re-map" [ref=e574]:
+                    - img [ref=e575]
+                    - text: Re-map
+            - generic [ref=e578] [cursor=pointer]:
+              - button "Watch Now" [ref=e579]:
+                - img [ref=e580]
+              - img "NHL Network HD" [ref=e582]
+              - generic [ref=e583]:
+                - generic [ref=e584]: NHL Network HD
+                - generic [ref=e585]:
+                  - text: Ch 215
+                  - generic [ref=e586]: • DirectTV_39
+                  - generic [ref=e587]: • No EPG
+                  - button "Map" [ref=e588]:
+                    - img [ref=e589]
+                    - text: Map
+            - generic [ref=e592] [cursor=pointer]:
+              - button "Watch Now" [ref=e593]:
+                - img [ref=e594]
+              - img "NBA TV HD" [ref=e596]
+              - generic [ref=e597]:
+                - generic [ref=e598]: NBA TV HD
+                - generic [ref=e599]:
+                  - text: Ch 216
+                  - generic [ref=e600]: • DirectTV_39
+                  - button "Re-map" [ref=e601]:
+                    - img [ref=e602]
+                    - text: Re-map
+            - generic [ref=e605] [cursor=pointer]:
+              - button "Watch Now" [ref=e606]:
+                - img [ref=e607]
+              - img "Tennis Channel HD" [ref=e609]
+              - generic [ref=e610]:
+                - generic [ref=e611]: Tennis Channel HD
+                - generic [ref=e612]:
+                  - text: Ch 217
+                  - generic [ref=e613]: • DirectTV_39
+                  - button "Re-map" [ref=e614]:
+                    - img [ref=e615]
+                    - text: Re-map
+            - generic [ref=e618] [cursor=pointer]:
+              - button "Watch Now" [ref=e619]:
+                - img [ref=e620]
+              - img "Golf Channel HD" [ref=e622]
+              - generic [ref=e623]:
+                - generic [ref=e624]: Golf Channel HD
+                - generic [ref=e625]:
+                  - text: Ch 218
+                  - generic [ref=e626]: • DirectTV_39
+                  - button "Re-map" [ref=e627]:
+                    - img [ref=e628]
+                    - text: Re-map
+            - generic [ref=e631] [cursor=pointer]:
+              - button "Watch Now" [ref=e632]:
+                - img [ref=e633]
+              - img "FOX Sports 1 HD" [ref=e635]
+              - generic [ref=e636]:
+                - generic [ref=e637]: FOX Sports 1 HD
+                - generic [ref=e638]:
+                  - text: Ch 219
+                  - generic [ref=e639]: • DirectTV_39
+                  - button "Re-map" [ref=e640]:
+                    - img [ref=e641]
+                    - text: Re-map
+            - generic [ref=e644] [cursor=pointer]:
+              - button "Watch Now" [ref=e645]:
+                - img [ref=e646]
+              - img "CBS Sports Network HD" [ref=e648]
+              - generic [ref=e649]:
+                - generic [ref=e650]: CBS Sports Network HD
+                - generic [ref=e651]:
+                  - text: Ch 221
+                  - generic [ref=e652]: • DirectTV_39
+                  - button "Re-map" [ref=e653]:
+                    - img [ref=e654]
+                    - text: Re-map
+            - generic [ref=e657] [cursor=pointer]:
+              - button "Watch Now" [ref=e658]:
+                - img [ref=e659]
+              - img "Shop LC HD" [ref=e661]
+              - generic [ref=e662]:
+                - generic [ref=e663]: Shop LC HD
+                - generic [ref=e664]:
+                  - text: Ch 226
+                  - generic [ref=e665]: • DirectTV_39
+                  - button "Re-map" [ref=e666]:
+                    - img [ref=e667]
+                    - text: Re-map
+            - generic [ref=e670] [cursor=pointer]:
+              - button "Watch Now" [ref=e671]:
+                - img [ref=e672]
+              - img "GEM Shopping Network" [ref=e674]
+              - generic [ref=e675]:
+                - generic [ref=e676]: GEM Shopping Network
+                - generic [ref=e677]:
+                  - text: Ch 228
+                  - generic [ref=e678]: • DirectTV_39
+                  - button "Re-map" [ref=e679]:
+                    - img [ref=e680]
+                    - text: Re-map
+            - generic [ref=e683] [cursor=pointer]:
+              - button "Watch Now" [ref=e684]:
+                - img [ref=e685]
+              - img "HGTV HD" [ref=e687]
+              - generic [ref=e688]:
+                - generic [ref=e689]: HGTV HD
+                - generic [ref=e690]:
+                  - text: Ch 229
+                  - generic [ref=e691]: • DirectTV_39
+                  - button "Re-map" [ref=e692]:
+                    - img [ref=e693]
+                    - text: Re-map
+            - generic [ref=e696] [cursor=pointer]:
+              - button "Watch Now" [ref=e697]:
+                - img [ref=e698]
+              - img "Magnolia Network HD" [ref=e700]
+              - generic [ref=e701]:
+                - generic [ref=e702]: Magnolia Network HD
+                - generic [ref=e703]:
+                  - text: Ch 230
+                  - generic [ref=e704]: • DirectTV_39
+                  - button "Re-map" [ref=e705]:
+                    - img [ref=e706]
+                    - text: Re-map
+            - generic [ref=e709] [cursor=pointer]:
+              - button "Watch Now" [ref=e710]:
+                - img [ref=e711]
+              - img "Food Network HD" [ref=e713]
+              - generic [ref=e714]:
+                - generic [ref=e715]: Food Network HD
+                - generic [ref=e716]:
+                  - text: Ch 231
+                  - generic [ref=e717]: • DirectTV_39
+                  - button "Re-map" [ref=e718]:
+                    - img [ref=e719]
+                    - text: Re-map
+            - generic [ref=e722] [cursor=pointer]:
+              - button "Watch Now" [ref=e723]:
+                - img [ref=e724]
+              - img "Cooking Channel HD" [ref=e726]
+              - generic [ref=e727]:
+                - generic [ref=e728]: Cooking Channel HD
+                - generic [ref=e729]:
+                  - text: Ch 232
+                  - generic [ref=e730]: • DirectTV_39
+                  - button "Re-map" [ref=e731]:
+                    - img [ref=e732]
+                    - text: Re-map
+            - generic [ref=e735] [cursor=pointer]:
+              - button "Watch Now" [ref=e736]:
+                - img [ref=e737]
+              - img "Game Show Network HD" [ref=e739]
+              - generic [ref=e740]:
+                - generic [ref=e741]: Game Show Network HD
+                - generic [ref=e742]:
+                  - text: Ch 233
+                  - generic [ref=e743]: • DirectTV_39
+                  - button "Re-map" [ref=e744]:
+                    - img [ref=e745]
+                    - text: Re-map
+            - generic [ref=e748] [cursor=pointer]:
+              - button "Watch Now" [ref=e749]:
+                - img [ref=e750]
+              - img "Tastemade" [ref=e752]
+              - generic [ref=e753]:
+                - generic [ref=e754]: Tastemade
+                - generic [ref=e755]:
+                  - text: Ch 235
+                  - generic [ref=e756]: • DirectTV_39
+                  - button "Re-map" [ref=e757]:
+                    - img [ref=e758]
+                    - text: Re-map
+            - generic [ref=e761] [cursor=pointer]:
+              - button "Watch Now" [ref=e762]:
+                - img [ref=e763]
+              - img "E! HD" [ref=e765]
+              - generic [ref=e766]:
+                - generic [ref=e767]: E! HD
+                - generic [ref=e768]:
+                  - text: Ch 236
+                  - generic [ref=e769]: • DirectTV_39
+                  - button "Re-map" [ref=e770]:
+                    - img [ref=e771]
+                    - text: Re-map
+            - generic [ref=e774] [cursor=pointer]:
+              - button "Watch Now" [ref=e775]:
+                - img [ref=e776]
+              - img "Bravo HD" [ref=e778]
+              - generic [ref=e779]:
+                - generic [ref=e780]: Bravo HD
+                - generic [ref=e781]:
+                  - text: Ch 237
+                  - generic [ref=e782]: • DirectTV_39
+                  - button "Re-map" [ref=e783]:
+                    - img [ref=e784]
+                    - text: Re-map
+            - generic [ref=e787] [cursor=pointer]:
+              - button "Watch Now" [ref=e788]:
+                - img [ref=e789]
+              - img "ReelzChannel HD" [ref=e791]
+              - generic [ref=e792]:
+                - generic [ref=e793]: ReelzChannel HD
+                - generic [ref=e794]:
+                  - text: Ch 238
+                  - generic [ref=e795]: • DirectTV_39
+                  - button "Re-map" [ref=e796]:
+                    - img [ref=e797]
+                    - text: Re-map
+            - generic [ref=e800] [cursor=pointer]:
+              - button "Watch Now" [ref=e801]:
+                - img [ref=e802]
+              - img "SundanceTV HD" [ref=e804]
+              - generic [ref=e805]:
+                - generic [ref=e806]: SundanceTV HD
+                - generic [ref=e807]:
+                  - text: Ch 239
+                  - generic [ref=e808]: • DirectTV_39
+                  - button "Re-map" [ref=e809]:
+                    - img [ref=e810]
+                    - text: Re-map
+            - generic [ref=e813] [cursor=pointer]:
+              - button "Watch Now" [ref=e814]:
+                - img [ref=e815]
+              - img "Home Shopping Network HD" [ref=e817]
+              - generic [ref=e818]:
+                - generic [ref=e819]: Home Shopping Network HD
+                - generic [ref=e820]:
+                  - text: Ch 240
+                  - generic [ref=e821]: • DirectTV_39
+                  - button "Re-map" [ref=e822]:
+                    - img [ref=e823]
+                    - text: Re-map
+            - generic [ref=e826] [cursor=pointer]:
+              - button "Watch Now" [ref=e827]:
+                - img [ref=e828]
+              - img "Paramount Network HD" [ref=e830]
+              - generic [ref=e831]:
+                - generic [ref=e832]: Paramount Network HD
+                - generic [ref=e833]:
+                  - text: Ch 241
+                  - generic [ref=e834]: • DirectTV_39
+                  - button "Re-map" [ref=e835]:
+                    - img [ref=e836]
+                    - text: Re-map
+            - generic [ref=e839] [cursor=pointer]:
+              - button "Watch Now" [ref=e840]:
+                - img [ref=e841]
+              - img "USA Network HD" [ref=e843]
+              - generic [ref=e844]:
+                - generic [ref=e845]: USA Network HD
+                - generic [ref=e846]:
+                  - text: Ch 242
+                  - generic [ref=e847]: • DirectTV_39
+                  - button "Re-map" [ref=e848]:
+                    - img [ref=e849]
+                    - text: Re-map
+            - generic [ref=e852] [cursor=pointer]:
+              - button "Watch Now" [ref=e853]:
+                - img [ref=e854]
+              - img "SYFYHD" [ref=e856]
+              - generic [ref=e857]:
+                - generic [ref=e858]: SYFYHD
+                - generic [ref=e859]:
+                  - text: Ch 244
+                  - generic [ref=e860]: • DirectTV_39
+                  - button "Re-map" [ref=e861]:
+                    - img [ref=e862]
+                    - text: Re-map
+            - generic [ref=e865] [cursor=pointer]:
+              - button "Watch Now" [ref=e866]:
+                - img [ref=e867]
+              - img "TNT HD" [ref=e869]
+              - generic [ref=e870]:
+                - generic [ref=e871]: TNT HD
+                - generic [ref=e872]:
+                  - text: Ch 245
+                  - generic [ref=e873]: • DirectTV_39
+                  - generic [ref=e874]: • No EPG
+                  - button "Map" [ref=e875]:
+                    - img [ref=e876]
+                    - text: Map
+            - generic [ref=e879] [cursor=pointer]:
+              - button "Watch Now" [ref=e880]:
+                - img [ref=e881]
+              - img "TNT West HD" [ref=e883]
+              - generic [ref=e884]:
+                - generic [ref=e885]: TNT West HD
+                - generic [ref=e886]:
+                  - text: Ch 245
+                  - generic [ref=e887]: • DirectTV_39
+                  - button "Re-map" [ref=e888]:
+                    - img [ref=e889]
+                    - text: Re-map
+            - generic [ref=e892] [cursor=pointer]:
+              - button "Watch Now" [ref=e893]:
+                - img [ref=e894]
+              - img "truTV HD" [ref=e896]
+              - generic [ref=e897]:
+                - generic [ref=e898]: truTV HD
+                - generic [ref=e899]:
+                  - text: Ch 246
+                  - generic [ref=e900]: • DirectTV_39
+                  - button "Re-map" [ref=e901]:
+                    - img [ref=e902]
+                    - text: Re-map
+            - generic [ref=e905] [cursor=pointer]:
+              - button "Watch Now" [ref=e906]:
+                - img [ref=e907]
+              - img "TBS HD" [ref=e909]
+              - generic [ref=e910]:
+                - generic [ref=e911]: TBS HD
+                - generic [ref=e912]:
+                  - text: Ch 247
+                  - generic [ref=e913]: • DirectTV_39
+                  - button "Re-map" [ref=e914]:
+                    - img [ref=e915]
+                    - text: Re-map
+            - generic [ref=e918] [cursor=pointer]:
+              - button "Watch Now" [ref=e919]:
+                - img [ref=e920]
+              - img "TBS West HD" [ref=e922]
+              - generic [ref=e923]:
+                - generic [ref=e924]: TBS West HD
+                - generic [ref=e925]:
+                  - text: Ch 247
+                  - generic [ref=e926]: • DirectTV_39
+                  - generic [ref=e927]: • No EPG
+                  - button "Map" [ref=e928]:
+                    - img [ref=e929]
+                    - text: Map
+            - generic [ref=e932] [cursor=pointer]:
+              - button "Watch Now" [ref=e933]:
+                - img [ref=e934]
+              - img "FX HD" [ref=e936]
+              - generic [ref=e937]:
+                - generic [ref=e938]: FX HD
+                - generic [ref=e939]:
+                  - text: Ch 248
+                  - generic [ref=e940]: • DirectTV_39
+                  - button "Re-map" [ref=e941]:
+                    - img [ref=e942]
+                    - text: Re-map
+            - generic [ref=e945] [cursor=pointer]:
+              - button "Watch Now" [ref=e946]:
+                - img [ref=e947]
+              - img "Comedy Central HD" [ref=e949]
+              - generic [ref=e950]:
+                - generic [ref=e951]: Comedy Central HD
+                - generic [ref=e952]:
+                  - text: Ch 249
+                  - generic [ref=e953]: • DirectTV_39
+                  - button "Re-map" [ref=e954]:
+                    - img [ref=e955]
+                    - text: Re-map
+            - generic [ref=e958] [cursor=pointer]:
+              - button "Watch Now" [ref=e959]:
+                - img [ref=e960]
+              - img "Comedy Central West HD" [ref=e962]
+              - generic [ref=e963]:
+                - generic [ref=e964]: Comedy Central West HD
+                - generic [ref=e965]:
+                  - text: Ch 249
+                  - generic [ref=e966]: • DirectTV_39
+                  - generic [ref=e967]: • No EPG
+                  - button "Map" [ref=e968]:
+                    - img [ref=e969]
+                    - text: Map
+            - generic [ref=e972] [cursor=pointer]:
+              - button "Watch Now" [ref=e973]:
+                - img [ref=e974]
+              - img "Oxygen True Crime HD" [ref=e976]
+              - generic [ref=e977]:
+                - generic [ref=e978]: Oxygen True Crime HD
+                - generic [ref=e979]:
+                  - text: Ch 251
+                  - generic [ref=e980]: • DirectTV_39
+                  - button "Re-map" [ref=e981]:
+                    - img [ref=e982]
+                    - text: Re-map
+            - generic [ref=e985] [cursor=pointer]:
+              - button "Watch Now" [ref=e986]:
+                - img [ref=e987]
+              - img "Lifetime HD" [ref=e989]
+              - generic [ref=e990]:
+                - generic [ref=e991]: Lifetime HD
+                - generic [ref=e992]:
+                  - text: Ch 252
+                  - generic [ref=e993]: • DirectTV_39
+                  - button "Re-map" [ref=e994]:
+                    - img [ref=e995]
+                    - text: Re-map
+            - generic [ref=e998] [cursor=pointer]:
+              - button "Watch Now" [ref=e999]:
+                - img [ref=e1000]
+              - img "LMN HD" [ref=e1002]
+              - generic [ref=e1003]:
+                - generic [ref=e1004]: LMN HD
+                - generic [ref=e1005]:
+                  - text: Ch 253
+                  - generic [ref=e1006]: • DirectTV_39
+                  - button "Re-map" [ref=e1007]:
+                    - img [ref=e1008]
+                    - text: Re-map
+            - generic [ref=e1011] [cursor=pointer]:
+              - button "Watch Now" [ref=e1012]:
+                - img [ref=e1013]
+              - img "AMC HD" [ref=e1015]
+              - generic [ref=e1016]:
+                - generic [ref=e1017]: AMC HD
+                - generic [ref=e1018]:
+                  - text: Ch 254
+                  - generic [ref=e1019]: • DirectTV_39
+                  - button "Re-map" [ref=e1020]:
+                    - img [ref=e1021]
+                    - text: Re-map
+            - generic [ref=e1024] [cursor=pointer]:
+              - button "Watch Now" [ref=e1025]:
+                - img [ref=e1026]
+              - img "TCM HD" [ref=e1028]
+              - generic [ref=e1029]:
+                - generic [ref=e1030]: TCM HD
+                - generic [ref=e1031]:
+                  - text: Ch 256
+                  - generic [ref=e1032]: • DirectTV_39
+                  - button "Re-map" [ref=e1033]:
+                    - img [ref=e1034]
+                    - text: Re-map
+            - generic [ref=e1037] [cursor=pointer]:
+              - button "Watch Now" [ref=e1038]:
+                - img [ref=e1039]
+              - img "FX Movie Channel HD" [ref=e1041]
+              - generic [ref=e1042]:
+                - generic [ref=e1043]: FX Movie Channel HD
+                - generic [ref=e1044]:
+                  - text: Ch 258
+                  - generic [ref=e1045]: • DirectTV_39
+                  - button "Re-map" [ref=e1046]:
+                    - img [ref=e1047]
+                    - text: Re-map
+            - generic [ref=e1050] [cursor=pointer]:
+              - button "Watch Now" [ref=e1051]:
+                - img [ref=e1052]
+              - img "FXX HD" [ref=e1054]
+              - generic [ref=e1055]:
+                - generic [ref=e1056]: FXX HD
+                - generic [ref=e1057]:
+                  - text: Ch 259
+                  - generic [ref=e1058]: • DirectTV_39
+                  - button "Re-map" [ref=e1059]:
+                    - img [ref=e1060]
+                    - text: Re-map
+            - generic [ref=e1063] [cursor=pointer]:
+              - button "Watch Now" [ref=e1064]:
+                - img [ref=e1065]
+              - img "WE tv HD" [ref=e1067]
+              - generic [ref=e1068]:
+                - generic [ref=e1069]: WE tv HD
+                - generic [ref=e1070]:
+                  - text: Ch 260
+                  - generic [ref=e1071]: • DirectTV_39
+                  - button "Re-map" [ref=e1072]:
+                    - img [ref=e1073]
+                    - text: Re-map
+            - generic [ref=e1076] [cursor=pointer]:
+              - button "Watch Now" [ref=e1077]:
+                - img [ref=e1078]
+              - img "Discovery Life" [ref=e1080]
+              - generic [ref=e1081]:
+                - generic [ref=e1082]: Discovery Life
+                - generic [ref=e1083]:
+                  - text: Ch 261
+                  - generic [ref=e1084]: • DirectTV_39
+                  - button "Re-map" [ref=e1085]:
+                    - img [ref=e1086]
+                    - text: Re-map
+            - generic [ref=e1089] [cursor=pointer]:
+              - button "Watch Now" [ref=e1090]:
+                - img [ref=e1091]
+              - img "BBC America HD" [ref=e1093]
+              - generic [ref=e1094]:
+                - generic [ref=e1095]: BBC America HD
+                - generic [ref=e1096]:
+                  - text: Ch 264
+                  - generic [ref=e1097]: • DirectTV_39
+                  - button "Re-map" [ref=e1098]:
+                    - img [ref=e1099]
+                    - text: Re-map
+            - generic [ref=e1102] [cursor=pointer]:
+              - button "Watch Now" [ref=e1103]:
+                - img [ref=e1104]
+              - img "A&E HD" [ref=e1106]
+              - generic [ref=e1107]:
+                - generic [ref=e1108]: A&E HD
+                - generic [ref=e1109]:
+                  - text: Ch 265
+                  - generic [ref=e1110]: • DirectTV_39
+                  - button "Re-map" [ref=e1111]:
+                    - img [ref=e1112]
+                    - text: Re-map
+            - generic [ref=e1115] [cursor=pointer]:
+              - button "Watch Now" [ref=e1116]:
+                - img [ref=e1117]
+              - img "FYI HD" [ref=e1119]
+              - generic [ref=e1120]:
+                - generic [ref=e1121]: FYI HD
+                - generic [ref=e1122]:
+                  - text: Ch 266
+                  - generic [ref=e1123]: • DirectTV_39
+                  - button "Re-map" [ref=e1124]:
+                    - img [ref=e1125]
+                    - text: Re-map
+            - generic [ref=e1128] [cursor=pointer]:
+              - button "Watch Now" [ref=e1129]:
+                - img [ref=e1130]
+              - img "EarthX" [ref=e1132]
+              - generic [ref=e1133]:
+                - generic [ref=e1134]: EarthX
+                - generic [ref=e1135]:
+                  - text: Ch 267
+                  - generic [ref=e1136]: • DirectTV_39
+                  - button "Re-map" [ref=e1137]:
+                    - img [ref=e1138]
+                    - text: Re-map
+            - generic [ref=e1141] [cursor=pointer]:
+              - button "Watch Now" [ref=e1142]:
+                - img [ref=e1143]
+              - img "History HD" [ref=e1145]
+              - generic [ref=e1146]:
+                - generic [ref=e1147]: History HD
+                - generic [ref=e1148]:
+                  - text: Ch 269
+                  - generic [ref=e1149]: • DirectTV_39
+                  - button "Re-map" [ref=e1150]:
+                    - img [ref=e1151]
+                    - text: Re-map
+            - generic [ref=e1154] [cursor=pointer]:
+              - button "Watch Now" [ref=e1155]:
+                - img [ref=e1156]
+              - img "VICE HD" [ref=e1158]
+              - generic [ref=e1159]:
+                - generic [ref=e1160]: VICE HD
+                - generic [ref=e1161]:
+                  - text: Ch 271
+                  - generic [ref=e1162]: • DirectTV_39
+                  - button "Re-map" [ref=e1163]:
+                    - img [ref=e1164]
+                    - text: Re-map
+            - generic [ref=e1167] [cursor=pointer]:
+              - button "Watch Now" [ref=e1168]:
+                - img [ref=e1169]
+              - img "Logo" [ref=e1171]
+              - generic [ref=e1172]:
+                - generic [ref=e1173]: Logo
+                - generic [ref=e1174]:
+                  - text: Ch 272
+                  - generic [ref=e1175]: • DirectTV_39
+                  - button "Re-map" [ref=e1176]:
+                    - img [ref=e1177]
+                    - text: Re-map
+            - generic [ref=e1180] [cursor=pointer]:
+              - button "Watch Now" [ref=e1181]:
+                - img [ref=e1182]
+              - img "POP HD" [ref=e1184]
+              - generic [ref=e1185]:
+                - generic [ref=e1186]: POP HD
+                - generic [ref=e1187]:
+                  - text: Ch 273
+                  - generic [ref=e1188]: • DirectTV_39
+                  - button "Re-map" [ref=e1189]:
+                    - img [ref=e1190]
+                    - text: Re-map
+            - generic [ref=e1193] [cursor=pointer]:
+              - button "Watch Now" [ref=e1194]:
+                - img [ref=e1195]
+              - img "Ovation HD" [ref=e1197]
+              - generic [ref=e1198]:
+                - generic [ref=e1199]: Ovation HD
+                - generic [ref=e1200]:
+                  - text: Ch 274
+                  - generic [ref=e1201]: • DirectTV_39
+                  - button "Re-map" [ref=e1202]:
+                    - img [ref=e1203]
+                    - text: Re-map
+            - generic [ref=e1206] [cursor=pointer]:
+              - button "Watch Now" [ref=e1207]:
+                - img [ref=e1208]
+              - img "QVC HD" [ref=e1210]
+              - generic [ref=e1211]:
+                - generic [ref=e1212]: QVC HD
+                - generic [ref=e1213]:
+                  - text: Ch 275
+                  - generic [ref=e1214]: • DirectTV_39
+                  - button "Re-map" [ref=e1215]:
+                    - img [ref=e1216]
+                    - text: Re-map
+            - generic [ref=e1219] [cursor=pointer]:
+              - button "Watch Now" [ref=e1220]:
+                - img [ref=e1221]
+              - img "National Geographic HD" [ref=e1223]
+              - generic [ref=e1224]:
+                - generic [ref=e1225]: National Geographic HD
+                - generic [ref=e1226]:
+                  - text: Ch 276
+                  - generic [ref=e1227]: • DirectTV_39
+                  - button "Re-map" [ref=e1228]:
+                    - img [ref=e1229]
+                    - text: Re-map
+            - generic [ref=e1232] [cursor=pointer]:
+              - button "Watch Now" [ref=e1233]:
+                - img [ref=e1234]
+              - img "Travel Channel HD" [ref=e1236]
+              - generic [ref=e1237]:
+                - generic [ref=e1238]: Travel Channel HD
+                - generic [ref=e1239]:
+                  - text: Ch 277
+                  - generic [ref=e1240]: • DirectTV_39
+                  - button "Re-map" [ref=e1241]:
+                    - img [ref=e1242]
+                    - text: Re-map
+            - generic [ref=e1245] [cursor=pointer]:
+              - button "Watch Now" [ref=e1246]:
+                - img [ref=e1247]
+              - img "Discovery HD" [ref=e1249]
+              - generic [ref=e1250]:
+                - generic [ref=e1251]: Discovery HD
+                - generic [ref=e1252]:
+                  - text: Ch 278
+                  - generic [ref=e1253]: • DirectTV_39
+                  - button "Re-map" [ref=e1254]:
+                    - img [ref=e1255]
+                    - text: Re-map
+            - generic [ref=e1258] [cursor=pointer]:
+              - button "Watch Now" [ref=e1259]:
+                - img [ref=e1260]
+              - img "OWN HD" [ref=e1262]
+              - generic [ref=e1263]:
+                - generic [ref=e1264]: OWN HD
+                - generic [ref=e1265]:
+                  - text: Ch 279
+                  - generic [ref=e1266]: • DirectTV_39
+                  - button "Re-map" [ref=e1267]:
+                    - img [ref=e1268]
+                    - text: Re-map
+            - generic [ref=e1271] [cursor=pointer]:
+              - button "Watch Now" [ref=e1272]:
+                - img [ref=e1273]
+              - img "TLC HD" [ref=e1275]
+              - generic [ref=e1276]:
+                - generic [ref=e1277]: TLC HD
+                - generic [ref=e1278]:
+                  - text: Ch 280
+                  - generic [ref=e1279]: • DirectTV_39
+                  - button "Re-map" [ref=e1280]:
+                    - img [ref=e1281]
+                    - text: Re-map
+            - generic [ref=e1284] [cursor=pointer]:
+              - button "Watch Now" [ref=e1285]:
+                - img [ref=e1286]
+              - img "Discovery Turbo HD" [ref=e1288]
+              - generic [ref=e1289]:
+                - generic [ref=e1290]: Discovery Turbo HD
+                - generic [ref=e1291]:
+                  - text: Ch 281
+                  - generic [ref=e1292]: • DirectTV_39
+                  - button "Re-map" [ref=e1293]:
+                    - img [ref=e1294]
+                    - text: Re-map
+            - generic [ref=e1297] [cursor=pointer]:
+              - button "Watch Now" [ref=e1298]:
+                - img [ref=e1299]
+              - img "Animal Planet HD" [ref=e1301]
+              - generic [ref=e1302]:
+                - generic [ref=e1303]: Animal Planet HD
+                - generic [ref=e1304]:
+                  - text: Ch 282
+                  - generic [ref=e1305]: • DirectTV_39
+                  - button "Re-map" [ref=e1306]:
+                    - img [ref=e1307]
+                    - text: Re-map
+            - generic [ref=e1310] [cursor=pointer]:
+              - button "Watch Now" [ref=e1311]:
+                - img [ref=e1312]
+              - img "Nat Geo Wild HD" [ref=e1314]
+              - generic [ref=e1315]:
+                - generic [ref=e1316]: Nat Geo Wild HD
+                - generic [ref=e1317]:
+                  - text: Ch 283
+                  - generic [ref=e1318]: • DirectTV_39
+                  - button "Re-map" [ref=e1319]:
+                    - img [ref=e1320]
+                    - text: Re-map
+            - generic [ref=e1323] [cursor=pointer]:
+              - button "Watch Now" [ref=e1324]:
+                - img [ref=e1325]
+              - img "Science HD" [ref=e1327]
+              - generic [ref=e1328]:
+                - generic [ref=e1329]: Science HD
+                - generic [ref=e1330]:
+                  - text: Ch 284
+                  - generic [ref=e1331]: • DirectTV_39
+                  - button "Re-map" [ref=e1332]:
+                    - img [ref=e1333]
+                    - text: Re-map
+            - generic [ref=e1336] [cursor=pointer]:
+              - button "Watch Now" [ref=e1337]:
+                - img [ref=e1338]
+              - img "Investigation Discovery HD" [ref=e1340]
+              - generic [ref=e1341]:
+                - generic [ref=e1342]: Investigation Discovery HD
+                - generic [ref=e1343]:
+                  - text: Ch 285
+                  - generic [ref=e1344]: • DirectTV_39
+                  - button "Re-map" [ref=e1345]:
+                    - img [ref=e1346]
+                    - text: Re-map
+            - generic [ref=e1349] [cursor=pointer]:
+              - button "Watch Now" [ref=e1350]:
+                - img [ref=e1351]
+              - img "Destination America HD" [ref=e1353]
+              - generic [ref=e1354]:
+                - generic [ref=e1355]: Destination America HD
+                - generic [ref=e1356]:
+                  - text: Ch 286
+                  - generic [ref=e1357]: • DirectTV_39
+                  - button "Re-map" [ref=e1358]:
+                    - img [ref=e1359]
+                    - text: Re-map
+            - generic [ref=e1362] [cursor=pointer]:
+              - button "Watch Now" [ref=e1363]:
+                - img [ref=e1364]
+              - img "American Heroes HD" [ref=e1366]
+              - generic [ref=e1367]:
+                - generic [ref=e1368]: American Heroes HD
+                - generic [ref=e1369]:
+                  - text: Ch 287
+                  - generic [ref=e1370]: • DirectTV_39
+                  - button "Re-map" [ref=e1371]:
+                    - img [ref=e1372]
+                    - text: Re-map
+            - generic [ref=e1375] [cursor=pointer]:
+              - button "Watch Now" [ref=e1376]:
+                - img [ref=e1377]
+              - img "PBS Kids" [ref=e1379]
+              - generic [ref=e1380]:
+                - generic [ref=e1381]: PBS Kids
+                - generic [ref=e1382]:
+                  - text: Ch 288
+                  - generic [ref=e1383]: • DirectTV_39
+                  - button "Re-map" [ref=e1384]:
+                    - img [ref=e1385]
+                    - text: Re-map
+            - generic [ref=e1388] [cursor=pointer]:
+              - button "Watch Now" [ref=e1389]:
+                - img [ref=e1390]
+              - img "Disney Junior HD" [ref=e1392]
+              - generic [ref=e1393]:
+                - generic [ref=e1394]: Disney Junior HD
+                - generic [ref=e1395]:
+                  - text: Ch 289
+                  - generic [ref=e1396]: • DirectTV_39
+                  - button "Re-map" [ref=e1397]:
+                    - img [ref=e1398]
+                    - text: Re-map
+            - generic [ref=e1401] [cursor=pointer]:
+              - button "Watch Now" [ref=e1402]:
+                - img [ref=e1403]
+              - img "Disney Channel HD" [ref=e1405]
+              - generic [ref=e1406]:
+                - generic [ref=e1407]: Disney Channel HD
+                - generic [ref=e1408]:
+                  - text: Ch 290
+                  - generic [ref=e1409]: • DirectTV_39
+                  - button "Re-map" [ref=e1410]:
+                    - img [ref=e1411]
+                    - text: Re-map
+            - generic [ref=e1414] [cursor=pointer]:
+              - button "Watch Now" [ref=e1415]:
+                - img [ref=e1416]
+              - img "Disney XD HD" [ref=e1418]
+              - generic [ref=e1419]:
+                - generic [ref=e1420]: Disney XD HD
+                - generic [ref=e1421]:
+                  - text: Ch 292
+                  - generic [ref=e1422]: • DirectTV_39
+                  - button "Re-map" [ref=e1423]:
+                    - img [ref=e1424]
+                    - text: Re-map
+            - generic [ref=e1427] [cursor=pointer]:
+              - button "Watch Now" [ref=e1428]:
+                - img [ref=e1429]
+              - img "BabyFirst" [ref=e1431]
+              - generic [ref=e1432]:
+                - generic [ref=e1433]: BabyFirst
+                - generic [ref=e1434]:
+                  - text: Ch 293
+                  - generic [ref=e1435]: • DirectTV_39
+                  - button "Re-map" [ref=e1436]:
+                    - img [ref=e1437]
+                    - text: Re-map
+            - generic [ref=e1440] [cursor=pointer]:
+              - button "Watch Now" [ref=e1441]:
+                - img [ref=e1442]
+              - img "Discovery Family Channel HD" [ref=e1444]
+              - generic [ref=e1445]:
+                - generic [ref=e1446]: Discovery Family Channel HD
+                - generic [ref=e1447]:
+                  - text: Ch 294
+                  - generic [ref=e1448]: • DirectTV_39
+                  - button "Re-map" [ref=e1449]:
+                    - img [ref=e1450]
+                    - text: Re-map
+            - generic [ref=e1453] [cursor=pointer]:
+              - button "Watch Now" [ref=e1454]:
+                - img [ref=e1455]
+              - img "MeTV Toons" [ref=e1457]
+              - generic [ref=e1458]:
+                - generic [ref=e1459]: MeTV Toons
+                - generic [ref=e1460]:
+                  - text: Ch 295
+                  - generic [ref=e1461]: • DirectTV_39
+                  - button "Re-map" [ref=e1462]:
+                    - img [ref=e1463]
+                    - text: Re-map
+            - generic [ref=e1466] [cursor=pointer]:
+              - button "Watch Now" [ref=e1467]:
+                - img [ref=e1468]
+              - img "Cartoon Network HD" [ref=e1470]
+              - generic [ref=e1471]:
+                - generic [ref=e1472]: Cartoon Network HD
+                - generic [ref=e1473]:
+                  - text: Ch 296
+                  - generic [ref=e1474]: • DirectTV_39
+                  - button "Re-map" [ref=e1475]:
+                    - img [ref=e1476]
+                    - text: Re-map
+            - generic [ref=e1479] [cursor=pointer]:
+              - button "Watch Now" [ref=e1480]:
+                - img [ref=e1481]
+              - img "Boomerang" [ref=e1483]
+              - generic [ref=e1484]:
+                - generic [ref=e1485]: Boomerang
+                - generic [ref=e1486]:
+                  - text: Ch 298
+                  - generic [ref=e1487]: • DirectTV_39
+                  - button "Re-map" [ref=e1488]:
+                    - img [ref=e1489]
+                    - text: Re-map
+            - generic [ref=e1492] [cursor=pointer]:
+              - button "Watch Now" [ref=e1493]:
+                - img [ref=e1494]
+              - img "Nickelodeon East HD" [ref=e1496]
+              - generic [ref=e1497]:
+                - generic [ref=e1498]: Nickelodeon East HD
+                - generic [ref=e1499]:
+                  - text: Ch 299
+                  - generic [ref=e1500]: • DirectTV_39
+                  - button "Re-map" [ref=e1501]:
+                    - img [ref=e1502]
+                    - text: Re-map
+            - generic [ref=e1505] [cursor=pointer]:
+              - button "Watch Now" [ref=e1506]:
+                - img [ref=e1507]
+              - img "Nick Jr. HD" [ref=e1509]
+              - generic [ref=e1510]:
+                - generic [ref=e1511]: Nick Jr. HD
+                - generic [ref=e1512]:
+                  - text: Ch 301
+                  - generic [ref=e1513]: • DirectTV_39
+                  - button "Re-map" [ref=e1514]:
+                    - img [ref=e1515]
+                    - text: Re-map
+            - generic [ref=e1518] [cursor=pointer]:
+              - button "Watch Now" [ref=e1519]:
+                - img [ref=e1520]
+              - img "Nicktoons" [ref=e1522]
+              - generic [ref=e1523]:
+                - generic [ref=e1524]: Nicktoons
+                - generic [ref=e1525]:
+                  - text: Ch 302
+                  - generic [ref=e1526]: • DirectTV_39
+                  - button "Re-map" [ref=e1527]:
+                    - img [ref=e1528]
+                    - text: Re-map
+            - generic [ref=e1531] [cursor=pointer]:
+              - button "Watch Now" [ref=e1532]:
+                - img [ref=e1533]
+              - img "TeenNick" [ref=e1535]
+              - generic [ref=e1536]:
+                - generic [ref=e1537]: TeenNick
+                - generic [ref=e1538]:
+                  - text: Ch 303
+                  - generic [ref=e1539]: • DirectTV_39
+                  - button "Re-map" [ref=e1540]:
+                    - img [ref=e1541]
+                    - text: Re-map
+            - generic [ref=e1544] [cursor=pointer]:
+              - button "Watch Now" [ref=e1545]:
+                - img [ref=e1546]
+              - img "TV Land HD" [ref=e1548]
+              - generic [ref=e1549]:
+                - generic [ref=e1550]: TV Land HD
+                - generic [ref=e1551]:
+                  - text: Ch 304
+                  - generic [ref=e1552]: • DirectTV_39
+                  - button "Re-map" [ref=e1553]:
+                    - img [ref=e1554]
+                    - text: Re-map
+            - generic [ref=e1557] [cursor=pointer]:
+              - button "Watch Now" [ref=e1558]:
+                - img [ref=e1559]
+              - img "ION Television East HD" [ref=e1561]
+              - generic [ref=e1562]:
+                - generic [ref=e1563]: ION Television East HD
+                - generic [ref=e1564]:
+                  - text: Ch 305
+                  - generic [ref=e1565]: • DirectTV_39
+                  - generic [ref=e1566]: • No EPG
+                  - button "Map" [ref=e1567]:
+                    - img [ref=e1568]
+                    - text: Map
+            - generic [ref=e1571] [cursor=pointer]:
+              - button "Watch Now" [ref=e1572]:
+                - img [ref=e1573]
+              - img "WNBA on ION 1" [ref=e1575]
+              - generic [ref=e1576]:
+                - generic [ref=e1577]: WNBA on ION 1
+                - generic [ref=e1578]:
+                  - text: Ch 305
+                  - generic [ref=e1579]: • DirectTV_39
+                  - generic [ref=e1580]: • No EPG
+                  - button "Map" [ref=e1581]:
+                    - img [ref=e1582]
+                    - text: Map
+            - generic [ref=e1585] [cursor=pointer]:
+              - button "Watch Now" [ref=e1586]:
+                - img [ref=e1587]
+              - img "WNBA on ION 2" [ref=e1589]
+              - generic [ref=e1590]:
+                - generic [ref=e1591]: WNBA on ION 2
+                - generic [ref=e1592]:
+                  - text: Ch 305
+                  - generic [ref=e1593]: • DirectTV_39
+                  - button "Re-map" [ref=e1594]:
+                    - img [ref=e1595]
+                    - text: Re-map
+            - generic [ref=e1598] [cursor=pointer]:
+              - button "Watch Now" [ref=e1599]:
+                - img [ref=e1600]
+              - img "WNBA on ION 3" [ref=e1602]
+              - generic [ref=e1603]:
+                - generic [ref=e1604]: WNBA on ION 3
+                - generic [ref=e1605]:
+                  - text: Ch 305
+                  - generic [ref=e1606]: • DirectTV_39
+                  - generic [ref=e1607]: • No EPG
+                  - button "Map" [ref=e1608]:
+                    - img [ref=e1609]
+                    - text: Map
+            - generic [ref=e1612] [cursor=pointer]:
+              - button "Watch Now" [ref=e1613]:
+                - img [ref=e1614]
+              - img "NewsNation HD" [ref=e1616]
+              - generic [ref=e1617]:
+                - generic [ref=e1618]: NewsNation HD
+                - generic [ref=e1619]:
+                  - text: Ch 307
+                  - generic [ref=e1620]: • DirectTV_39
+                  - button "Re-map" [ref=e1621]:
+                    - img [ref=e1622]
+                    - text: Re-map
+            - generic [ref=e1625] [cursor=pointer]:
+              - button "Watch Now" [ref=e1626]:
+                - img [ref=e1627]
+              - img "LooLoo Kids" [ref=e1629]
+              - generic [ref=e1630]:
+                - generic [ref=e1631]: LooLoo Kids
+                - generic [ref=e1632]:
+                  - text: Ch 308
+                  - generic [ref=e1633]: • DirectTV_39
+                  - button "Re-map" [ref=e1634]:
+                    - img [ref=e1635]
+                    - text: Re-map
+            - generic [ref=e1638] [cursor=pointer]:
+              - button "Watch Now" [ref=e1639]:
+                - img [ref=e1640]
+              - img "Freeform HD" [ref=e1642]
+              - generic [ref=e1643]:
+                - generic [ref=e1644]: Freeform HD
+                - generic [ref=e1645]:
+                  - text: Ch 311
+                  - generic [ref=e1646]: • DirectTV_39
+                  - button "Re-map" [ref=e1647]:
+                    - img [ref=e1648]
+                    - text: Re-map
+            - generic [ref=e1651] [cursor=pointer]:
+              - button "Watch Now" [ref=e1652]:
+                - img [ref=e1653]
+              - img "Hallmark Channel HD" [ref=e1655]
+              - generic [ref=e1656]:
+                - generic [ref=e1657]: Hallmark Channel HD
+                - generic [ref=e1658]:
+                  - text: Ch 312
+                  - generic [ref=e1659]: • DirectTV_39
+                  - button "Re-map" [ref=e1660]:
+                    - img [ref=e1661]
+                    - text: Re-map
+            - generic [ref=e1664] [cursor=pointer]:
+              - button "Watch Now" [ref=e1665]:
+                - img [ref=e1666]
+              - img "Jewelry Television" [ref=e1668]
+              - generic [ref=e1669]:
+                - generic [ref=e1670]: Jewelry Television
+                - generic [ref=e1671]:
+                  - text: Ch 313
+                  - generic [ref=e1672]: • DirectTV_39
+                  - button "Re-map" [ref=e1673]:
+                    - img [ref=e1674]
+                    - text: Re-map
+            - generic [ref=e1677] [cursor=pointer]:
+              - button "Watch Now" [ref=e1678]:
+                - img [ref=e1679]
+              - img "Family Movie Classics" [ref=e1681]
+              - generic [ref=e1682]:
+                - generic [ref=e1683]: Family Movie Classics
+                - generic [ref=e1684]:
+                  - text: Ch 314
+                  - generic [ref=e1685]: • DirectTV_39
+                  - button "Re-map" [ref=e1686]:
+                    - img [ref=e1687]
+                    - text: Re-map
+            - generic [ref=e1690] [cursor=pointer]:
+              - button "Watch Now" [ref=e1691]:
+                - img [ref=e1692]
+              - img "QVC2" [ref=e1694]
+              - generic [ref=e1695]:
+                - generic [ref=e1696]: QVC2
+                - generic [ref=e1697]:
+                  - text: Ch 315
+                  - generic [ref=e1698]: • DirectTV_39
+                  - button "Re-map" [ref=e1699]:
+                    - img [ref=e1700]
+                    - text: Re-map
+            - generic [ref=e1703] [cursor=pointer]:
+              - button "Watch Now" [ref=e1704]:
+                - img [ref=e1705]
+              - img "QVC3" [ref=e1707]
+              - generic [ref=e1708]:
+                - generic [ref=e1709]: QVC3
+                - generic [ref=e1710]:
+                  - text: Ch 318
+                  - generic [ref=e1711]: • DirectTV_39
+                  - button "Re-map" [ref=e1712]:
+                    - img [ref=e1713]
+                    - text: Re-map
+            - generic [ref=e1716] [cursor=pointer]:
+              - button "Watch Now" [ref=e1717]:
+                - img [ref=e1718]
+              - img "Scientology Network" [ref=e1720]
+              - generic [ref=e1721]:
+                - generic [ref=e1722]: Scientology Network
+                - generic [ref=e1723]:
+                  - text: Ch 320
+                  - generic [ref=e1724]: • DirectTV_39
+                  - button "Re-map" [ref=e1725]:
+                    - img [ref=e1726]
+                    - text: Re-map
+            - generic [ref=e1729] [cursor=pointer]:
+              - button "Watch Now" [ref=e1730]:
+                - img [ref=e1731]
+              - img "Family Entertainment Television HD" [ref=e1733]
+              - generic [ref=e1734]:
+                - generic [ref=e1735]: Family Entertainment Television HD
+                - generic [ref=e1736]:
+                  - text: Ch 323
+                  - generic [ref=e1737]: • DirectTV_39
+                  - button "Re-map" [ref=e1738]:
+                    - img [ref=e1739]
+                    - text: Re-map
+            - generic [ref=e1742] [cursor=pointer]:
+              - button "Watch Now" [ref=e1743]:
+                - img [ref=e1744]
+              - img "In Touch +" [ref=e1746]
+              - generic [ref=e1747]:
+                - generic [ref=e1748]: In Touch +
+                - generic [ref=e1749]:
+                  - text: Ch 324
+                  - generic [ref=e1750]: • DirectTV_39
+                  - button "Re-map" [ref=e1751]:
+                    - img [ref=e1752]
+                    - text: Re-map
+            - generic [ref=e1755] [cursor=pointer]:
+              - button "Watch Now" [ref=e1756]:
+                - img [ref=e1757]
+              - img "Great American Family HD" [ref=e1759]
+              - generic [ref=e1760]:
+                - generic [ref=e1761]: Great American Family HD
+                - generic [ref=e1762]:
+                  - text: Ch 326
+                  - generic [ref=e1763]: • DirectTV_39
+                  - button "Re-map" [ref=e1764]:
+                    - img [ref=e1765]
+                    - text: Re-map
+            - generic [ref=e1768] [cursor=pointer]:
+              - button "Watch Now" [ref=e1769]:
+                - img [ref=e1770]
+              - img "CMT HD" [ref=e1772]
+              - generic [ref=e1773]:
+                - generic [ref=e1774]: CMT HD
+                - generic [ref=e1775]:
+                  - text: Ch 327
+                  - generic [ref=e1776]: • DirectTV_39
+                  - button "Re-map" [ref=e1777]:
+                    - img [ref=e1778]
+                    - text: Re-map
+            - generic [ref=e1781] [cursor=pointer]:
+              - button "Watch Now" [ref=e1782]:
+                - img [ref=e1783]
+              - img "TV One HD" [ref=e1785]
+              - generic [ref=e1786]:
+                - generic [ref=e1787]: TV One HD
+                - generic [ref=e1788]:
+                  - text: Ch 328
+                  - generic [ref=e1789]: • DirectTV_39
+                  - button "Re-map" [ref=e1790]:
+                    - img [ref=e1791]
+                    - text: Re-map
+            - generic [ref=e1794] [cursor=pointer]:
+              - button "Watch Now" [ref=e1795]:
+                - img [ref=e1796]
+              - img "BET HD" [ref=e1798]
+              - generic [ref=e1799]:
+                - generic [ref=e1800]: BET HD
+                - generic [ref=e1801]:
+                  - text: Ch 329
+                  - generic [ref=e1802]: • DirectTV_39
+                  - generic [ref=e1803]: • No EPG
+                  - button "Map" [ref=e1804]:
+                    - img [ref=e1805]
+                    - text: Map
+            - generic [ref=e1808] [cursor=pointer]:
+              - button "Watch Now" [ref=e1809]:
+                - img [ref=e1810]
+              - img "BET West HD" [ref=e1812]
+              - generic [ref=e1813]:
+                - generic [ref=e1814]: BET West HD
+                - generic [ref=e1815]:
+                  - text: Ch 329
+                  - generic [ref=e1816]: • DirectTV_39
+                  - button "Re-map" [ref=e1817]:
+                    - img [ref=e1818]
+                    - text: Re-map
+            - generic [ref=e1821] [cursor=pointer]:
+              - button "Watch Now" [ref=e1822]:
+                - img [ref=e1823]
+              - img "BET Her" [ref=e1825]
+              - generic [ref=e1826]:
+                - generic [ref=e1827]: BET Her
+                - generic [ref=e1828]:
+                  - text: Ch 330
+                  - generic [ref=e1829]: • DirectTV_39
+                  - button "Re-map" [ref=e1830]:
+                    - img [ref=e1831]
+                    - text: Re-map
+            - generic [ref=e1834] [cursor=pointer]:
+              - button "Watch Now" [ref=e1835]:
+                - img [ref=e1836]
+              - img "MTV HD" [ref=e1838]
+              - generic [ref=e1839]:
+                - generic [ref=e1840]: MTV HD
+                - generic [ref=e1841]:
+                  - text: Ch 331
+                  - generic [ref=e1842]: • DirectTV_39
+                  - button "Re-map" [ref=e1843]:
+                    - img [ref=e1844]
+                    - text: Re-map
+            - generic [ref=e1847] [cursor=pointer]:
+              - button "Watch Now" [ref=e1848]:
+                - img [ref=e1849]
+              - img "MTV West HD" [ref=e1851]
+              - generic [ref=e1852]:
+                - generic [ref=e1853]: MTV West HD
+                - generic [ref=e1854]:
+                  - text: Ch 331
+                  - generic [ref=e1855]: • DirectTV_39
+                  - generic [ref=e1856]: • No EPG
+                  - button "Map" [ref=e1857]:
+                    - img [ref=e1858]
+                    - text: Map
+            - generic [ref=e1861] [cursor=pointer]:
+              - button "Watch Now" [ref=e1862]:
+                - img [ref=e1863]
+              - img "MTV2 HD" [ref=e1865]
+              - generic [ref=e1866]:
+                - generic [ref=e1867]: MTV2 HD
+                - generic [ref=e1868]:
+                  - text: Ch 332
+                  - generic [ref=e1869]: • DirectTV_39
+                  - button "Re-map" [ref=e1870]:
+                    - img [ref=e1871]
+                    - text: Re-map
+            - generic [ref=e1874] [cursor=pointer]:
+              - button "Watch Now" [ref=e1875]:
+                - img [ref=e1876]
+              - img "IFC HD" [ref=e1878]
+              - generic [ref=e1879]:
+                - generic [ref=e1880]: IFC HD
+                - generic [ref=e1881]:
+                  - text: Ch 333
+                  - generic [ref=e1882]: • DirectTV_39
+                  - button "Re-map" [ref=e1883]:
+                    - img [ref=e1884]
+                    - text: Re-map
+            - generic [ref=e1887] [cursor=pointer]:
+              - button "Watch Now" [ref=e1888]:
+                - img [ref=e1889]
+              - img "Revolt HD" [ref=e1891]
+              - generic [ref=e1892]:
+                - generic [ref=e1893]: Revolt HD
+                - generic [ref=e1894]:
+                  - text: Ch 334
+                  - generic [ref=e1895]: • DirectTV_39
+                  - button "Re-map" [ref=e1896]:
+                    - img [ref=e1897]
+                    - text: Re-map
+            - generic [ref=e1900] [cursor=pointer]:
+              - button "Watch Now" [ref=e1901]:
+                - img [ref=e1902]
+              - img "VH1 HD" [ref=e1904]
+              - generic [ref=e1905]:
+                - generic [ref=e1906]: VH1 HD
+                - generic [ref=e1907]:
+                  - text: Ch 335
+                  - generic [ref=e1908]: • DirectTV_39
+                  - button "Re-map" [ref=e1909]:
+                    - img [ref=e1910]
+                    - text: Re-map
+            - generic [ref=e1913] [cursor=pointer]:
+              - button "Watch Now" [ref=e1914]:
+                - img [ref=e1915]
+              - img "MTV Classic" [ref=e1917]
+              - generic [ref=e1918]:
+                - generic [ref=e1919]: MTV Classic
+                - generic [ref=e1920]:
+                  - text: Ch 336
+                  - generic [ref=e1921]: • DirectTV_39
+                  - button "Re-map" [ref=e1922]:
+                    - img [ref=e1923]
+                    - text: Re-map
+            - generic [ref=e1926] [cursor=pointer]:
+              - button "Watch Now" [ref=e1927]:
+                - img [ref=e1928]
+              - img "UPTV" [ref=e1930]
+              - generic [ref=e1931]:
+                - generic [ref=e1932]: UPTV
+                - generic [ref=e1933]:
+                  - text: Ch 338
+                  - generic [ref=e1934]: • DirectTV_39
+                  - button "Re-map" [ref=e1935]:
+                    - img [ref=e1936]
+                    - text: Re-map
+            - generic [ref=e1939] [cursor=pointer]:
+              - button "Watch Now" [ref=e1940]:
+                - img [ref=e1941]
+              - img "Fuse HD" [ref=e1943]
+              - generic [ref=e1944]:
+                - generic [ref=e1945]: Fuse HD
+                - generic [ref=e1946]:
+                  - text: Ch 339
+                  - generic [ref=e1947]: • DirectTV_39
+                  - button "Re-map" [ref=e1948]:
+                    - img [ref=e1949]
+                    - text: Re-map
+            - generic [ref=e1952] [cursor=pointer]:
+              - button "Watch Now" [ref=e1953]:
+                - img [ref=e1954]
+              - img "AXS TV HD" [ref=e1956]
+              - generic [ref=e1957]:
+                - generic [ref=e1958]: AXS TV HD
+                - generic [ref=e1959]:
+                  - text: Ch 340
+                  - generic [ref=e1960]: • DirectTV_39
+                  - button "Re-map" [ref=e1961]:
+                    - img [ref=e1962]
+                    - text: Re-map
+            - generic [ref=e1965] [cursor=pointer]:
+              - button "Watch Now" [ref=e1966]:
+                - img [ref=e1967]
+              - img "Cleo TV" [ref=e1969]
+              - generic [ref=e1970]:
+                - generic [ref=e1971]: Cleo TV
+                - generic [ref=e1972]:
+                  - text: Ch 341
+                  - generic [ref=e1973]: • DirectTV_39
+                  - button "Re-map" [ref=e1974]:
+                    - img [ref=e1975]
+                    - text: Re-map
+            - generic [ref=e1978] [cursor=pointer]:
+              - button "Watch Now" [ref=e1979]:
+                - img [ref=e1980]
+              - img "theGrio" [ref=e1982]
+              - generic [ref=e1983]:
+                - generic [ref=e1984]: theGrio
+                - generic [ref=e1985]:
+                  - text: Ch 342
+                  - generic [ref=e1986]: • DirectTV_39
+                  - button "Re-map" [ref=e1987]:
+                    - img [ref=e1988]
+                    - text: Re-map
+            - generic [ref=e1991] [cursor=pointer]:
+              - button "Watch Now" [ref=e1992]:
+                - img [ref=e1993]
+              - img "i24 News" [ref=e1995]
+              - generic [ref=e1996]:
+                - generic [ref=e1997]: i24 News
+                - generic [ref=e1998]:
+                  - text: Ch 343
+                  - generic [ref=e1999]: • DirectTV_39
+                  - button "Re-map" [ref=e2000]:
+                    - img [ref=e2001]
+                    - text: Re-map
+            - generic [ref=e2004] [cursor=pointer]:
+              - button "Watch Now" [ref=e2005]:
+                - img [ref=e2006]
+              - img "RFD HD TV" [ref=e2008]
+              - generic [ref=e2009]:
+                - generic [ref=e2010]: RFD HD TV
+                - generic [ref=e2011]:
+                  - text: Ch 345
+                  - generic [ref=e2012]: • DirectTV_39
+                  - button "Re-map" [ref=e2013]:
+                    - img [ref=e2014]
+                    - text: Re-map
+            - generic [ref=e2017] [cursor=pointer]:
+              - button "Watch Now" [ref=e2018]:
+                - img [ref=e2019]
+              - img "BBC News" [ref=e2021]
+              - generic [ref=e2022]:
+                - generic [ref=e2023]: BBC News
+                - generic [ref=e2024]:
+                  - text: Ch 346
+                  - generic [ref=e2025]: • DirectTV_39
+                  - button "Re-map" [ref=e2026]:
+                    - img [ref=e2027]
+                    - text: Re-map
+            - generic [ref=e2030] [cursor=pointer]:
+              - button "Watch Now" [ref=e2031]:
+                - img [ref=e2032]
+              - img "The First" [ref=e2034]
+              - generic [ref=e2035]:
+                - generic [ref=e2036]: The First
+                - generic [ref=e2037]:
+                  - text: Ch 347
+                  - generic [ref=e2038]: • DirectTV_39
+                  - button "Re-map" [ref=e2039]:
+                    - img [ref=e2040]
+                    - text: Re-map
+            - generic [ref=e2043] [cursor=pointer]:
+              - button "Watch Now" [ref=e2044]:
+                - img [ref=e2045]
+              - img "Newsmax TV HD" [ref=e2047]
+              - generic [ref=e2048]:
+                - generic [ref=e2049]: Newsmax TV HD
+                - generic [ref=e2050]:
+                  - text: Ch 349
+                  - generic [ref=e2051]: • DirectTV_39
+                  - button "Re-map" [ref=e2052]:
+                    - img [ref=e2053]
+                    - text: Re-map
+            - generic [ref=e2056] [cursor=pointer]:
+              - button "Watch Now" [ref=e2057]:
+                - img [ref=e2058]
+              - img "CSPAN" [ref=e2060]
+              - generic [ref=e2061]:
+                - generic [ref=e2062]: CSPAN
+                - generic [ref=e2063]:
+                  - text: Ch 350
+                  - generic [ref=e2064]: • DirectTV_39
+                  - button "Re-map" [ref=e2065]:
+                    - img [ref=e2066]
+                    - text: Re-map
+            - generic [ref=e2069] [cursor=pointer]:
+              - button "Watch Now" [ref=e2070]:
+                - img [ref=e2071]
+              - img "CSPAN 2" [ref=e2073]
+              - generic [ref=e2074]:
+                - generic [ref=e2075]: CSPAN 2
+                - generic [ref=e2076]:
+                  - text: Ch 351
+                  - generic [ref=e2077]: • DirectTV_39
+                  - button "Re-map" [ref=e2078]:
+                    - img [ref=e2079]
+                    - text: Re-map
+            - generic [ref=e2082] [cursor=pointer]:
+              - button "Watch Now" [ref=e2083]:
+                - img [ref=e2084]
+              - img "Bloomberg TV HD" [ref=e2086]
+              - generic [ref=e2087]:
+                - generic [ref=e2088]: Bloomberg TV HD
+                - generic [ref=e2089]:
+                  - text: Ch 353
+                  - generic [ref=e2090]: • DirectTV_39
+                  - button "Re-map" [ref=e2091]:
+                    - img [ref=e2092]
+                    - text: Re-map
+            - generic [ref=e2095] [cursor=pointer]:
+              - button "Watch Now" [ref=e2096]:
+                - img [ref=e2097]
+              - img "Cheddar News" [ref=e2099]
+              - generic [ref=e2100]:
+                - generic [ref=e2101]: Cheddar News
+                - generic [ref=e2102]:
+                  - text: Ch 354
+                  - generic [ref=e2103]: • DirectTV_39
+                  - button "Re-map" [ref=e2104]:
+                    - img [ref=e2105]
+                    - text: Re-map
+            - generic [ref=e2108] [cursor=pointer]:
+              - button "Watch Now" [ref=e2109]:
+                - img [ref=e2110]
+              - img "CNBC HD" [ref=e2112]
+              - generic [ref=e2113]:
+                - generic [ref=e2114]: CNBC HD
+                - generic [ref=e2115]:
+                  - text: Ch 355
+                  - generic [ref=e2116]: • DirectTV_39
+                  - button "Re-map" [ref=e2117]:
+                    - img [ref=e2118]
+                    - text: Re-map
+            - generic [ref=e2121] [cursor=pointer]:
+              - button "Watch Now" [ref=e2122]:
+                - img [ref=e2123]
+              - img "MS Now HD" [ref=e2125]
+              - generic [ref=e2126]:
+                - generic [ref=e2127]: MS Now HD
+                - generic [ref=e2128]:
+                  - text: Ch 356
+                  - generic [ref=e2129]: • DirectTV_39
+                  - button "Re-map" [ref=e2130]:
+                    - img [ref=e2131]
+                    - text: Re-map
+            - generic [ref=e2134] [cursor=pointer]:
+              - button "Watch Now" [ref=e2135]:
+                - img [ref=e2136]
+              - img "CNBC World" [ref=e2138]
+              - generic [ref=e2139]:
+                - generic [ref=e2140]: CNBC World
+                - generic [ref=e2141]:
+                  - text: Ch 357
+                  - generic [ref=e2142]: • DirectTV_39
+                  - button "Re-map" [ref=e2143]:
+                    - img [ref=e2144]
+                    - text: Re-map
+            - generic [ref=e2147] [cursor=pointer]:
+              - button "Watch Now" [ref=e2148]:
+                - img [ref=e2149]
+              - img "CNNi" [ref=e2151]
+              - generic [ref=e2152]:
+                - generic [ref=e2153]: CNNi
+                - generic [ref=e2154]:
+                  - text: Ch 358
+                  - generic [ref=e2155]: • DirectTV_39
+                  - button "Re-map" [ref=e2156]:
+                    - img [ref=e2157]
+                    - text: Re-map
+            - generic [ref=e2160] [cursor=pointer]:
+              - button "Watch Now" [ref=e2161]:
+                - img [ref=e2162]
+              - img "Fox Business Network HD" [ref=e2164]
+              - generic [ref=e2165]:
+                - generic [ref=e2166]: Fox Business Network HD
+                - generic [ref=e2167]:
+                  - text: Ch 359
+                  - generic [ref=e2168]: • DirectTV_39
+                  - button "Re-map" [ref=e2169]:
+                    - img [ref=e2170]
+                    - text: Re-map
+            - generic [ref=e2173] [cursor=pointer]:
+              - button "Watch Now" [ref=e2174]:
+                - img [ref=e2175]
+              - img "FOX News Channel HD" [ref=e2177]
+              - generic [ref=e2178]:
+                - generic [ref=e2179]: FOX News Channel HD
+                - generic [ref=e2180]:
+                  - text: Ch 360
+                  - generic [ref=e2181]: • DirectTV_39
+                  - button "Re-map" [ref=e2182]:
+                    - img [ref=e2183]
+                    - text: Re-map
+            - generic [ref=e2186] [cursor=pointer]:
+              - button "Watch Now" [ref=e2187]:
+                - img [ref=e2188]
+              - img "AccuWeather HD" [ref=e2190]
+              - generic [ref=e2191]:
+                - generic [ref=e2192]: AccuWeather HD
+                - generic [ref=e2193]:
+                  - text: Ch 361
+                  - generic [ref=e2194]: • DirectTV_39
+                  - button "Re-map" [ref=e2195]:
+                    - img [ref=e2196]
+                    - text: Re-map
+            - generic [ref=e2199] [cursor=pointer]:
+              - button "Watch Now" [ref=e2200]:
+                - img [ref=e2201]
+              - img "The Weather Channel HD" [ref=e2203]
+              - generic [ref=e2204]:
+                - generic [ref=e2205]: The Weather Channel HD
+                - generic [ref=e2206]:
+                  - text: Ch 362
+                  - generic [ref=e2207]: • DirectTV_39
+                  - button "Re-map" [ref=e2208]:
+                    - img [ref=e2209]
+                    - text: Re-map
+            - generic [ref=e2212] [cursor=pointer]:
+              - button "Watch Now" [ref=e2213]:
+                - img [ref=e2214]
+              - img "FOX Weather" [ref=e2216]
+              - generic [ref=e2217]:
+                - generic [ref=e2218]: FOX Weather
+                - generic [ref=e2219]:
+                  - text: Ch 363
+                  - generic [ref=e2220]: • DirectTV_39
+                  - button "Re-map" [ref=e2221]:
+                    - img [ref=e2222]
+                    - text: Re-map
+            - generic [ref=e2225] [cursor=pointer]:
+              - button "Watch Now" [ref=e2226]:
+                - img [ref=e2227]
+              - img "INSP HD" [ref=e2229]
+              - generic [ref=e2230]:
+                - generic [ref=e2231]: INSP HD
+                - generic [ref=e2232]:
+                  - text: Ch 364
+                  - generic [ref=e2233]: • DirectTV_39
+                  - button "Re-map" [ref=e2234]:
+                    - img [ref=e2235]
+                    - text: Re-map
+            - generic [ref=e2238] [cursor=pointer]:
+              - button "Watch Now" [ref=e2239]:
+                - img [ref=e2240]
+              - img "Daystar HD" [ref=e2242]
+              - generic [ref=e2243]:
+                - generic [ref=e2244]: Daystar HD
+                - generic [ref=e2245]:
+                  - text: Ch 369
+                  - generic [ref=e2246]: • DirectTV_39
+                  - button "Re-map" [ref=e2247]:
+                    - img [ref=e2248]
+                    - text: Re-map
+            - generic [ref=e2251] [cursor=pointer]:
+              - button "Watch Now" [ref=e2252]:
+                - img [ref=e2253]
+              - img "ASPIRE (HD)" [ref=e2255]
+              - generic [ref=e2256]:
+                - generic [ref=e2257]: ASPIRE (HD)
+                - generic [ref=e2258]:
+                  - text: Ch 381
+                  - generic [ref=e2259]: • DirectTV_39
+                  - button "Re-map" [ref=e2260]:
+                    - img [ref=e2261]
+                    - text: Re-map
+            - generic [ref=e2264] [cursor=pointer]:
+              - button "Watch Now" [ref=e2265]:
+                - img [ref=e2266]
+              - img "Comedy TV HD" [ref=e2268]
+              - generic [ref=e2269]:
+                - generic [ref=e2270]: Comedy TV HD
+                - generic [ref=e2271]:
+                  - text: Ch 382
+                  - generic [ref=e2272]: • DirectTV_39
+                  - button "Re-map" [ref=e2273]:
+                    - img [ref=e2274]
+                    - text: Re-map
+            - generic [ref=e2277] [cursor=pointer]:
+              - button "Watch Now" [ref=e2278]:
+                - img [ref=e2279]
+              - img "Justice Central HD" [ref=e2281]
+              - generic [ref=e2282]:
+                - generic [ref=e2283]: Justice Central HD
+                - generic [ref=e2284]:
+                  - text: Ch 383
+                  - generic [ref=e2285]: • DirectTV_39
+                  - button "Re-map" [ref=e2286]:
+                    - img [ref=e2287]
+                    - text: Re-map
+            - generic [ref=e2290] [cursor=pointer]:
+              - button "Watch Now" [ref=e2291]:
+                - img [ref=e2292]
+              - img "FM HD" [ref=e2294]
+              - generic [ref=e2295]:
+                - generic [ref=e2296]: FM HD
+                - generic [ref=e2297]:
+                  - text: Ch 386
+                  - generic [ref=e2298]: • DirectTV_39
+                  - button "Re-map" [ref=e2299]:
+                    - img [ref=e2300]
+                    - text: Re-map
+            - generic [ref=e2303] [cursor=pointer]:
+              - button "Watch Now" [ref=e2304]:
+                - img [ref=e2305]
+              - img "Recipe TV" [ref=e2307]
+              - generic [ref=e2308]:
+                - generic [ref=e2309]: Recipe TV
+                - generic [ref=e2310]:
+                  - text: Ch 387
+                  - generic [ref=e2311]: • DirectTV_39
+                  - button "Re-map" [ref=e2312]:
+                    - img [ref=e2313]
+                    - text: Re-map
+            - generic [ref=e2316] [cursor=pointer]:
+              - button "Watch Now" [ref=e2317]:
+                - img [ref=e2318]
+              - img "Univision East HD" [ref=e2320]
+              - generic [ref=e2321]:
+                - generic [ref=e2322]: Univision East HD
+                - generic [ref=e2323]:
+                  - text: Ch 402
+                  - generic [ref=e2324]: • DirectTV_39
+                  - button "Re-map" [ref=e2325]:
+                    - img [ref=e2326]
+                    - text: Re-map
+            - generic [ref=e2329] [cursor=pointer]:
+              - button "Watch Now" [ref=e2330]:
+                - img [ref=e2331]
+              - img "Galavision HD" [ref=e2333]
+              - generic [ref=e2334]:
+                - generic [ref=e2335]: Galavision HD
+                - generic [ref=e2336]:
+                  - text: Ch 404
+                  - generic [ref=e2337]: • DirectTV_39
+                  - button "Re-map" [ref=e2338]:
+                    - img [ref=e2339]
+                    - text: Re-map
+            - generic [ref=e2342] [cursor=pointer]:
+              - button "Watch Now" [ref=e2343]:
+                - img [ref=e2344]
+              - img "Telemundo East" [ref=e2346]
+              - generic [ref=e2347]:
+                - generic [ref=e2348]: Telemundo East
+                - generic [ref=e2349]:
+                  - text: Ch 406
+                  - generic [ref=e2350]: • DirectTV_39
+                  - button "Re-map" [ref=e2351]:
+                    - img [ref=e2352]
+                    - text: Re-map
+            - generic [ref=e2355] [cursor=pointer]:
+              - button "Watch Now" [ref=e2356]:
+                - img [ref=e2357]
+              - img "UniMas West HD" [ref=e2359]
+              - generic [ref=e2360]:
+                - generic [ref=e2361]: UniMas West HD
+                - generic [ref=e2362]:
+                  - text: Ch 408
+                  - generic [ref=e2363]: • DirectTV_39
+                  - button "Re-map" [ref=e2364]:
+                    - img [ref=e2365]
+                    - text: Re-map
+            - generic [ref=e2368] [cursor=pointer]:
+              - button "Watch Now" [ref=e2369]:
+                - img [ref=e2370]
+              - img "Universo HD" [ref=e2372]
+              - generic [ref=e2373]:
+                - generic [ref=e2374]: Universo HD
+                - generic [ref=e2375]:
+                  - text: Ch 410
+                  - generic [ref=e2376]: • DirectTV_39
+                  - button "Re-map" [ref=e2377]:
+                    - img [ref=e2378]
+                    - text: Re-map
+            - generic [ref=e2381] [cursor=pointer]:
+              - button "Watch Now" [ref=e2382]:
+                - img [ref=e2383]
+              - img "CNN en Espanol (103A)" [ref=e2385]
+              - generic [ref=e2386]:
+                - generic [ref=e2387]: CNN en Espanol (103A)
+                - generic [ref=e2388]:
+                  - text: Ch 419
+                  - generic [ref=e2389]: • DirectTV_39
+                  - button "Re-map" [ref=e2390]:
+                    - img [ref=e2391]
+                    - text: Re-map
+            - generic [ref=e2394] [cursor=pointer]:
+              - button "Watch Now" [ref=e2395]:
+                - img [ref=e2396]
+              - img "Canal Once" [ref=e2398]
+              - generic [ref=e2399]:
+                - generic [ref=e2400]: Canal Once
+                - generic [ref=e2401]:
+                  - text: Ch 447
+                  - generic [ref=e2402]: • DirectTV_39
+                  - button "Re-map" [ref=e2403]:
+                    - img [ref=e2404]
+                    - text: Re-map
+            - generic [ref=e2407] [cursor=pointer]:
+              - button "Watch Now" [ref=e2408]:
+                - img [ref=e2409]
+              - img "Enlace" [ref=e2411]
+              - generic [ref=e2412]:
+                - generic [ref=e2413]: Enlace
+                - generic [ref=e2414]:
+                  - text: Ch 448
+                  - generic [ref=e2415]: • DirectTV_39
+                  - button "Re-map" [ref=e2416]:
+                    - img [ref=e2417]
+                    - text: Re-map
+            - generic [ref=e2420] [cursor=pointer]:
+              - button "Watch Now" [ref=e2421]:
+                - img [ref=e2422]
+              - img "HITN (103A)" [ref=e2424]
+              - generic [ref=e2425]:
+                - generic [ref=e2426]: HITN (103A)
+                - generic [ref=e2427]:
+                  - text: Ch 461
+                  - generic [ref=e2428]: • DirectTV_39
+                  - button "Re-map" [ref=e2429]:
+                    - img [ref=e2430]
+                    - text: Re-map
+            - generic [ref=e2433] [cursor=pointer]:
+              - button "Watch Now" [ref=e2434]:
+                - img [ref=e2435]
+              - img "Daystar Espanol" [ref=e2437]
+              - generic [ref=e2438]:
+                - generic [ref=e2439]: Daystar Espanol
+                - generic [ref=e2440]:
+                  - text: Ch 463
+                  - generic [ref=e2441]: • DirectTV_39
+                  - button "Re-map" [ref=e2442]:
+                    - img [ref=e2443]
+                    - text: Re-map
+            - generic [ref=e2446] [cursor=pointer]:
+              - button "Watch Now" [ref=e2447]:
+                - img [ref=e2448]
+              - img "TUDN HD" [ref=e2450]
+              - generic [ref=e2451]:
+                - generic [ref=e2452]: TUDN HD
+                - generic [ref=e2453]:
+                  - text: Ch 464
+                  - generic [ref=e2454]: • DirectTV_39
+                  - button "Re-map" [ref=e2455]:
+                    - img [ref=e2456]
+                    - text: Re-map
+            - generic [ref=e2459] [cursor=pointer]:
+              - button "Watch Now" [ref=e2460]:
+                - img [ref=e2461]
+              - img "HBO HD East" [ref=e2463]
+              - generic [ref=e2464]:
+                - generic [ref=e2465]: HBO HD East
+                - generic [ref=e2466]:
+                  - text: Ch 501
+                  - generic [ref=e2467]: • DirectTV_39
+                  - button "Re-map" [ref=e2468]:
+                    - img [ref=e2469]
+                    - text: Re-map
+            - generic [ref=e2472] [cursor=pointer]:
+              - button "Watch Now" [ref=e2473]:
+                - img [ref=e2474]
+              - img "HBO Hits HD East" [ref=e2476]
+              - generic [ref=e2477]:
+                - generic [ref=e2478]: HBO Hits HD East
+                - generic [ref=e2479]:
+                  - text: Ch 502
+                  - generic [ref=e2480]: • DirectTV_39
+                  - button "Re-map" [ref=e2481]:
+                    - img [ref=e2482]
+                    - text: Re-map
+            - generic [ref=e2485] [cursor=pointer]:
+              - button "Watch Now" [ref=e2486]:
+                - img [ref=e2487]
+              - img "HBO Drama HD" [ref=e2489]
+              - generic [ref=e2490]:
+                - generic [ref=e2491]: HBO Drama HD
+                - generic [ref=e2492]:
+                  - text: Ch 503
+                  - generic [ref=e2493]: • DirectTV_39
+                  - button "Re-map" [ref=e2494]:
+                    - img [ref=e2495]
+                    - text: Re-map
+            - generic [ref=e2498] [cursor=pointer]:
+              - button "Watch Now" [ref=e2499]:
+                - img [ref=e2500]
+              - img "HBO West HD" [ref=e2502]
+              - generic [ref=e2503]:
+                - generic [ref=e2504]: HBO West HD
+                - generic [ref=e2505]:
+                  - text: Ch 504
+                  - generic [ref=e2506]: • DirectTV_39
+                  - button "Re-map" [ref=e2507]:
+                    - img [ref=e2508]
+                    - text: Re-map
+            - generic [ref=e2511] [cursor=pointer]:
+              - button "Watch Now" [ref=e2512]:
+                - img [ref=e2513]
+              - img "HBO Hits West HD" [ref=e2515]
+              - generic [ref=e2516]:
+                - generic [ref=e2517]: HBO Hits West HD
+                - generic [ref=e2518]:
+                  - text: Ch 505
+                  - generic [ref=e2519]: • DirectTV_39
+                  - button "Re-map" [ref=e2520]:
+                    - img [ref=e2521]
+                    - text: Re-map
+            - generic [ref=e2524] [cursor=pointer]:
+              - button "Watch Now" [ref=e2525]:
+                - img [ref=e2526]
+              - img "HBO Comedy HD" [ref=e2528]
+              - generic [ref=e2529]:
+                - generic [ref=e2530]: HBO Comedy HD
+                - generic [ref=e2531]:
+                  - text: Ch 506
+                  - generic [ref=e2532]: • DirectTV_39
+                  - button "Re-map" [ref=e2533]:
+                    - img [ref=e2534]
+                    - text: Re-map
+            - generic [ref=e2537] [cursor=pointer]:
+              - button "Watch Now" [ref=e2538]:
+                - img [ref=e2539]
+              - img "HBO Movies HD" [ref=e2541]
+              - generic [ref=e2542]:
+                - generic [ref=e2543]: HBO Movies HD
+                - generic [ref=e2544]:
+                  - text: Ch 509
+                  - generic [ref=e2545]: • DirectTV_39
+                  - button "Re-map" [ref=e2546]:
+                    - img [ref=e2547]
+                    - text: Re-map
+            - generic [ref=e2550] [cursor=pointer]:
+              - button "Watch Now" [ref=e2551]:
+                - img [ref=e2552]
+              - img "HBO Latino HD" [ref=e2554]
+              - generic [ref=e2555]:
+                - generic [ref=e2556]: HBO Latino HD
+                - generic [ref=e2557]:
+                  - text: Ch 511
+                  - generic [ref=e2558]: • DirectTV_39
+                  - button "Re-map" [ref=e2559]:
+                    - img [ref=e2560]
+                    - text: Re-map
+            - generic [ref=e2563] [cursor=pointer]:
+              - button "Watch Now" [ref=e2564]:
+                - img [ref=e2565]
+              - img "Cinemax East HD" [ref=e2567]
+              - generic [ref=e2568]:
+                - generic [ref=e2569]: Cinemax East HD
+                - generic [ref=e2570]:
+                  - text: Ch 515
+                  - generic [ref=e2571]: • DirectTV_39
+                  - button "Re-map" [ref=e2572]:
+                    - img [ref=e2573]
+                    - text: Re-map
+            - generic [ref=e2576] [cursor=pointer]:
+              - button "Watch Now" [ref=e2577]:
+                - img [ref=e2578]
+              - img "Cinemax West HD" [ref=e2580]
+              - generic [ref=e2581]:
+                - generic [ref=e2582]: Cinemax West HD
+                - generic [ref=e2583]:
+                  - text: Ch 516
+                  - generic [ref=e2584]: • DirectTV_39
+                  - button "Re-map" [ref=e2585]:
+                    - img [ref=e2586]
+                    - text: Re-map
+            - generic [ref=e2589] [cursor=pointer]:
+              - button "Watch Now" [ref=e2590]:
+                - img [ref=e2591]
+              - img "Cinemax Hits HD" [ref=e2593]
+              - generic [ref=e2594]:
+                - generic [ref=e2595]: Cinemax Hits HD
+                - generic [ref=e2596]:
+                  - text: Ch 517
+                  - generic [ref=e2597]: • DirectTV_39
+                  - button "Re-map" [ref=e2598]:
+                    - img [ref=e2599]
+                    - text: Re-map
+            - generic [ref=e2602] [cursor=pointer]:
+              - button "Watch Now" [ref=e2603]:
+                - img [ref=e2604]
+              - img "Cinemax Action HD" [ref=e2606]
+              - generic [ref=e2607]:
+                - generic [ref=e2608]: Cinemax Action HD
+                - generic [ref=e2609]:
+                  - text: Ch 519
+                  - generic [ref=e2610]: • DirectTV_39
+                  - button "Re-map" [ref=e2611]:
+                    - img [ref=e2612]
+                    - text: Re-map
+            - generic [ref=e2615] [cursor=pointer]:
+              - button "Watch Now" [ref=e2616]:
+                - img [ref=e2617]
+              - img "Cinemax Classics HD" [ref=e2619]
+              - generic [ref=e2620]:
+                - generic [ref=e2621]: Cinemax Classics HD
+                - generic [ref=e2622]:
+                  - text: Ch 520
+                  - generic [ref=e2623]: • DirectTV_39
+                  - button "Re-map" [ref=e2624]:
+                    - img [ref=e2625]
+                    - text: Re-map
+            - generic [ref=e2628] [cursor=pointer]:
+              - button "Watch Now" [ref=e2629]:
+                - img [ref=e2630]
+              - img "Cinemáx HD" [ref=e2632]
+              - generic [ref=e2633]:
+                - generic [ref=e2634]: Cinemáx HD
+                - generic [ref=e2635]:
+                  - text: Ch 523
+                  - generic [ref=e2636]: • DirectTV_39
+                  - button "Re-map" [ref=e2637]:
+                    - img [ref=e2638]
+                    - text: Re-map
+            - generic [ref=e2641] [cursor=pointer]:
+              - button "Watch Now" [ref=e2642]:
+                - img [ref=e2643]
+              - img "STARZ East HD" [ref=e2645]
+              - generic [ref=e2646]:
+                - generic [ref=e2647]: STARZ East HD
+                - generic [ref=e2648]:
+                  - text: Ch 525
+                  - generic [ref=e2649]: • DirectTV_39
+                  - button "Re-map" [ref=e2650]:
+                    - img [ref=e2651]
+                    - text: Re-map
+            - generic [ref=e2654] [cursor=pointer]:
+              - button "Watch Now" [ref=e2655]:
+                - img [ref=e2656]
+              - img "STARZ West HD" [ref=e2658]
+              - generic [ref=e2659]:
+                - generic [ref=e2660]: STARZ West HD
+                - generic [ref=e2661]:
+                  - text: Ch 526
+                  - generic [ref=e2662]: • DirectTV_39
+                  - button "Re-map" [ref=e2663]:
+                    - img [ref=e2664]
+                    - text: Re-map
+            - generic [ref=e2667] [cursor=pointer]:
+              - button "Watch Now" [ref=e2668]:
+                - img [ref=e2669]
+              - img "STARZ Kids & Family HD" [ref=e2671]
+              - generic [ref=e2672]:
+                - generic [ref=e2673]: STARZ Kids & Family HD
+                - generic [ref=e2674]:
+                  - text: Ch 527
+                  - generic [ref=e2675]: • DirectTV_39
+                  - button "Re-map" [ref=e2676]:
+                    - img [ref=e2677]
+                    - text: Re-map
+            - generic [ref=e2680] [cursor=pointer]:
+              - button "Watch Now" [ref=e2681]:
+                - img [ref=e2682]
+              - img "STARZ Comedy HD" [ref=e2684]
+              - generic [ref=e2685]:
+                - generic [ref=e2686]: STARZ Comedy HD
+                - generic [ref=e2687]:
+                  - text: Ch 528
+                  - generic [ref=e2688]: • DirectTV_39
+                  - button "Re-map" [ref=e2689]:
+                    - img [ref=e2690]
+                    - text: Re-map
+            - generic [ref=e2693] [cursor=pointer]:
+              - button "Watch Now" [ref=e2694]:
+                - img [ref=e2695]
+              - img "STARZ Edge HD" [ref=e2697]
+              - generic [ref=e2698]:
+                - generic [ref=e2699]: STARZ Edge HD
+                - generic [ref=e2700]:
+                  - text: Ch 529
+                  - generic [ref=e2701]: • DirectTV_39
+                  - button "Re-map" [ref=e2702]:
+                    - img [ref=e2703]
+                    - text: Re-map
+            - generic [ref=e2706] [cursor=pointer]:
+              - button "Watch Now" [ref=e2707]:
+                - img [ref=e2708]
+              - img "STARZ in Black HD" [ref=e2710]
+              - generic [ref=e2711]:
+                - generic [ref=e2712]: STARZ in Black HD
+                - generic [ref=e2713]:
+                  - text: Ch 530
+                  - generic [ref=e2714]: • DirectTV_39
+                  - button "Re-map" [ref=e2715]:
+                    - img [ref=e2716]
+                    - text: Re-map
+            - generic [ref=e2719] [cursor=pointer]:
+              - button "Watch Now" [ref=e2720]:
+                - img [ref=e2721]
+              - img "STARZ Cinema HD" [ref=e2723]
+              - generic [ref=e2724]:
+                - generic [ref=e2725]: STARZ Cinema HD
+                - generic [ref=e2726]:
+                  - text: Ch 531
+                  - generic [ref=e2727]: • DirectTV_39
+                  - button "Re-map" [ref=e2728]:
+                    - img [ref=e2729]
+                    - text: Re-map
+            - generic [ref=e2732] [cursor=pointer]:
+              - button "Watch Now" [ref=e2733]:
+                - img [ref=e2734]
+              - img "STARZ Encore HD" [ref=e2736]
+              - generic [ref=e2737]:
+                - generic [ref=e2738]: STARZ Encore HD
+                - generic [ref=e2739]:
+                  - text: Ch 535
+                  - generic [ref=e2740]: • DirectTV_39
+                  - button "Re-map" [ref=e2741]:
+                    - img [ref=e2742]
+                    - text: Re-map
+            - generic [ref=e2745] [cursor=pointer]:
+              - button "Watch Now" [ref=e2746]:
+                - img [ref=e2747]
+              - img "STARZ Encore West" [ref=e2749]
+              - generic [ref=e2750]:
+                - generic [ref=e2751]: STARZ Encore West
+                - generic [ref=e2752]:
+                  - text: Ch 536
+                  - generic [ref=e2753]: • DirectTV_39
+                  - button "Re-map" [ref=e2754]:
+                    - img [ref=e2755]
+                    - text: Re-map
+            - generic [ref=e2758] [cursor=pointer]:
+              - button "Watch Now" [ref=e2759]:
+                - img [ref=e2760]
+              - img "STARZ Encore Classic" [ref=e2762]
+              - generic [ref=e2763]:
+                - generic [ref=e2764]: STARZ Encore Classic
+                - generic [ref=e2765]:
+                  - text: Ch 537
+                  - generic [ref=e2766]: • DirectTV_39
+                  - button "Re-map" [ref=e2767]:
+                    - img [ref=e2768]
+                    - text: Re-map
+            - generic [ref=e2771] [cursor=pointer]:
+              - button "Watch Now" [ref=e2772]:
+                - img [ref=e2773]
+              - img "STARZ Encore Westerns" [ref=e2775]
+              - generic [ref=e2776]:
+                - generic [ref=e2777]: STARZ Encore Westerns
+                - generic [ref=e2778]:
+                  - text: Ch 538
+                  - generic [ref=e2779]: • DirectTV_39
+                  - button "Re-map" [ref=e2780]:
+                    - img [ref=e2781]
+                    - text: Re-map
+            - generic [ref=e2784] [cursor=pointer]:
+              - button "Watch Now" [ref=e2785]:
+                - img [ref=e2786]
+              - img "STARZ Encore Suspense" [ref=e2788]
+              - generic [ref=e2789]:
+                - generic [ref=e2790]: STARZ Encore Suspense
+                - generic [ref=e2791]:
+                  - text: Ch 539
+                  - generic [ref=e2792]: • DirectTV_39
+                  - button "Re-map" [ref=e2793]:
+                    - img [ref=e2794]
+                    - text: Re-map
+            - generic [ref=e2797] [cursor=pointer]:
+              - button "Watch Now" [ref=e2798]:
+                - img [ref=e2799]
+              - img "STARZ Encore Black" [ref=e2801]
+              - generic [ref=e2802]:
+                - generic [ref=e2803]: STARZ Encore Black
+                - generic [ref=e2804]:
+                  - text: Ch 540
+                  - generic [ref=e2805]: • DirectTV_39
+                  - button "Re-map" [ref=e2806]:
+                    - img [ref=e2807]
+                    - text: Re-map
+            - generic [ref=e2810] [cursor=pointer]:
+              - button "Watch Now" [ref=e2811]:
+                - img [ref=e2812]
+              - img "STARZ Encore Action HD" [ref=e2814]
+              - generic [ref=e2815]:
+                - generic [ref=e2816]: STARZ Encore Action HD
+                - generic [ref=e2817]:
+                  - text: Ch 541
+                  - generic [ref=e2818]: • DirectTV_39
+                  - button "Re-map" [ref=e2819]:
+                    - img [ref=e2820]
+                    - text: Re-map
+            - generic [ref=e2823] [cursor=pointer]:
+              - button "Watch Now" [ref=e2824]:
+                - img [ref=e2825]
+              - img "STARZ Encore Family" [ref=e2827]
+              - generic [ref=e2828]:
+                - generic [ref=e2829]: STARZ Encore Family
+                - generic [ref=e2830]:
+                  - text: Ch 542
+                  - generic [ref=e2831]: • DirectTV_39
+                  - button "Re-map" [ref=e2832]:
+                    - img [ref=e2833]
+                    - text: Re-map
+            - generic [ref=e2836] [cursor=pointer]:
+              - button "Watch Now" [ref=e2837]:
+                - img [ref=e2838]
+              - img "Paramount+ with SHOWTIME EAST HD" [ref=e2840]
+              - generic [ref=e2841]:
+                - generic [ref=e2842]: Paramount+ with SHOWTIME EAST HD
+                - generic [ref=e2843]:
+                  - text: Ch 545
+                  - generic [ref=e2844]: • DirectTV_39
+                  - button "Re-map" [ref=e2845]:
+                    - img [ref=e2846]
+                    - text: Re-map
+            - generic [ref=e2849] [cursor=pointer]:
+              - button "Watch Now" [ref=e2850]:
+                - img [ref=e2851]
+              - img "Paramount+ with SHOWTIME WEST HD" [ref=e2853]
+              - generic [ref=e2854]:
+                - generic [ref=e2855]: Paramount+ with SHOWTIME WEST HD
+                - generic [ref=e2856]:
+                  - text: Ch 546
+                  - generic [ref=e2857]: • DirectTV_39
+                  - button "Re-map" [ref=e2858]:
+                    - img [ref=e2859]
+                    - text: Re-map
+            - generic [ref=e2862] [cursor=pointer]:
+              - button "Watch Now" [ref=e2863]:
+                - img [ref=e2864]
+              - img "SHOWTIME 2 HD" [ref=e2866]
+              - generic [ref=e2867]:
+                - generic [ref=e2868]: SHOWTIME 2 HD
+                - generic [ref=e2869]:
+                  - text: Ch 547
+                  - generic [ref=e2870]: • DirectTV_39
+                  - button "Re-map" [ref=e2871]:
+                    - img [ref=e2872]
+                    - text: Re-map
+            - generic [ref=e2875] [cursor=pointer]:
+              - button "Watch Now" [ref=e2876]:
+                - img [ref=e2877]
+              - img "SHOxBET HD" [ref=e2879]
+              - generic [ref=e2880]:
+                - generic [ref=e2881]: SHOxBET HD
+                - generic [ref=e2882]:
+                  - text: Ch 548
+                  - generic [ref=e2883]: • DirectTV_39
+                  - button "Re-map" [ref=e2884]:
+                    - img [ref=e2885]
+                    - text: Re-map
+            - generic [ref=e2888] [cursor=pointer]:
+              - button "Watch Now" [ref=e2889]:
+                - img [ref=e2890]
+              - img "Showtime Extreme HD" [ref=e2892]
+              - generic [ref=e2893]:
+                - generic [ref=e2894]: Showtime Extreme HD
+                - generic [ref=e2895]:
+                  - text: Ch 549
+                  - generic [ref=e2896]: • DirectTV_39
+                  - button "Re-map" [ref=e2897]:
+                    - img [ref=e2898]
+                    - text: Re-map
+            - generic [ref=e2901] [cursor=pointer]:
+              - button "Watch Now" [ref=e2902]:
+                - img [ref=e2903]
+              - img "Showtime Showcase HD" [ref=e2905]
+              - generic [ref=e2906]:
+                - generic [ref=e2907]: Showtime Showcase HD
+                - generic [ref=e2908]:
+                  - text: Ch 550
+                  - generic [ref=e2909]: • DirectTV_39
+                  - button "Re-map" [ref=e2910]:
+                    - img [ref=e2911]
+                    - text: Re-map
+            - generic [ref=e2914] [cursor=pointer]:
+              - button "Watch Now" [ref=e2915]:
+                - img [ref=e2916]
+              - img "Showtime Next HD" [ref=e2918]
+              - generic [ref=e2919]:
+                - generic [ref=e2920]: Showtime Next HD
+                - generic [ref=e2921]:
+                  - text: Ch 551
+                  - generic [ref=e2922]: • DirectTV_39
+                  - button "Re-map" [ref=e2923]:
+                    - img [ref=e2924]
+                    - text: Re-map
+            - generic [ref=e2927] [cursor=pointer]:
+              - button "Watch Now" [ref=e2928]:
+                - img [ref=e2929]
+              - img "Showtime FamilyZone HD" [ref=e2931]
+              - generic [ref=e2932]:
+                - generic [ref=e2933]: Showtime FamilyZone HD
+                - generic [ref=e2934]:
+                  - text: Ch 552
+                  - generic [ref=e2935]: • DirectTV_39
+                  - button "Re-map" [ref=e2936]:
+                    - img [ref=e2937]
+                    - text: Re-map
+            - generic [ref=e2940] [cursor=pointer]:
+              - button "Watch Now" [ref=e2941]:
+                - img [ref=e2942]
+              - img "The Movie Channel East HD" [ref=e2944]
+              - generic [ref=e2945]:
+                - generic [ref=e2946]: The Movie Channel East HD
+                - generic [ref=e2947]:
+                  - text: Ch 553
+                  - generic [ref=e2948]: • DirectTV_39
+                  - button "Re-map" [ref=e2949]:
+                    - img [ref=e2950]
+                    - text: Re-map
+            - generic [ref=e2953] [cursor=pointer]:
+              - button "Watch Now" [ref=e2954]:
+                - img [ref=e2955]
+              - img "The Movie Channel Xtra HD" [ref=e2957]
+              - generic [ref=e2958]:
+                - generic [ref=e2959]: The Movie Channel Xtra HD
+                - generic [ref=e2960]:
+                  - text: Ch 555
+                  - generic [ref=e2961]: • DirectTV_39
+                  - button "Re-map" [ref=e2962]:
+                    - img [ref=e2963]
+                    - text: Re-map
+            - generic [ref=e2966] [cursor=pointer]:
+              - button "Watch Now" [ref=e2967]:
+                - img [ref=e2968]
+              - img "MGM+" [ref=e2970]
+              - generic [ref=e2971]:
+                - generic [ref=e2972]: MGM+
+                - generic [ref=e2973]:
+                  - text: Ch 558
+                  - generic [ref=e2974]: • DirectTV_39
+                  - button "Re-map" [ref=e2975]:
+                    - img [ref=e2976]
+                    - text: Re-map
+            - generic [ref=e2979] [cursor=pointer]:
+              - button "Watch Now" [ref=e2980]:
+                - img [ref=e2981]
+              - img "MGM+ HITS" [ref=e2983]
+              - generic [ref=e2984]:
+                - generic [ref=e2985]: MGM+ HITS
+                - generic [ref=e2986]:
+                  - text: Ch 559
+                  - generic [ref=e2987]: • DirectTV_39
+                  - button "Re-map" [ref=e2988]:
+                    - img [ref=e2989]
+                    - text: Re-map
+            - generic [ref=e2992] [cursor=pointer]:
+              - button "Watch Now" [ref=e2993]:
+                - img [ref=e2994]
+              - img "MGM+ MARQUEE" [ref=e2996]
+              - generic [ref=e2997]:
+                - generic [ref=e2998]: MGM+ MARQUEE
+                - generic [ref=e2999]:
+                  - text: Ch 560
+                  - generic [ref=e3000]: • DirectTV_39
+                  - button "Re-map" [ref=e3001]:
+                    - img [ref=e3002]
+                    - text: Re-map
+            - generic [ref=e3005] [cursor=pointer]:
+              - button "Watch Now" [ref=e3006]:
+                - img [ref=e3007]
+              - img "Hallmark Mystery" [ref=e3009]
+              - generic [ref=e3010]:
+                - generic [ref=e3011]: Hallmark Mystery
+                - generic [ref=e3012]:
+                  - text: Ch 565
+                  - generic [ref=e3013]: • DirectTV_39
+                  - button "Re-map" [ref=e3014]:
+                    - img [ref=e3015]
+                    - text: Re-map
+            - generic [ref=e3018] [cursor=pointer]:
+              - button "Watch Now" [ref=e3019]:
+                - img [ref=e3020]
+              - img "HDNET MOVIES" [ref=e3022]
+              - generic [ref=e3023]:
+                - generic [ref=e3024]: HDNET MOVIES
+                - generic [ref=e3025]:
+                  - text: Ch 566
+                  - generic [ref=e3026]: • DirectTV_39
+                  - button "Re-map" [ref=e3027]:
+                    - img [ref=e3028]
+                    - text: Re-map
+            - generic [ref=e3031] [cursor=pointer]:
+              - button "Watch Now" [ref=e3032]:
+                - img [ref=e3033]
+              - img "Smithsonian Channel HD" [ref=e3035]
+              - generic [ref=e3036]:
+                - generic [ref=e3037]: Smithsonian Channel HD
+                - generic [ref=e3038]:
+                  - text: Ch 570
+                  - generic [ref=e3039]: • DirectTV_39
+                  - button "Re-map" [ref=e3040]:
+                    - img [ref=e3041]
+                    - text: Re-map
+            - generic [ref=e3044] [cursor=pointer]:
+              - button "Watch Now" [ref=e3045]:
+                - img [ref=e3046]
+              - img "ShortsTV HD" [ref=e3048]
+              - generic [ref=e3049]:
+                - generic [ref=e3050]: ShortsTV HD
+                - generic [ref=e3051]:
+                  - text: Ch 573
+                  - generic [ref=e3052]: • DirectTV_39
+                  - button "Re-map" [ref=e3053]:
+                    - img [ref=e3054]
+                    - text: Re-map
+            - generic [ref=e3057] [cursor=pointer]:
+              - button "Watch Now" [ref=e3058]:
+                - img [ref=e3059]
+              - img "FanDuel TV HD" [ref=e3061]
+              - generic [ref=e3062]:
+                - generic [ref=e3063]: FanDuel TV HD
+                - generic [ref=e3064]:
+                  - text: Ch 602
+                  - generic [ref=e3065]: • DirectTV_39
+                  - button "Re-map" [ref=e3066]:
+                    - img [ref=e3067]
+                    - text: Re-map
+            - generic [ref=e3070] [cursor=pointer]:
+              - button "Watch Now" [ref=e3071]:
+                - img [ref=e3072]
+              - img "Cowboy Channel" [ref=e3074]
+              - generic [ref=e3075]:
+                - generic [ref=e3076]: Cowboy Channel
+                - generic [ref=e3077]:
+                  - text: Ch 603
+                  - generic [ref=e3078]: • DirectTV_39
+                  - button "Re-map" [ref=e3079]:
+                    - img [ref=e3080]
+                    - text: Re-map
+            - generic [ref=e3083] [cursor=pointer]:
+              - button "Watch Now" [ref=e3084]:
+                - img [ref=e3085]
+              - img "Pursuit Channel" [ref=e3087]
+              - generic [ref=e3088]:
+                - generic [ref=e3089]: Pursuit Channel
+                - generic [ref=e3090]:
+                  - text: Ch 604
+                  - generic [ref=e3091]: • DirectTV_39
+                  - button "Re-map" [ref=e3092]:
+                    - img [ref=e3093]
+                    - text: Re-map
+            - generic [ref=e3096] [cursor=pointer]:
+              - button "Watch Now" [ref=e3097]:
+                - img [ref=e3098]
+              - img "Sportsman Channel" [ref=e3100]
+              - generic [ref=e3101]:
+                - generic [ref=e3102]: Sportsman Channel
+                - generic [ref=e3103]:
+                  - text: Ch 605
+                  - generic [ref=e3104]: • DirectTV_39
+                  - button "Re-map" [ref=e3105]:
+                    - img [ref=e3106]
+                    - text: Re-map
+            - generic [ref=e3109] [cursor=pointer]:
+              - button "Watch Now" [ref=e3110]:
+                - img [ref=e3111]
+              - img "Outdoor Channel HD" [ref=e3113]
+              - generic [ref=e3114]:
+                - generic [ref=e3115]: Outdoor Channel HD
+                - generic [ref=e3116]:
+                  - text: Ch 606
+                  - generic [ref=e3117]: • DirectTV_39
+                  - button "Re-map" [ref=e3118]:
+                    - img [ref=e3119]
+                    - text: Re-map
+            - generic [ref=e3122] [cursor=pointer]:
+              - button "Watch Now" [ref=e3123]:
+                - img [ref=e3124]
+              - img "BTN HD" [ref=e3126]
+              - generic [ref=e3127]:
+                - generic [ref=e3128]: BTN HD
+                - generic [ref=e3129]:
+                  - text: Ch 610
+                  - generic [ref=e3130]: • DirectTV_39
+                  - button "Re-map" [ref=e3131]:
+                    - img [ref=e3132]
+                    - text: Re-map
+            - generic [ref=e3135] [cursor=pointer]:
+              - button "Watch Now" [ref=e3136]:
+                - img [ref=e3137]
+              - img "Big Ten Network Overflow 2" [ref=e3139]
+              - generic [ref=e3140]:
+                - generic [ref=e3141]: Big Ten Network Overflow 2
+                - generic [ref=e3142]:
+                  - text: Ch 610
+                  - generic [ref=e3143]: • DirectTV_39
+                  - generic [ref=e3144]: • No EPG
+                  - button "Map" [ref=e3145]:
+                    - img [ref=e3146]
+                    - text: Map
+            - generic [ref=e3149] [cursor=pointer]:
+              - button "Watch Now" [ref=e3150]:
+                - img [ref=e3151]
+              - img "Big Ten Network Overflow 3" [ref=e3153]
+              - generic [ref=e3154]:
+                - generic [ref=e3155]: Big Ten Network Overflow 3
+                - generic [ref=e3156]:
+                  - text: Ch 610
+                  - generic [ref=e3157]: • DirectTV_39
+                  - generic [ref=e3158]: • No EPG
+                  - button "Map" [ref=e3159]:
+                    - img [ref=e3160]
+                    - text: Map
+            - generic [ref=e3163] [cursor=pointer]:
+              - button "Watch Now" [ref=e3164]:
+                - img [ref=e3165]
+              - img "Big Ten Network Overflow 4" [ref=e3167]
+              - generic [ref=e3168]:
+                - generic [ref=e3169]: Big Ten Network Overflow 4
+                - generic [ref=e3170]:
+                  - text: Ch 610
+                  - generic [ref=e3171]: • DirectTV_39
+                  - generic [ref=e3172]: • No EPG
+                  - button "Map" [ref=e3173]:
+                    - img [ref=e3174]
+                    - text: Map
+            - generic [ref=e3177] [cursor=pointer]:
+              - button "Watch Now" [ref=e3178]:
+                - img [ref=e3179]
+              - img "SEC Network HD" [ref=e3181]
+              - generic [ref=e3182]:
+                - generic [ref=e3183]: SEC Network HD
+                - generic [ref=e3184]:
+                  - text: Ch 611
+                  - generic [ref=e3185]: • DirectTV_39
+                  - button "Re-map" [ref=e3186]:
+                    - img [ref=e3187]
+                    - text: Re-map
+            - generic [ref=e3190] [cursor=pointer]:
+              - button "Watch Now" [ref=e3191]:
+                - img [ref=e3192]
+              - img "ACC Network HD" [ref=e3194]
+              - generic [ref=e3195]:
+                - generic [ref=e3196]: ACC Network HD
+                - generic [ref=e3197]:
+                  - text: Ch 612
+                  - generic [ref=e3198]: • DirectTV_39
+                  - button "Re-map" [ref=e3199]:
+                    - img [ref=e3200]
+                    - text: Re-map
+            - generic [ref=e3203] [cursor=pointer]:
+              - button "Watch Now" [ref=e3204]:
+                - img [ref=e3205]
+              - img "FOX Sports 2 HD" [ref=e3207]
+              - generic [ref=e3208]:
+                - generic [ref=e3209]: FOX Sports 2 HD
+                - generic [ref=e3210]:
+                  - text: Ch 618
+                  - generic [ref=e3211]: • DirectTV_39
+                  - button "Re-map" [ref=e3212]:
+                    - img [ref=e3213]
+                    - text: Re-map
+            - generic [ref=e3216] [cursor=pointer]:
+              - button "Watch Now" [ref=e3217]:
+                - img [ref=e3218]
+              - img "Next Level Sports HD" [ref=e3220]
+              - generic [ref=e3221]:
+                - generic [ref=e3222]: Next Level Sports HD
+                - generic [ref=e3223]:
+                  - text: Ch 623
+                  - generic [ref=e3224]: • DirectTV_39
+                  - button "Re-map" [ref=e3225]:
+                    - img [ref=e3226]
+                    - text: Re-map
+            - generic [ref=e3229] [cursor=pointer]:
+              - button "Watch Now" [ref=e3230]:
+                - img [ref=e3231]
+              - img "Willow HD" [ref=e3233]
+              - generic [ref=e3234]:
+                - generic [ref=e3235]: Willow HD
+                - generic [ref=e3236]:
+                  - text: Ch 625
+                  - generic [ref=e3237]: • DirectTV_39
+                  - button "Re-map" [ref=e3238]:
+                    - img [ref=e3239]
+                    - text: Re-map
+            - generic [ref=e3242] [cursor=pointer]:
+              - button "Watch Now" [ref=e3243]:
+                - img [ref=e3244]
+              - img "Willow 2" [ref=e3246]
+              - generic [ref=e3247]:
+                - generic [ref=e3248]: Willow 2
+                - generic [ref=e3249]:
+                  - text: Ch 626
+                  - generic [ref=e3250]: • DirectTV_39
+                  - button "Re-map" [ref=e3251]:
+                    - img [ref=e3252]
+                    - text: Re-map
+            - generic [ref=e3255] [cursor=pointer]:
+              - button "Watch Now" [ref=e3256]:
+                - img [ref=e3257]
+              - img "NESN HD" [ref=e3259]
+              - generic [ref=e3260]:
+                - generic [ref=e3261]: NESN HD
+                - generic [ref=e3262]:
+                  - text: Ch 628
+                  - generic [ref=e3263]: • DirectTV_39
+                  - generic [ref=e3264]: • No EPG
+                  - button "Map" [ref=e3265]:
+                    - img [ref=e3266]
+                    - text: Map
+            - generic [ref=e3269] [cursor=pointer]:
+              - button "Watch Now" [ref=e3270]:
+                - img [ref=e3271]
+              - img "NESN PLUS" [ref=e3273]
+              - generic [ref=e3274]:
+                - generic [ref=e3275]: NESN PLUS
+                - generic [ref=e3276]:
+                  - text: Ch 628
+                  - generic [ref=e3277]: • DirectTV_39
+                  - button "Re-map" [ref=e3278]:
+                    - img [ref=e3279]
+                    - text: Re-map
+            - generic [ref=e3282] [cursor=pointer]:
+              - button "Watch Now" [ref=e3283]:
+                - img [ref=e3284]
+              - img "NBC Sports Boston HD" [ref=e3286]
+              - generic [ref=e3287]:
+                - generic [ref=e3288]: NBC Sports Boston HD
+                - generic [ref=e3289]:
+                  - text: Ch 630
+                  - generic [ref=e3290]: • DirectTV_39
+                  - button "Re-map" [ref=e3291]:
+                    - img [ref=e3292]
+                    - text: Re-map
+            - generic [ref=e3295] [cursor=pointer]:
+              - button "Watch Now" [ref=e3296]:
+                - img [ref=e3297]
+              - img "Yankees Entertainment & Sports Network" [ref=e3299]
+              - generic [ref=e3300]:
+                - generic [ref=e3301]: Yankees Entertainment & Sports Network
+                - generic [ref=e3302]:
+                  - text: Ch 631
+                  - generic [ref=e3303]: • DirectTV_39
+                  - generic [ref=e3304]: • No EPG
+                  - button "Map" [ref=e3305]:
+                    - img [ref=e3306]
+                    - text: Map
+            - generic [ref=e3309] [cursor=pointer]:
+              - button "Watch Now" [ref=e3310]:
+                - img [ref=e3311]
+              - img "Yes Network HD" [ref=e3313]
+              - generic [ref=e3314]:
+                - generic [ref=e3315]: Yes Network HD
+                - generic [ref=e3316]:
+                  - text: Ch 631
+                  - generic [ref=e3317]: • DirectTV_39
+                  - button "Re-map" [ref=e3318]:
+                    - img [ref=e3319]
+                    - text: Re-map
+            - generic [ref=e3322] [cursor=pointer]:
+              - button "Watch Now" [ref=e3323]:
+                - img [ref=e3324]
+              - img "Madison Square Garden HD" [ref=e3326]
+              - generic [ref=e3327]:
+                - generic [ref=e3328]: Madison Square Garden HD
+                - generic [ref=e3329]:
+                  - text: Ch 634
+                  - generic [ref=e3330]: • DirectTV_39
+                  - button "Re-map" [ref=e3331]:
+                    - img [ref=e3332]
+                    - text: Re-map
+            - generic [ref=e3335] [cursor=pointer]:
+              - button "Watch Now" [ref=e3336]:
+                - img [ref=e3337]
+              - img "MSG ALT-1" [ref=e3339]
+              - generic [ref=e3340]:
+                - generic [ref=e3341]: MSG ALT-1
+                - generic [ref=e3342]:
+                  - text: Ch 635
+                  - generic [ref=e3343]: • DirectTV_39
+                  - button "Re-map" [ref=e3344]:
+                    - img [ref=e3345]
+                    - text: Re-map
+            - generic [ref=e3348] [cursor=pointer]:
+              - button "Watch Now" [ref=e3349]:
+                - img [ref=e3350]
+              - img "MSG ALT-2" [ref=e3352]
+              - generic [ref=e3353]:
+                - generic [ref=e3354]: MSG ALT-2
+                - generic [ref=e3355]:
+                  - text: Ch 635
+                  - generic [ref=e3356]: • DirectTV_39
+                  - generic [ref=e3357]: • No EPG
+                  - button "Map" [ref=e3358]:
+                    - img [ref=e3359]
+                    - text: Map
+            - generic [ref=e3362] [cursor=pointer]:
+              - button "Watch Now" [ref=e3363]:
+                - img [ref=e3364]
+              - img "MSG ALT-3" [ref=e3366]
+              - generic [ref=e3367]:
+                - generic [ref=e3368]: MSG ALT-3
+                - generic [ref=e3369]:
+                  - text: Ch 635
+                  - generic [ref=e3370]: • DirectTV_39
+                  - generic [ref=e3371]: • No EPG
+                  - button "Map" [ref=e3372]:
+                    - img [ref=e3373]
+                    - text: Map
+            - generic [ref=e3376] [cursor=pointer]:
+              - button "Watch Now" [ref=e3377]:
+                - img [ref=e3378]
+              - img "MSG Sportsnet HD" [ref=e3380]
+              - generic [ref=e3381]:
+                - generic [ref=e3382]: MSG Sportsnet HD
+                - generic [ref=e3383]:
+                  - text: Ch 635
+                  - generic [ref=e3384]: • DirectTV_39
+                  - generic [ref=e3385]: • No EPG
+                  - button "Map" [ref=e3386]:
+                    - img [ref=e3387]
+                    - text: Map
+            - generic [ref=e3390] [cursor=pointer]:
+              - button "Watch Now" [ref=e3391]:
+                - img [ref=e3392]
+              - img "SportsNet New York HD" [ref=e3394]
+              - generic [ref=e3395]:
+                - generic [ref=e3396]: SportsNet New York HD
+                - generic [ref=e3397]:
+                  - text: Ch 639
+                  - generic [ref=e3398]: • DirectTV_39
+                  - button "Re-map" [ref=e3399]:
+                    - img [ref=e3400]
+                    - text: Re-map
+            - generic [ref=e3403] [cursor=pointer]:
+              - button "Watch Now" [ref=e3404]:
+                - img [ref=e3405]
+              - img "MASN HD" [ref=e3407]
+              - generic [ref=e3408]:
+                - generic [ref=e3409]: MASN HD
+                - generic [ref=e3410]:
+                  - text: Ch 640
+                  - generic [ref=e3411]: • DirectTV_39
+                  - generic [ref=e3412]: • No EPG
+                  - button "Map" [ref=e3413]:
+                    - img [ref=e3414]
+                    - text: Map
+            - generic [ref=e3417] [cursor=pointer]:
+              - button "Watch Now" [ref=e3418]:
+                - img [ref=e3419]
+              - img "MASN2" [ref=e3421]
+              - generic [ref=e3422]:
+                - generic [ref=e3423]: MASN2
+                - generic [ref=e3424]:
+                  - text: Ch 640
+                  - generic [ref=e3425]: • DirectTV_39
+                  - button "Re-map" [ref=e3426]:
+                    - img [ref=e3427]
+                    - text: Re-map
+            - generic [ref=e3430] [cursor=pointer]:
+              - button "Watch Now" [ref=e3431]:
+                - img [ref=e3432]
+              - img "Monumental Sports Network Alternate" [ref=e3434]
+              - generic [ref=e3435]:
+                - generic [ref=e3436]: Monumental Sports Network Alternate
+                - generic [ref=e3437]:
+                  - text: Ch 642
+                  - generic [ref=e3438]: • DirectTV_39
+                  - button "Re-map" [ref=e3439]:
+                    - img [ref=e3440]
+                    - text: Re-map
+            - generic [ref=e3443] [cursor=pointer]:
+              - button "Watch Now" [ref=e3444]:
+                - img [ref=e3445]
+              - img "Monumental Sports Network HD" [ref=e3447]
+              - generic [ref=e3448]:
+                - generic [ref=e3449]: Monumental Sports Network HD
+                - generic [ref=e3450]:
+                  - text: Ch 642
+                  - generic [ref=e3451]: • DirectTV_39
+                  - generic [ref=e3452]: • No EPG
+                  - button "Map" [ref=e3453]:
+                    - img [ref=e3454]
+                    - text: Map
+            - generic [ref=e3457] [cursor=pointer]:
+              - button "Watch Now" [ref=e3458]:
+                - img [ref=e3459]
+              - img "FanDuel Sports Network South" [ref=e3461]
+              - generic [ref=e3462]:
+                - generic [ref=e3463]: FanDuel Sports Network South
+                - generic [ref=e3464]:
+                  - text: Ch 646
+                  - generic [ref=e3465]: • DirectTV_39
+                  - button "Re-map" [ref=e3466]:
+                    - img [ref=e3467]
+                    - text: Re-map
+            - generic [ref=e3470] [cursor=pointer]:
+              - button "Watch Now" [ref=e3471]:
+                - img [ref=e3472]
+              - img "FanDuel Sports Network Southeast" [ref=e3474]
+              - generic [ref=e3475]:
+                - generic [ref=e3476]: FanDuel Sports Network Southeast
+                - generic [ref=e3477]:
+                  - text: Ch 649
+                  - generic [ref=e3478]: • DirectTV_39
+                  - button "Re-map" [ref=e3479]:
+                    - img [ref=e3480]
+                    - text: Re-map
+            - generic [ref=e3483] [cursor=pointer]:
+              - button "Watch Now" [ref=e3484]:
+                - img [ref=e3485]
+              - img "FanDuel Sports Network Sun" [ref=e3487]
+              - generic [ref=e3488]:
+                - generic [ref=e3489]: FanDuel Sports Network Sun
+                - generic [ref=e3490]:
+                  - text: Ch 653
+                  - generic [ref=e3491]: • DirectTV_39
+                  - button "Re-map" [ref=e3492]:
+                    - img [ref=e3493]
+                    - text: Re-map
+            - generic [ref=e3496] [cursor=pointer]:
+              - button "Watch Now" [ref=e3497]:
+                - img [ref=e3498]
+              - img "FanDuel Sports Network Florida" [ref=e3500]
+              - generic [ref=e3501]:
+                - generic [ref=e3502]: FanDuel Sports Network Florida
+                - generic [ref=e3503]:
+                  - text: Ch 654
+                  - generic [ref=e3504]: • DirectTV_39
+                  - button "Re-map" [ref=e3505]:
+                    - img [ref=e3506]
+                    - text: Re-map
+            - generic [ref=e3509] [cursor=pointer]:
+              - button "Watch Now" [ref=e3510]:
+                - img [ref=e3511]
+              - img "SportsNet Pittsburgh Alternate" [ref=e3513]
+              - generic [ref=e3514]:
+                - generic [ref=e3515]: SportsNet Pittsburgh Alternate
+                - generic [ref=e3516]:
+                  - text: Ch 659
+                  - generic [ref=e3517]: • DirectTV_39
+                  - button "Re-map" [ref=e3518]:
+                    - img [ref=e3519]
+                    - text: Re-map
+            - generic [ref=e3522] [cursor=pointer]:
+              - button "Watch Now" [ref=e3523]:
+                - img [ref=e3524]
+              - img "SportsNet Pittsburgh HD" [ref=e3526]
+              - generic [ref=e3527]:
+                - generic [ref=e3528]: SportsNet Pittsburgh HD
+                - generic [ref=e3529]:
+                  - text: Ch 659
+                  - generic [ref=e3530]: • DirectTV_39
+                  - generic [ref=e3531]: • No EPG
+                  - button "Map" [ref=e3532]:
+                    - img [ref=e3533]
+                    - text: Map
+            - generic [ref=e3536] [cursor=pointer]:
+              - button "Watch Now" [ref=e3537]:
+                - img [ref=e3538]
+              - img "FanDuel Sports Network Ohio" [ref=e3540]
+              - generic [ref=e3541]:
+                - generic [ref=e3542]: FanDuel Sports Network Ohio
+                - generic [ref=e3543]:
+                  - text: Ch 660
+                  - generic [ref=e3544]: • DirectTV_39
+                  - button "Re-map" [ref=e3545]:
+                    - img [ref=e3546]
+                    - text: Re-map
+            - generic [ref=e3549] [cursor=pointer]:
+              - button "Watch Now" [ref=e3550]:
+                - img [ref=e3551]
+              - img "FanDuel Sports Network Detroit" [ref=e3553]
+              - generic [ref=e3554]:
+                - generic [ref=e3555]: FanDuel Sports Network Detroit
+                - generic [ref=e3556]:
+                  - text: Ch 663
+                  - generic [ref=e3557]: • DirectTV_39
+                  - button "Re-map" [ref=e3558]:
+                    - img [ref=e3559]
+                    - text: Re-map
+            - generic [ref=e3562] [cursor=pointer]:
+              - button "Watch Now" [ref=e3563]:
+                - img [ref=e3564]
+              - img "Marquee Sports Network" [ref=e3566]
+              - generic [ref=e3567]:
+                - generic [ref=e3568]: Marquee Sports Network
+                - generic [ref=e3569]:
+                  - text: Ch 664
+                  - generic [ref=e3570]: • DirectTV_39
+                  - button "Re-map" [ref=e3571]:
+                    - img [ref=e3572]
+                    - text: Re-map
+            - generic [ref=e3575] [cursor=pointer]:
+              - button "Watch Now" [ref=e3576]:
+                - img [ref=e3577]
+              - img "Chicago Sports Network HD" [ref=e3579]
+              - generic [ref=e3580]:
+                - generic [ref=e3581]: Chicago Sports Network HD
+                - generic [ref=e3582]:
+                  - text: Ch 665
+                  - generic [ref=e3583]: • DirectTV_39
+                  - generic [ref=e3584]: • No EPG
+                  - button "Map" [ref=e3585]:
+                    - img [ref=e3586]
+                    - text: Map
+            - generic [ref=e3589] [cursor=pointer]:
+              - button "Watch Now" [ref=e3590]:
+                - img [ref=e3591]
+              - img "Chicago Sports Network Plus" [ref=e3593]
+              - generic [ref=e3594]:
+                - generic [ref=e3595]: Chicago Sports Network Plus
+                - generic [ref=e3596]:
+                  - text: Ch 665
+                  - generic [ref=e3597]: • DirectTV_39
+                  - button "Re-map" [ref=e3598]:
+                    - img [ref=e3599]
+                    - text: Re-map
+            - generic [ref=e3602] [cursor=pointer]:
+              - button "Watch Now" [ref=e3603]:
+                - img [ref=e3604]
+              - img "FanDuel Sports Network North" [ref=e3606]
+              - generic [ref=e3607]:
+                - generic [ref=e3608]: FanDuel Sports Network North
+                - generic [ref=e3609]:
+                  - text: Ch 668
+                  - generic [ref=e3610]: • DirectTV_39
+                  - button "Re-map" [ref=e3611]:
+                    - img [ref=e3612]
+                    - text: Re-map
+            - generic [ref=e3615] [cursor=pointer]:
+              - button "Watch Now" [ref=e3616]:
+                - img [ref=e3617]
+              - img "FanDuel Sports Network Wisconsin" [ref=e3619]
+              - generic [ref=e3620]:
+                - generic [ref=e3621]: FanDuel Sports Network Wisconsin
+                - generic [ref=e3622]:
+                  - text: Ch 669
+                  - generic [ref=e3623]: • DirectTV_39
+                  - button "Re-map" [ref=e3624]:
+                    - img [ref=e3625]
+                    - text: Re-map
+            - generic [ref=e3628] [cursor=pointer]:
+              - button "Watch Now" [ref=e3629]:
+                - img [ref=e3630]
+              - img "FanDuel Sports Network Midwest" [ref=e3632]
+              - generic [ref=e3633]:
+                - generic [ref=e3634]: FanDuel Sports Network Midwest
+                - generic [ref=e3635]:
+                  - text: Ch 671
+                  - generic [ref=e3636]: • DirectTV_39
+                  - button "Re-map" [ref=e3637]:
+                    - img [ref=e3638]
+                    - text: Re-map
+            - generic [ref=e3641] [cursor=pointer]:
+              - button "Watch Now" [ref=e3642]:
+                - img [ref=e3643]
+              - img "Space City Home Network Alternate" [ref=e3645]
+              - generic [ref=e3646]:
+                - generic [ref=e3647]: Space City Home Network Alternate
+                - generic [ref=e3648]:
+                  - text: Ch 674
+                  - generic [ref=e3649]: • DirectTV_39
+                  - button "Re-map" [ref=e3650]:
+                    - img [ref=e3651]
+                    - text: Re-map
+            - generic [ref=e3654] [cursor=pointer]:
+              - button "Watch Now" [ref=e3655]:
+                - img [ref=e3656]
+              - img "Space City Home Network HD" [ref=e3658]
+              - generic [ref=e3659]:
+                - generic [ref=e3660]: Space City Home Network HD
+                - generic [ref=e3661]:
+                  - text: Ch 674
+                  - generic [ref=e3662]: • DirectTV_39
+                  - generic [ref=e3663]: • No EPG
+                  - button "Map" [ref=e3664]:
+                    - img [ref=e3665]
+                    - text: Map
+            - generic [ref=e3668] [cursor=pointer]:
+              - button "Watch Now" [ref=e3669]:
+                - img [ref=e3670]
+              - img "FanDuel Sports Network Southeast" [ref=e3672]
+              - generic [ref=e3673]:
+                - generic [ref=e3674]: FanDuel Sports Network Southeast
+                - generic [ref=e3675]:
+                  - text: Ch 676
+                  - generic [ref=e3676]: • DirectTV_39
+                  - button "Re-map" [ref=e3677]:
+                    - img [ref=e3678]
+                    - text: Re-map
+            - generic [ref=e3681] [cursor=pointer]:
+              - button "Watch Now" [ref=e3682]:
+                - img [ref=e3683]
+              - img "Altitude Sports Alternate" [ref=e3685]
+              - generic [ref=e3686]:
+                - generic [ref=e3687]: Altitude Sports Alternate
+                - generic [ref=e3688]:
+                  - text: Ch 681
+                  - generic [ref=e3689]: • DirectTV_39
+                  - generic [ref=e3690]: • No EPG
+                  - button "Map" [ref=e3691]:
+                    - img [ref=e3692]
+                    - text: Map
+            - generic [ref=e3695] [cursor=pointer]:
+              - button "Watch Now" [ref=e3696]:
+                - img [ref=e3697]
+              - img "Altitude Sports HD" [ref=e3699]
+              - generic [ref=e3700]:
+                - generic [ref=e3701]: Altitude Sports HD
+                - generic [ref=e3702]:
+                  - text: Ch 681
+                  - generic [ref=e3703]: • DirectTV_39
+                  - button "Re-map" [ref=e3704]:
+                    - img [ref=e3705]
+                    - text: Re-map
+            - generic [ref=e3708] [cursor=pointer]:
+              - button "Watch Now" [ref=e3709]:
+                - img [ref=e3710]
+              - img "Spectrum SportsNet LA HD" [ref=e3712]
+              - generic [ref=e3713]:
+                - generic [ref=e3714]: Spectrum SportsNet LA HD
+                - generic [ref=e3715]:
+                  - text: Ch 690
+                  - generic [ref=e3716]: • DirectTV_39
+                  - button "Re-map" [ref=e3717]:
+                    - img [ref=e3718]
+                    - text: Re-map
+            - generic [ref=e3721] [cursor=pointer]:
+              - button "Watch Now" [ref=e3722]:
+                - img [ref=e3723]
+              - img "Spectrum SportsNet HD" [ref=e3725]
+              - generic [ref=e3726]:
+                - generic [ref=e3727]: Spectrum SportsNet HD
+                - generic [ref=e3728]:
+                  - text: Ch 691
+                  - generic [ref=e3729]: • DirectTV_39
+                  - button "Re-map" [ref=e3730]:
+                    - img [ref=e3731]
+                    - text: Re-map
+            - generic [ref=e3734] [cursor=pointer]:
+              - button "Watch Now" [ref=e3735]:
+                - img [ref=e3736]
+              - img "FanDuel Sports Network West" [ref=e3738]
+              - generic [ref=e3739]:
+                - generic [ref=e3740]: FanDuel Sports Network West
+                - generic [ref=e3741]:
+                  - text: Ch 692
+                  - generic [ref=e3742]: • DirectTV_39
+                  - button "Re-map" [ref=e3743]:
+                    - img [ref=e3744]
+                    - text: Re-map
+            - generic [ref=e3747] [cursor=pointer]:
+              - button "Watch Now" [ref=e3748]:
+                - img [ref=e3749]
+              - img "FanDuel Sports Network SoCal" [ref=e3751]
+              - generic [ref=e3752]:
+                - generic [ref=e3753]: FanDuel Sports Network SoCal
+                - generic [ref=e3754]:
+                  - text: Ch 693
+                  - generic [ref=e3755]: • DirectTV_39
+                  - button "Re-map" [ref=e3756]:
+                    - img [ref=e3757]
+                    - text: Re-map
+            - generic [ref=e3760] [cursor=pointer]:
+              - button "Watch Now" [ref=e3761]:
+                - img [ref=e3762]
+              - img "NBC Sports Bay Area HD" [ref=e3764]
+              - generic [ref=e3765]:
+                - generic [ref=e3766]: NBC Sports Bay Area HD
+                - generic [ref=e3767]:
+                  - text: Ch 696
+                  - generic [ref=e3768]: • DirectTV_39
+                  - button "Re-map" [ref=e3769]:
+                    - img [ref=e3770]
+                    - text: Re-map
+            - generic [ref=e3773] [cursor=pointer]:
+              - button "Watch Now" [ref=e3774]:
+                - img [ref=e3775]
+              - img "NBC Sports Bay Area Plus HD Alternate" [ref=e3777]
+              - generic [ref=e3778]:
+                - generic [ref=e3779]: NBC Sports Bay Area Plus HD Alternate
+                - generic [ref=e3780]:
+                  - text: Ch 696
+                  - generic [ref=e3781]: • DirectTV_39
+                  - generic [ref=e3782]: • No EPG
+                  - button "Map" [ref=e3783]:
+                    - img [ref=e3784]
+                    - text: Map
+            - generic [ref=e3787] [cursor=pointer]:
+              - button "Watch Now" [ref=e3788]:
+                - img [ref=e3789]
+              - img "NBC Sports California HD" [ref=e3791]
+              - generic [ref=e3792]:
+                - generic [ref=e3793]: NBC Sports California HD
+                - generic [ref=e3794]:
+                  - text: Ch 698
+                  - generic [ref=e3795]: • DirectTV_39
+                  - generic [ref=e3796]: • No EPG
+                  - button "Map" [ref=e3797]:
+                    - img [ref=e3798]
+                    - text: Map
+            - generic [ref=e3801] [cursor=pointer]:
+              - button "Watch Now" [ref=e3802]:
+                - img [ref=e3803]
+              - img "NBC Sports California Plus" [ref=e3805]
+              - generic [ref=e3806]:
+                - generic [ref=e3807]: NBC Sports California Plus
+                - generic [ref=e3808]:
+                  - text: Ch 698
+                  - generic [ref=e3809]: • DirectTV_39
+                  - button "Re-map" [ref=e3810]:
+                    - img [ref=e3811]
+                    - text: Re-map
+            - generic [ref=e3814] [cursor=pointer]:
+              - button "Watch Now" [ref=e3815]:
+                - img [ref=e3816]
+              - img "NBC Sports California Plus 2" [ref=e3818]
+              - generic [ref=e3819]:
+                - generic [ref=e3820]: NBC Sports California Plus 2
+                - generic [ref=e3821]:
+                  - text: Ch 698
+                  - generic [ref=e3822]: • DirectTV_39
+                  - generic [ref=e3823]: • No EPG
+                  - button "Map" [ref=e3824]:
+                    - img [ref=e3825]
+                    - text: Map
+            - generic [ref=e3828] [cursor=pointer]:
+              - button "Watch Now" [ref=e3829]:
+                - img [ref=e3830]
+              - img "MLB Strike Zone" [ref=e3832]
+              - generic [ref=e3833]:
+                - generic [ref=e3834]: MLB Strike Zone
+                - generic [ref=e3835]:
+                  - text: Ch 719
+                  - generic [ref=e3836]: • DirectTV_39
+                  - button "Re-map" [ref=e3837]:
+                    - img [ref=e3838]
+                    - text: Re-map
+            - generic [ref=e3841] [cursor=pointer]:
+              - button "Watch Now" [ref=e3842]:
+                - img [ref=e3843]
+              - img "Arirang TV" [ref=e3845]
+              - generic [ref=e3846]:
+                - generic [ref=e3847]: Arirang TV
+                - generic [ref=e3848]:
+                  - text: Ch 2095
+                  - generic [ref=e3849]: • DirectTV_39
+                  - button "Re-map" [ref=e3850]:
+                    - img [ref=e3851]
+                    - text: Re-map
+            - generic [ref=e3854] [cursor=pointer]:
+              - button "Watch Now" [ref=e3855]:
+                - img [ref=e3856]
+              - img "NBC News Now" [ref=e3858]
+              - generic [ref=e3859]:
+                - generic [ref=e3860]: NBC News Now
+                - generic [ref=e3861]:
+                  - text: Ch 4004
+                  - generic [ref=e3862]: • DirectTV_39
+                  - button "Re-map" [ref=e3863]:
+                    - img [ref=e3864]
+                    - text: Re-map
+            - generic [ref=e3867] [cursor=pointer]:
+              - button "Watch Now" [ref=e3868]:
+                - img [ref=e3869]
+              - img "Today All Day" [ref=e3871]
+              - generic [ref=e3872]:
+                - generic [ref=e3873]: Today All Day
+                - generic [ref=e3874]:
+                  - text: Ch 4005
+                  - generic [ref=e3875]: • DirectTV_39
+                  - button "Re-map" [ref=e3876]:
+                    - img [ref=e3877]
+                    - text: Re-map
+            - generic [ref=e3880] [cursor=pointer]:
+              - button "Watch Now" [ref=e3881]:
+                - img [ref=e3882]
+              - img "ABC News Live" [ref=e3884]
+              - generic [ref=e3885]:
+                - generic [ref=e3886]: ABC News Live
+                - generic [ref=e3887]:
+                  - text: Ch 4007
+                  - generic [ref=e3888]: • DirectTV_39
+                  - button "Re-map" [ref=e3889]:
+                    - img [ref=e3890]
+                    - text: Re-map
+            - generic [ref=e3893] [cursor=pointer]:
+              - button "Watch Now" [ref=e3894]:
+                - img [ref=e3895]
+              - img "ABC Localish" [ref=e3897]
+              - generic [ref=e3898]:
+                - generic [ref=e3899]: ABC Localish
+                - generic [ref=e3900]:
+                  - text: Ch 4008
+                  - generic [ref=e3901]: • DirectTV_39
+                  - button "Re-map" [ref=e3902]:
+                    - img [ref=e3903]
+                    - text: Re-map
+            - generic [ref=e3906] [cursor=pointer]:
+              - button "Watch Now" [ref=e3907]:
+                - img [ref=e3908]
+              - img "Scripps News" [ref=e3910]
+              - generic [ref=e3911]:
+                - generic [ref=e3912]: Scripps News
+                - generic [ref=e3913]:
+                  - text: Ch 4009
+                  - generic [ref=e3914]: • DirectTV_39
+                  - button "Re-map" [ref=e3915]:
+                    - img [ref=e3916]
+                    - text: Re-map
+            - generic [ref=e3919] [cursor=pointer]:
+              - button "Watch Now" [ref=e3920]:
+                - img [ref=e3921]
+              - img "20/20" [ref=e3923]
+              - generic [ref=e3924]:
+                - generic [ref=e3925]: 20/20
+                - generic [ref=e3926]:
+                  - text: Ch 4010
+                  - generic [ref=e3927]: • DirectTV_39
+                  - button "Re-map" [ref=e3928]:
+                    - img [ref=e3929]
+                    - text: Re-map
+            - generic [ref=e3932] [cursor=pointer]:
+              - button "Watch Now" [ref=e3933]:
+                - img [ref=e3934]
+              - img "Yahoo Finance" [ref=e3936]
+              - generic [ref=e3937]:
+                - generic [ref=e3938]: Yahoo Finance
+                - generic [ref=e3939]:
+                  - text: Ch 4021
+                  - generic [ref=e3940]: • DirectTV_39
+                  - button "Re-map" [ref=e3941]:
+                    - img [ref=e3942]
+                    - text: Re-map
+            - generic [ref=e3945] [cursor=pointer]:
+              - button "Watch Now" [ref=e3946]:
+                - img [ref=e3947]
+              - img "SportsGrid" [ref=e3949]
+              - generic [ref=e3950]:
+                - generic [ref=e3951]: SportsGrid
+                - generic [ref=e3952]:
+                  - text: Ch 4105
+                  - generic [ref=e3953]: • DirectTV_39
+                  - button "Re-map" [ref=e3954]:
+                    - img [ref=e3955]
+                    - text: Re-map
+            - generic [ref=e3958] [cursor=pointer]:
+              - button "Watch Now" [ref=e3959]:
+                - img [ref=e3960]
+              - img "DraftKings" [ref=e3962]
+              - generic [ref=e3963]:
+                - generic [ref=e3964]: DraftKings
+                - generic [ref=e3965]:
+                  - text: Ch 4106
+                  - generic [ref=e3966]: • DirectTV_39
+                  - button "Re-map" [ref=e3967]:
+                    - img [ref=e3968]
+                    - text: Re-map
+            - generic [ref=e3971] [cursor=pointer]:
+              - button "Watch Now" [ref=e3972]:
+                - img [ref=e3973]
+              - 'img "ESPN8: The Ocho" [ref=e3975]'
+              - generic [ref=e3976]:
+                - generic [ref=e3977]: "ESPN8: The Ocho"
+                - generic [ref=e3978]:
+                  - text: Ch 4108
+                  - generic [ref=e3979]: • DirectTV_39
+                  - button "Re-map" [ref=e3980]:
+                    - img [ref=e3981]
+                    - text: Re-map
+            - generic [ref=e3984] [cursor=pointer]:
+              - button "Watch Now" [ref=e3985]:
+                - img [ref=e3986]
+              - img "Fuel TV" [ref=e3988]
+              - generic [ref=e3989]:
+                - generic [ref=e3990]: Fuel TV
+                - generic [ref=e3991]:
+                  - text: Ch 4110
+                  - generic [ref=e3992]: • DirectTV_39
+                  - button "Re-map" [ref=e3993]:
+                    - img [ref=e3994]
+                    - text: Re-map
+            - generic [ref=e3997] [cursor=pointer]:
+              - button "Watch Now" [ref=e3998]:
+                - img [ref=e3999]
+              - img "Fox Sports" [ref=e4001]
+              - generic [ref=e4002]:
+                - generic [ref=e4003]: Fox Sports
+                - generic [ref=e4004]:
+                  - text: Ch 4111
+                  - generic [ref=e4005]: • DirectTV_39
+                  - button "Re-map" [ref=e4006]:
+                    - img [ref=e4007]
+                    - text: Re-map
+            - generic [ref=e4010] [cursor=pointer]:
+              - button "Watch Now" [ref=e4011]:
+                - img [ref=e4012]
+              - img "NBA FAST Channel" [ref=e4014]
+              - generic [ref=e4015]:
+                - generic [ref=e4016]: NBA FAST Channel
+                - generic [ref=e4017]:
+                  - text: Ch 4114
+                  - generic [ref=e4018]: • DirectTV_39
+                  - button "Re-map" [ref=e4019]:
+                    - img [ref=e4020]
+                    - text: Re-map
+            - generic [ref=e4023] [cursor=pointer]:
+              - button "Watch Now" [ref=e4024]:
+                - img [ref=e4025]
+              - img "GolfPass" [ref=e4027]
+              - generic [ref=e4028]:
+                - generic [ref=e4029]: GolfPass
+                - generic [ref=e4030]:
+                  - text: Ch 4116
+                  - generic [ref=e4031]: • DirectTV_39
+                  - button "Re-map" [ref=e4032]:
+                    - img [ref=e4033]
+                    - text: Re-map
+            - generic [ref=e4036] [cursor=pointer]:
+              - button "Watch Now" [ref=e4037]:
+                - img [ref=e4038]
+              - img "Tennis Channel 2" [ref=e4040]
+              - generic [ref=e4041]:
+                - generic [ref=e4042]: Tennis Channel 2
+                - generic [ref=e4043]:
+                  - text: Ch 4117
+                  - generic [ref=e4044]: • DirectTV_39
+                  - button "Re-map" [ref=e4045]:
+                    - img [ref=e4046]
+                    - text: Re-map
+            - generic [ref=e4049] [cursor=pointer]:
+              - button "Watch Now" [ref=e4050]:
+                - img [ref=e4051]
+              - img "Surf Cinema" [ref=e4053]
+              - generic [ref=e4054]:
+                - generic [ref=e4055]: Surf Cinema
+                - generic [ref=e4056]:
+                  - text: Ch 4118
+                  - generic [ref=e4057]: • DirectTV_39
+                  - button "Re-map" [ref=e4058]:
+                    - img [ref=e4059]
+                    - text: Re-map
+            - generic [ref=e4062] [cursor=pointer]:
+              - button "Watch Now" [ref=e4063]:
+                - img [ref=e4064]
+              - img "Red Bull TV" [ref=e4066]
+              - generic [ref=e4067]:
+                - generic [ref=e4068]: Red Bull TV
+                - generic [ref=e4069]:
+                  - text: Ch 4119
+                  - generic [ref=e4070]: • DirectTV_39
+                  - button "Re-map" [ref=e4071]:
+                    - img [ref=e4072]
+                    - text: Re-map
+            - generic [ref=e4075] [cursor=pointer]:
+              - button "Watch Now" [ref=e4076]:
+                - img [ref=e4077]
+              - img "beIN SPORTS XTRA" [ref=e4079]
+              - generic [ref=e4080]:
+                - generic [ref=e4081]: beIN SPORTS XTRA
+                - generic [ref=e4082]:
+                  - text: Ch 4122
+                  - generic [ref=e4083]: • DirectTV_39
+                  - button "Re-map" [ref=e4084]:
+                    - img [ref=e4085]
+                    - text: Re-map
+            - generic [ref=e4088] [cursor=pointer]:
+              - button "Watch Now" [ref=e4089]:
+                - img [ref=e4090]
+              - img "Willow Sports" [ref=e4092]
+              - generic [ref=e4093]:
+                - generic [ref=e4094]: Willow Sports
+                - generic [ref=e4095]:
+                  - text: Ch 4123
+                  - generic [ref=e4096]: • DirectTV_39
+                  - button "Re-map" [ref=e4097]:
+                    - img [ref=e4098]
+                    - text: Re-map
+            - generic [ref=e4101] [cursor=pointer]:
+              - button "Watch Now" [ref=e4102]:
+                - img [ref=e4103]
+              - img "Women's Sports Network" [ref=e4105]
+              - generic [ref=e4106]:
+                - generic [ref=e4107]: Women's Sports Network
+                - generic [ref=e4108]:
+                  - text: Ch 4125
+                  - generic [ref=e4109]: • DirectTV_39
+                  - button "Re-map" [ref=e4110]:
+                    - img [ref=e4111]
+                    - text: Re-map
+            - generic [ref=e4114] [cursor=pointer]:
+              - button "Watch Now" [ref=e4115]:
+                - img [ref=e4116]
+              - img "All Women's Sports" [ref=e4118]
+              - generic [ref=e4119]:
+                - generic [ref=e4120]: All Women's Sports
+                - generic [ref=e4121]:
+                  - text: Ch 4126
+                  - generic [ref=e4122]: • DirectTV_39
+                  - button "Re-map" [ref=e4123]:
+                    - img [ref=e4124]
+                    - text: Re-map
+            - generic [ref=e4127] [cursor=pointer]:
+              - button "Watch Now" [ref=e4128]:
+                - img [ref=e4129]
+              - img "Fight Network" [ref=e4131]
+              - generic [ref=e4132]:
+                - generic [ref=e4133]: Fight Network
+                - generic [ref=e4134]:
+                  - text: Ch 4130
+                  - generic [ref=e4135]: • DirectTV_39
+                  - button "Re-map" [ref=e4136]:
+                    - img [ref=e4137]
+                    - text: Re-map
+            - generic [ref=e4140] [cursor=pointer]:
+              - button "Watch Now" [ref=e4141]:
+                - img [ref=e4142]
+              - img "TNA" [ref=e4144]
+              - generic [ref=e4145]:
+                - generic [ref=e4146]: TNA
+                - generic [ref=e4147]:
+                  - text: Ch 4131
+                  - generic [ref=e4148]: • DirectTV_39
+                  - button "Re-map" [ref=e4149]:
+                    - img [ref=e4150]
+                    - text: Re-map
+            - generic [ref=e4153] [cursor=pointer]:
+              - button "Watch Now" [ref=e4154]:
+                - img [ref=e4155]
+              - img "Swerve Combat" [ref=e4157]
+              - generic [ref=e4158]:
+                - generic [ref=e4159]: Swerve Combat
+                - generic [ref=e4160]:
+                  - text: Ch 4132
+                  - generic [ref=e4161]: • DirectTV_39
+                  - button "Re-map" [ref=e4162]:
+                    - img [ref=e4163]
+                    - text: Re-map
+            - generic [ref=e4166] [cursor=pointer]:
+              - button "Watch Now" [ref=e4167]:
+                - img [ref=e4168]
+              - img "DAZN Ringside" [ref=e4170]
+              - generic [ref=e4171]:
+                - generic [ref=e4172]: DAZN Ringside
+                - generic [ref=e4173]:
+                  - text: Ch 4133
+                  - generic [ref=e4174]: • DirectTV_39
+                  - button "Re-map" [ref=e4175]:
+                    - img [ref=e4176]
+                    - text: Re-map
+            - generic [ref=e4179] [cursor=pointer]:
+              - button "Watch Now" [ref=e4180]:
+                - img [ref=e4181]
+              - img "PokerGo" [ref=e4183]
+              - generic [ref=e4184]:
+                - generic [ref=e4185]: PokerGo
+                - generic [ref=e4186]:
+                  - text: Ch 4140
+                  - generic [ref=e4187]: • DirectTV_39
+                  - button "Re-map" [ref=e4188]:
+                    - img [ref=e4189]
+                    - text: Re-map
+            - generic [ref=e4192] [cursor=pointer]:
+              - button "Watch Now" [ref=e4193]:
+                - img [ref=e4194]
+              - img "Pickleball TV" [ref=e4196]
+              - generic [ref=e4197]:
+                - generic [ref=e4198]: Pickleball TV
+                - generic [ref=e4199]:
+                  - text: Ch 4141
+                  - generic [ref=e4200]: • DirectTV_39
+                  - button "Re-map" [ref=e4201]:
+                    - img [ref=e4202]
+                    - text: Re-map
+            - generic [ref=e4205] [cursor=pointer]:
+              - button "Watch Now" [ref=e4206]:
+                - img [ref=e4207]
+              - img "Billiard TV" [ref=e4209]
+              - generic [ref=e4210]:
+                - generic [ref=e4211]: Billiard TV
+                - generic [ref=e4212]:
+                  - text: Ch 4148
+                  - generic [ref=e4213]: • DirectTV_39
+                  - button "Re-map" [ref=e4214]:
+                    - img [ref=e4215]
+                    - text: Re-map
+            - generic [ref=e4218] [cursor=pointer]:
+              - button "Watch Now" [ref=e4219]:
+                - img [ref=e4220]
+              - img "Stadium Stream" [ref=e4222]
+              - generic [ref=e4223]:
+                - generic [ref=e4224]: Stadium Stream
+                - generic [ref=e4225]:
+                  - text: Ch 4150
+                  - generic [ref=e4226]: • DirectTV_39
+                  - button "Re-map" [ref=e4227]:
+                    - img [ref=e4228]
+                    - text: Re-map
+            - generic [ref=e4231] [cursor=pointer]:
+              - button "Watch Now" [ref=e4232]:
+                - img [ref=e4233]
+              - img "ACC Digital Network" [ref=e4235]
+              - generic [ref=e4236]:
+                - generic [ref=e4237]: ACC Digital Network
+                - generic [ref=e4238]:
+                  - text: Ch 4151
+                  - generic [ref=e4239]: • DirectTV_39
+                  - button "Re-map" [ref=e4240]:
+                    - img [ref=e4241]
+                    - text: Re-map
+            - generic [ref=e4244] [cursor=pointer]:
+              - button "Watch Now" [ref=e4245]:
+                - img [ref=e4246]
+              - img "Big 12" [ref=e4248]
+              - generic [ref=e4249]:
+                - generic [ref=e4250]: Big 12
+                - generic [ref=e4251]:
+                  - text: Ch 4152
+                  - generic [ref=e4252]: • DirectTV_39
+                  - button "Re-map" [ref=e4253]:
+                    - img [ref=e4254]
+                    - text: Re-map
+            - generic [ref=e4257] [cursor=pointer]:
+              - button "Watch Now" [ref=e4258]:
+                - img [ref=e4259]
+              - img "WIRED2fish TV" [ref=e4261]
+              - generic [ref=e4262]:
+                - generic [ref=e4263]: WIRED2fish TV
+                - generic [ref=e4264]:
+                  - text: Ch 4170
+                  - generic [ref=e4265]: • DirectTV_39
+                  - button "Re-map" [ref=e4266]:
+                    - img [ref=e4267]
+                    - text: Re-map
+            - generic [ref=e4270] [cursor=pointer]:
+              - button "Watch Now" [ref=e4271]:
+                - img [ref=e4272]
+              - img "Pursuit UP" [ref=e4274]
+              - generic [ref=e4275]:
+                - generic [ref=e4276]: Pursuit UP
+                - generic [ref=e4277]:
+                  - text: Ch 4172
+                  - generic [ref=e4278]: • DirectTV_39
+                  - button "Re-map" [ref=e4279]:
+                    - img [ref=e4280]
+                    - text: Re-map
+            - generic [ref=e4283] [cursor=pointer]:
+              - button "Watch Now" [ref=e4284]:
+                - img [ref=e4285]
+              - img "Waypoint TV" [ref=e4287]
+              - generic [ref=e4288]:
+                - generic [ref=e4289]: Waypoint TV
+                - generic [ref=e4290]:
+                  - text: Ch 4175
+                  - generic [ref=e4291]: • DirectTV_39
+                  - button "Re-map" [ref=e4292]:
+                    - img [ref=e4293]
+                    - text: Re-map
+            - generic [ref=e4296] [cursor=pointer]:
+              - button "Watch Now" [ref=e4297]:
+                - img [ref=e4298]
+              - img "NBC Sports Now" [ref=e4300]
+              - generic [ref=e4301]:
+                - generic [ref=e4302]: NBC Sports Now
+                - generic [ref=e4303]:
+                  - text: Ch 4180
+                  - generic [ref=e4304]: • DirectTV_39
+                  - button "Re-map" [ref=e4305]:
+                    - img [ref=e4306]
+                    - text: Re-map
+            - generic [ref=e4309] [cursor=pointer]:
+              - button "Watch Now" [ref=e4310]:
+                - img [ref=e4311]
+              - img "The Jim Rome Show" [ref=e4313]
+              - generic [ref=e4314]:
+                - generic [ref=e4315]: The Jim Rome Show
+                - generic [ref=e4316]:
+                  - text: Ch 4181
+                  - generic [ref=e4317]: • DirectTV_39
+                  - button "Re-map" [ref=e4318]:
+                    - img [ref=e4319]
+                    - text: Re-map
+            - generic [ref=e4322] [cursor=pointer]:
+              - button "Watch Now" [ref=e4323]:
+                - img [ref=e4324]
+              - img "Sports Illustrated" [ref=e4326]
+              - generic [ref=e4327]:
+                - generic [ref=e4328]: Sports Illustrated
+                - generic [ref=e4329]:
+                  - text: Ch 4189
+                  - generic [ref=e4330]: • DirectTV_39
+                  - button "Re-map" [ref=e4331]:
+                    - img [ref=e4332]
+                    - text: Re-map
+            - generic [ref=e4335] [cursor=pointer]:
+              - button "Watch Now" [ref=e4336]:
+                - img [ref=e4337]
+              - img "Players TV" [ref=e4339]
+              - generic [ref=e4340]:
+                - generic [ref=e4341]: Players TV
+                - generic [ref=e4342]:
+                  - text: Ch 4190
+                  - generic [ref=e4343]: • DirectTV_39
+                  - button "Re-map" [ref=e4344]:
+                    - img [ref=e4345]
+                    - text: Re-map
+            - generic [ref=e4348] [cursor=pointer]:
+              - button "Watch Now" [ref=e4349]:
+                - img [ref=e4350]
+              - img "PowerNation" [ref=e4352]
+              - generic [ref=e4353]:
+                - generic [ref=e4354]: PowerNation
+                - generic [ref=e4355]:
+                  - text: Ch 4191
+                  - generic [ref=e4356]: • DirectTV_39
+                  - button "Re-map" [ref=e4357]:
+                    - img [ref=e4358]
+                    - text: Re-map
+            - generic [ref=e4361] [cursor=pointer]:
+              - button "Watch Now" [ref=e4362]:
+                - img [ref=e4363]
+              - img "Racing America" [ref=e4365]
+              - generic [ref=e4366]:
+                - generic [ref=e4367]: Racing America
+                - generic [ref=e4368]:
+                  - text: Ch 4192
+                  - generic [ref=e4369]: • DirectTV_39
+                  - button "Re-map" [ref=e4370]:
+                    - img [ref=e4371]
+                    - text: Re-map
+            - generic [ref=e4374] [cursor=pointer]:
+              - button "Watch Now" [ref=e4375]:
+                - img [ref=e4376]
+              - img "Torque by History" [ref=e4378]
+              - generic [ref=e4379]:
+                - generic [ref=e4380]: Torque by History
+                - generic [ref=e4381]:
+                  - text: Ch 4193
+                  - generic [ref=e4382]: • DirectTV_39
+                  - button "Re-map" [ref=e4383]:
+                    - img [ref=e4384]
+                    - text: Re-map
+            - generic [ref=e4387] [cursor=pointer]:
+              - button "Watch Now" [ref=e4388]:
+                - img [ref=e4389]
+              - img "Speedvision" [ref=e4391]
+              - generic [ref=e4392]:
+                - generic [ref=e4393]: Speedvision
+                - generic [ref=e4394]:
+                  - text: Ch 4194
+                  - generic [ref=e4395]: • DirectTV_39
+                  - button "Re-map" [ref=e4396]:
+                    - img [ref=e4397]
+                    - text: Re-map
+            - generic [ref=e4400] [cursor=pointer]:
+              - button "Watch Now" [ref=e4401]:
+                - img [ref=e4402]
+              - img "Lionsgate Collection" [ref=e4404]
+              - generic [ref=e4405]:
+                - generic [ref=e4406]: Lionsgate Collection
+                - generic [ref=e4407]:
+                  - text: Ch 4200
+                  - generic [ref=e4408]: • DirectTV_39
+                  - button "Re-map" [ref=e4409]:
+                    - img [ref=e4410]
+                    - text: Re-map
+            - generic [ref=e4413] [cursor=pointer]:
+              - button "Watch Now" [ref=e4414]:
+                - img [ref=e4415]
+              - img "Acorn TV Mysteries" [ref=e4417]
+              - generic [ref=e4418]:
+                - generic [ref=e4419]: Acorn TV Mysteries
+                - generic [ref=e4420]:
+                  - text: Ch 4204
+                  - generic [ref=e4421]: • DirectTV_39
+                  - button "Re-map" [ref=e4422]:
+                    - img [ref=e4423]
+                    - text: Re-map
+            - generic [ref=e4426] [cursor=pointer]:
+              - button "Watch Now" [ref=e4427]:
+                - img [ref=e4428]
+              - img "HerSphere" [ref=e4430]
+              - generic [ref=e4431]:
+                - generic [ref=e4432]: HerSphere
+                - generic [ref=e4433]:
+                  - text: Ch 4209
+                  - generic [ref=e4434]: • DirectTV_39
+                  - button "Re-map" [ref=e4435]:
+                    - img [ref=e4436]
+                    - text: Re-map
+            - generic [ref=e4439] [cursor=pointer]:
+              - button "Watch Now" [ref=e4440]:
+                - img [ref=e4441]
+              - img "Three Stooges" [ref=e4443]
+              - generic [ref=e4444]:
+                - generic [ref=e4445]: Three Stooges
+                - generic [ref=e4446]:
+                  - text: Ch 4218
+                  - generic [ref=e4447]: • DirectTV_39
+                  - button "Re-map" [ref=e4448]:
+                    - img [ref=e4449]
+                    - text: Re-map
+            - generic [ref=e4452] [cursor=pointer]:
+              - button "Watch Now" [ref=e4453]:
+                - img [ref=e4454]
+              - img "Bob Ross Channel" [ref=e4456]
+              - generic [ref=e4457]:
+                - generic [ref=e4458]: Bob Ross Channel
+                - generic [ref=e4459]:
+                  - text: Ch 4219
+                  - generic [ref=e4460]: • DirectTV_39
+                  - button "Re-map" [ref=e4461]:
+                    - img [ref=e4462]
+                    - text: Re-map
+            - generic [ref=e4465] [cursor=pointer]:
+              - button "Watch Now" [ref=e4466]:
+                - img [ref=e4467]
+              - img "Horror by Alter" [ref=e4469]
+              - generic [ref=e4470]:
+                - generic [ref=e4471]: Horror by Alter
+                - generic [ref=e4472]:
+                  - text: Ch 4221
+                  - generic [ref=e4473]: • DirectTV_39
+                  - button "Re-map" [ref=e4474]:
+                    - img [ref=e4475]
+                    - text: Re-map
+            - generic [ref=e4478] [cursor=pointer]:
+              - button "Watch Now" [ref=e4479]:
+                - img [ref=e4480]
+              - img "Nosey" [ref=e4482]
+              - generic [ref=e4483]:
+                - generic [ref=e4484]: Nosey
+                - generic [ref=e4485]:
+                  - text: Ch 4225
+                  - generic [ref=e4486]: • DirectTV_39
+                  - button "Re-map" [ref=e4487]:
+                    - img [ref=e4488]
+                    - text: Re-map
+            - generic [ref=e4491] [cursor=pointer]:
+              - button "Watch Now" [ref=e4492]:
+                - img [ref=e4493]
+              - img "The Walking Dead Universe" [ref=e4495]
+              - generic [ref=e4496]:
+                - generic [ref=e4497]: The Walking Dead Universe
+                - generic [ref=e4498]:
+                  - text: Ch 4227
+                  - generic [ref=e4499]: • DirectTV_39
+                  - button "Re-map" [ref=e4500]:
+                    - img [ref=e4501]
+                    - text: Re-map
+            - generic [ref=e4504] [cursor=pointer]:
+              - button "Watch Now" [ref=e4505]:
+                - img [ref=e4506]
+              - img "50 Cent Action Channel" [ref=e4508]
+              - generic [ref=e4509]:
+                - generic [ref=e4510]: 50 Cent Action Channel
+                - generic [ref=e4511]:
+                  - text: Ch 4228
+                  - generic [ref=e4512]: • DirectTV_39
+                  - button "Re-map" [ref=e4513]:
+                    - img [ref=e4514]
+                    - text: Re-map
+            - generic [ref=e4517] [cursor=pointer]:
+              - button "Watch Now" [ref=e4518]:
+                - img [ref=e4519]
+              - img "El Rey Rebel" [ref=e4521]
+              - generic [ref=e4522]:
+                - generic [ref=e4523]: El Rey Rebel
+                - generic [ref=e4524]:
+                  - text: Ch 4229
+                  - generic [ref=e4525]: • DirectTV_39
+                  - button "Re-map" [ref=e4526]:
+                    - img [ref=e4527]
+                    - text: Re-map
+            - generic [ref=e4530] [cursor=pointer]:
+              - button "Watch Now" [ref=e4531]:
+                - img [ref=e4532]
+              - img "Court TV" [ref=e4534]
+              - generic [ref=e4535]:
+                - generic [ref=e4536]: Court TV
+                - generic [ref=e4537]:
+                  - text: Ch 4230
+                  - generic [ref=e4538]: • DirectTV_39
+                  - button "Re-map" [ref=e4539]:
+                    - img [ref=e4540]
+                    - text: Re-map
+            - generic [ref=e4543] [cursor=pointer]:
+              - button "Watch Now" [ref=e4544]:
+                - img [ref=e4545]
+              - img "Bravo Vault" [ref=e4547]
+              - generic [ref=e4548]:
+                - generic [ref=e4549]: Bravo Vault
+                - generic [ref=e4550]:
+                  - text: Ch 4250
+                  - generic [ref=e4551]: • DirectTV_39
+                  - button "Re-map" [ref=e4552]:
+                    - img [ref=e4553]
+                    - text: Re-map
+            - generic [ref=e4556] [cursor=pointer]:
+              - button "Watch Now" [ref=e4557]:
+                - img [ref=e4558]
+              - img "Real Housewives Vault" [ref=e4560]
+              - generic [ref=e4561]:
+                - generic [ref=e4562]: Real Housewives Vault
+                - generic [ref=e4563]:
+                  - text: Ch 4251
+                  - generic [ref=e4564]: • DirectTV_39
+                  - button "Re-map" [ref=e4565]:
+                    - img [ref=e4566]
+                    - text: Re-map
+            - generic [ref=e4569] [cursor=pointer]:
+              - button "Watch Now" [ref=e4570]:
+                - img [ref=e4571]
+              - img "E! Keeping Up" [ref=e4573]
+              - generic [ref=e4574]:
+                - generic [ref=e4575]: E! Keeping Up
+                - generic [ref=e4576]:
+                  - text: Ch 4252
+                  - generic [ref=e4577]: • DirectTV_39
+                  - button "Re-map" [ref=e4578]:
+                    - img [ref=e4579]
+                    - text: Re-map
+            - generic [ref=e4582] [cursor=pointer]:
+              - button "Watch Now" [ref=e4583]:
+                - img [ref=e4584]
+              - img "All Reality WeTV" [ref=e4586]
+              - generic [ref=e4587]:
+                - generic [ref=e4588]: All Reality WeTV
+                - generic [ref=e4589]:
+                  - text: Ch 4253
+                  - generic [ref=e4590]: • DirectTV_39
+                  - button "Re-map" [ref=e4591]:
+                    - img [ref=e4592]
+                    - text: Re-map
+            - generic [ref=e4595] [cursor=pointer]:
+              - button "Watch Now" [ref=e4596]:
+                - img [ref=e4597]
+              - img "Confess by Nosey" [ref=e4599]
+              - generic [ref=e4600]:
+                - generic [ref=e4601]: Confess by Nosey
+                - generic [ref=e4602]:
+                  - text: Ch 4254
+                  - generic [ref=e4603]: • DirectTV_39
+                  - button "Re-map" [ref=e4604]:
+                    - img [ref=e4605]
+                    - text: Re-map
+            - generic [ref=e4608] [cursor=pointer]:
+              - button "Watch Now" [ref=e4609]:
+                - img [ref=e4610]
+              - img "Dance Moms by Lifetime" [ref=e4612]
+              - generic [ref=e4613]:
+                - generic [ref=e4614]: Dance Moms by Lifetime
+                - generic [ref=e4615]:
+                  - text: Ch 4256
+                  - generic [ref=e4616]: • DirectTV_39
+                  - button "Re-map" [ref=e4617]:
+                    - img [ref=e4618]
+                    - text: Re-map
+            - generic [ref=e4621] [cursor=pointer]:
+              - button "Watch Now" [ref=e4622]:
+                - img [ref=e4623]
+              - img "Say Yes To The Dress" [ref=e4625]
+              - generic [ref=e4626]:
+                - generic [ref=e4627]: Say Yes To The Dress
+                - generic [ref=e4628]:
+                  - text: Ch 4257
+                  - generic [ref=e4629]: • DirectTV_39
+                  - button "Re-map" [ref=e4630]:
+                    - img [ref=e4631]
+                    - text: Re-map
+            - generic [ref=e4634] [cursor=pointer]:
+              - button "Watch Now" [ref=e4635]:
+                - img [ref=e4636]
+              - img "CUT" [ref=e4638]
+              - generic [ref=e4639]:
+                - generic [ref=e4640]: CUT
+                - generic [ref=e4641]:
+                  - text: Ch 4259
+                  - generic [ref=e4642]: • DirectTV_39
+                  - button "Re-map" [ref=e4643]:
+                    - img [ref=e4644]
+                    - text: Re-map
+            - generic [ref=e4647] [cursor=pointer]:
+              - button "Watch Now" [ref=e4648]:
+                - img [ref=e4649]
+              - img "The Masked Singer" [ref=e4651]
+              - generic [ref=e4652]:
+                - generic [ref=e4653]: The Masked Singer
+                - generic [ref=e4654]:
+                  - text: Ch 4260
+                  - generic [ref=e4655]: • DirectTV_39
+                  - button "Re-map" [ref=e4656]:
+                    - img [ref=e4657]
+                    - text: Re-map
+            - generic [ref=e4660] [cursor=pointer]:
+              - button "Watch Now" [ref=e4661]:
+                - img [ref=e4662]
+              - img "America's Got Talent" [ref=e4664]
+              - generic [ref=e4665]:
+                - generic [ref=e4666]: America's Got Talent
+                - generic [ref=e4667]:
+                  - text: Ch 4261
+                  - generic [ref=e4668]: • DirectTV_39
+                  - button "Re-map" [ref=e4669]:
+                    - img [ref=e4670]
+                    - text: Re-map
+            - generic [ref=e4673] [cursor=pointer]:
+              - button "Watch Now" [ref=e4674]:
+                - img [ref=e4675]
+              - img "Duck Dynasty" [ref=e4677]
+              - generic [ref=e4678]:
+                - generic [ref=e4679]: Duck Dynasty
+                - generic [ref=e4680]:
+                  - text: Ch 4262
+                  - generic [ref=e4681]: • DirectTV_39
+                  - button "Re-map" [ref=e4682]:
+                    - img [ref=e4683]
+                    - text: Re-map
+            - generic [ref=e4686] [cursor=pointer]:
+              - button "Watch Now" [ref=e4687]:
+                - img [ref=e4688]
+              - img "Ice Road Truckers" [ref=e4690]
+              - generic [ref=e4691]:
+                - generic [ref=e4692]: Ice Road Truckers
+                - generic [ref=e4693]:
+                  - text: Ch 4263
+                  - generic [ref=e4694]: • DirectTV_39
+                  - button "Re-map" [ref=e4695]:
+                    - img [ref=e4696]
+                    - text: Re-map
+            - generic [ref=e4699] [cursor=pointer]:
+              - button "Watch Now" [ref=e4700]:
+                - img [ref=e4701]
+              - img "Ax Men" [ref=e4703]
+              - generic [ref=e4704]:
+                - generic [ref=e4705]: Ax Men
+                - generic [ref=e4706]:
+                  - text: Ch 4264
+                  - generic [ref=e4707]: • DirectTV_39
+                  - button "Re-map" [ref=e4708]:
+                    - img [ref=e4709]
+                    - text: Re-map
+            - generic [ref=e4712] [cursor=pointer]:
+              - button "Watch Now" [ref=e4713]:
+                - img [ref=e4714]
+              - img "Rig TV" [ref=e4716]
+              - generic [ref=e4717]:
+                - generic [ref=e4718]: Rig TV
+                - generic [ref=e4719]:
+                  - text: Ch 4265
+                  - generic [ref=e4720]: • DirectTV_39
+                  - button "Re-map" [ref=e4721]:
+                    - img [ref=e4722]
+                    - text: Re-map
+            - generic [ref=e4725] [cursor=pointer]:
+              - button "Watch Now" [ref=e4726]:
+                - img [ref=e4727]
+              - img "Danger TV" [ref=e4729]
+              - generic [ref=e4730]:
+                - generic [ref=e4731]: Danger TV
+                - generic [ref=e4732]:
+                  - text: Ch 4268
+                  - generic [ref=e4733]: • DirectTV_39
+                  - button "Re-map" [ref=e4734]:
+                    - img [ref=e4735]
+                    - text: Re-map
+            - generic [ref=e4738] [cursor=pointer]:
+              - button "Watch Now" [ref=e4739]:
+                - img [ref=e4740]
+              - img "Love After Lockup" [ref=e4742]
+              - generic [ref=e4743]:
+                - generic [ref=e4744]: Love After Lockup
+                - generic [ref=e4745]:
+                  - text: Ch 4269
+                  - generic [ref=e4746]: • DirectTV_39
+                  - button "Re-map" [ref=e4747]:
+                    - img [ref=e4748]
+                    - text: Re-map
+            - generic [ref=e4751] [cursor=pointer]:
+              - button "Watch Now" [ref=e4752]:
+                - img [ref=e4753]
+              - img "Cold Case Files" [ref=e4755]
+              - generic [ref=e4756]:
+                - generic [ref=e4757]: Cold Case Files
+                - generic [ref=e4758]:
+                  - text: Ch 4271
+                  - generic [ref=e4759]: • DirectTV_39
+                  - button "Re-map" [ref=e4760]:
+                    - img [ref=e4761]
+                    - text: Re-map
+            - generic [ref=e4764] [cursor=pointer]:
+              - button "Watch Now" [ref=e4765]:
+                - img [ref=e4766]
+              - img "Crime 360" [ref=e4768]
+              - generic [ref=e4769]:
+                - generic [ref=e4770]: Crime 360
+                - generic [ref=e4771]:
+                  - text: Ch 4272
+                  - generic [ref=e4772]: • DirectTV_39
+                  - button "Re-map" [ref=e4773]:
+                    - img [ref=e4774]
+                    - text: Re-map
+            - generic [ref=e4777] [cursor=pointer]:
+              - button "Watch Now" [ref=e4778]:
+                - img [ref=e4779]
+              - img "Total Crime" [ref=e4781]
+              - generic [ref=e4782]:
+                - generic [ref=e4783]: Total Crime
+                - generic [ref=e4784]:
+                  - text: Ch 4273
+                  - generic [ref=e4785]: • DirectTV_39
+                  - button "Re-map" [ref=e4786]:
+                    - img [ref=e4787]
+                    - text: Re-map
+            - generic [ref=e4790] [cursor=pointer]:
+              - button "Watch Now" [ref=e4791]:
+                - img [ref=e4792]
+              - img "True Crime Now" [ref=e4794]
+              - generic [ref=e4795]:
+                - generic [ref=e4796]: True Crime Now
+                - generic [ref=e4797]:
+                  - text: Ch 4274
+                  - generic [ref=e4798]: • DirectTV_39
+                  - button "Re-map" [ref=e4799]:
+                    - img [ref=e4800]
+                    - text: Re-map
+            - generic [ref=e4803] [cursor=pointer]:
+              - button "Watch Now" [ref=e4804]:
+                - img [ref=e4805]
+              - img "Car Chase Channel" [ref=e4807]
+              - generic [ref=e4808]:
+                - generic [ref=e4809]: Car Chase Channel
+                - generic [ref=e4810]:
+                  - text: Ch 4279
+                  - generic [ref=e4811]: • DirectTV_39
+                  - button "Re-map" [ref=e4812]:
+                    - img [ref=e4813]
+                    - text: Re-map
+            - generic [ref=e4816] [cursor=pointer]:
+              - button "Watch Now" [ref=e4817]:
+                - img [ref=e4818]
+              - img "Crime Scenes" [ref=e4820]
+              - generic [ref=e4821]:
+                - generic [ref=e4822]: Crime Scenes
+                - generic [ref=e4823]:
+                  - text: Ch 4281
+                  - generic [ref=e4824]: • DirectTV_39
+                  - button "Re-map" [ref=e4825]:
+                    - img [ref=e4826]
+                    - text: Re-map
+            - generic [ref=e4829] [cursor=pointer]:
+              - button "Watch Now" [ref=e4830]:
+                - img [ref=e4831]
+              - img "I (Almost) Got Away With It" [ref=e4833]
+              - generic [ref=e4834]:
+                - generic [ref=e4835]: I (Almost) Got Away With It
+                - generic [ref=e4836]:
+                  - text: Ch 4282
+                  - generic [ref=e4837]: • DirectTV_39
+                  - button "Re-map" [ref=e4838]:
+                    - img [ref=e4839]
+                    - text: Re-map
+            - generic [ref=e4842] [cursor=pointer]:
+              - button "Watch Now" [ref=e4843]:
+                - img [ref=e4844]
+              - img "Living With Evil" [ref=e4846]
+              - generic [ref=e4847]:
+                - generic [ref=e4848]: Living With Evil
+                - generic [ref=e4849]:
+                  - text: Ch 4283
+                  - generic [ref=e4850]: • DirectTV_39
+                  - button "Re-map" [ref=e4851]:
+                    - img [ref=e4852]
+                    - text: Re-map
+            - generic [ref=e4855] [cursor=pointer]:
+              - button "Watch Now" [ref=e4856]:
+                - img [ref=e4857]
+              - img "Love Kills" [ref=e4859]
+              - generic [ref=e4860]:
+                - generic [ref=e4861]: Love Kills
+                - generic [ref=e4862]:
+                  - text: Ch 4284
+                  - generic [ref=e4863]: • DirectTV_39
+                  - button "Re-map" [ref=e4864]:
+                    - img [ref=e4865]
+                    - text: Re-map
+            - generic [ref=e4868] [cursor=pointer]:
+              - button "Watch Now" [ref=e4869]:
+                - img [ref=e4870]
+              - img "Oxygen True Crime Archives" [ref=e4872]
+              - generic [ref=e4873]:
+                - generic [ref=e4874]: Oxygen True Crime Archives
+                - generic [ref=e4875]:
+                  - text: Ch 4287
+                  - generic [ref=e4876]: • DirectTV_39
+                  - button "Re-map" [ref=e4877]:
+                    - img [ref=e4878]
+                    - text: Re-map
+            - generic [ref=e4881] [cursor=pointer]:
+              - button "Watch Now" [ref=e4882]:
+                - img [ref=e4883]
+              - img "Dateline 24/7" [ref=e4885]
+              - generic [ref=e4886]:
+                - generic [ref=e4887]: Dateline 24/7
+                - generic [ref=e4888]:
+                  - text: Ch 4288
+                  - generic [ref=e4889]: • DirectTV_39
+                  - button "Re-map" [ref=e4890]:
+                    - img [ref=e4891]
+                    - text: Re-map
+            - generic [ref=e4894] [cursor=pointer]:
+              - button "Watch Now" [ref=e4895]:
+                - img [ref=e4896]
+              - img "Fail Army" [ref=e4898]
+              - generic [ref=e4899]:
+                - generic [ref=e4900]: Fail Army
+                - generic [ref=e4901]:
+                  - text: Ch 4301
+                  - generic [ref=e4902]: • DirectTV_39
+                  - button "Re-map" [ref=e4903]:
+                    - img [ref=e4904]
+                    - text: Re-map
+            - generic [ref=e4907] [cursor=pointer]:
+              - button "Watch Now" [ref=e4908]:
+                - img [ref=e4909]
+              - img "Always Funny" [ref=e4911]
+              - generic [ref=e4912]:
+                - generic [ref=e4913]: Always Funny
+                - generic [ref=e4914]:
+                  - text: Ch 4303
+                  - generic [ref=e4915]: • DirectTV_39
+                  - button "Re-map" [ref=e4916]:
+                    - img [ref=e4917]
+                    - text: Re-map
+            - generic [ref=e4920] [cursor=pointer]:
+              - button "Watch Now" [ref=e4921]:
+                - img [ref=e4922]
+              - img "America's Funniest Home Videos" [ref=e4924]
+              - generic [ref=e4925]:
+                - generic [ref=e4926]: America's Funniest Home Videos
+                - generic [ref=e4927]:
+                  - text: Ch 4304
+                  - generic [ref=e4928]: • DirectTV_39
+                  - button "Re-map" [ref=e4929]:
+                    - img [ref=e4930]
+                    - text: Re-map
+            - generic [ref=e4933] [cursor=pointer]:
+              - button "Watch Now" [ref=e4934]:
+                - img [ref=e4935]
+              - img "Comedy Dynamics" [ref=e4937]
+              - generic [ref=e4938]:
+                - generic [ref=e4939]: Comedy Dynamics
+                - generic [ref=e4940]:
+                  - text: Ch 4305
+                  - generic [ref=e4941]: • DirectTV_39
+                  - button "Re-map" [ref=e4942]:
+                    - img [ref=e4943]
+                    - text: Re-map
+            - generic [ref=e4946] [cursor=pointer]:
+              - button "Watch Now" [ref=e4947]:
+                - img [ref=e4948]
+              - img "SNL Vault" [ref=e4950]
+              - generic [ref=e4951]:
+                - generic [ref=e4952]: SNL Vault
+                - generic [ref=e4953]:
+                  - text: Ch 4310
+                  - generic [ref=e4954]: • DirectTV_39
+                  - button "Re-map" [ref=e4955]:
+                    - img [ref=e4956]
+                    - text: Re-map
+            - generic [ref=e4959] [cursor=pointer]:
+              - button "Watch Now" [ref=e4960]:
+                - img [ref=e4961]
+              - img "Anger Management" [ref=e4963]
+              - generic [ref=e4964]:
+                - generic [ref=e4965]: Anger Management
+                - generic [ref=e4966]:
+                  - text: Ch 4321
+                  - generic [ref=e4967]: • DirectTV_39
+                  - button "Re-map" [ref=e4968]:
+                    - img [ref=e4969]
+                    - text: Re-map
+            - generic [ref=e4972] [cursor=pointer]:
+              - button "Watch Now" [ref=e4973]:
+                - img [ref=e4974]
+              - img "Are We There Yet" [ref=e4976]
+              - generic [ref=e4977]:
+                - generic [ref=e4978]: Are We There Yet
+                - generic [ref=e4979]:
+                  - text: Ch 4322
+                  - generic [ref=e4980]: • DirectTV_39
+                  - button "Re-map" [ref=e4981]:
+                    - img [ref=e4982]
+                    - text: Re-map
+            - generic [ref=e4985] [cursor=pointer]:
+              - button "Watch Now" [ref=e4986]:
+                - img [ref=e4987]
+              - img "Portlandia" [ref=e4989]
+              - generic [ref=e4990]:
+                - generic [ref=e4991]: Portlandia
+                - generic [ref=e4992]:
+                  - text: Ch 4324
+                  - generic [ref=e4993]: • DirectTV_39
+                  - button "Re-map" [ref=e4994]:
+                    - img [ref=e4995]
+                    - text: Re-map
+            - generic [ref=e4998] [cursor=pointer]:
+              - button "Watch Now" [ref=e4999]:
+                - img [ref=e5000]
+              - img "Stories by AMC" [ref=e5002]
+              - generic [ref=e5003]:
+                - generic [ref=e5004]: Stories by AMC
+                - generic [ref=e5005]:
+                  - text: Ch 4325
+                  - generic [ref=e5006]: • DirectTV_39
+                  - button "Re-map" [ref=e5007]:
+                    - img [ref=e5008]
+                    - text: Re-map
+            - generic [ref=e5011] [cursor=pointer]:
+              - button "Watch Now" [ref=e5012]:
+                - img [ref=e5013]
+              - img "INFAST" [ref=e5015]
+              - generic [ref=e5016]:
+                - generic [ref=e5017]: INFAST
+                - generic [ref=e5018]:
+                  - text: Ch 4328
+                  - generic [ref=e5019]: • DirectTV_39
+                  - button "Re-map" [ref=e5020]:
+                    - img [ref=e5021]
+                    - text: Re-map
+            - generic [ref=e5024] [cursor=pointer]:
+              - button "Watch Now" [ref=e5025]:
+                - img [ref=e5026]
+              - img "INWONDER" [ref=e5028]
+              - generic [ref=e5029]:
+                - generic [ref=e5030]: INWONDER
+                - generic [ref=e5031]:
+                  - text: Ch 4329
+                  - generic [ref=e5032]: • DirectTV_39
+                  - button "Re-map" [ref=e5033]:
+                    - img [ref=e5034]
+                    - text: Re-map
+            - generic [ref=e5037] [cursor=pointer]:
+              - button "Watch Now" [ref=e5038]:
+                - img [ref=e5039]
+              - img "Buzzr" [ref=e5041]
+              - generic [ref=e5042]:
+                - generic [ref=e5043]: Buzzr
+                - generic [ref=e5044]:
+                  - text: Ch 4335
+                  - generic [ref=e5045]: • DirectTV_39
+                  - button "Re-map" [ref=e5046]:
+                    - img [ref=e5047]
+                    - text: Re-map
+            - generic [ref=e5050] [cursor=pointer]:
+              - button "Watch Now" [ref=e5051]:
+                - img [ref=e5052]
+              - img "Family Feud (Steve Harvey)" [ref=e5054]
+              - generic [ref=e5055]:
+                - generic [ref=e5056]: Family Feud (Steve Harvey)
+                - generic [ref=e5057]:
+                  - text: Ch 4336
+                  - generic [ref=e5058]: • DirectTV_39
+                  - button "Re-map" [ref=e5059]:
+                    - img [ref=e5060]
+                    - text: Re-map
+            - generic [ref=e5063] [cursor=pointer]:
+              - button "Watch Now" [ref=e5064]:
+                - img [ref=e5065]
+              - img "Let's Make a Deal" [ref=e5067]
+              - generic [ref=e5068]:
+                - generic [ref=e5069]: Let's Make a Deal
+                - generic [ref=e5070]:
+                  - text: Ch 4337
+                  - generic [ref=e5071]: • DirectTV_39
+                  - button "Re-map" [ref=e5072]:
+                    - img [ref=e5073]
+                    - text: Re-map
+            - generic [ref=e5076] [cursor=pointer]:
+              - button "Watch Now" [ref=e5077]:
+                - img [ref=e5078]
+              - 'img "The Price is Right: Drew Carey" [ref=e5080]'
+              - generic [ref=e5081]:
+                - generic [ref=e5082]: "The Price is Right: Drew Carey"
+                - generic [ref=e5083]:
+                  - text: Ch 4338
+                  - generic [ref=e5084]: • DirectTV_39
+                  - button "Re-map" [ref=e5085]:
+                    - img [ref=e5086]
+                    - text: Re-map
+            - generic [ref=e5089] [cursor=pointer]:
+              - button "Watch Now" [ref=e5090]:
+                - img [ref=e5091]
+              - 'img "The Price is Right: The Barker Era" [ref=e5093]'
+              - generic [ref=e5094]:
+                - generic [ref=e5095]: "The Price is Right: The Barker Era"
+                - generic [ref=e5096]:
+                  - text: Ch 4339
+                  - generic [ref=e5097]: • DirectTV_39
+                  - button "Re-map" [ref=e5098]:
+                    - img [ref=e5099]
+                    - text: Re-map
+            - generic [ref=e5102] [cursor=pointer]:
+              - button "Watch Now" [ref=e5103]:
+                - img [ref=e5104]
+              - img "Deal Zone" [ref=e5106]
+              - generic [ref=e5107]:
+                - generic [ref=e5108]: Deal Zone
+                - generic [ref=e5109]:
+                  - text: Ch 4340
+                  - generic [ref=e5110]: • DirectTV_39
+                  - button "Re-map" [ref=e5111]:
+                    - img [ref=e5112]
+                    - text: Re-map
+            - generic [ref=e5115] [cursor=pointer]:
+              - button "Watch Now" [ref=e5116]:
+                - img [ref=e5117]
+              - img "Supermarket Sweep" [ref=e5119]
+              - generic [ref=e5120]:
+                - generic [ref=e5121]: Supermarket Sweep
+                - generic [ref=e5122]:
+                  - text: Ch 4341
+                  - generic [ref=e5123]: • DirectTV_39
+                  - button "Re-map" [ref=e5124]:
+                    - img [ref=e5125]
+                    - text: Re-map
+            - generic [ref=e5128] [cursor=pointer]:
+              - button "Watch Now" [ref=e5129]:
+                - img [ref=e5130]
+              - img "Dog Whisperer" [ref=e5132]
+              - generic [ref=e5133]:
+                - generic [ref=e5134]: Dog Whisperer
+                - generic [ref=e5135]:
+                  - text: Ch 4346
+                  - generic [ref=e5136]: • DirectTV_39
+                  - button "Re-map" [ref=e5137]:
+                    - img [ref=e5138]
+                    - text: Re-map
+            - generic [ref=e5141] [cursor=pointer]:
+              - button "Watch Now" [ref=e5142]:
+                - img [ref=e5143]
+              - img "Million Dollar Listing Vault" [ref=e5145]
+              - generic [ref=e5146]:
+                - generic [ref=e5147]: Million Dollar Listing Vault
+                - generic [ref=e5148]:
+                  - text: Ch 4352
+                  - generic [ref=e5149]: • DirectTV_39
+                  - button "Re-map" [ref=e5150]:
+                    - img [ref=e5151]
+                    - text: Re-map
+            - generic [ref=e5154] [cursor=pointer]:
+              - button "Watch Now" [ref=e5155]:
+                - img [ref=e5156]
+              - img "Drool" [ref=e5158]
+              - generic [ref=e5159]:
+                - generic [ref=e5160]: Drool
+                - generic [ref=e5161]:
+                  - text: Ch 4356
+                  - generic [ref=e5162]: • DirectTV_39
+                  - button "Re-map" [ref=e5163]:
+                    - img [ref=e5164]
+                    - text: Re-map
+            - generic [ref=e5167] [cursor=pointer]:
+              - button "Watch Now" [ref=e5168]:
+                - img [ref=e5169]
+              - img "America's Test Kitchen" [ref=e5171]
+              - generic [ref=e5172]:
+                - generic [ref=e5173]: America's Test Kitchen
+                - generic [ref=e5174]:
+                  - text: Ch 4357
+                  - generic [ref=e5175]: • DirectTV_39
+                  - button "Re-map" [ref=e5176]:
+                    - img [ref=e5177]
+                    - text: Re-map
+            - generic [ref=e5180] [cursor=pointer]:
+              - button "Watch Now" [ref=e5181]:
+                - img [ref=e5182]
+              - img "Tastemade Travel" [ref=e5184]
+              - generic [ref=e5185]:
+                - generic [ref=e5186]: Tastemade Travel
+                - generic [ref=e5187]:
+                  - text: Ch 4358
+                  - generic [ref=e5188]: • DirectTV_39
+                  - button "Re-map" [ref=e5189]:
+                    - img [ref=e5190]
+                    - text: Re-map
+            - generic [ref=e5193] [cursor=pointer]:
+              - button "Watch Now" [ref=e5194]:
+                - img [ref=e5195]
+              - img "Tastemade Home" [ref=e5197]
+              - generic [ref=e5198]:
+                - generic [ref=e5199]: Tastemade Home
+                - generic [ref=e5200]:
+                  - text: Ch 4359
+                  - generic [ref=e5201]: • DirectTV_39
+                  - button "Re-map" [ref=e5202]:
+                    - img [ref=e5203]
+                    - text: Re-map
+            - generic [ref=e5206] [cursor=pointer]:
+              - button "Watch Now" [ref=e5207]:
+                - img [ref=e5208]
+              - img "Jamie Oliver" [ref=e5210]
+              - generic [ref=e5211]:
+                - generic [ref=e5212]: Jamie Oliver
+                - generic [ref=e5213]:
+                  - text: Ch 4361
+                  - generic [ref=e5214]: • DirectTV_39
+                  - button "Re-map" [ref=e5215]:
+                    - img [ref=e5216]
+                    - text: Re-map
+            - generic [ref=e5219] [cursor=pointer]:
+              - button "Watch Now" [ref=e5220]:
+                - img [ref=e5221]
+              - img "Tiny House Nation" [ref=e5223]
+              - generic [ref=e5224]:
+                - generic [ref=e5225]: Tiny House Nation
+                - generic [ref=e5226]:
+                  - text: Ch 4363
+                  - generic [ref=e5227]: • DirectTV_39
+                  - button "Re-map" [ref=e5228]:
+                    - img [ref=e5229]
+                    - text: Re-map
+            - generic [ref=e5232] [cursor=pointer]:
+              - button "Watch Now" [ref=e5233]:
+                - img [ref=e5234]
+              - img "The Design Network" [ref=e5236]
+              - generic [ref=e5237]:
+                - generic [ref=e5238]: The Design Network
+                - generic [ref=e5239]:
+                  - text: Ch 4365
+                  - generic [ref=e5240]: • DirectTV_39
+                  - button "Re-map" [ref=e5241]:
+                    - img [ref=e5242]
+                    - text: Re-map
+            - generic [ref=e5245] [cursor=pointer]:
+              - button "Watch Now" [ref=e5246]:
+                - img [ref=e5247]
+              - img "RVTV" [ref=e5249]
+              - generic [ref=e5250]:
+                - generic [ref=e5251]: RVTV
+                - generic [ref=e5252]:
+                  - text: Ch 4366
+                  - generic [ref=e5253]: • DirectTV_39
+                  - button "Re-map" [ref=e5254]:
+                    - img [ref=e5255]
+                    - text: Re-map
+            - generic [ref=e5258] [cursor=pointer]:
+              - button "Watch Now" [ref=e5259]:
+                - img [ref=e5260]
+              - img "AT HOME with family handyman" [ref=e5262]
+              - generic [ref=e5263]:
+                - generic [ref=e5264]: AT HOME with family handyman
+                - generic [ref=e5265]:
+                  - text: Ch 4367
+                  - generic [ref=e5266]: • DirectTV_39
+                  - button "Re-map" [ref=e5267]:
+                    - img [ref=e5268]
+                    - text: Re-map
+            - generic [ref=e5271] [cursor=pointer]:
+              - button "Watch Now" [ref=e5272]:
+                - img [ref=e5273]
+              - img "Great American Adventures" [ref=e5275]
+              - generic [ref=e5276]:
+                - generic [ref=e5277]: Great American Adventures
+                - generic [ref=e5278]:
+                  - text: Ch 4368
+                  - generic [ref=e5279]: • DirectTV_39
+                  - button "Re-map" [ref=e5280]:
+                    - img [ref=e5281]
+                    - text: Re-map
+            - generic [ref=e5284] [cursor=pointer]:
+              - button "Watch Now" [ref=e5285]:
+                - img [ref=e5286]
+              - img "MeatEater" [ref=e5288]
+              - generic [ref=e5289]:
+                - generic [ref=e5290]: MeatEater
+                - generic [ref=e5291]:
+                  - text: Ch 4370
+                  - generic [ref=e5292]: • DirectTV_39
+                  - button "Re-map" [ref=e5293]:
+                    - img [ref=e5294]
+                    - text: Re-map
+            - generic [ref=e5297] [cursor=pointer]:
+              - button "Watch Now" [ref=e5298]:
+                - img [ref=e5299]
+              - img "Gusto TV" [ref=e5301]
+              - generic [ref=e5302]:
+                - generic [ref=e5303]: Gusto TV
+                - generic [ref=e5304]:
+                  - text: Ch 4372
+                  - generic [ref=e5305]: • DirectTV_39
+                  - button "Re-map" [ref=e5306]:
+                    - img [ref=e5307]
+                    - text: Re-map
+            - generic [ref=e5310] [cursor=pointer]:
+              - button "Watch Now" [ref=e5311]:
+                - img [ref=e5312]
+              - img "Sweet Escapes" [ref=e5314]
+              - generic [ref=e5315]:
+                - generic [ref=e5316]: Sweet Escapes
+                - generic [ref=e5317]:
+                  - text: Ch 4378
+                  - generic [ref=e5318]: • DirectTV_39
+                  - button "Re-map" [ref=e5319]:
+                    - img [ref=e5320]
+                    - text: Re-map
+            - generic [ref=e5323] [cursor=pointer]:
+              - button "Watch Now" [ref=e5324]:
+                - img [ref=e5325]
+              - img "Bizarre Foods with Andrew Zimmern" [ref=e5327]
+              - generic [ref=e5328]:
+                - generic [ref=e5329]: Bizarre Foods with Andrew Zimmern
+                - generic [ref=e5330]:
+                  - text: Ch 4379
+                  - generic [ref=e5331]: • DirectTV_39
+                  - button "Re-map" [ref=e5332]:
+                    - img [ref=e5333]
+                    - text: Re-map
+            - generic [ref=e5336] [cursor=pointer]:
+              - button "Watch Now" [ref=e5337]:
+                - img [ref=e5338]
+              - img "Beach Day" [ref=e5340]
+              - generic [ref=e5341]:
+                - generic [ref=e5342]: Beach Day
+                - generic [ref=e5343]:
+                  - text: Ch 4380
+                  - generic [ref=e5344]: • DirectTV_39
+                  - button "Re-map" [ref=e5345]:
+                    - img [ref=e5346]
+                    - text: Re-map
+            - generic [ref=e5349] [cursor=pointer]:
+              - button "Watch Now" [ref=e5350]:
+                - img [ref=e5351]
+              - img "GoTraveler" [ref=e5353]
+              - generic [ref=e5354]:
+                - generic [ref=e5355]: GoTraveler
+                - generic [ref=e5356]:
+                  - text: Ch 4388
+                  - generic [ref=e5357]: • DirectTV_39
+                  - button "Re-map" [ref=e5358]:
+                    - img [ref=e5359]
+                    - text: Re-map
+            - generic [ref=e5362] [cursor=pointer]:
+              - button "Watch Now" [ref=e5363]:
+                - img [ref=e5364]
+              - img "FOX Soul" [ref=e5366]
+              - generic [ref=e5367]:
+                - generic [ref=e5368]: FOX Soul
+                - generic [ref=e5369]:
+                  - text: Ch 4401
+                  - generic [ref=e5370]: • DirectTV_39
+                  - button "Re-map" [ref=e5371]:
+                    - img [ref=e5372]
+                    - text: Re-map
+            - generic [ref=e5375] [cursor=pointer]:
+              - button "Watch Now" [ref=e5376]:
+                - img [ref=e5377]
+              - img "Ebony TV" [ref=e5379]
+              - generic [ref=e5380]:
+                - generic [ref=e5381]: Ebony TV
+                - generic [ref=e5382]:
+                  - text: Ch 4404
+                  - generic [ref=e5383]: • DirectTV_39
+                  - button "Re-map" [ref=e5384]:
+                    - img [ref=e5385]
+                    - text: Re-map
+            - generic [ref=e5388] [cursor=pointer]:
+              - button "Watch Now" [ref=e5389]:
+                - img [ref=e5390]
+              - img "Dove TV" [ref=e5392]
+              - generic [ref=e5393]:
+                - generic [ref=e5394]: Dove TV
+                - generic [ref=e5395]:
+                  - text: Ch 4416
+                  - generic [ref=e5396]: • DirectTV_39
+                  - button "Re-map" [ref=e5397]:
+                    - img [ref=e5398]
+                    - text: Re-map
+            - generic [ref=e5401] [cursor=pointer]:
+              - button "Watch Now" [ref=e5402]:
+                - img [ref=e5403]
+              - img "Joel Osteen" [ref=e5405]
+              - generic [ref=e5406]:
+                - generic [ref=e5407]: Joel Osteen
+                - generic [ref=e5408]:
+                  - text: Ch 4418
+                  - generic [ref=e5409]: • DirectTV_39
+                  - button "Re-map" [ref=e5410]:
+                    - img [ref=e5411]
+                    - text: Re-map
+            - generic [ref=e5414] [cursor=pointer]:
+              - button "Watch Now" [ref=e5415]:
+                - img [ref=e5416]
+              - img "Pureflix TV" [ref=e5418]
+              - generic [ref=e5419]:
+                - generic [ref=e5420]: Pureflix TV
+                - generic [ref=e5421]:
+                  - text: Ch 4421
+                  - generic [ref=e5422]: • DirectTV_39
+                  - button "Re-map" [ref=e5423]:
+                    - img [ref=e5424]
+                    - text: Re-map
+            - generic [ref=e5427] [cursor=pointer]:
+              - button "Watch Now" [ref=e5428]:
+                - img [ref=e5429]
+              - img "Yu-Gi-Oh!" [ref=e5431]
+              - generic [ref=e5432]:
+                - generic [ref=e5433]: Yu-Gi-Oh!
+                - generic [ref=e5434]:
+                  - text: Ch 4449
+                  - generic [ref=e5435]: • DirectTV_39
+                  - button "Re-map" [ref=e5436]:
+                    - img [ref=e5437]
+                    - text: Re-map
+            - generic [ref=e5440] [cursor=pointer]:
+              - button "Watch Now" [ref=e5441]:
+                - img [ref=e5442]
+              - img "Love Nature" [ref=e5444]
+              - generic [ref=e5445]:
+                - generic [ref=e5446]: Love Nature
+                - generic [ref=e5447]:
+                  - text: Ch 4470
+                  - generic [ref=e5448]: • DirectTV_39
+                  - button "Re-map" [ref=e5449]:
+                    - img [ref=e5450]
+                    - text: Re-map
+            - generic [ref=e5453] [cursor=pointer]:
+              - button "Watch Now" [ref=e5454]:
+                - img [ref=e5455]
+              - img "Earth Touch" [ref=e5457]
+              - generic [ref=e5458]:
+                - generic [ref=e5459]: Earth Touch
+                - generic [ref=e5460]:
+                  - text: Ch 4473
+                  - generic [ref=e5461]: • DirectTV_39
+                  - button "Re-map" [ref=e5462]:
+                    - img [ref=e5463]
+                    - text: Re-map
+            - generic [ref=e5466] [cursor=pointer]:
+              - button "Watch Now" [ref=e5467]:
+                - img [ref=e5468]
+              - img "Cosmic Frontiers" [ref=e5470]
+              - generic [ref=e5471]:
+                - generic [ref=e5472]: Cosmic Frontiers
+                - generic [ref=e5473]:
+                  - text: Ch 4476
+                  - generic [ref=e5474]: • DirectTV_39
+                  - button "Re-map" [ref=e5475]:
+                    - img [ref=e5476]
+                    - text: Re-map
+            - generic [ref=e5479] [cursor=pointer]:
+              - button "Watch Now" [ref=e5480]:
+                - img [ref=e5481]
+              - img "Mythbusters" [ref=e5483]
+              - generic [ref=e5484]:
+                - generic [ref=e5485]: Mythbusters
+                - generic [ref=e5486]:
+                  - text: Ch 4477
+                  - generic [ref=e5487]: • DirectTV_39
+                  - button "Re-map" [ref=e5488]:
+                    - img [ref=e5489]
+                    - text: Re-map
+            - generic [ref=e5492] [cursor=pointer]:
+              - button "Watch Now" [ref=e5493]:
+                - img [ref=e5494]
+              - img "Modern Marvels" [ref=e5496]
+              - generic [ref=e5497]:
+                - generic [ref=e5498]: Modern Marvels
+                - generic [ref=e5499]:
+                  - text: Ch 4480
+                  - generic [ref=e5500]: • DirectTV_39
+                  - button "Re-map" [ref=e5501]:
+                    - img [ref=e5502]
+                    - text: Re-map
+            - generic [ref=e5505] [cursor=pointer]:
+              - button "Watch Now" [ref=e5506]:
+                - img [ref=e5507]
+              - img "Curiosity Now" [ref=e5509]
+              - generic [ref=e5510]:
+                - generic [ref=e5511]: Curiosity Now
+                - generic [ref=e5512]:
+                  - text: Ch 4481
+                  - generic [ref=e5513]: • DirectTV_39
+                  - button "Re-map" [ref=e5514]:
+                    - img [ref=e5515]
+                    - text: Re-map
+            - generic [ref=e5518] [cursor=pointer]:
+              - button "Watch Now" [ref=e5519]:
+                - img [ref=e5520]
+              - img "MagellanTV Wildest" [ref=e5522]
+              - generic [ref=e5523]:
+                - generic [ref=e5524]: MagellanTV Wildest
+                - generic [ref=e5525]:
+                  - text: Ch 4482
+                  - generic [ref=e5526]: • DirectTV_39
+                  - button "Re-map" [ref=e5527]:
+                    - img [ref=e5528]
+                    - text: Re-map
+            - generic [ref=e5531] [cursor=pointer]:
+              - button "Watch Now" [ref=e5532]:
+                - img [ref=e5533]
+              - img "Military Heroes" [ref=e5535]
+              - generic [ref=e5536]:
+                - generic [ref=e5537]: Military Heroes
+                - generic [ref=e5538]:
+                  - text: Ch 4484
+                  - generic [ref=e5539]: • DirectTV_39
+                  - button "Re-map" [ref=e5540]:
+                    - img [ref=e5541]
+                    - text: Re-map
+            - generic [ref=e5544] [cursor=pointer]:
+              - button "Watch Now" [ref=e5545]:
+                - img [ref=e5546]
+              - img "Declassified" [ref=e5548]
+              - generic [ref=e5549]:
+                - generic [ref=e5550]: Declassified
+                - generic [ref=e5551]:
+                  - text: Ch 4485
+                  - generic [ref=e5552]: • DirectTV_39
+                  - button "Re-map" [ref=e5553]:
+                    - img [ref=e5554]
+                    - text: Re-map
+            - generic [ref=e5557] [cursor=pointer]:
+              - button "Watch Now" [ref=e5558]:
+                - img [ref=e5559]
+              - img "History & Warfare" [ref=e5561]
+              - generic [ref=e5562]:
+                - generic [ref=e5563]: History & Warfare
+                - generic [ref=e5564]:
+                  - text: Ch 4486
+                  - generic [ref=e5565]: • DirectTV_39
+                  - button "Re-map" [ref=e5566]:
+                    - img [ref=e5567]
+                    - text: Re-map
+            - generic [ref=e5570] [cursor=pointer]:
+              - button "Watch Now" [ref=e5571]:
+                - img [ref=e5572]
+              - img "How To" [ref=e5574]
+              - generic [ref=e5575]:
+                - generic [ref=e5576]: How To
+                - generic [ref=e5577]:
+                  - text: Ch 4487
+                  - generic [ref=e5578]: • DirectTV_39
+                  - button "Re-map" [ref=e5579]:
+                    - img [ref=e5580]
+                    - text: Re-map
+            - generic [ref=e5583] [cursor=pointer]:
+              - button "Watch Now" [ref=e5584]:
+                - img [ref=e5585]
+              - img "Alien Nation by DUST" [ref=e5587]
+              - generic [ref=e5588]:
+                - generic [ref=e5589]: Alien Nation by DUST
+                - generic [ref=e5590]:
+                  - text: Ch 4490
+                  - generic [ref=e5591]: • DirectTV_39
+                  - button "Re-map" [ref=e5592]:
+                    - img [ref=e5593]
+                    - text: Re-map
+            - generic [ref=e5596] [cursor=pointer]:
+              - button "Watch Now" [ref=e5597]:
+                - img [ref=e5598]
+              - img "UnXplained Zone" [ref=e5600]
+              - generic [ref=e5601]:
+                - generic [ref=e5602]: UnXplained Zone
+                - generic [ref=e5603]:
+                  - text: Ch 4491
+                  - generic [ref=e5604]: • DirectTV_39
+                  - button "Re-map" [ref=e5605]:
+                    - img [ref=e5606]
+                    - text: Re-map
+            - generic [ref=e5609] [cursor=pointer]:
+              - button "Watch Now" [ref=e5610]:
+                - img [ref=e5611]
+              - img "Ghosts are Real" [ref=e5613]
+              - generic [ref=e5614]:
+                - generic [ref=e5615]: Ghosts are Real
+                - generic [ref=e5616]:
+                  - text: Ch 4493
+                  - generic [ref=e5617]: • DirectTV_39
+                  - button "Re-map" [ref=e5618]:
+                    - img [ref=e5619]
+                    - text: Re-map
+            - generic [ref=e5622] [cursor=pointer]:
+              - button "Watch Now" [ref=e5623]:
+                - img [ref=e5624]
+              - img "Mysterious Worlds" [ref=e5626]
+              - generic [ref=e5627]:
+                - generic [ref=e5628]: Mysterious Worlds
+                - generic [ref=e5629]:
+                  - text: Ch 4494
+                  - generic [ref=e5630]: • DirectTV_39
+                  - button "Re-map" [ref=e5631]:
+                    - img [ref=e5632]
+                    - text: Re-map
+            - generic [ref=e5635] [cursor=pointer]:
+              - button "Watch Now" [ref=e5636]:
+                - img [ref=e5637]
+              - img "MovieSphere" [ref=e5639]
+              - generic [ref=e5640]:
+                - generic [ref=e5641]: MovieSphere
+                - generic [ref=e5642]:
+                  - text: Ch 4501
+                  - generic [ref=e5643]: • DirectTV_39
+                  - button "Re-map" [ref=e5644]:
+                    - img [ref=e5645]
+                    - text: Re-map
+            - generic [ref=e5648] [cursor=pointer]:
+              - button "Watch Now" [ref=e5649]:
+                - img [ref=e5650]
+              - img "Movie Favorites by Lifetime" [ref=e5652]
+              - generic [ref=e5653]:
+                - generic [ref=e5654]: Movie Favorites by Lifetime
+                - generic [ref=e5655]:
+                  - text: Ch 4504
+                  - generic [ref=e5656]: • DirectTV_39
+                  - button "Re-map" [ref=e5657]:
+                    - img [ref=e5658]
+                    - text: Re-map
+            - generic [ref=e5661] [cursor=pointer]:
+              - button "Watch Now" [ref=e5662]:
+                - img [ref=e5663]
+              - img "Tribeca Festival+" [ref=e5665]
+              - generic [ref=e5666]:
+                - generic [ref=e5667]: Tribeca Festival+
+                - generic [ref=e5668]:
+                  - text: Ch 4520
+                  - generic [ref=e5669]: • DirectTV_39
+                  - button "Re-map" [ref=e5670]:
+                    - img [ref=e5671]
+                    - text: Re-map
+            - generic [ref=e5674] [cursor=pointer]:
+              - button "Watch Now" [ref=e5675]:
+                - img [ref=e5676]
+              - img "Documentary+" [ref=e5678]
+              - generic [ref=e5679]:
+                - generic [ref=e5680]: Documentary+
+                - generic [ref=e5681]:
+                  - text: Ch 4540
+                  - generic [ref=e5682]: • DirectTV_39
+                  - button "Re-map" [ref=e5683]:
+                    - img [ref=e5684]
+                    - text: Re-map
+            - generic [ref=e5687] [cursor=pointer]:
+              - button "Watch Now" [ref=e5688]:
+                - img [ref=e5689]
+              - img "INSP Western Bound" [ref=e5691]
+              - generic [ref=e5692]:
+                - generic [ref=e5693]: INSP Western Bound
+                - generic [ref=e5694]:
+                  - text: Ch 4551
+                  - generic [ref=e5695]: • DirectTV_39
+                  - button "Re-map" [ref=e5696]:
+                    - img [ref=e5697]
+                    - text: Re-map
+            - generic [ref=e5700] [cursor=pointer]:
+              - button "Watch Now" [ref=e5701]:
+                - img [ref=e5702]
+              - img "Somos Novelas" [ref=e5704]
+              - generic [ref=e5705]:
+                - generic [ref=e5706]: Somos Novelas
+                - generic [ref=e5707]:
+                  - text: Ch 4720
+                  - generic [ref=e5708]: • DirectTV_39
+                  - button "Re-map" [ref=e5709]:
+                    - img [ref=e5710]
+                    - text: Re-map
+            - generic [ref=e5713] [cursor=pointer]:
+              - button "Watch Now" [ref=e5714]:
+                - img [ref=e5715]
+              - img "The Pet Collective" [ref=e5717]
+              - generic [ref=e5718]:
+                - generic [ref=e5719]: The Pet Collective
+                - generic [ref=e5720]:
+                  - text: Ch 4721
+                  - generic [ref=e5721]: • DirectTV_39
+                  - button "Re-map" [ref=e5722]:
+                    - img [ref=e5723]
+                    - text: Re-map
+            - generic [ref=e5726] [cursor=pointer]:
+              - button "Watch Now" [ref=e5727]:
+                - img [ref=e5728]
+              - generic [ref=e5730]: "8005"
+              - generic [ref=e5731]:
+                - generic [ref=e5732]: IL WMAQ NBC 5 A3 HD
+                - generic [ref=e5733]:
+                  - text: Ch 8005
+                  - generic [ref=e5734]: • DirectTV_39
+                  - generic [ref=e5735]: • No EPG
+                  - button "Map" [ref=e5736]:
+                    - img [ref=e5737]
+                    - text: Map
+            - generic [ref=e5740] [cursor=pointer]:
+              - button "Watch Now" [ref=e5741]:
+                - img [ref=e5742]
+              - generic [ref=e5744]: "8011"
+              - generic [ref=e5745]:
+                - generic [ref=e5746]: IL WTTW PBS 11 A3 HD
+                - generic [ref=e5747]:
+                  - text: Ch 8011
+                  - generic [ref=e5748]: • DirectTV_39
+                  - button "Re-map" [ref=e5749]:
+                    - img [ref=e5750]
+                    - text: Re-map
+            - generic [ref=e5753] [cursor=pointer]:
+              - button "Watch Now" [ref=e5754]:
+                - img [ref=e5755]
+              - generic [ref=e5757]: "8032"
+              - generic [ref=e5758]:
+                - generic [ref=e5759]: IL WFLD FOX 32 A3 HD
+                - generic [ref=e5760]:
+                  - text: Ch 8032
+                  - generic [ref=e5761]: • DirectTV_39
+                  - button "Re-map" [ref=e5762]:
+                    - img [ref=e5763]
+                    - text: Re-map
+            - generic [ref=e5766] [cursor=pointer]:
+              - button "Watch Now" [ref=e5767]:
+                - img [ref=e5768]
+              - generic [ref=e5770]: "8056"
+              - generic [ref=e5771]:
+                - generic [ref=e5772]: IL WYIN PBS 56 A3 HD
+                - generic [ref=e5773]:
+                  - text: Ch 8056
+                  - generic [ref=e5774]: • DirectTV_39
+                  - button "Re-map" [ref=e5775]:
+                    - img [ref=e5776]
+                    - text: Re-map
+          - generic [ref=e5780]:
+            - generic [ref=e5795]: No program info
+            - generic [ref=e5796]:
+              - generic "NBC 5 News at 5pm 5:00 PM - 5:30 PM" [ref=e5809] [cursor=pointer]:
+                - generic [ref=e5811]: NBC 5 News at 5pm
+              - generic "NBC Nightly News With Tom Llamas 5:30 PM - 6:00 PM" [ref=e5812] [cursor=pointer]:
+                - generic [ref=e5814]: Live
+                - generic [ref=e5816]: NBC Nightly News With Tom Llamas
+              - generic "NBC 5 News at 6pm 6:00 PM - 6:30 PM" [ref=e5817] [cursor=pointer]:
+                - generic [ref=e5819]: NBC 5 News at 6pm
+              - generic "Access Hollywood 6:30 PM - 7:00 PM" [ref=e5820] [cursor=pointer]:
+                - generic [ref=e5822]: Access Hollywood
+              - generic "NBA Basketball 7:00 PM - 10:00 PM" [ref=e5823] [cursor=pointer]:
+                - generic [ref=e5824]:
+                  - generic [ref=e5825]: NBA Basketball
+                  - generic [ref=e5826]: 7:00 PM - 10:00 PM
+                  - generic [ref=e5827]: The Spurs visit the Rockets at Toyota Center for a Southwest Division clash led by Harrison Barnes. Guard Devin Vassell is out due to an injury. Kevin Durant leads the offense in a battle for position near the top of the Western Conference.
+              - generic "Doc 8:00 PM - 9:00 PM" [ref=e5828] [cursor=pointer]:
+                - generic [ref=e5829]:
+                  - generic [ref=e5830]: Doc
+                  - generic [ref=e5831]: 8:00 PM - 9:00 PM
+              - generic "The 10 O'Clock News 9:00 PM - 10:00 PM" [ref=e5832] [cursor=pointer]:
+                - generic [ref=e5833]:
+                  - generic [ref=e5834]: The 10 O'Clock News
+                  - generic [ref=e5835]: 9:00 PM - 10:00 PM
+            - generic [ref=e5836]:
+              - generic "ABC7 Eyewitness News at 5pm 5:00 PM - 5:30 PM" [ref=e5849] [cursor=pointer]:
+                - generic [ref=e5851]: ABC7 Eyewitness News at 5pm
+              - generic "ABC World News Tonight With David Muir 5:30 PM - 6:00 PM" [ref=e5852] [cursor=pointer]:
+                - generic [ref=e5854]: Live
+                - generic [ref=e5856]: ABC World News Tonight With David Muir
+              - generic "ABC7 Eyewitness News at 6pm 6:00 PM - 6:30 PM" [ref=e5857] [cursor=pointer]:
+                - generic [ref=e5859]: ABC7 Eyewitness News at 6pm
+              - generic "Wheel of Fortune 6:30 PM - 7:00 PM" [ref=e5860] [cursor=pointer]:
+                - generic [ref=e5862]: Wheel of Fortune
+              - generic "Will Trent 7:00 PM - 8:00 PM" [ref=e5863] [cursor=pointer]:
+                - generic [ref=e5864]:
+                  - generic [ref=e5865]: Will Trent
+                  - generic [ref=e5866]: 7:00 PM - 8:00 PM
+              - generic "High Potential 8:00 PM - 9:00 PM" [ref=e5867] [cursor=pointer]:
+                - generic [ref=e5868]:
+                  - generic [ref=e5869]: High Potential
+                  - generic [ref=e5870]: 8:00 PM - 9:00 PM
+              - generic "The Rookie 9:00 PM - 10:00 PM" [ref=e5871] [cursor=pointer]:
+                - generic [ref=e5872]:
+                  - generic [ref=e5873]: The Rookie
+                  - generic [ref=e5874]: 9:00 PM - 10:00 PM
+            - generic [ref=e5875]:
+              - generic "DW News 5:00 PM - 5:30 PM" [ref=e5888] [cursor=pointer]:
+                - generic [ref=e5890]: DW News
+              - generic "BBC News America 5:30 PM - 6:00 PM" [ref=e5891] [cursor=pointer]:
+                - generic [ref=e5893]: Live
+                - generic [ref=e5895]: BBC News America
+              - generic "PBS News Hour 6:00 PM - 7:00 PM" [ref=e5896] [cursor=pointer]:
+                - generic [ref=e5897]:
+                  - generic [ref=e5898]: PBS News Hour
+                  - generic [ref=e5899]: 6:00 PM - 7:00 PM
+              - generic "Finding Your Roots With Henry Louis Gates, Jr. 7:00 PM - 8:00 PM" [ref=e5900] [cursor=pointer]:
+                - generic [ref=e5901]:
+                  - generic [ref=e5902]: Finding Your Roots With Henry Louis Gates, Jr.
+                  - generic [ref=e5903]: 7:00 PM - 8:00 PM
+              - generic "Breaking the Deadlock 8:00 PM - 9:00 PM" [ref=e5904] [cursor=pointer]:
+                - generic [ref=e5906]: Live
+                - generic [ref=e5907]:
+                  - generic [ref=e5908]: Breaking the Deadlock
+                  - generic [ref=e5909]: 8:00 PM - 9:00 PM
+              - generic "The Cure for Hate 9:00 PM - 10:00 PM" [ref=e5910] [cursor=pointer]:
+                - generic [ref=e5911]:
+                  - generic [ref=e5912]: The Cure for Hate
+                  - generic [ref=e5913]: 9:00 PM - 10:00 PM
+              - generic "Roots of Comedy With Jesus Trejo 9:30 PM - 10:00 PM" [ref=e5914] [cursor=pointer]:
+                - generic [ref=e5916]: Roots of Comedy With Jesus Trejo
+            - generic [ref=e5917]:
+              - generic "BBC News The Context 5:00 PM - 5:30 PM" [ref=e5930] [cursor=pointer]:
+                - generic [ref=e5932]: BBC News The Context
+              - generic "BBC News America 5:30 PM - 6:00 PM" [ref=e5933] [cursor=pointer]:
+                - generic [ref=e5935]: Live
+                - generic [ref=e5937]: BBC News America
+              - generic "PBS News Hour 6:00 PM - 7:00 PM" [ref=e5938] [cursor=pointer]:
+                - generic [ref=e5939]:
+                  - generic [ref=e5940]: PBS News Hour
+                  - generic [ref=e5941]: 6:00 PM - 7:00 PM
+              - generic "Finding Your Roots With Henry Louis Gates, Jr. 7:00 PM - 8:00 PM" [ref=e5942] [cursor=pointer]:
+                - generic [ref=e5943]:
+                  - generic [ref=e5944]: Finding Your Roots With Henry Louis Gates, Jr.
+                  - generic [ref=e5945]: 7:00 PM - 8:00 PM
+              - 'generic "Still Here: Native American Resilience in New England 8:00 PM - 8:30 PM" [ref=e5946] [cursor=pointer]':
+                - generic [ref=e5948]: "Still Here: Native American Resilience in New England"
+              - generic "Breaking the Deadlock 8:30 PM - 9:30 PM" [ref=e5949] [cursor=pointer]:
+                - generic [ref=e5951]: Live
+                - generic [ref=e5952]:
+                  - generic [ref=e5953]: Breaking the Deadlock
+                  - generic [ref=e5954]: 8:30 PM - 9:30 PM
+              - generic "Frontline 9:30 PM - 11:30 PM" [ref=e5955] [cursor=pointer]:
+                - generic [ref=e5957]: Frontline
+            - generic [ref=e5958]:
+              - generic "BBC News America 5:00 PM - 5:30 PM" [ref=e5971] [cursor=pointer]:
+                - generic [ref=e5973]: Live
+                - generic [ref=e5975]: BBC News America
+              - generic "NJ Spotlight News with Briana Vannozzi 5:30 PM - 6:00 PM" [ref=e5976] [cursor=pointer]:
+                - generic [ref=e5978]: NJ Spotlight News with Briana Vannozzi
+              - generic "One on One With Steve Adubato 6:00 PM - 6:30 PM" [ref=e5979] [cursor=pointer]:
+                - generic [ref=e5981]: One on One With Steve Adubato
+              - generic "NJ Spotlight News with Briana Vannozzi 6:30 PM - 7:00 PM" [ref=e5982] [cursor=pointer]:
+                - generic [ref=e5984]: NJ Spotlight News with Briana Vannozzi
+              - generic "The Seaside Hotel 7:00 PM - 8:00 PM" [ref=e5985] [cursor=pointer]:
+                - generic [ref=e5986]:
+                  - generic [ref=e5987]: The Seaside Hotel
+                  - generic [ref=e5988]: 7:00 PM - 8:00 PM
+              - generic "My Life Is Murder 8:00 PM - 8:45 PM" [ref=e5989] [cursor=pointer]:
+                - generic [ref=e5990]:
+                  - generic [ref=e5991]: My Life Is Murder
+                  - generic [ref=e5992]: 8:00 PM - 8:45 PM
+              - generic "Happiness 8:45 PM - 9:15 PM" [ref=e5993] [cursor=pointer]:
+                - generic [ref=e5995]: Happiness
+              - generic "The Travelling Auctioneers 9:15 PM - 10:01 PM" [ref=e5996] [cursor=pointer]:
+                - generic [ref=e5997]:
+                  - generic [ref=e5998]: The Travelling Auctioneers
+                  - generic [ref=e5999]: 9:15 PM - 10:01 PM
+            - generic [ref=e6000]:
+              - generic "M*A*S*H 5:00 PM - 5:30 PM" [ref=e6013] [cursor=pointer]:
+                - generic [ref=e6015]: M*A*S*H
+              - generic "M*A*S*H 5:30 PM - 6:00 PM" [ref=e6016] [cursor=pointer]:
+                - generic [ref=e6018]: M*A*S*H
+              - generic "M*A*S*H 6:00 PM - 6:30 PM" [ref=e6019] [cursor=pointer]:
+                - generic [ref=e6021]: M*A*S*H
+              - generic "M*A*S*H 6:30 PM - 7:00 PM" [ref=e6022] [cursor=pointer]:
+                - generic [ref=e6024]: M*A*S*H
+              - generic "The Andy Griffith Show 7:00 PM - 7:30 PM" [ref=e6025] [cursor=pointer]:
+                - generic [ref=e6027]: The Andy Griffith Show
+              - generic "The Andy Griffith Show 7:30 PM - 8:00 PM" [ref=e6028] [cursor=pointer]:
+                - generic [ref=e6030]: The Andy Griffith Show
+              - generic "Everybody Loves Raymond 8:00 PM - 8:30 PM" [ref=e6031] [cursor=pointer]:
+                - generic [ref=e6033]: Everybody Loves Raymond
+              - generic "Everybody Loves Raymond 8:30 PM - 9:00 PM" [ref=e6034] [cursor=pointer]:
+                - generic [ref=e6036]: Everybody Loves Raymond
+              - generic "Hogan's Heroes 9:00 PM - 9:30 PM" [ref=e6037] [cursor=pointer]:
+                - generic [ref=e6039]: Hogan's Heroes
+              - generic "Hogan's Heroes 9:30 PM - 10:00 PM" [ref=e6040] [cursor=pointer]:
+                - generic [ref=e6042]: Hogan's Heroes
+            - generic [ref=e6043]:
+              - generic "Married ... With Children 5:00 PM - 5:30 PM" [ref=e6056] [cursor=pointer]:
+                - generic [ref=e6058]: Married ... With Children
+              - generic "Married ... With Children 5:30 PM - 6:00 PM" [ref=e6059] [cursor=pointer]:
+                - generic [ref=e6061]: Married ... With Children
+              - generic "The King of Queens 6:00 PM - 6:30 PM" [ref=e6062] [cursor=pointer]:
+                - generic [ref=e6064]: The King of Queens
+              - generic "The King of Queens 6:30 PM - 7:00 PM" [ref=e6065] [cursor=pointer]:
+                - generic [ref=e6067]: The King of Queens
+              - generic "The King of Queens 7:00 PM - 7:30 PM" [ref=e6068] [cursor=pointer]:
+                - generic [ref=e6070]: The King of Queens
+              - generic "The King of Queens 7:30 PM - 8:00 PM" [ref=e6071] [cursor=pointer]:
+                - generic [ref=e6073]: The King of Queens
+              - generic "The King of Queens 8:00 PM - 8:30 PM" [ref=e6074] [cursor=pointer]:
+                - generic [ref=e6076]: The King of Queens
+              - generic "The King of Queens 8:30 PM - 9:00 PM" [ref=e6077] [cursor=pointer]:
+                - generic [ref=e6079]: The King of Queens
+              - generic "George Lopez 9:00 PM - 9:30 PM" [ref=e6080] [cursor=pointer]:
+                - generic [ref=e6082]: George Lopez
+              - generic "George Lopez 9:30 PM - 10:00 PM" [ref=e6083] [cursor=pointer]:
+                - generic [ref=e6085]: George Lopez
+            - generic [ref=e6086]:
+              - generic "Tales of Wells Fargo 5:00 PM - 6:00 PM" [ref=e6099] [cursor=pointer]:
+                - generic [ref=e6100]:
+                  - generic [ref=e6101]: Tales of Wells Fargo
+                  - generic [ref=e6102]: 5:00 PM - 6:00 PM
+              - generic "Tales of Wells Fargo 6:00 PM - 6:30 PM" [ref=e6103] [cursor=pointer]:
+                - generic [ref=e6105]: Tales of Wells Fargo
+              - generic "Tales of Wells Fargo 6:30 PM - 7:00 PM" [ref=e6106] [cursor=pointer]:
+                - generic [ref=e6108]: Live
+                - generic [ref=e6110]: Tales of Wells Fargo
+              - generic "The Siege at Red River 7:00 PM - 9:00 PM" [ref=e6111] [cursor=pointer]:
+                - generic [ref=e6112]:
+                  - generic [ref=e6113]: The Siege at Red River
+                  - generic [ref=e6114]: 7:00 PM - 9:00 PM
+                  - generic [ref=e6115]: Rebel raiders transport a stolen Gatling gun in a medicine-show wagon; Indians get it.
+              - generic "Powder River 9:00 PM - 11:00 PM" [ref=e6116] [cursor=pointer]:
+                - generic [ref=e6117]:
+                  - generic [ref=e6118]: Powder River
+                  - generic [ref=e6119]: 9:00 PM - 11:00 PM
+            - generic [ref=e6120]:
+              - generic "The Kitchen 3:00 PM - 5:30 PM" [ref=e6133] [cursor=pointer]:
+                - generic [ref=e6134]:
+                  - generic [ref=e6135]: The Kitchen
+                  - generic [ref=e6136]: 3:00 PM - 5:30 PM
+                  - generic [ref=e6137]: Between 8th Ave. and the Hudson River, the Irish mafia runs 20 blocks of a tough New York City neighborhood known as Hell's Kitchen. But for mob wives Kathy, Ruby and Claire, things are about to take a dramatic and radical turn. When the FBI sends their husbands to prison, the three women take business into their own hands by running the rackets and taking out the competition.
+              - generic "The Italian Job 5:30 PM - 8:00 PM" [ref=e6138] [cursor=pointer]:
+                - generic [ref=e6139]:
+                  - generic [ref=e6140]: The Italian Job
+                  - generic [ref=e6141]: 5:30 PM - 8:00 PM
+                  - generic [ref=e6142]: After a heist in Venice, Steve turns on his partners in crime, killing safecracker John Bridger and keeping all the gold for himself; the rest of the team, including leader Charlie Croker, driver Handsome Rob, explosives man Left Ear and tech geek Lyle, vows revenge; they enlist the help of Bridger's daughter, Stella and plot to recover the gold from Steve's Los Angeles mansion.
+              - generic "Den of Thieves 8:00 PM - 11:00 PM" [ref=e6143] [cursor=pointer]:
+                - generic [ref=e6144]:
+                  - generic [ref=e6145]: Den of Thieves
+                  - generic [ref=e6146]: 8:00 PM - 11:00 PM
+                  - generic [ref=e6147]: Nick O'Brien is the hard-drinking leader of the Regulators, an elite unit of the Los Angeles County Sheriff's Department. Ray Merrimen is the recently paroled leader of the Outlaws, a gang of ex-military men who use their expertise and tactical skills to evade the law. O'Brien, Merrimen and their crews soon find themselves on a direct collision course as the criminals hatch an elaborate plan for a seemingly impossible heist -- the city's Federal Reserve Bank.
+            - generic [ref=e6148]:
+              - generic "Monk 5:00 PM - 6:00 PM" [ref=e6161] [cursor=pointer]:
+                - generic [ref=e6162]:
+                  - generic [ref=e6163]: Monk
+                  - generic [ref=e6164]: 5:00 PM - 6:00 PM
+              - generic "Monk 6:00 PM - 7:00 PM" [ref=e6165] [cursor=pointer]:
+                - generic [ref=e6166]:
+                  - generic [ref=e6167]: Monk
+                  - generic [ref=e6168]: 6:00 PM - 7:00 PM
+              - generic "Monk 7:00 PM - 8:00 PM" [ref=e6169] [cursor=pointer]:
+                - generic [ref=e6170]:
+                  - generic [ref=e6171]: Monk
+                  - generic [ref=e6172]: 7:00 PM - 8:00 PM
+              - generic "Psych 8:00 PM - 9:00 PM" [ref=e6173] [cursor=pointer]:
+                - generic [ref=e6174]:
+                  - generic [ref=e6175]: Psych
+                  - generic [ref=e6176]: 8:00 PM - 9:00 PM
+              - generic "Psych 9:00 PM - 10:00 PM" [ref=e6177] [cursor=pointer]:
+                - generic [ref=e6178]:
+                  - generic [ref=e6179]: Psych
+                  - generic [ref=e6180]: 9:00 PM - 10:00 PM
+            - generic [ref=e6181]:
+              - generic "The Closer 5:00 PM - 6:00 PM" [ref=e6194] [cursor=pointer]:
+                - generic [ref=e6195]:
+                  - generic [ref=e6196]: The Closer
+                  - generic [ref=e6197]: 5:00 PM - 6:00 PM
+              - generic "The Closer 6:00 PM - 7:00 PM" [ref=e6198] [cursor=pointer]:
+                - generic [ref=e6199]:
+                  - generic [ref=e6200]: The Closer
+                  - generic [ref=e6201]: 6:00 PM - 7:00 PM
+              - generic "Major Crimes 7:00 PM - 8:00 PM" [ref=e6202] [cursor=pointer]:
+                - generic [ref=e6203]:
+                  - generic [ref=e6204]: Major Crimes
+                  - generic [ref=e6205]: 7:00 PM - 8:00 PM
+              - generic "Major Crimes 8:00 PM - 9:00 PM" [ref=e6206] [cursor=pointer]:
+                - generic [ref=e6207]:
+                  - generic [ref=e6208]: Major Crimes
+                  - generic [ref=e6209]: 8:00 PM - 9:00 PM
+              - generic "Rizzoli & Isles 9:00 PM - 10:00 PM" [ref=e6210] [cursor=pointer]:
+                - generic [ref=e6211]:
+                  - generic [ref=e6212]: Rizzoli & Isles
+                  - generic [ref=e6213]: 9:00 PM - 10:00 PM
+            - generic [ref=e6214]:
+              - generic "Dateline 4:00 PM - 6:00 PM" [ref=e6227] [cursor=pointer]:
+                - generic [ref=e6228]:
+                  - generic [ref=e6229]: Dateline
+                  - generic [ref=e6230]: 4:00 PM - 6:00 PM
+                  - generic [ref=e6231]: Insights into the story of the private royal, including a look at Diana's troubled marriage, her turbulent life in the royal family and the investigation into her death.
+              - generic "Dateline 6:00 PM - 7:00 PM" [ref=e6232] [cursor=pointer]:
+                - generic [ref=e6233]:
+                  - generic [ref=e6234]: Dateline
+                  - generic [ref=e6235]: 6:00 PM - 7:00 PM
+              - generic "Dateline 7:00 PM - 9:00 PM" [ref=e6236] [cursor=pointer]:
+                - generic [ref=e6237]:
+                  - generic [ref=e6238]: Dateline
+                  - generic [ref=e6239]: 7:00 PM - 9:00 PM
+                  - generic [ref=e6240]: Brittany Stork's decades-long quest to find out more about her mother's mysterious death leads to a dramatic courtroom decision; the man at the center of the case tells his side of the story.
+              - generic "Dateline NBC 9:00 PM - 11:00 PM" [ref=e6241] [cursor=pointer]:
+                - generic [ref=e6243]: Live
+                - generic [ref=e6244]:
+                  - generic [ref=e6245]: Dateline NBC
+                  - generic [ref=e6246]: 9:00 PM - 11:00 PM
+            - generic [ref=e6247]:
+              - generic "Killers 5:06 PM - 6:58 PM" [ref=e6260] [cursor=pointer]:
+                - generic [ref=e6261]:
+                  - generic [ref=e6262]: Killers
+                  - generic [ref=e6263]: 5:06 PM - 6:58 PM
+                  - generic [ref=e6264]: Three years after a fateful trip to the French Riviera, Jen (Katherine Heigl) enjoys the good life in suburbia with her handsome husband, Spencer (Ashton Kutcher). That comes crashing down, however, when gunfire rings out the morning after his 30th birthday. It turns out that Spencer has not been honest with Jen about his job; he's a deadly spy. Now she must learn to dodge bullets while keeping up an appearance of normalcy.
+              - generic "Good Luck Chuck 6:58 PM - 8:56 PM" [ref=e6265] [cursor=pointer]:
+                - generic [ref=e6266]:
+                  - generic [ref=e6267]: Good Luck Chuck
+                  - generic [ref=e6268]: 6:58 PM - 8:56 PM
+                  - generic [ref=e6269]: Cursed since childhood, dentist Charlie Kagan (Dane Cook) cannot find the right woman. Even worse, he learns that each of his ex-girlfriends finds true love with the man she meets after her relationship with him ends. Hearing of Charlie's reputation as a good-luck charm, women from all over line up for a quick tryst. But when Charlie meets the woman (Jessica Alba) of his dreams, he must find a way to break the curse or risk losing her to the next man she meets.
+              - generic "Meatballs 8:56 PM - 11:01 PM" [ref=e6270] [cursor=pointer]:
+                - generic [ref=e6271]:
+                  - generic [ref=e6272]: Meatballs
+                  - generic [ref=e6273]: 8:56 PM - 11:01 PM
+            - generic [ref=e6274]:
+              - generic "The Lead With Jake Tapper 5:00 PM - 6:00 PM" [ref=e6287] [cursor=pointer]:
+                - generic [ref=e6288]:
+                  - generic [ref=e6289]: The Lead With Jake Tapper
+                  - generic [ref=e6290]: 5:00 PM - 6:00 PM
+              - generic "Erin Burnett OutFront 6:00 PM - 7:00 PM" [ref=e6291] [cursor=pointer]:
+                - generic [ref=e6293]: Live
+                - generic [ref=e6294]:
+                  - generic [ref=e6295]: Erin Burnett OutFront
+                  - generic [ref=e6296]: 6:00 PM - 7:00 PM
+              - generic "Anderson Cooper 360 7:00 PM - 8:00 PM" [ref=e6297] [cursor=pointer]:
+                - generic [ref=e6298]:
+                  - generic [ref=e6299]: Anderson Cooper 360
+                  - generic [ref=e6300]: 7:00 PM - 8:00 PM
+              - generic "The Source With Kaitlan Collins 8:00 PM - 9:00 PM" [ref=e6301] [cursor=pointer]:
+                - generic [ref=e6302]:
+                  - generic [ref=e6303]: The Source With Kaitlan Collins
+                  - generic [ref=e6304]: 8:00 PM - 9:00 PM
+              - generic "CNN NewsNight With Abby Phillip 9:00 PM - 10:00 PM" [ref=e6305] [cursor=pointer]:
+                - generic [ref=e6306]:
+                  - generic [ref=e6307]: CNN NewsNight With Abby Phillip
+                  - generic [ref=e6308]: 9:00 PM - 10:00 PM
+            - generic [ref=e6309]:
+              - generic "Forensic Files 5:00 PM - 5:30 PM" [ref=e6322] [cursor=pointer]:
+                - generic [ref=e6324]: Forensic Files
+              - generic "Forensic Files 5:30 PM - 6:00 PM" [ref=e6325] [cursor=pointer]:
+                - generic [ref=e6327]: Forensic Files
+              - generic "Forensic Files 6:00 PM - 6:30 PM" [ref=e6328] [cursor=pointer]:
+                - generic [ref=e6330]: Forensic Files
+              - generic "Forensic Files 6:30 PM - 7:00 PM" [ref=e6331] [cursor=pointer]:
+                - generic [ref=e6333]: Forensic Files
+              - generic "Forensic Files 7:00 PM - 7:30 PM" [ref=e6334] [cursor=pointer]:
+                - generic [ref=e6336]: Forensic Files
+              - generic "Forensic Files 7:30 PM - 8:00 PM" [ref=e6337] [cursor=pointer]:
+                - generic [ref=e6339]: Forensic Files
+              - generic "Forensic Files 8:00 PM - 8:30 PM" [ref=e6340] [cursor=pointer]:
+                - generic [ref=e6342]: Forensic Files
+              - generic "Forensic Files 8:30 PM - 9:00 PM" [ref=e6343] [cursor=pointer]:
+                - generic [ref=e6345]: Forensic Files
+              - generic "Forensic Files 9:00 PM - 9:30 PM" [ref=e6346] [cursor=pointer]:
+                - generic [ref=e6348]: Forensic Files
+              - generic "Forensic Files 9:30 PM - 10:00 PM" [ref=e6349] [cursor=pointer]:
+                - generic [ref=e6351]: Forensic Files
+            - generic [ref=e6352]:
+              - generic "SportsCenter 5:00 PM - 6:00 PM" [ref=e6365] [cursor=pointer]:
+                - generic [ref=e6366]:
+                  - generic [ref=e6367]: SportsCenter
+                  - generic [ref=e6368]: 5:00 PM - 6:00 PM
+              - generic "TGL Golf 6:00 PM - 8:00 PM" [ref=e6369] [cursor=pointer]:
+                - generic [ref=e6370]:
+                  - generic [ref=e6371]: TGL Golf
+                  - generic [ref=e6372]: 6:00 PM - 8:00 PM
+                  - generic [ref=e6373]: From SoFi Center in Palm Beach Gardens, Fla.
+              - generic "College Basketball 8:00 PM - 10:00 PM" [ref=e6374] [cursor=pointer]:
+                - generic [ref=e6375]:
+                  - generic [ref=e6376]: College Basketball
+                  - generic [ref=e6377]: 8:00 PM - 10:00 PM
+                  - generic [ref=e6378]: From Bud Walton Arena in Fayetteville, Ark.
+            - generic [ref=e6379]:
+              - generic "Peyton's Places 5:00 PM - 5:30 PM" [ref=e6392] [cursor=pointer]:
+                - generic [ref=e6394]: Peyton's Places
+              - generic "Pardon the Interruption 5:30 PM - 6:00 PM" [ref=e6395] [cursor=pointer]:
+                - generic [ref=e6397]: Pardon the Interruption
+              - generic "Always College Football 6:00 PM - 7:00 PM" [ref=e6398] [cursor=pointer]:
+                - generic [ref=e6399]:
+                  - generic [ref=e6400]: Always College Football
+                  - generic [ref=e6401]: 6:00 PM - 7:00 PM
+              - generic "Peyton's Places 7:00 PM - 7:30 PM" [ref=e6402] [cursor=pointer]:
+                - generic [ref=e6404]: Peyton's Places
+              - generic "Pardon the Interruption 7:30 PM - 8:00 PM" [ref=e6405] [cursor=pointer]:
+                - generic [ref=e6407]: Pardon the Interruption
+              - generic "Always College Football 8:00 PM - 9:00 PM" [ref=e6408] [cursor=pointer]:
+                - generic [ref=e6409]:
+                  - generic [ref=e6410]: Always College Football
+                  - generic [ref=e6411]: 8:00 PM - 9:00 PM
+              - generic "Peyton's Places 9:00 PM - 9:30 PM" [ref=e6412] [cursor=pointer]:
+                - generic [ref=e6414]: Peyton's Places
+              - generic "Pardon the Interruption 9:30 PM - 10:00 PM" [ref=e6415] [cursor=pointer]:
+                - generic [ref=e6417]: Pardon the Interruption
+            - generic [ref=e6418]:
+              - generic "30 for 30 4:00 PM - 6:00 PM" [ref=e6431] [cursor=pointer]:
+                - generic [ref=e6432]:
+                  - generic [ref=e6433]: 30 for 30
+                  - generic [ref=e6434]: 4:00 PM - 6:00 PM
+                  - generic [ref=e6435]: An intimate look at University of Kentucky men's basketball coach John Calipari, one of the most compelling and controversial figures in sports. Featuring never-before-seen footage as he tries to capture his second national title.
+              - generic "College Basketball 6:00 PM - 8:00 PM" [ref=e6436] [cursor=pointer]:
+                - generic [ref=e6437]:
+                  - generic [ref=e6438]: College Basketball
+                  - generic [ref=e6439]: 6:00 PM - 8:00 PM
+                  - generic [ref=e6440]: The Florida State Seminoles (7-10) visit the Miami Hurricanes (15-2) at Watsco Center. Tre Donaldson (16.9 PPG) leads a Miami team that is on a ten-game win streak against Robert McCray V and the Seminoles in an ACC rivalry clash broadcast.
+              - generic "College Basketball 8:00 PM - 10:00 PM" [ref=e6441] [cursor=pointer]:
+                - generic [ref=e6442]:
+                  - generic [ref=e6443]: College Basketball
+                  - generic [ref=e6444]: 8:00 PM - 10:00 PM
+                  - generic [ref=e6445]: From Pavilion at Ole Miss in Oxford, Miss.
+            - generic [ref=e6446]:
+              - generic "NFL Live 5:00 PM - 6:00 PM" [ref=e6459] [cursor=pointer]:
+                - generic [ref=e6461]: Live
+                - generic [ref=e6462]:
+                  - generic [ref=e6463]: NFL Live
+                  - generic [ref=e6464]: 5:00 PM - 6:00 PM
+              - generic "College Basketball 6:00 PM - 8:00 PM" [ref=e6465] [cursor=pointer]:
+                - generic [ref=e6466]:
+                  - generic [ref=e6467]: College Basketball
+                  - generic [ref=e6468]: 6:00 PM - 8:00 PM
+                  - generic [ref=e6469]: LSU visits No. 19 Florida at the O'Connell Center for an SEC game on Jan. 20. The Tigers seek their first road win behind junior Dedan Thomas Jr. (16.2 ppg), while the Gators look to build on a three-game win streak after beating Oklahoma 96-79.
+              - generic "2026 Australian Open Tennis 8:00 PM - 2:00 AM" [ref=e6470] [cursor=pointer]:
+                - generic [ref=e6471]:
+                  - generic [ref=e6472]: 2026 Australian Open Tennis
+                  - generic [ref=e6473]: 8:00 PM - 2:00 AM
+                  - generic [ref=e6474]: From Melbourne Park in Melbourne, Victoria, Australia.
+            - generic [ref=e6489]: No program info
+            - generic [ref=e6504]: No program info
+            - generic [ref=e6519]: No program info
+            - generic [ref=e6520]:
+              - generic "To Be Announced 12:00 PM - 6:00 PM" [ref=e6533] [cursor=pointer]:
+                - generic [ref=e6534]:
+                  - generic [ref=e6535]: To Be Announced
+                  - generic [ref=e6536]: 12:00 PM - 6:00 PM
+                  - generic [ref=e6537]: To Be Announced
+              - generic "To Be Announced 3:45 PM - 6:00 PM" [ref=e6538] [cursor=pointer]:
+                - generic [ref=e6539]:
+                  - generic [ref=e6540]: To Be Announced
+                  - generic [ref=e6541]: 3:45 PM - 6:00 PM
+                  - generic [ref=e6542]: To Be Announced
+              - generic "To Be Announced 6:00 PM - 12:00 AM" [ref=e6543] [cursor=pointer]:
+                - generic [ref=e6544]:
+                  - generic [ref=e6545]: To Be Announced
+                  - generic [ref=e6546]: 6:00 PM - 12:00 AM
+                  - generic [ref=e6547]: To Be Announced
+              - generic "College Basketball 7:00 PM - 9:00 PM" [ref=e6548] [cursor=pointer]:
+                - generic [ref=e6549]:
+                  - generic [ref=e6550]: College Basketball
+                  - generic [ref=e6551]: 7:00 PM - 9:00 PM
+              - generic "To Be Announced 9:00 PM - 12:00 AM" [ref=e6552] [cursor=pointer]:
+                - generic [ref=e6553]:
+                  - generic [ref=e6554]: To Be Announced
+                  - generic [ref=e6555]: 9:00 PM - 12:00 AM
+            - generic [ref=e6570]: No program info
+            - generic [ref=e6585]: No program info
+            - generic [ref=e6600]: No program info
+            - generic [ref=e6601]:
+              - generic "NFL Football 3:30 PM - 6:00 PM" [ref=e6614] [cursor=pointer]:
+                - generic [ref=e6615]:
+                  - generic [ref=e6616]: NFL Football
+                  - generic [ref=e6617]: 3:30 PM - 6:00 PM
+                  - generic [ref=e6618]: The Broncos battle against the Bills at Empower Field at Mile High. Denver's Bo Nix is the fourth QB in franchise history to lead the team to No. 1 seed. Buffalo's James Cook had 15 carries for 46 yards in the Wild Card win in his previous game.
+              - generic "The Insiders 6:00 PM - 7:00 PM" [ref=e6619] [cursor=pointer]:
+                - generic [ref=e6620]:
+                  - generic [ref=e6621]: The Insiders
+                  - generic [ref=e6622]: 6:00 PM - 7:00 PM
+              - generic "NFL Football 7:00 PM - 10:00 PM" [ref=e6623] [cursor=pointer]:
+                - generic [ref=e6624]:
+                  - generic [ref=e6625]: NFL Football
+                  - generic [ref=e6626]: 7:00 PM - 10:00 PM
+                  - generic [ref=e6627]: After surviving Carolina, Matthew Stafford leads the Rams (12-5) into Chicago for an NFC Divisional clash. Despite a finger injury, the veteran Matthew Stafford faces Caleb Williams and a Bears team (11-6) that just erased a 21-3 halftime deficit.
+            - generic [ref=e6628]:
+              - generic "2026 Baseball Hall of Fame Election Announcement 5:00 PM - 6:00 PM" [ref=e6641] [cursor=pointer]:
+                - generic [ref=e6642]:
+                  - generic [ref=e6643]: 2026 Baseball Hall of Fame Election Announcement
+                  - generic [ref=e6644]: 5:00 PM - 6:00 PM
+              - generic "MLB Tonight 6:00 PM - 7:00 PM" [ref=e6645] [cursor=pointer]:
+                - generic [ref=e6646]:
+                  - generic [ref=e6647]: MLB Tonight
+                  - generic [ref=e6648]: 6:00 PM - 7:00 PM
+              - generic "2026 Baseball Hall of Fame Election Announcement 7:00 PM - 8:00 PM" [ref=e6649] [cursor=pointer]:
+                - generic [ref=e6650]:
+                  - generic [ref=e6651]: 2026 Baseball Hall of Fame Election Announcement
+                  - generic [ref=e6652]: 7:00 PM - 8:00 PM
+              - generic "MLB Tonight 8:00 PM - 9:00 PM" [ref=e6653] [cursor=pointer]:
+                - generic [ref=e6654]:
+                  - generic [ref=e6655]: MLB Tonight
+                  - generic [ref=e6656]: 8:00 PM - 9:00 PM
+              - generic "2026 Baseball Hall of Fame Election Announcement 9:00 PM - 10:00 PM" [ref=e6657] [cursor=pointer]:
+                - generic [ref=e6658]:
+                  - generic [ref=e6659]: 2026 Baseball Hall of Fame Election Announcement
+                  - generic [ref=e6660]: 9:00 PM - 10:00 PM
+            - generic [ref=e6661]:
+              - generic "2025 British Superbikes 5:00 PM - 6:00 PM" [ref=e6674] [cursor=pointer]:
+                - generic [ref=e6675]:
+                  - generic [ref=e6676]: 2025 British Superbikes
+                  - generic [ref=e6677]: 5:00 PM - 6:00 PM
+              - generic "2026 DAKAR Rally 6:00 PM - 7:00 PM" [ref=e6678] [cursor=pointer]:
+                - generic [ref=e6679]:
+                  - generic [ref=e6680]: 2026 DAKAR Rally
+                  - generic [ref=e6681]: 6:00 PM - 7:00 PM
+              - generic "2026 FIM North America Arenacross Championship 7:00 PM - 9:30 PM" [ref=e6682] [cursor=pointer]:
+                - generic [ref=e6683]:
+                  - generic [ref=e6684]: 2026 FIM North America Arenacross Championship
+                  - generic [ref=e6685]: 7:00 PM - 9:30 PM
+              - 'generic "2025 FIM MXGP: Behind the Gate 9:30 PM - 10:00 PM" [ref=e6686] [cursor=pointer]':
+                - generic [ref=e6688]: "2025 FIM MXGP: Behind the Gate"
+            - generic [ref=e6689]:
+              - generic "NHL Now 5:00 PM - 6:00 PM" [ref=e6702] [cursor=pointer]:
+                - generic [ref=e6703]:
+                  - generic [ref=e6704]: NHL Now
+                  - generic [ref=e6705]: 5:00 PM - 6:00 PM
+              - generic "NHL Tonight 6:00 PM - 9:00 PM" [ref=e6706] [cursor=pointer]:
+                - generic [ref=e6707]:
+                  - generic [ref=e6708]: NHL Tonight
+                  - generic [ref=e6709]: 6:00 PM - 9:00 PM
+              - generic "NHL Tonight 9:00 PM - 10:00 PM" [ref=e6710] [cursor=pointer]:
+                - generic [ref=e6712]: Live
+                - generic [ref=e6713]:
+                  - generic [ref=e6714]: NHL Tonight
+                  - generic [ref=e6715]: 9:00 PM - 10:00 PM
+            - generic [ref=e6730]: No program info
+            - generic [ref=e6731]:
+              - 'generic "NBA Shot Clock: 50-Point Games 2025-26 Season 5:00 PM - 6:00 PM" [ref=e6744] [cursor=pointer]':
+                - generic [ref=e6745]:
+                  - generic [ref=e6746]: "NBA Shot Clock: 50-Point Games 2025-26 Season"
+                  - generic [ref=e6747]: 5:00 PM - 6:00 PM
+              - 'generic "NBA Shot Clock: 50-Point Games 2025-26 Season 6:00 PM - 6:30 PM" [ref=e6748] [cursor=pointer]':
+                - generic [ref=e6750]: "NBA Shot Clock: 50-Point Games 2025-26 Season"
+              - generic "The Association 6:30 PM - 9:30 PM" [ref=e6751] [cursor=pointer]:
+                - generic [ref=e6752]:
+                  - generic [ref=e6753]: The Association
+                  - generic [ref=e6754]: 6:30 PM - 9:30 PM
+              - generic "Hardwood Classics 9:30 PM - 11:30 PM" [ref=e6755] [cursor=pointer]:
+                - generic [ref=e6757]: Hardwood Classics
+            - generic [ref=e6758]:
+              - generic "Tennis Channel Live at the Australian Open 4:00 PM - 6:00 PM" [ref=e6771] [cursor=pointer]:
+                - generic [ref=e6773]: Live
+                - generic [ref=e6774]:
+                  - generic [ref=e6775]: Tennis Channel Live at the Australian Open
+                  - generic [ref=e6776]: 4:00 PM - 6:00 PM
+                  - generic [ref=e6777]: From Melbourne, Australia.
+              - generic "Wimbledon Encore 6:00 PM - 11:00 PM" [ref=e6778] [cursor=pointer]:
+                - generic [ref=e6779]:
+                  - generic [ref=e6780]: Wimbledon Encore
+                  - generic [ref=e6781]: 6:00 PM - 11:00 PM
+                  - generic [ref=e6782]: Mirra Andreeva vs. Belinda Bencic.
+            - generic [ref=e6783]:
+              - generic "PGA TOUR - The Drop 5:00 PM - 5:30 PM" [ref=e6796] [cursor=pointer]:
+                - generic [ref=e6798]: PGA TOUR - The Drop
+              - generic "PGA Korn Ferry Tour Golf 5:30 PM - 8:30 PM" [ref=e6799] [cursor=pointer]:
+                - generic [ref=e6800]:
+                  - generic [ref=e6801]: PGA Korn Ferry Tour Golf
+                  - generic [ref=e6802]: 5:30 PM - 8:30 PM
+                  - generic [ref=e6803]: From The Abaco Club on Winding Bay in North Abaco, Bahamas.
+              - generic "DP World Tour Golf 8:30 PM - 1:30 AM" [ref=e6804] [cursor=pointer]:
+                - generic [ref=e6805]:
+                  - generic [ref=e6806]: DP World Tour Golf
+                  - generic [ref=e6807]: 8:30 PM - 1:30 AM
+                  - generic [ref=e6808]: From Dubai Creek Resort in Dubai, United Arab Emirates.
+            - generic [ref=e6809]:
+              - generic "NFL Films Presents 5:00 PM - 5:30 PM" [ref=e6822] [cursor=pointer]:
+                - generic [ref=e6824]: NFL Films Presents
+              - generic "Big Time Hoops 5:30 PM - 6:00 PM" [ref=e6825] [cursor=pointer]:
+                - generic [ref=e6827]: Big Time Hoops
+              - generic "College Basketball 6:00 PM - 8:00 PM" [ref=e6828] [cursor=pointer]:
+                - generic [ref=e6829]:
+                  - generic [ref=e6830]: College Basketball
+                  - generic [ref=e6831]: 6:00 PM - 8:00 PM
+                  - generic [ref=e6832]: From Madison Square Garden in New York.
+              - generic "College Basketball 8:00 PM - 10:00 PM" [ref=e6833] [cursor=pointer]:
+                - generic [ref=e6834]:
+                  - generic [ref=e6835]: College Basketball
+                  - generic [ref=e6836]: 8:00 PM - 10:00 PM
+                  - generic [ref=e6837]: From Matthew Knight Arena in Eugene, Ore.
+            - generic [ref=e6838]:
+              - generic "SailGP 4:00 PM - 5:30 PM" [ref=e6851] [cursor=pointer]:
+                - generic [ref=e6852]:
+                  - generic [ref=e6853]: SailGP
+                  - generic [ref=e6854]: 4:00 PM - 5:30 PM
+                  - generic [ref=e6855]: From Fremantle, Australia.
+              - generic "Time to Schein 5:00 PM - 6:00 PM" [ref=e6856] [cursor=pointer]:
+                - generic [ref=e6857]:
+                  - generic [ref=e6858]: Time to Schein
+                  - generic [ref=e6859]: 5:00 PM - 6:00 PM
+              - generic "Inside College Basketball 5:30 PM - 6:00 PM" [ref=e6860] [cursor=pointer]:
+                - generic [ref=e6862]: Inside College Basketball
+              - generic "College Basketball 6:00 PM - 8:00 PM" [ref=e6863] [cursor=pointer]:
+                - generic [ref=e6864]:
+                  - generic [ref=e6865]: College Basketball
+                  - generic [ref=e6866]: 6:00 PM - 8:00 PM
+                  - generic [ref=e6867]: From Hilton Coliseum in Ames, Iowa.
+              - generic "College Basketball 8:00 PM - 10:00 PM" [ref=e6868] [cursor=pointer]:
+                - generic [ref=e6869]:
+                  - generic [ref=e6870]: College Basketball
+                  - generic [ref=e6871]: 8:00 PM - 10:00 PM
+                  - generic [ref=e6872]: From Bramlage Coliseum in Mahnattan, Kan.
+            - generic [ref=e6873]:
+              - generic "Shopping 5:00 PM - 6:00 PM" [ref=e6886] [cursor=pointer]:
+                - generic [ref=e6887]:
+                  - generic [ref=e6888]: Shopping
+                  - generic [ref=e6889]: 5:00 PM - 6:00 PM
+              - generic "Shopping 6:00 PM - 7:00 PM" [ref=e6890] [cursor=pointer]:
+                - generic [ref=e6891]:
+                  - generic [ref=e6892]: Shopping
+                  - generic [ref=e6893]: 6:00 PM - 7:00 PM
+              - generic "Shopping 7:00 PM - 8:00 PM" [ref=e6894] [cursor=pointer]:
+                - generic [ref=e6895]:
+                  - generic [ref=e6896]: Shopping
+                  - generic [ref=e6897]: 7:00 PM - 8:00 PM
+              - generic "Shopping 8:00 PM - 9:00 PM" [ref=e6898] [cursor=pointer]:
+                - generic [ref=e6899]:
+                  - generic [ref=e6900]: Shopping
+                  - generic [ref=e6901]: 8:00 PM - 9:00 PM
+              - generic "Shopping 9:00 PM - 10:00 PM" [ref=e6902] [cursor=pointer]:
+                - generic [ref=e6903]:
+                  - generic [ref=e6904]: Shopping
+                  - generic [ref=e6905]: 9:00 PM - 10:00 PM
+            - generic [ref=e6906]:
+              - generic "Jewelry Extravaganza With Mike 1:00 PM - 6:00 PM" [ref=e6919] [cursor=pointer]:
+                - generic [ref=e6920]:
+                  - generic [ref=e6921]: Jewelry Extravaganza With Mike
+                  - generic [ref=e6922]: 1:00 PM - 6:00 PM
+                  - generic [ref=e6923]: A high-energy show featuring a selection of contemporary jewelry and gems from around the world. Presented by Gem Shopping.
+              - generic "Gem Bleu With Daniel 6:00 PM - 2:00 AM" [ref=e6924] [cursor=pointer]:
+                - generic [ref=e6925]:
+                  - generic [ref=e6926]: Gem Bleu With Daniel
+                  - generic [ref=e6927]: 6:00 PM - 2:00 AM
+                  - generic [ref=e6928]: Multi-generational jewelers show high-end collector loose gems and fine jewelry. Presented by Gem Shopping.
+            - generic [ref=e6929]:
+              - generic "Love It or List It 5:00 PM - 6:00 PM" [ref=e6942] [cursor=pointer]:
+                - generic [ref=e6943]:
+                  - generic [ref=e6944]: Love It or List It
+                  - generic [ref=e6945]: 5:00 PM - 6:00 PM
+              - generic "Fixer to Fabulous 6:00 PM - 7:00 PM" [ref=e6946] [cursor=pointer]:
+                - generic [ref=e6947]:
+                  - generic [ref=e6948]: Fixer to Fabulous
+                  - generic [ref=e6949]: 6:00 PM - 7:00 PM
+              - generic "Fixer to Fabulous 7:00 PM - 8:00 PM" [ref=e6950] [cursor=pointer]:
+                - generic [ref=e6951]:
+                  - generic [ref=e6952]: Fixer to Fabulous
+                  - generic [ref=e6953]: 7:00 PM - 8:00 PM
+              - generic "Farmhouse Facelift 8:00 PM - 9:00 PM" [ref=e6954] [cursor=pointer]:
+                - generic [ref=e6955]:
+                  - generic [ref=e6956]: Farmhouse Facelift
+                  - generic [ref=e6957]: 8:00 PM - 9:00 PM
+              - generic "House Hunters International 9:00 PM - 9:30 PM" [ref=e6958] [cursor=pointer]:
+                - generic [ref=e6960]: House Hunters International
+              - generic "House Hunters International 9:30 PM - 10:00 PM" [ref=e6961] [cursor=pointer]:
+                - generic [ref=e6963]: House Hunters International
+            - generic [ref=e6964]:
+              - generic "Building Off the Grid 5:00 PM - 6:00 PM" [ref=e6977] [cursor=pointer]:
+                - generic [ref=e6978]:
+                  - generic [ref=e6979]: Building Off the Grid
+                  - generic [ref=e6980]: 5:00 PM - 6:00 PM
+              - generic "Building Off the Grid 6:00 PM - 7:00 PM" [ref=e6981] [cursor=pointer]:
+                - generic [ref=e6982]:
+                  - generic [ref=e6983]: Building Off the Grid
+                  - generic [ref=e6984]: 6:00 PM - 7:00 PM
+              - generic "Building Outside the Lines 7:00 PM - 8:00 PM" [ref=e6985] [cursor=pointer]:
+                - generic [ref=e6986]:
+                  - generic [ref=e6987]: Building Outside the Lines
+                  - generic [ref=e6988]: 7:00 PM - 8:00 PM
+              - generic "Building Outside the Lines 8:00 PM - 9:00 PM" [ref=e6989] [cursor=pointer]:
+                - generic [ref=e6990]:
+                  - generic [ref=e6991]: Building Outside the Lines
+                  - generic [ref=e6992]: 8:00 PM - 9:00 PM
+              - generic "Building Off the Grid 9:00 PM - 10:00 PM" [ref=e6993] [cursor=pointer]:
+                - generic [ref=e6994]:
+                  - generic [ref=e6995]: Building Off the Grid
+                  - generic [ref=e6996]: 9:00 PM - 10:00 PM
+            - generic [ref=e6997]:
+              - generic "Chopped 5:00 PM - 6:00 PM" [ref=e7010] [cursor=pointer]:
+                - generic [ref=e7011]:
+                  - generic [ref=e7012]: Chopped
+                  - generic [ref=e7013]: 5:00 PM - 6:00 PM
+              - generic "Chopped 6:00 PM - 7:00 PM" [ref=e7014] [cursor=pointer]:
+                - generic [ref=e7015]:
+                  - generic [ref=e7016]: Chopped
+                  - generic [ref=e7017]: 6:00 PM - 7:00 PM
+              - generic "Chopped 7:00 PM - 8:00 PM" [ref=e7018] [cursor=pointer]:
+                - generic [ref=e7019]:
+                  - generic [ref=e7020]: Chopped
+                  - generic [ref=e7021]: 7:00 PM - 8:00 PM
+              - generic "Wildcard Kitchen 8:00 PM - 9:00 PM" [ref=e7022] [cursor=pointer]:
+                - generic [ref=e7023]:
+                  - generic [ref=e7024]: Wildcard Kitchen
+                  - generic [ref=e7025]: 8:00 PM - 9:00 PM
+              - generic "Wildcard Kitchen 9:00 PM - 10:00 PM" [ref=e7026] [cursor=pointer]:
+                - generic [ref=e7027]:
+                  - generic [ref=e7028]: Wildcard Kitchen
+                  - generic [ref=e7029]: 9:00 PM - 10:00 PM
+            - generic [ref=e7030]:
+              - generic "Man v. Food 5:00 PM - 5:30 PM" [ref=e7043] [cursor=pointer]:
+                - generic [ref=e7045]: Man v. Food
+              - generic "Man v. Food 5:30 PM - 6:00 PM" [ref=e7046] [cursor=pointer]:
+                - generic [ref=e7048]: Man v. Food
+              - generic "Man v. Food 6:00 PM - 6:30 PM" [ref=e7049] [cursor=pointer]:
+                - generic [ref=e7051]: Man v. Food
+              - generic "Man v. Food 6:30 PM - 7:00 PM" [ref=e7052] [cursor=pointer]:
+                - generic [ref=e7054]: Man v. Food
+              - generic "Man v. Food 7:00 PM - 7:30 PM" [ref=e7055] [cursor=pointer]:
+                - generic [ref=e7057]: Man v. Food
+              - generic "Man v. Food 7:30 PM - 8:00 PM" [ref=e7058] [cursor=pointer]:
+                - generic [ref=e7060]: Man v. Food
+              - 'generic "Anthony Bourdain: No Reservations 8:00 PM - 9:00 PM" [ref=e7061] [cursor=pointer]':
+                - generic [ref=e7062]:
+                  - generic [ref=e7063]: "Anthony Bourdain: No Reservations"
+                  - generic [ref=e7064]: 8:00 PM - 9:00 PM
+              - 'generic "Anthony Bourdain: No Reservations 9:00 PM - 10:00 PM" [ref=e7065] [cursor=pointer]':
+                - generic [ref=e7066]:
+                  - generic [ref=e7067]: "Anthony Bourdain: No Reservations"
+                  - generic [ref=e7068]: 9:00 PM - 10:00 PM
+            - generic [ref=e7069]:
+              - generic "America Says 5:00 PM - 5:30 PM" [ref=e7082] [cursor=pointer]:
+                - generic [ref=e7084]: America Says
+              - generic "Chain Reaction 5:30 PM - 6:00 PM" [ref=e7085] [cursor=pointer]:
+                - generic [ref=e7087]: Chain Reaction
+              - generic "The Chase 6:00 PM - 7:00 PM" [ref=e7088] [cursor=pointer]:
+                - generic [ref=e7089]:
+                  - generic [ref=e7090]: The Chase
+                  - generic [ref=e7091]: 6:00 PM - 7:00 PM
+              - generic "The Wall 7:00 PM - 8:00 PM" [ref=e7092] [cursor=pointer]:
+                - generic [ref=e7093]:
+                  - generic [ref=e7094]: The Wall
+                  - generic [ref=e7095]: 7:00 PM - 8:00 PM
+              - generic "Press Your Luck 8:00 PM - 9:00 PM" [ref=e7096] [cursor=pointer]:
+                - generic [ref=e7097]:
+                  - generic [ref=e7098]: Press Your Luck
+                  - generic [ref=e7099]: 8:00 PM - 9:00 PM
+              - generic "Family Feud 9:00 PM - 9:30 PM" [ref=e7100] [cursor=pointer]:
+                - generic [ref=e7102]: Family Feud
+              - generic "Family Feud 9:30 PM - 10:00 PM" [ref=e7103] [cursor=pointer]:
+                - generic [ref=e7105]: Family Feud
+            - generic [ref=e7106]:
+              - generic "Nigella Lawson's Cook, Eat, Repeat 4:30 PM - 5:15 PM" [ref=e7119] [cursor=pointer]:
+                - generic [ref=e7120]:
+                  - generic [ref=e7121]: Nigella Lawson's Cook, Eat, Repeat
+                  - generic [ref=e7122]: 4:30 PM - 5:15 PM
+              - generic "Nigella Lawson's Cook, Eat, Repeat 5:15 PM - 6:00 PM" [ref=e7123] [cursor=pointer]:
+                - generic [ref=e7124]:
+                  - generic [ref=e7125]: Nigella Lawson's Cook, Eat, Repeat
+                  - generic [ref=e7126]: 5:15 PM - 6:00 PM
+              - generic "Nigella Lawson's Cook, Eat, Repeat 6:00 PM - 6:45 PM" [ref=e7127] [cursor=pointer]:
+                - generic [ref=e7128]:
+                  - generic [ref=e7129]: Nigella Lawson's Cook, Eat, Repeat
+                  - generic [ref=e7130]: 6:00 PM - 6:45 PM
+              - generic "Nigella Lawson's Cook, Eat, Repeat 6:45 PM - 7:30 PM" [ref=e7131] [cursor=pointer]:
+                - generic [ref=e7132]:
+                  - generic [ref=e7133]: Nigella Lawson's Cook, Eat, Repeat
+                  - generic [ref=e7134]: 6:45 PM - 7:30 PM
+              - generic "Nigella Lawson's Cook, Eat, Repeat 7:30 PM - 8:15 PM" [ref=e7135] [cursor=pointer]:
+                - generic [ref=e7136]:
+                  - generic [ref=e7137]: Nigella Lawson's Cook, Eat, Repeat
+                  - generic [ref=e7138]: 7:30 PM - 8:15 PM
+              - generic "Nigella Lawson's Cook, Eat, Repeat 8:15 PM - 9:00 PM" [ref=e7139] [cursor=pointer]:
+                - generic [ref=e7140]:
+                  - generic [ref=e7141]: Nigella Lawson's Cook, Eat, Repeat
+                  - generic [ref=e7142]: 8:15 PM - 9:00 PM
+              - generic "Nigella Lawson's Cook, Eat, Repeat 9:00 PM - 9:45 PM" [ref=e7143] [cursor=pointer]:
+                - generic [ref=e7144]:
+                  - generic [ref=e7145]: Nigella Lawson's Cook, Eat, Repeat
+                  - generic [ref=e7146]: 9:00 PM - 9:45 PM
+              - generic "Nigella Lawson's Cook, Eat, Repeat 9:45 PM - 10:30 PM" [ref=e7147] [cursor=pointer]:
+                - generic [ref=e7149]: Nigella Lawson's Cook, Eat, Repeat
+            - generic [ref=e7150]:
+              - generic "The Office 5:00 PM - 5:30 PM" [ref=e7163] [cursor=pointer]:
+                - generic [ref=e7165]: The Office
+              - generic "The Office 5:30 PM - 6:00 PM" [ref=e7166] [cursor=pointer]:
+                - generic [ref=e7168]: The Office
+              - generic "The Office 6:00 PM - 6:30 PM" [ref=e7169] [cursor=pointer]:
+                - generic [ref=e7171]: The Office
+              - generic "The Office 6:30 PM - 7:00 PM" [ref=e7172] [cursor=pointer]:
+                - generic [ref=e7174]: The Office
+              - generic "The Office 7:00 PM - 7:30 PM" [ref=e7175] [cursor=pointer]:
+                - generic [ref=e7177]: The Office
+              - generic "The Office 7:30 PM - 8:00 PM" [ref=e7178] [cursor=pointer]:
+                - generic [ref=e7180]: The Office
+              - generic "The Office 8:00 PM - 8:30 PM" [ref=e7181] [cursor=pointer]:
+                - generic [ref=e7183]: The Office
+              - generic "The Office 8:30 PM - 9:00 PM" [ref=e7184] [cursor=pointer]:
+                - generic [ref=e7186]: The Office
+              - generic "The Office 9:00 PM - 9:30 PM" [ref=e7187] [cursor=pointer]:
+                - generic [ref=e7189]: The Office
+              - generic "The Office 9:30 PM - 10:00 PM" [ref=e7190] [cursor=pointer]:
+                - generic [ref=e7192]: The Office
+            - generic [ref=e7193]:
+              - generic "The Real Housewives of Salt Lake City 5:00 PM - 6:00 PM" [ref=e7206] [cursor=pointer]:
+                - generic [ref=e7207]:
+                  - generic [ref=e7208]: The Real Housewives of Salt Lake City
+                  - generic [ref=e7209]: 5:00 PM - 6:00 PM
+              - generic "The Real Housewives of Salt Lake City 6:00 PM - 7:00 PM" [ref=e7210] [cursor=pointer]:
+                - generic [ref=e7211]:
+                  - generic [ref=e7212]: The Real Housewives of Salt Lake City
+                  - generic [ref=e7213]: 6:00 PM - 7:00 PM
+              - generic "The Real Housewives of Salt Lake City 7:00 PM - 8:00 PM" [ref=e7214] [cursor=pointer]:
+                - generic [ref=e7215]:
+                  - generic [ref=e7216]: The Real Housewives of Salt Lake City
+                  - generic [ref=e7217]: 7:00 PM - 8:00 PM
+              - generic "Vanderpump Rules 8:00 PM - 9:30 PM" [ref=e7218] [cursor=pointer]:
+                - generic [ref=e7219]:
+                  - generic [ref=e7220]: Vanderpump Rules
+                  - generic [ref=e7221]: 8:00 PM - 9:30 PM
+                  - generic [ref=e7222]: Lisa throws an intimate 20th anniversary party to celebrate the founding of SUR. Angelica and Shayne grow closer, despite Shayne's transparent feelings about monogamy.
+              - generic "The Real Housewives of Salt Lake City 9:30 PM - 10:30 PM" [ref=e7223] [cursor=pointer]:
+                - generic [ref=e7225]: The Real Housewives of Salt Lake City
+            - generic [ref=e7226]:
+              - 'generic "Jail: Big Texas 5:00 PM - 5:30 PM" [ref=e7239] [cursor=pointer]':
+                - generic [ref=e7241]: "Jail: Big Texas"
+              - 'generic "Jail: Big Texas 5:30 PM - 6:00 PM" [ref=e7242] [cursor=pointer]':
+                - generic [ref=e7244]: "Jail: Big Texas"
+              - generic "Cops Reloaded 6:00 PM - 6:30 PM" [ref=e7245] [cursor=pointer]:
+                - generic [ref=e7247]: Cops Reloaded
+              - generic "Cops Reloaded 6:30 PM - 7:00 PM" [ref=e7248] [cursor=pointer]:
+                - generic [ref=e7250]: Cops Reloaded
+              - generic "Cops Reloaded 7:00 PM - 7:30 PM" [ref=e7251] [cursor=pointer]:
+                - generic [ref=e7253]: Cops Reloaded
+              - generic "Cops Reloaded 7:30 PM - 8:00 PM" [ref=e7254] [cursor=pointer]:
+                - generic [ref=e7256]: Cops Reloaded
+              - generic "Spycraft 8:00 PM - 9:00 PM" [ref=e7257] [cursor=pointer]:
+                - generic [ref=e7258]:
+                  - generic [ref=e7259]: Spycraft
+                  - generic [ref=e7260]: 8:00 PM - 9:00 PM
+              - generic "Spycraft 9:00 PM - 10:00 PM" [ref=e7261] [cursor=pointer]:
+                - generic [ref=e7262]:
+                  - generic [ref=e7263]: Spycraft
+                  - generic [ref=e7264]: 9:00 PM - 10:00 PM
+            - generic [ref=e7265]:
+              - generic "Law & Order 5:00 PM - 6:00 PM" [ref=e7278] [cursor=pointer]:
+                - generic [ref=e7279]:
+                  - generic [ref=e7280]: Law & Order
+                  - generic [ref=e7281]: 5:00 PM - 6:00 PM
+              - generic "Law & Order 6:00 PM - 7:00 PM" [ref=e7282] [cursor=pointer]:
+                - generic [ref=e7283]:
+                  - generic [ref=e7284]: Law & Order
+                  - generic [ref=e7285]: 6:00 PM - 7:00 PM
+              - generic "Law & Order 7:00 PM - 8:00 PM" [ref=e7286] [cursor=pointer]:
+                - generic [ref=e7287]:
+                  - generic [ref=e7288]: Law & Order
+                  - generic [ref=e7289]: 7:00 PM - 8:00 PM
+              - generic "Law & Order 8:00 PM - 9:00 PM" [ref=e7290] [cursor=pointer]:
+                - generic [ref=e7291]:
+                  - generic [ref=e7292]: Law & Order
+                  - generic [ref=e7293]: 8:00 PM - 9:00 PM
+              - generic "Law & Order 9:00 PM - 10:00 PM" [ref=e7294] [cursor=pointer]:
+                - generic [ref=e7295]:
+                  - generic [ref=e7296]: Law & Order
+                  - generic [ref=e7297]: 9:00 PM - 10:00 PM
+            - generic [ref=e7298]:
+              - generic "Canadian Ammolite Jewelry 5:00 PM - 6:00 PM" [ref=e7311] [cursor=pointer]:
+                - generic [ref=e7312]:
+                  - generic [ref=e7313]: Canadian Ammolite Jewelry
+                  - generic [ref=e7314]: 5:00 PM - 6:00 PM
+              - generic "Copper Life 6:00 PM - 7:00 PM" [ref=e7315] [cursor=pointer]:
+                - generic [ref=e7316]:
+                  - generic [ref=e7317]: Copper Life
+                  - generic [ref=e7318]: 6:00 PM - 7:00 PM
+              - generic "Skinn Cosmetics - All on Free Shipping 7:00 PM - 8:00 PM" [ref=e7319] [cursor=pointer]:
+                - generic [ref=e7320]:
+                  - generic [ref=e7321]: Skinn Cosmetics - All on Free Shipping
+                  - generic [ref=e7322]: 7:00 PM - 8:00 PM
+              - generic "Healthy Living 8:00 PM - 9:00 PM" [ref=e7323] [cursor=pointer]:
+                - generic [ref=e7324]:
+                  - generic [ref=e7325]: Healthy Living
+                  - generic [ref=e7326]: 8:00 PM - 9:00 PM
+              - generic "First Big Sale of the Year 9:00 PM - 10:00 PM" [ref=e7327] [cursor=pointer]:
+                - generic [ref=e7328]:
+                  - generic [ref=e7329]: First Big Sale of the Year
+                  - generic [ref=e7330]: 9:00 PM - 10:00 PM
+            - generic [ref=e7331]:
+              - generic "Grown Ups 5:00 PM - 7:20 PM" [ref=e7344] [cursor=pointer]:
+                - generic [ref=e7345]:
+                  - generic [ref=e7346]: Grown Ups
+                  - generic [ref=e7347]: 5:00 PM - 7:20 PM
+                  - generic [ref=e7348]: The death of their childhood basketball coach leads to a reunion for some old friends (Adam Sandler, Kevin James, Chris Rock), who gather at the site of a championship celebration years earlier. Picking up where they left off, the buddies -- with wives and children in tow -- discover why age does not, necessarily, equal maturity.
+              - generic "Grown Ups 2 7:20 PM - 9:40 PM" [ref=e7349] [cursor=pointer]:
+                - generic [ref=e7350]:
+                  - generic [ref=e7351]: Grown Ups 2
+                  - generic [ref=e7352]: 7:20 PM - 9:40 PM
+                  - generic [ref=e7353]: "Lenny Feder moves his family back to his hometown to be with his friends, but he finds -- what with old bullies, new bullies, party crashers and more -- that he hasn't left the crazy life behind in Los Angeles. Lenny's friends must also cope with their own challenges: Eric must face his ultimate fear; Kurt has gone back to work as a cable repairman; and Marcus learns that he has an 18-year-old son."
+              - generic "Grown Ups 9:40 PM - 12:00 AM" [ref=e7354] [cursor=pointer]:
+                - generic [ref=e7356]: Grown Ups
+            - generic [ref=e7357]:
+              - 'generic "Law & Order: Special Victims Unit 5:00 PM - 6:00 PM" [ref=e7370] [cursor=pointer]':
+                - generic [ref=e7371]:
+                  - generic [ref=e7372]: "Law & Order: Special Victims Unit"
+                  - generic [ref=e7373]: 5:00 PM - 6:00 PM
+              - 'generic "Law & Order: Special Victims Unit 6:00 PM - 7:00 PM" [ref=e7374] [cursor=pointer]':
+                - generic [ref=e7375]:
+                  - generic [ref=e7376]: "Law & Order: Special Victims Unit"
+                  - generic [ref=e7377]: 6:00 PM - 7:00 PM
+              - 'generic "Law & Order: Special Victims Unit 7:00 PM - 8:00 PM" [ref=e7378] [cursor=pointer]':
+                - generic [ref=e7379]:
+                  - generic [ref=e7380]: "Law & Order: Special Victims Unit"
+                  - generic [ref=e7381]: 7:00 PM - 8:00 PM
+              - 'generic "Law & Order: Special Victims Unit 8:00 PM - 9:00 PM" [ref=e7382] [cursor=pointer]':
+                - generic [ref=e7383]:
+                  - generic [ref=e7384]: "Law & Order: Special Victims Unit"
+                  - generic [ref=e7385]: 8:00 PM - 9:00 PM
+              - 'generic "Law & Order: Special Victims Unit 9:00 PM - 10:00 PM" [ref=e7386] [cursor=pointer]':
+                - generic [ref=e7387]:
+                  - generic [ref=e7388]: "Law & Order: Special Victims Unit"
+                  - generic [ref=e7389]: 9:00 PM - 10:00 PM
+            - generic [ref=e7390]:
+              - generic "Harry Potter and the Goblet of Fire 3:00 PM - 6:30 PM" [ref=e7403] [cursor=pointer]:
+                - generic [ref=e7404]:
+                  - generic [ref=e7405]: Harry Potter and the Goblet of Fire
+                  - generic [ref=e7406]: 3:00 PM - 6:30 PM
+                  - generic [ref=e7407]: During Harry's fourth year at Hogwarts a competition will be held between three schools of wizardry, and contestants will be magically chosen for the very dangerous event.
+              - generic "Harry Potter and the Order of the Phoenix 6:30 PM - 9:30 PM" [ref=e7408] [cursor=pointer]:
+                - generic [ref=e7409]:
+                  - generic [ref=e7410]: Harry Potter and the Order of the Phoenix
+                  - generic [ref=e7411]: 6:30 PM - 9:30 PM
+                  - generic [ref=e7412]: Now in his fifth year at Hogwarts, Harry learns that many in the wizarding community do not know the truth of his encounter with Lord Voldemort. Cornelius Fudge, minister of Magic, appoints his toady, Dolores Umbridge, as Defense Against the Dark Arts teacher, for he fears that professor Dumbledore will take his job. But her teaching is deficient and her methods, cruel, so Harry prepares a group of students to defend the school against a rising tide of evil.
+              - generic "Harry Potter and the Half-Blood Prince 9:30 PM - 1:00 AM" [ref=e7413] [cursor=pointer]:
+                - generic [ref=e7415]: Harry Potter and the Half-Blood Prince
+            - generic [ref=e7430]: No program info
+            - generic [ref=e7431]:
+              - generic "Plane 3:45 PM - 6:00 PM" [ref=e7444] [cursor=pointer]:
+                - generic [ref=e7445]:
+                  - generic [ref=e7446]: Plane
+                  - generic [ref=e7447]: 3:45 PM - 6:00 PM
+                  - generic [ref=e7448]: Pilot Brodie Torrance saves passengers from a lightning strike by making a risky landing on a war-torn island -- only to find that surviving the landing was just the beginning. When dangerous rebels take most of the passengers hostage, the only person Torrance can count on for help is Louis Gaspare, an accused murderer who was being transported by the FBI.
+              - generic "NHL on TNT Face Off 6:00 PM - 6:30 PM" [ref=e7449] [cursor=pointer]:
+                - generic [ref=e7451]: NHL on TNT Face Off
+              - generic "NHL Hockey 6:30 PM - 9:00 PM" [ref=e7452] [cursor=pointer]:
+                - generic [ref=e7453]:
+                  - generic [ref=e7454]: NHL Hockey
+                  - generic [ref=e7455]: 6:30 PM - 9:00 PM
+                  - generic [ref=e7456]: The Boston Bruins visit the Dallas Stars at American Airlines Center. Dallas right wing Mikko Rantanen ranks sixth in the NHL with 62 points and 18 goals. Boston seeks to extend its win streak, while the Stars look to rebound from a 3-1 loss.
+              - generic "NHL Hockey 9:00 PM - 12:00 AM" [ref=e7457] [cursor=pointer]:
+                - generic [ref=e7458]:
+                  - generic [ref=e7459]: NHL Hockey
+                  - generic [ref=e7460]: 9:00 PM - 12:00 AM
+            - generic [ref=e7461]:
+              - generic "Any Given Sunday 3:00 PM - 6:00 PM" [ref=e7474] [cursor=pointer]:
+                - generic [ref=e7475]:
+                  - generic [ref=e7476]: Any Given Sunday
+                  - generic [ref=e7477]: 3:00 PM - 6:00 PM
+                  - generic [ref=e7478]: Four years ago, DAmato's (Al Pacino) Miami Sharks were at the top. Now, his team is struggling with three consecutive losses, sliding attendance, and aging heroes, particularly 39-year-old quarterback Jack Cap Rooney (Dennis Quaid). Off the field, DAmato is struggling with a failed marriage and estranged children, and is on a collision course with Christina Pagniacci (Cameron Diaz), the young president/co-owner of the Sharks organization.
+              - generic "College Basketball Pregame 6:00 PM - 6:30 PM" [ref=e7479] [cursor=pointer]:
+                - generic [ref=e7481]: College Basketball Pregame
+              - generic "College Basketball 6:30 PM - 8:30 PM" [ref=e7482] [cursor=pointer]:
+                - generic [ref=e7483]:
+                  - generic [ref=e7484]: College Basketball
+                  - generic [ref=e7485]: 6:30 PM - 8:30 PM
+                  - generic [ref=e7486]: From Hinkle Fieldhouse in Indianapolis.
+              - generic "College Basketball Postgame 8:30 PM - 9:00 PM" [ref=e7487] [cursor=pointer]:
+                - generic [ref=e7489]: College Basketball Postgame
+              - generic "NHL Hockey 9:00 PM - 12:00 AM" [ref=e7490] [cursor=pointer]:
+                - generic [ref=e7491]:
+                  - generic [ref=e7492]: NHL Hockey
+                  - generic [ref=e7493]: 9:00 PM - 12:00 AM
+            - generic [ref=e7494]:
+              - generic "Friends 5:00 PM - 5:30 PM" [ref=e7507] [cursor=pointer]:
+                - generic [ref=e7509]: Friends
+              - generic "Friends 5:30 PM - 6:00 PM" [ref=e7510] [cursor=pointer]:
+                - generic [ref=e7512]: Live
+                - generic [ref=e7514]: Friends
+              - generic "The Big Bang Theory 6:00 PM - 6:30 PM" [ref=e7515] [cursor=pointer]:
+                - generic [ref=e7517]: The Big Bang Theory
+              - generic "The Big Bang Theory 6:30 PM - 7:00 PM" [ref=e7518] [cursor=pointer]:
+                - generic [ref=e7520]: The Big Bang Theory
+              - generic "The Big Bang Theory 7:00 PM - 7:30 PM" [ref=e7521] [cursor=pointer]:
+                - generic [ref=e7523]: The Big Bang Theory
+              - generic "The Big Bang Theory 7:30 PM - 8:00 PM" [ref=e7524] [cursor=pointer]:
+                - generic [ref=e7526]: The Big Bang Theory
+              - generic "The Big Bang Theory 8:00 PM - 8:30 PM" [ref=e7527] [cursor=pointer]:
+                - generic [ref=e7529]: The Big Bang Theory
+              - generic "The Big Bang Theory 8:30 PM - 9:00 PM" [ref=e7530] [cursor=pointer]:
+                - generic [ref=e7532]: The Big Bang Theory
+              - generic "The Big Bang Theory 9:00 PM - 9:30 PM" [ref=e7533] [cursor=pointer]:
+                - generic [ref=e7535]: The Big Bang Theory
+              - generic "The Big Bang Theory 9:30 PM - 10:00 PM" [ref=e7536] [cursor=pointer]:
+                - generic [ref=e7538]: The Big Bang Theory
+            - generic [ref=e7553]: No program info
+            - generic [ref=e7554]:
+              - 'generic "Thor: Ragnarok 5:00 PM - 8:00 PM" [ref=e7567] [cursor=pointer]':
+                - generic [ref=e7568]:
+                  - generic [ref=e7569]: "Thor: Ragnarok"
+                  - generic [ref=e7570]: 5:00 PM - 8:00 PM
+                  - generic [ref=e7571]: Imprisoned on the other side of the universe, the mighty Thor finds himself in a deadly gladiatorial contest that pits him against the Hulk, his former ally and fellow Avenger. Thor's quest for survival leads him in a race against time to prevent the all-powerful Hela from destroying his home world and the Asgardian civilization.
+              - 'generic "Thor: Love and Thunder 8:00 PM - 10:30 PM" [ref=e7572] [cursor=pointer]':
+                - generic [ref=e7573]:
+                  - generic [ref=e7574]: "Thor: Love and Thunder"
+                  - generic [ref=e7575]: 8:00 PM - 10:30 PM
+                  - generic [ref=e7576]: Thor embarks on a journey unlike anything he's ever faced -- a quest for inner peace. However, his retirement gets interrupted by Gorr the God Butcher, a galactic killer who seeks the extinction of the gods. To combat the threat, Thor enlists the help of King Valkyrie, Korg and ex-girlfriend Jane Foster, who -- to his surprise -- inexplicably wields his magical hammer. Together, they set out on a harrowing cosmic adventure to uncover the mystery of the God Butcher's vengeance.
+            - generic [ref=e7577]:
+              - generic "Family Guy 5:00 PM - 5:30 PM" [ref=e7590] [cursor=pointer]:
+                - generic [ref=e7592]: Family Guy
+              - generic "Family Guy 5:30 PM - 6:00 PM" [ref=e7593] [cursor=pointer]:
+                - generic [ref=e7595]: Family Guy
+              - generic "Family Guy 6:00 PM - 6:30 PM" [ref=e7596] [cursor=pointer]:
+                - generic [ref=e7598]: Family Guy
+              - generic "Family Guy 6:30 PM - 7:00 PM" [ref=e7599] [cursor=pointer]:
+                - generic [ref=e7601]: Family Guy
+              - generic "Family Guy 7:00 PM - 7:30 PM" [ref=e7602] [cursor=pointer]:
+                - generic [ref=e7604]: Family Guy
+              - generic "Family Guy 7:30 PM - 8:00 PM" [ref=e7605] [cursor=pointer]:
+                - generic [ref=e7607]: Live
+                - generic [ref=e7609]: Family Guy
+              - generic "Family Guy 8:00 PM - 8:30 PM" [ref=e7610] [cursor=pointer]:
+                - generic [ref=e7612]: Family Guy
+              - generic "Family Guy 8:30 PM - 9:00 PM" [ref=e7613] [cursor=pointer]:
+                - generic [ref=e7615]: Family Guy
+              - generic "Family Guy 9:00 PM - 9:30 PM" [ref=e7616] [cursor=pointer]:
+                - generic [ref=e7618]: Family Guy
+              - generic "Family Guy 9:30 PM - 10:00 PM" [ref=e7619] [cursor=pointer]:
+                - generic [ref=e7621]: Family Guy
+            - generic [ref=e7636]: No program info
+            - generic [ref=e7637]:
+              - generic "Forensic Files 5:00 PM - 5:30 PM" [ref=e7650] [cursor=pointer]:
+                - generic [ref=e7652]: Forensic Files
+              - generic "Forensic Files 5:30 PM - 6:00 PM" [ref=e7653] [cursor=pointer]:
+                - generic [ref=e7655]: Forensic Files
+              - generic "Forensic Files 6:00 PM - 6:30 PM" [ref=e7656] [cursor=pointer]:
+                - generic [ref=e7658]: Forensic Files
+              - generic "Forensic Files 6:30 PM - 7:00 PM" [ref=e7659] [cursor=pointer]:
+                - generic [ref=e7661]: Forensic Files
+              - generic "Forensic Files 7:00 PM - 7:30 PM" [ref=e7662] [cursor=pointer]:
+                - generic [ref=e7664]: Forensic Files
+              - generic "Forensic Files 7:30 PM - 8:00 PM" [ref=e7665] [cursor=pointer]:
+                - generic [ref=e7667]: Forensic Files
+              - generic "Forensic Files 8:00 PM - 8:30 PM" [ref=e7668] [cursor=pointer]:
+                - generic [ref=e7670]: Forensic Files
+              - generic "Forensic Files 8:30 PM - 9:00 PM" [ref=e7671] [cursor=pointer]:
+                - generic [ref=e7673]: Forensic Files
+              - generic "Forensic Files 9:00 PM - 9:30 PM" [ref=e7674] [cursor=pointer]:
+                - generic [ref=e7676]: Forensic Files
+              - generic "Forensic Files 9:30 PM - 10:00 PM" [ref=e7677] [cursor=pointer]:
+                - generic [ref=e7679]: Forensic Files
+            - generic [ref=e7680]:
+              - generic "Castle 5:00 PM - 6:00 PM" [ref=e7693] [cursor=pointer]:
+                - generic [ref=e7694]:
+                  - generic [ref=e7695]: Castle
+                  - generic [ref=e7696]: 5:00 PM - 6:00 PM
+              - generic "Castle 6:00 PM - 7:00 PM" [ref=e7697] [cursor=pointer]:
+                - generic [ref=e7698]:
+                  - generic [ref=e7699]: Castle
+                  - generic [ref=e7700]: 6:00 PM - 7:00 PM
+              - generic "Castle 7:00 PM - 8:00 PM" [ref=e7701] [cursor=pointer]:
+                - generic [ref=e7702]:
+                  - generic [ref=e7703]: Castle
+                  - generic [ref=e7704]: 7:00 PM - 8:00 PM
+              - generic "Castle 8:00 PM - 9:03 PM" [ref=e7705] [cursor=pointer]:
+                - generic [ref=e7706]:
+                  - generic [ref=e7707]: Castle
+                  - generic [ref=e7708]: 8:00 PM - 9:03 PM
+              - generic "Castle 9:03 PM - 10:03 PM" [ref=e7709] [cursor=pointer]:
+                - generic [ref=e7710]:
+                  - generic [ref=e7711]: Castle
+                  - generic [ref=e7712]: 9:03 PM - 10:03 PM
+            - generic [ref=e7713]:
+              - generic "Secrets on Greek Row 5:00 PM - 7:00 PM" [ref=e7726] [cursor=pointer]:
+                - generic [ref=e7727]:
+                  - generic [ref=e7728]: Secrets on Greek Row
+                  - generic [ref=e7729]: 5:00 PM - 7:00 PM
+                  - generic [ref=e7730]: A college student's carefree life explodes when her boyfriend dies in a bizarre electrocution accident, leaving many to suspect she was the culprit. As she tries to clear her name, she soon uncovers a horrifying truth that puts her life in danger.
+              - generic "Killing All My Sisters 7:00 PM - 9:00 PM" [ref=e7731] [cursor=pointer]:
+                - generic [ref=e7732]:
+                  - generic [ref=e7733]: Killing All My Sisters
+                  - generic [ref=e7734]: 7:00 PM - 9:00 PM
+                  - generic [ref=e7735]: A college student uncovers an elite sorority's dark secrets when her best friend mysteriously disappears during rush week.
+              - generic "Secret Life of a Sorority Girl 9:00 PM - 11:01 PM" [ref=e7736] [cursor=pointer]:
+                - generic [ref=e7737]:
+                  - generic [ref=e7738]: Secret Life of a Sorority Girl
+                  - generic [ref=e7739]: 9:00 PM - 11:01 PM
+            - generic [ref=e7740]:
+              - generic "Beverly Hills Cop II 5:00 PM - 7:00 PM" [ref=e7753] [cursor=pointer]:
+                - generic [ref=e7754]:
+                  - generic [ref=e7755]: Beverly Hills Cop II
+                  - generic [ref=e7756]: 5:00 PM - 7:00 PM
+                  - generic [ref=e7757]: The hard-nosed Detroit cop returns to Los Angeles to help solve another case. This time he must direct his efforts towards unraveling the Alphabet Crimes, a series of robberies committed by leather-jacketed punks. The investigation puts him on the trail of an illegal arms dealer and his hit lady.
+              - generic "Remember the Titans 7:00 PM - 9:30 PM" [ref=e7758] [cursor=pointer]:
+                - generic [ref=e7759]:
+                  - generic [ref=e7760]: Remember the Titans
+                  - generic [ref=e7761]: 7:00 PM - 9:30 PM
+                  - generic [ref=e7762]: In Virginia, high school football is a way of life, an institution revered, each game celebrated more lavishly than Christmas, each playoff distinguished more grandly than any national holiday. And with such recognition, comes powerful emotions. In 1971 high school football was everything to the people of Alexandria. But when the local school board was forced to integrate an all black school with an all white school, the very foundation of football's great tradition was put to the test.
+              - generic "The Replacements 9:30 PM - 12:15 AM" [ref=e7763] [cursor=pointer]:
+                - generic [ref=e7765]: Live
+                - generic [ref=e7767]: The Replacements
+            - generic [ref=e7768]:
+              - generic "A Face in the Crowd 4:45 PM - 7:00 PM" [ref=e7781] [cursor=pointer]:
+                - generic [ref=e7782]:
+                  - generic [ref=e7783]: A Face in the Crowd
+                  - generic [ref=e7784]: 4:45 PM - 7:00 PM
+                  - generic [ref=e7785]: Ambitious young radio producer Marcia Jeffries (Patricia Neal) finds a charming rogue named Larry "Lonesome" Rhodes (Andy Griffith) in an Arkansas drunk tank and puts him on the air. Soon, Rhodes' local popularity gets him an appearance on television in Memphis, which he parlays into national network stardom that he uses to endorse a presidential candidate for personal gain. But the increasingly petulant star's ego, arrogance and womanizing threaten his rise to the top.
+              - generic "On the Waterfront 7:00 PM - 9:00 PM" [ref=e7786] [cursor=pointer]:
+                - generic [ref=e7787]:
+                  - generic [ref=e7788]: On the Waterfront
+                  - generic [ref=e7789]: 7:00 PM - 9:00 PM
+                  - generic [ref=e7790]: Dockworker Terry Malloy (Marlon Brando) had been an up-and-coming boxer until powerful local mob boss Johnny Friendly (Lee J. Cobb) persuaded him to throw a fight. When a longshoreman is murdered before he can testify about Friendly's control of the Hoboken waterfront, Terry teams up with the dead man's sister Edie (Eva Marie Saint) and the streetwise priest Father Barry (Karl Malden) to testify himself, against the advice of Friendly's lawyer, Terry's older brother Charley (Rod Steiger).
+              - generic "A Place in the Sun 9:00 PM - 11:15 PM" [ref=e7791] [cursor=pointer]:
+                - generic [ref=e7792]:
+                  - generic [ref=e7793]: A Place in the Sun
+                  - generic [ref=e7794]: 9:00 PM - 11:15 PM
+            - generic [ref=e7795]:
+              - generic "The Night House 3:50 PM - 6:00 PM" [ref=e7808] [cursor=pointer]:
+                - generic [ref=e7809]:
+                  - generic [ref=e7810]: The Night House
+                  - generic [ref=e7811]: 3:50 PM - 6:00 PM
+                  - generic [ref=e7812]: Reeling from the unexpected death of her husband, Beth is left alone at the lakeside home he built for her. She tries her best to keep it together -- but then the nightmares come. Disturbing visions of a presence in the house call to her, beckoning Beth with a ghostly allure. She soon begins searching for answers, only to find secrets both strange and disturbing.
+              - generic "Us 6:00 PM - 8:20 PM" [ref=e7813] [cursor=pointer]:
+                - generic [ref=e7814]:
+                  - generic [ref=e7815]: Us
+                  - generic [ref=e7816]: 6:00 PM - 8:20 PM
+                  - generic [ref=e7817]: Accompanied by her husband, son and daughter, Adelaide Wilson returns to the beachfront home where she grew up as a child. Haunted by a traumatic experience from the past, Adelaide grows increasingly concerned that something bad is going to happen. Her worst fears soon become a reality when four masked strangers descend upon the house, forcing the Wilsons into a fight for survival. When the masks come off, the family is horrified to learn that each attacker takes the appearance of one of them.
+              - generic "Us 8:20 PM - 10:40 PM" [ref=e7818] [cursor=pointer]:
+                - generic [ref=e7819]:
+                  - generic [ref=e7820]: Us
+                  - generic [ref=e7821]: 8:20 PM - 10:40 PM
+                  - generic [ref=e7822]: Accompanied by her husband, son and daughter, Adelaide Wilson returns to the beachfront home where she grew up as a child. Haunted by a traumatic experience from the past, Adelaide grows increasingly concerned that something bad is going to happen. Her worst fears soon become a reality when four masked strangers descend upon the house, forcing the Wilsons into a fight for survival. When the masks come off, the family is horrified to learn that each attacker takes the appearance of one of them.
+            - generic [ref=e7823]:
+              - generic "Bob's Burgers 5:00 PM - 5:30 PM" [ref=e7836] [cursor=pointer]:
+                - generic [ref=e7838]: Bob's Burgers
+              - generic "Bob's Burgers 5:30 PM - 6:00 PM" [ref=e7839] [cursor=pointer]:
+                - generic [ref=e7841]: Bob's Burgers
+              - generic "Family Guy 6:00 PM - 6:30 PM" [ref=e7842] [cursor=pointer]:
+                - generic [ref=e7844]: Live
+                - generic [ref=e7846]: Family Guy
+              - generic "Family Guy 6:30 PM - 7:00 PM" [ref=e7847] [cursor=pointer]:
+                - generic [ref=e7849]: Family Guy
+              - generic "Family Guy 7:00 PM - 7:30 PM" [ref=e7850] [cursor=pointer]:
+                - generic [ref=e7852]: Family Guy
+              - generic "Family Guy 7:30 PM - 8:00 PM" [ref=e7853] [cursor=pointer]:
+                - generic [ref=e7855]: Family Guy
+              - generic "Family Guy 8:00 PM - 8:30 PM" [ref=e7856] [cursor=pointer]:
+                - generic [ref=e7858]: Family Guy
+              - generic "Family Guy 8:30 PM - 9:00 PM" [ref=e7859] [cursor=pointer]:
+                - generic [ref=e7861]: Family Guy
+              - generic "Family Guy 9:00 PM - 9:30 PM" [ref=e7862] [cursor=pointer]:
+                - generic [ref=e7864]: Family Guy
+              - generic "Family Guy 9:30 PM - 10:00 PM" [ref=e7865] [cursor=pointer]:
+                - generic [ref=e7867]: Family Guy
+            - generic [ref=e7868]:
+              - generic "Criminal Minds 5:00 PM - 6:00 PM" [ref=e7881] [cursor=pointer]:
+                - generic [ref=e7882]:
+                  - generic [ref=e7883]: Criminal Minds
+                  - generic [ref=e7884]: 5:00 PM - 6:00 PM
+              - generic "Criminal Minds 6:00 PM - 7:00 PM" [ref=e7885] [cursor=pointer]:
+                - generic [ref=e7886]:
+                  - generic [ref=e7887]: Criminal Minds
+                  - generic [ref=e7888]: 6:00 PM - 7:00 PM
+              - generic "Criminal Minds 7:00 PM - 8:00 PM" [ref=e7889] [cursor=pointer]:
+                - generic [ref=e7890]:
+                  - generic [ref=e7891]: Criminal Minds
+                  - generic [ref=e7892]: 7:00 PM - 8:00 PM
+              - generic "Criminal Minds 8:00 PM - 9:00 PM" [ref=e7893] [cursor=pointer]:
+                - generic [ref=e7894]:
+                  - generic [ref=e7895]: Criminal Minds
+                  - generic [ref=e7896]: 8:00 PM - 9:00 PM
+              - generic "Criminal Minds 9:00 PM - 10:00 PM" [ref=e7897] [cursor=pointer]:
+                - generic [ref=e7899]: Live
+                - generic [ref=e7900]:
+                  - generic [ref=e7901]: Criminal Minds
+                  - generic [ref=e7902]: 9:00 PM - 10:00 PM
+            - generic [ref=e7903]:
+              - 'generic "Hoarding: Buried Alive 5:00 PM - 6:00 PM" [ref=e7916] [cursor=pointer]':
+                - generic [ref=e7918]: Live
+                - generic [ref=e7919]:
+                  - generic [ref=e7920]: "Hoarding: Buried Alive"
+                  - generic [ref=e7921]: 5:00 PM - 6:00 PM
+              - 'generic "Hoarding: Buried Alive 6:00 PM - 7:00 PM" [ref=e7922] [cursor=pointer]':
+                - generic [ref=e7924]: Live
+                - generic [ref=e7925]:
+                  - generic [ref=e7926]: "Hoarding: Buried Alive"
+                  - generic [ref=e7927]: 6:00 PM - 7:00 PM
+              - 'generic "Hoarding: Buried Alive 7:00 PM - 8:00 PM" [ref=e7928] [cursor=pointer]':
+                - generic [ref=e7930]: Live
+                - generic [ref=e7931]:
+                  - generic [ref=e7932]: "Hoarding: Buried Alive"
+                  - generic [ref=e7933]: 7:00 PM - 8:00 PM
+              - 'generic "Hoarding: Buried Alive 8:00 PM - 9:00 PM" [ref=e7934] [cursor=pointer]':
+                - generic [ref=e7936]: Live
+                - generic [ref=e7937]:
+                  - generic [ref=e7938]: "Hoarding: Buried Alive"
+                  - generic [ref=e7939]: 8:00 PM - 9:00 PM
+              - 'generic "Hoarding: Buried Alive 9:00 PM - 10:00 PM" [ref=e7940] [cursor=pointer]':
+                - generic [ref=e7942]: Live
+                - generic [ref=e7943]:
+                  - generic [ref=e7944]: "Hoarding: Buried Alive"
+                  - generic [ref=e7945]: 9:00 PM - 10:00 PM
+            - generic [ref=e7946]:
+              - generic "Underworld 5:00 PM - 7:30 PM" [ref=e7959] [cursor=pointer]:
+                - generic [ref=e7960]:
+                  - generic [ref=e7961]: Underworld
+                  - generic [ref=e7962]: 5:00 PM - 7:30 PM
+                  - generic [ref=e7963]: Under cover of night, vampires engage in an age-old battle with their sworn enemies, the Lycans, a clan of violent werewolves. Selene, a vampire orphaned in the wake of a bloody Lycan attack, works for the vampire clan as a trained killer. When the Lycans take a mysterious interest in Michael Corvin, an exceptional mortal doctor, Selene struggles to save him from Lucian, a ruthless Lycan leader hell-bent on ending the vampire bloodline.
+              - generic "Demolition Man 7:30 PM - 10:00 PM" [ref=e7964] [cursor=pointer]:
+                - generic [ref=e7965]:
+                  - generic [ref=e7966]: Demolition Man
+                  - generic [ref=e7967]: 7:30 PM - 10:00 PM
+                  - generic [ref=e7968]: With innocent victims caught in the crossfire in Los Angeles' intensifying war on crime, both cop John Spartan (Sylvester Stallone) and violent thug Simon Phoenix (Wesley Snipes) are sentenced to a state of frozen incarceration known as "CryoPrison." When Spartan is finally thawed 36 years later, it's 2032, and Los Angeles is now a pacifist utopia called San Angeles. But with Phoenix again on the loose, Spartan must team up with future cop Lenina (Sandra Bullock) to apprehend the killer.
+            - generic [ref=e7969]:
+              - generic "Court Cam 5:00 PM - 5:30 PM" [ref=e7982] [cursor=pointer]:
+                - generic [ref=e7984]: Court Cam
+              - generic "Court Cam 5:30 PM - 6:00 PM" [ref=e7985] [cursor=pointer]:
+                - generic [ref=e7987]: Court Cam
+              - generic "Court Cam 6:00 PM - 6:30 PM" [ref=e7988] [cursor=pointer]:
+                - generic [ref=e7990]: Court Cam
+              - generic "Court Cam 6:30 PM - 7:00 PM" [ref=e7991] [cursor=pointer]:
+                - generic [ref=e7993]: Court Cam
+              - generic "Court Cam 7:00 PM - 7:30 PM" [ref=e7994] [cursor=pointer]:
+                - generic [ref=e7996]: Court Cam
+              - generic "Court Cam 7:30 PM - 8:00 PM" [ref=e7997] [cursor=pointer]:
+                - generic [ref=e7999]: Court Cam
+              - generic "Court Cam 8:00 PM - 8:30 PM" [ref=e8000] [cursor=pointer]:
+                - generic [ref=e8002]: Court Cam
+              - generic "Court Cam 8:30 PM - 9:01 PM" [ref=e8003] [cursor=pointer]:
+                - generic [ref=e8005]: Court Cam
+              - 'generic "Booked: First Day In 9:01 PM - 10:04 PM" [ref=e8006] [cursor=pointer]':
+                - generic [ref=e8007]:
+                  - generic [ref=e8008]: "Booked: First Day In"
+                  - generic [ref=e8009]: 9:01 PM - 10:04 PM
+            - generic [ref=e8010]:
+              - generic "Barrett-Jackson Auction 4:00 PM - 9:00 PM" [ref=e8023] [cursor=pointer]:
+                - generic [ref=e8025]: Live
+                - generic [ref=e8026]:
+                  - generic [ref=e8027]: Barrett-Jackson Auction
+                  - generic [ref=e8028]: 4:00 PM - 9:00 PM
+                  - generic [ref=e8029]: Collector car auctions return with the Scottsdale Auction, live and exclusive from the Westworld of Scottsdale, Scottsdale, AZ.
+              - generic "Barrett-Jackson Auction 9:00 PM - 11:00 PM" [ref=e8030] [cursor=pointer]:
+                - generic [ref=e8032]: Live
+                - generic [ref=e8033]:
+                  - generic [ref=e8034]: Barrett-Jackson Auction
+                  - generic [ref=e8035]: 9:00 PM - 11:00 PM
+            - generic [ref=e8036]:
+              - generic "Eco-Heroines 5:00 PM - 6:00 PM" [ref=e8049] [cursor=pointer]:
+                - generic [ref=e8050]:
+                  - generic [ref=e8051]: Eco-Heroines
+                  - generic [ref=e8052]: 5:00 PM - 6:00 PM
+              - generic "Jimmy Doherty's Escape to the Wild 6:00 PM - 7:00 PM" [ref=e8053] [cursor=pointer]:
+                - generic [ref=e8054]:
+                  - generic [ref=e8055]: Jimmy Doherty's Escape to the Wild
+                  - generic [ref=e8056]: 6:00 PM - 7:00 PM
+              - generic "The World's Deadliest Weather 7:00 PM - 8:00 PM" [ref=e8057] [cursor=pointer]:
+                - generic [ref=e8058]:
+                  - generic [ref=e8059]: The World's Deadliest Weather
+                  - generic [ref=e8060]: 7:00 PM - 8:00 PM
+              - generic "Wild Winter 8:00 PM - 9:00 PM" [ref=e8061] [cursor=pointer]:
+                - generic [ref=e8062]:
+                  - generic [ref=e8063]: Wild Winter
+                  - generic [ref=e8064]: 8:00 PM - 9:00 PM
+              - generic "Doug to the Rescue 9:00 PM - 9:30 PM" [ref=e8065] [cursor=pointer]:
+                - generic [ref=e8067]: Doug to the Rescue
+              - generic "Doug to the Rescue 9:30 PM - 10:00 PM" [ref=e8068] [cursor=pointer]:
+                - generic [ref=e8070]: Doug to the Rescue
+            - generic [ref=e8071]:
+              - generic "The Curse of Oak Island 5:00 PM - 6:00 PM" [ref=e8084] [cursor=pointer]:
+                - generic [ref=e8085]:
+                  - generic [ref=e8086]: The Curse of Oak Island
+                  - generic [ref=e8087]: 5:00 PM - 6:00 PM
+              - generic "The Curse of Oak Island 6:00 PM - 7:00 PM" [ref=e8088] [cursor=pointer]:
+                - generic [ref=e8089]:
+                  - generic [ref=e8090]: The Curse of Oak Island
+                  - generic [ref=e8091]: 6:00 PM - 7:00 PM
+              - generic "The Curse of Oak Island 7:00 PM - 8:00 PM" [ref=e8092] [cursor=pointer]:
+                - generic [ref=e8093]:
+                  - generic [ref=e8094]: The Curse of Oak Island
+                  - generic [ref=e8095]: 7:00 PM - 8:00 PM
+              - generic "The Curse of Oak Island 8:00 PM - 9:03 PM" [ref=e8096] [cursor=pointer]:
+                - generic [ref=e8097]:
+                  - generic [ref=e8098]: The Curse of Oak Island
+                  - generic [ref=e8099]: 8:00 PM - 9:03 PM
+              - generic "MonsterQuest 9:03 PM - 10:05 PM" [ref=e8100] [cursor=pointer]:
+                - generic [ref=e8101]:
+                  - generic [ref=e8102]: MonsterQuest
+                  - generic [ref=e8103]: 9:03 PM - 10:05 PM
+            - generic [ref=e8104]:
+              - generic "Dark Side of the 90s 5:00 PM - 6:00 PM" [ref=e8117] [cursor=pointer]:
+                - generic [ref=e8118]:
+                  - generic [ref=e8119]: Dark Side of the 90s
+                  - generic [ref=e8120]: 5:00 PM - 6:00 PM
+              - generic "Dark Side of the 90s 6:00 PM - 7:00 PM" [ref=e8121] [cursor=pointer]:
+                - generic [ref=e8122]:
+                  - generic [ref=e8123]: Dark Side of the 90s
+                  - generic [ref=e8124]: 6:00 PM - 7:00 PM
+              - generic "Don't Call It a Comeback 7:00 PM - 8:00 PM" [ref=e8125] [cursor=pointer]:
+                - generic [ref=e8126]:
+                  - generic [ref=e8127]: Don't Call It a Comeback
+                  - generic [ref=e8128]: 7:00 PM - 8:00 PM
+              - generic "Don't Call It a Comeback 8:00 PM - 9:00 PM" [ref=e8129] [cursor=pointer]:
+                - generic [ref=e8130]:
+                  - generic [ref=e8131]: Don't Call It a Comeback
+                  - generic [ref=e8132]: 8:00 PM - 9:00 PM
+              - generic "Don't Call It a Comeback 9:00 PM - 10:00 PM" [ref=e8133] [cursor=pointer]:
+                - generic [ref=e8134]:
+                  - generic [ref=e8135]: Don't Call It a Comeback
+                  - generic [ref=e8136]: 9:00 PM - 10:00 PM
+            - generic [ref=e8137]:
+              - generic "RuPaul's Drag Race 4:30 PM - 5:30 PM" [ref=e8150] [cursor=pointer]:
+                - generic [ref=e8151]:
+                  - generic [ref=e8152]: RuPaul's Drag Race
+                  - generic [ref=e8153]: 4:30 PM - 5:30 PM
+              - generic "RuPaul's Drag Race 5:30 PM - 6:30 PM" [ref=e8154] [cursor=pointer]:
+                - generic [ref=e8155]:
+                  - generic [ref=e8156]: RuPaul's Drag Race
+                  - generic [ref=e8157]: 5:30 PM - 6:30 PM
+              - generic "RuPaul's Drag Race 6:30 PM - 7:30 PM" [ref=e8158] [cursor=pointer]:
+                - generic [ref=e8159]:
+                  - generic [ref=e8160]: RuPaul's Drag Race
+                  - generic [ref=e8161]: 6:30 PM - 7:30 PM
+              - generic "RuPaul's Drag Race 7:30 PM - 8:30 PM" [ref=e8162] [cursor=pointer]:
+                - generic [ref=e8163]:
+                  - generic [ref=e8164]: RuPaul's Drag Race
+                  - generic [ref=e8165]: 7:30 PM - 8:30 PM
+              - generic "RuPaul's Drag Race 8:30 PM - 9:30 PM" [ref=e8166] [cursor=pointer]:
+                - generic [ref=e8167]:
+                  - generic [ref=e8168]: RuPaul's Drag Race
+                  - generic [ref=e8169]: 8:30 PM - 9:30 PM
+              - generic "RuPaul's Drag Race 9:30 PM - 10:30 PM" [ref=e8170] [cursor=pointer]:
+                - generic [ref=e8172]: RuPaul's Drag Race
+            - generic [ref=e8173]:
+              - generic "Criminal Minds 5:00 PM - 6:03 PM" [ref=e8186] [cursor=pointer]:
+                - generic [ref=e8187]:
+                  - generic [ref=e8188]: Criminal Minds
+                  - generic [ref=e8189]: 5:00 PM - 6:03 PM
+              - generic "Criminal Minds 6:03 PM - 7:02 PM" [ref=e8190] [cursor=pointer]:
+                - generic [ref=e8191]:
+                  - generic [ref=e8192]: Criminal Minds
+                  - generic [ref=e8193]: 6:03 PM - 7:02 PM
+              - generic "Criminal Minds 6:05 PM - 7:02 PM" [ref=e8194] [cursor=pointer]:
+                - generic [ref=e8195]:
+                  - generic [ref=e8196]: Criminal Minds
+                  - generic [ref=e8197]: 6:05 PM - 7:02 PM
+              - 'generic "NCIS: New Orleans 7:02 PM - 8:03 PM" [ref=e8198] [cursor=pointer]':
+                - generic [ref=e8199]:
+                  - generic [ref=e8200]: "NCIS: New Orleans"
+                  - generic [ref=e8201]: 7:02 PM - 8:03 PM
+              - 'generic "NCIS: New Orleans 8:03 PM - 9:04 PM" [ref=e8202] [cursor=pointer]':
+                - generic [ref=e8203]:
+                  - generic [ref=e8204]: "NCIS: New Orleans"
+                  - generic [ref=e8205]: 8:03 PM - 9:04 PM
+              - 'generic "NCIS: New Orleans 9:04 PM - 10:05 PM" [ref=e8206] [cursor=pointer]':
+                - generic [ref=e8207]:
+                  - generic [ref=e8208]: "NCIS: New Orleans"
+                  - generic [ref=e8209]: 9:04 PM - 10:05 PM
+            - generic [ref=e8210]:
+              - generic "Midsomer Murders 3:30 PM - 6:00 PM" [ref=e8223] [cursor=pointer]:
+                - generic [ref=e8224]:
+                  - generic [ref=e8225]: Midsomer Murders
+                  - generic [ref=e8226]: 3:30 PM - 6:00 PM
+                  - generic [ref=e8227]: Barnaby and Jones suspect foul play when a wealthy man dies of a heart attack.
+              - generic "Inspector George Gently 6:00 PM - 8:00 PM" [ref=e8228] [cursor=pointer]:
+                - generic [ref=e8229]:
+                  - generic [ref=e8230]: Inspector George Gently
+                  - generic [ref=e8231]: 6:00 PM - 8:00 PM
+                  - generic [ref=e8232]: The body of a wealthy German businessman is found in the harbor.
+              - generic "Leverage 8:00 PM - 9:00 PM" [ref=e8233] [cursor=pointer]:
+                - generic [ref=e8234]:
+                  - generic [ref=e8235]: Leverage
+                  - generic [ref=e8236]: 8:00 PM - 9:00 PM
+              - generic "Leverage 9:00 PM - 10:00 PM" [ref=e8237] [cursor=pointer]:
+                - generic [ref=e8238]:
+                  - generic [ref=e8239]: Leverage
+                  - generic [ref=e8240]: 9:00 PM - 10:00 PM
+            - generic [ref=e8241]:
+              - generic "Shoe Shopping With Jane 5:00 PM - 6:00 PM" [ref=e8254] [cursor=pointer]:
+                - generic [ref=e8255]:
+                  - generic [ref=e8256]: Shoe Shopping With Jane
+                  - generic [ref=e8257]: 5:00 PM - 6:00 PM
+              - generic "OMI WellBeauty by Naomi Whittel 6:00 PM - 7:00 PM" [ref=e8258] [cursor=pointer]:
+                - generic [ref=e8259]:
+                  - generic [ref=e8260]: OMI WellBeauty by Naomi Whittel
+                  - generic [ref=e8261]: 6:00 PM - 7:00 PM
+              - generic "The New Beauty - Inside & Out 7:00 PM - 9:00 PM" [ref=e8262] [cursor=pointer]:
+                - generic [ref=e8264]: Live
+                - generic [ref=e8265]:
+                  - generic [ref=e8266]: The New Beauty - Inside & Out
+                  - generic [ref=e8267]: 7:00 PM - 9:00 PM
+                  - generic [ref=e8268]: New possibilities are beautifully within reach when you celebrate who you are and begin with the beauty that already lives within you. Find your feel-good with wellness and beauty self-care that feels made for you.
+              - 'generic "Girls'' Night in With Courtney and Jane: Beauty 8:00 PM - 9:00 PM" [ref=e8269] [cursor=pointer]':
+                - generic [ref=e8270]:
+                  - generic [ref=e8271]: "Girls' Night in With Courtney and Jane: Beauty"
+                  - generic [ref=e8272]: 8:00 PM - 9:00 PM
+              - generic "Inspired Style 9:00 PM - 11:00 PM" [ref=e8273] [cursor=pointer]:
+                - generic [ref=e8274]:
+                  - generic [ref=e8275]: Inspired Style
+                  - generic [ref=e8276]: 9:00 PM - 11:00 PM
+            - generic [ref=e8277]:
+              - generic "Hostile Planet 4:12 PM - 5:15 PM" [ref=e8290] [cursor=pointer]:
+                - generic [ref=e8291]:
+                  - generic [ref=e8292]: Hostile Planet
+                  - generic [ref=e8293]: 4:12 PM - 5:15 PM
+              - generic "Hostile Planet 5:15 PM - 6:18 PM" [ref=e8294] [cursor=pointer]:
+                - generic [ref=e8295]:
+                  - generic [ref=e8296]: Hostile Planet
+                  - generic [ref=e8297]: 5:15 PM - 6:18 PM
+              - generic "Pole to Pole With Will Smith 6:18 PM - 7:21 PM" [ref=e8298] [cursor=pointer]:
+                - generic [ref=e8299]:
+                  - generic [ref=e8300]: Pole to Pole With Will Smith
+                  - generic [ref=e8301]: 6:18 PM - 7:21 PM
+              - generic "Pole to Pole With Will Smith 7:21 PM - 8:00 PM" [ref=e8302] [cursor=pointer]:
+                - generic [ref=e8304]: Pole to Pole With Will Smith
+              - generic "Pole to Pole With Will Smith 8:00 PM - 9:00 PM" [ref=e8305] [cursor=pointer]:
+                - generic [ref=e8306]:
+                  - generic [ref=e8307]: Pole to Pole With Will Smith
+                  - generic [ref=e8308]: 8:00 PM - 9:00 PM
+              - generic "Pole to Pole With Will Smith 9:00 PM - 10:02 PM" [ref=e8309] [cursor=pointer]:
+                - generic [ref=e8310]:
+                  - generic [ref=e8311]: Pole to Pole With Will Smith
+                  - generic [ref=e8312]: 9:00 PM - 10:02 PM
+            - generic [ref=e8313]:
+              - generic "Haunted Hospitals 5:00 PM - 6:00 PM" [ref=e8326] [cursor=pointer]:
+                - generic [ref=e8327]:
+                  - generic [ref=e8328]: Haunted Hospitals
+                  - generic [ref=e8329]: 5:00 PM - 6:00 PM
+              - generic "Paranormal Emergency 6:00 PM - 7:00 PM" [ref=e8330] [cursor=pointer]:
+                - generic [ref=e8331]:
+                  - generic [ref=e8332]: Paranormal Emergency
+                  - generic [ref=e8333]: 6:00 PM - 7:00 PM
+              - generic "Paranormal Emergency 7:00 PM - 8:00 PM" [ref=e8334] [cursor=pointer]:
+                - generic [ref=e8335]:
+                  - generic [ref=e8336]: Paranormal Emergency
+                  - generic [ref=e8337]: 7:00 PM - 8:00 PM
+              - generic "Paranormal Emergency 8:00 PM - 9:00 PM" [ref=e8338] [cursor=pointer]:
+                - generic [ref=e8339]:
+                  - generic [ref=e8340]: Paranormal Emergency
+                  - generic [ref=e8341]: 8:00 PM - 9:00 PM
+              - generic "Paranormal Emergency 9:00 PM - 10:00 PM" [ref=e8342] [cursor=pointer]:
+                - generic [ref=e8343]:
+                  - generic [ref=e8344]: Paranormal Emergency
+                  - generic [ref=e8345]: 9:00 PM - 10:00 PM
+            - generic [ref=e8346]:
+              - generic "Moonshiners 5:00 PM - 6:00 PM" [ref=e8359] [cursor=pointer]:
+                - generic [ref=e8360]:
+                  - generic [ref=e8361]: Moonshiners
+                  - generic [ref=e8362]: 5:00 PM - 6:00 PM
+              - generic "Moonshiners 6:00 PM - 7:00 PM" [ref=e8363] [cursor=pointer]:
+                - generic [ref=e8364]:
+                  - generic [ref=e8365]: Moonshiners
+                  - generic [ref=e8366]: 6:00 PM - 7:00 PM
+              - generic "Moonshiners 7:00 PM - 8:01 PM" [ref=e8367] [cursor=pointer]:
+                - generic [ref=e8368]:
+                  - generic [ref=e8369]: Moonshiners
+                  - generic [ref=e8370]: 7:00 PM - 8:01 PM
+              - generic "Moonshiners 8:01 PM - 9:01 PM" [ref=e8371] [cursor=pointer]:
+                - generic [ref=e8372]:
+                  - generic [ref=e8373]: Moonshiners
+                  - generic [ref=e8374]: 8:01 PM - 9:01 PM
+              - 'generic "Moonshiners: Master Distiller 9:01 PM - 10:01 PM" [ref=e8375] [cursor=pointer]':
+                - generic [ref=e8376]:
+                  - generic [ref=e8377]: "Moonshiners: Master Distiller"
+                  - generic [ref=e8378]: 9:01 PM - 10:01 PM
+            - generic [ref=e8379]:
+              - 'generic "Deadline: Crime With Tamron Hall 5:00 PM - 6:00 PM" [ref=e8392] [cursor=pointer]':
+                - generic [ref=e8393]:
+                  - generic [ref=e8394]: "Deadline: Crime With Tamron Hall"
+                  - generic [ref=e8395]: 5:00 PM - 6:00 PM
+              - 'generic "Deadline: Crime With Tamron Hall 6:00 PM - 7:00 PM" [ref=e8396] [cursor=pointer]':
+                - generic [ref=e8397]:
+                  - generic [ref=e8398]: "Deadline: Crime With Tamron Hall"
+                  - generic [ref=e8399]: 6:00 PM - 7:00 PM
+              - 'generic "Deadline: Crime With Tamron Hall 7:00 PM - 8:00 PM" [ref=e8400] [cursor=pointer]':
+                - generic [ref=e8401]:
+                  - generic [ref=e8402]: "Deadline: Crime With Tamron Hall"
+                  - generic [ref=e8403]: 7:00 PM - 8:00 PM
+              - 'generic "Deadline: Crime With Tamron Hall 8:00 PM - 9:00 PM" [ref=e8404] [cursor=pointer]':
+                - generic [ref=e8405]:
+                  - generic [ref=e8406]: "Deadline: Crime With Tamron Hall"
+                  - generic [ref=e8407]: 8:00 PM - 9:00 PM
+              - 'generic "Deadline: Crime With Tamron Hall 9:00 PM - 10:00 PM" [ref=e8408] [cursor=pointer]':
+                - generic [ref=e8409]:
+                  - generic [ref=e8410]: "Deadline: Crime With Tamron Hall"
+                  - generic [ref=e8411]: 9:00 PM - 10:00 PM
+            - generic [ref=e8412]:
+              - generic "1000-lb Sisters 5:00 PM - 6:00 PM" [ref=e8425] [cursor=pointer]:
+                - generic [ref=e8426]:
+                  - generic [ref=e8427]: 1000-lb Sisters
+                  - generic [ref=e8428]: 5:00 PM - 6:00 PM
+              - generic "1000-lb Sisters 6:00 PM - 7:00 PM" [ref=e8429] [cursor=pointer]:
+                - generic [ref=e8431]: Live
+                - generic [ref=e8432]:
+                  - generic [ref=e8433]: 1000-lb Sisters
+                  - generic [ref=e8434]: 6:00 PM - 7:00 PM
+              - generic "1000-lb Sisters 7:00 PM - 8:00 PM" [ref=e8435] [cursor=pointer]:
+                - generic [ref=e8436]:
+                  - generic [ref=e8437]: 1000-lb Sisters
+                  - generic [ref=e8438]: 7:00 PM - 8:00 PM
+              - generic "1000-lb Sisters 8:00 PM - 9:01 PM" [ref=e8439] [cursor=pointer]:
+                - generic [ref=e8440]:
+                  - generic [ref=e8441]: 1000-lb Sisters
+                  - generic [ref=e8442]: 8:00 PM - 9:01 PM
+              - generic "Suddenly Amish 9:01 PM - 10:01 PM" [ref=e8443] [cursor=pointer]:
+                - generic [ref=e8444]:
+                  - generic [ref=e8445]: Suddenly Amish
+                  - generic [ref=e8446]: 9:01 PM - 10:01 PM
+            - generic [ref=e8447]:
+              - generic "Texas Metal's Loud and Lifted 5:00 PM - 6:00 PM" [ref=e8460] [cursor=pointer]:
+                - generic [ref=e8461]:
+                  - generic [ref=e8462]: Texas Metal's Loud and Lifted
+                  - generic [ref=e8463]: 5:00 PM - 6:00 PM
+              - generic "Texas Metal's Loud and Lifted 6:00 PM - 7:00 PM" [ref=e8464] [cursor=pointer]:
+                - generic [ref=e8465]:
+                  - generic [ref=e8466]: Texas Metal's Loud and Lifted
+                  - generic [ref=e8467]: 6:00 PM - 7:00 PM
+              - generic "Texas Metal's Loud and Lifted 7:00 PM - 8:00 PM" [ref=e8468] [cursor=pointer]:
+                - generic [ref=e8469]:
+                  - generic [ref=e8470]: Texas Metal's Loud and Lifted
+                  - generic [ref=e8471]: 7:00 PM - 8:00 PM
+              - generic "Texas Metal's Loud and Lifted 8:00 PM - 9:00 PM" [ref=e8472] [cursor=pointer]:
+                - generic [ref=e8473]:
+                  - generic [ref=e8474]: Texas Metal's Loud and Lifted
+                  - generic [ref=e8475]: 8:00 PM - 9:00 PM
+              - generic "Texas Metal's Loud and Lifted 9:00 PM - 10:00 PM" [ref=e8476] [cursor=pointer]:
+                - generic [ref=e8477]:
+                  - generic [ref=e8478]: Texas Metal's Loud and Lifted
+                  - generic [ref=e8479]: 9:00 PM - 10:00 PM
+            - generic [ref=e8480]:
+              - generic "Louisiana Law 5:00 PM - 6:00 PM" [ref=e8493] [cursor=pointer]:
+                - generic [ref=e8494]:
+                  - generic [ref=e8495]: Louisiana Law
+                  - generic [ref=e8496]: 5:00 PM - 6:00 PM
+              - generic "Louisiana Law 6:00 PM - 7:00 PM" [ref=e8497] [cursor=pointer]:
+                - generic [ref=e8498]:
+                  - generic [ref=e8499]: Louisiana Law
+                  - generic [ref=e8500]: 6:00 PM - 7:00 PM
+              - generic "Lone Star Law 7:00 PM - 8:00 PM" [ref=e8501] [cursor=pointer]:
+                - generic [ref=e8503]: Live
+                - generic [ref=e8504]:
+                  - generic [ref=e8505]: Lone Star Law
+                  - generic [ref=e8506]: 7:00 PM - 8:00 PM
+              - generic "Lone Star Law 8:00 PM - 9:00 PM" [ref=e8507] [cursor=pointer]:
+                - generic [ref=e8508]:
+                  - generic [ref=e8509]: Lone Star Law
+                  - generic [ref=e8510]: 8:00 PM - 9:00 PM
+              - generic "Lone Star Law 9:00 PM - 10:00 PM" [ref=e8511] [cursor=pointer]:
+                - generic [ref=e8512]:
+                  - generic [ref=e8513]: Lone Star Law
+                  - generic [ref=e8514]: 9:00 PM - 10:00 PM
+            - generic [ref=e8515]:
+              - generic "Magic of Disney's Animal Kingdom 5:00 PM - 6:00 PM" [ref=e8528] [cursor=pointer]:
+                - generic [ref=e8529]:
+                  - generic [ref=e8530]: Magic of Disney's Animal Kingdom
+                  - generic [ref=e8531]: 5:00 PM - 6:00 PM
+              - generic "Magic of Disney's Animal Kingdom 6:00 PM - 7:00 PM" [ref=e8532] [cursor=pointer]:
+                - generic [ref=e8533]:
+                  - generic [ref=e8534]: Magic of Disney's Animal Kingdom
+                  - generic [ref=e8535]: 6:00 PM - 7:00 PM
+              - generic "Magic of Disney's Animal Kingdom 7:00 PM - 8:00 PM" [ref=e8536] [cursor=pointer]:
+                - generic [ref=e8537]:
+                  - generic [ref=e8538]: Magic of Disney's Animal Kingdom
+                  - generic [ref=e8539]: 7:00 PM - 8:00 PM
+              - generic "Magic of Disney's Animal Kingdom 8:00 PM - 9:00 PM" [ref=e8540] [cursor=pointer]:
+                - generic [ref=e8541]:
+                  - generic [ref=e8542]: Magic of Disney's Animal Kingdom
+                  - generic [ref=e8543]: 8:00 PM - 9:00 PM
+              - generic "Magic of Disney's Animal Kingdom 9:00 PM - 10:00 PM" [ref=e8544] [cursor=pointer]:
+                - generic [ref=e8545]:
+                  - generic [ref=e8546]: Magic of Disney's Animal Kingdom
+                  - generic [ref=e8547]: 9:00 PM - 10:00 PM
+            - generic [ref=e8548]:
+              - generic "Strange Evidence 5:00 PM - 6:00 PM" [ref=e8561] [cursor=pointer]:
+                - generic [ref=e8562]:
+                  - generic [ref=e8563]: Strange Evidence
+                  - generic [ref=e8564]: 5:00 PM - 6:00 PM
+              - generic "Strange Evidence 6:00 PM - 7:00 PM" [ref=e8565] [cursor=pointer]:
+                - generic [ref=e8566]:
+                  - generic [ref=e8567]: Strange Evidence
+                  - generic [ref=e8568]: 6:00 PM - 7:00 PM
+              - generic "Strange Evidence 7:00 PM - 8:00 PM" [ref=e8569] [cursor=pointer]:
+                - generic [ref=e8570]:
+                  - generic [ref=e8571]: Strange Evidence
+                  - generic [ref=e8572]: 7:00 PM - 8:00 PM
+              - generic "Strange Evidence 8:00 PM - 9:00 PM" [ref=e8573] [cursor=pointer]:
+                - generic [ref=e8574]:
+                  - generic [ref=e8575]: Strange Evidence
+                  - generic [ref=e8576]: 8:00 PM - 9:00 PM
+              - generic "Strange Evidence 9:00 PM - 10:00 PM" [ref=e8577] [cursor=pointer]:
+                - generic [ref=e8578]:
+                  - generic [ref=e8579]: Strange Evidence
+                  - generic [ref=e8580]: 9:00 PM - 10:00 PM
+            - generic [ref=e8581]:
+              - generic "Very Scary People 5:00 PM - 6:00 PM" [ref=e8594] [cursor=pointer]:
+                - generic [ref=e8595]:
+                  - generic [ref=e8596]: Very Scary People
+                  - generic [ref=e8597]: 5:00 PM - 6:00 PM
+              - generic "Very Scary People 6:00 PM - 7:00 PM" [ref=e8598] [cursor=pointer]:
+                - generic [ref=e8599]:
+                  - generic [ref=e8600]: Very Scary People
+                  - generic [ref=e8601]: 6:00 PM - 7:00 PM
+              - generic "Evil Lives Here 7:00 PM - 8:00 PM" [ref=e8602] [cursor=pointer]:
+                - generic [ref=e8604]: Live
+                - generic [ref=e8605]:
+                  - generic [ref=e8606]: Evil Lives Here
+                  - generic [ref=e8607]: 7:00 PM - 8:00 PM
+              - generic "Evil Lives Here 8:00 PM - 9:00 PM" [ref=e8608] [cursor=pointer]:
+                - generic [ref=e8610]: Live
+                - generic [ref=e8611]:
+                  - generic [ref=e8612]: Evil Lives Here
+                  - generic [ref=e8613]: 8:00 PM - 9:00 PM
+              - 'generic "Killer Confessions: Case Files of a Texas Ranger 9:00 PM - 10:00 PM" [ref=e8614] [cursor=pointer]':
+                - generic [ref=e8615]:
+                  - generic [ref=e8616]: "Killer Confessions: Case Files of a Texas Ranger"
+                  - generic [ref=e8617]: 9:00 PM - 10:00 PM
+            - generic [ref=e8618]:
+              - generic "Beachfront Bargain Hunt 5:00 PM - 5:30 PM" [ref=e8631] [cursor=pointer]:
+                - generic [ref=e8633]: Beachfront Bargain Hunt
+              - generic "Beachfront Bargain Hunt 5:30 PM - 6:00 PM" [ref=e8634] [cursor=pointer]:
+                - generic [ref=e8636]: Beachfront Bargain Hunt
+              - generic "Lakefront Bargain Hunt 6:00 PM - 6:30 PM" [ref=e8637] [cursor=pointer]:
+                - generic [ref=e8639]: Lakefront Bargain Hunt
+              - generic "Lakefront Bargain Hunt 6:30 PM - 7:00 PM" [ref=e8640] [cursor=pointer]:
+                - generic [ref=e8642]: Lakefront Bargain Hunt
+              - generic "Lakefront Bargain Hunt 7:00 PM - 7:30 PM" [ref=e8643] [cursor=pointer]:
+                - generic [ref=e8645]: Live
+                - generic [ref=e8647]: Lakefront Bargain Hunt
+              - generic "Lakefront Bargain Hunt 7:30 PM - 8:00 PM" [ref=e8648] [cursor=pointer]:
+                - generic [ref=e8650]: Lakefront Bargain Hunt
+              - generic "Lakefront Bargain Hunt 8:00 PM - 8:30 PM" [ref=e8651] [cursor=pointer]:
+                - generic [ref=e8653]: Lakefront Bargain Hunt
+              - generic "Lakefront Bargain Hunt 8:30 PM - 9:00 PM" [ref=e8654] [cursor=pointer]:
+                - generic [ref=e8656]: Lakefront Bargain Hunt
+              - generic "Lakefront Bargain Hunt 9:00 PM - 9:30 PM" [ref=e8657] [cursor=pointer]:
+                - generic [ref=e8659]: Lakefront Bargain Hunt
+              - generic "Lakefront Bargain Hunt 9:30 PM - 10:00 PM" [ref=e8660] [cursor=pointer]:
+                - generic [ref=e8662]: Lakefront Bargain Hunt
+            - generic [ref=e8663]:
+              - generic "Deadliest Tech 5:00 PM - 6:00 PM" [ref=e8676] [cursor=pointer]:
+                - generic [ref=e8677]:
+                  - generic [ref=e8678]: Deadliest Tech
+                  - generic [ref=e8679]: 5:00 PM - 6:00 PM
+              - generic "Deadliest Tech 6:00 PM - 7:00 PM" [ref=e8680] [cursor=pointer]:
+                - generic [ref=e8681]:
+                  - generic [ref=e8682]: Deadliest Tech
+                  - generic [ref=e8683]: 6:00 PM - 7:00 PM
+              - generic "Warrior POV 7:00 PM - 8:00 PM" [ref=e8684] [cursor=pointer]:
+                - generic [ref=e8685]:
+                  - generic [ref=e8686]: Warrior POV
+                  - generic [ref=e8687]: 7:00 PM - 8:00 PM
+              - generic "Warrior POV 8:00 PM - 9:00 PM" [ref=e8688] [cursor=pointer]:
+                - generic [ref=e8689]:
+                  - generic [ref=e8690]: Warrior POV
+                  - generic [ref=e8691]: 8:00 PM - 9:00 PM
+              - generic "Warrior POV 9:00 PM - 10:00 PM" [ref=e8692] [cursor=pointer]:
+                - generic [ref=e8693]:
+                  - generic [ref=e8694]: Warrior POV
+                  - generic [ref=e8695]: 9:00 PM - 10:00 PM
+            - generic [ref=e8696]:
+              - generic "Wild Kratts 5:00 PM - 5:30 PM" [ref=e8709] [cursor=pointer]:
+                - generic [ref=e8711]: Wild Kratts
+              - generic "Weather Hunters 5:30 PM - 6:00 PM" [ref=e8712] [cursor=pointer]:
+                - generic [ref=e8714]: Weather Hunters
+              - generic "Lyla in the Loop 6:00 PM - 6:30 PM" [ref=e8715] [cursor=pointer]:
+                - generic [ref=e8717]: Lyla in the Loop
+              - generic "Arthur 6:30 PM - 7:00 PM" [ref=e8718] [cursor=pointer]:
+                - generic [ref=e8720]: Arthur
+              - generic "Nature Cat 7:00 PM - 7:30 PM" [ref=e8721] [cursor=pointer]:
+                - generic [ref=e8723]: Nature Cat
+              - generic "Hero Elementary 7:30 PM - 8:00 PM" [ref=e8724] [cursor=pointer]:
+                - generic [ref=e8726]: Hero Elementary
+              - generic "Cyberchase 8:00 PM - 8:30 PM" [ref=e8727] [cursor=pointer]:
+                - generic [ref=e8729]: Cyberchase
+              - generic "Let's Go Luna! 8:30 PM - 9:00 PM" [ref=e8730] [cursor=pointer]:
+                - generic [ref=e8732]: Let's Go Luna!
+              - generic "Rosie's Rules 9:00 PM - 9:30 PM" [ref=e8733] [cursor=pointer]:
+                - generic [ref=e8735]: Rosie's Rules
+              - generic "Xavier Riddle and the Secret Museum 9:30 PM - 10:30 PM" [ref=e8736] [cursor=pointer]:
+                - generic [ref=e8738]: Xavier Riddle and the Secret Museum
+            - generic [ref=e8739]:
+              - generic "Bluey 4:45 PM - 5:15 PM" [ref=e8752] [cursor=pointer]:
+                - generic [ref=e8754]: Bluey
+              - generic "Bluey 5:15 PM - 5:40 PM" [ref=e8755] [cursor=pointer]:
+                - generic [ref=e8757]: Bluey
+              - generic "Mickey Mouse Clubhouse+ 5:40 PM - 6:05 PM" [ref=e8758] [cursor=pointer]:
+                - generic [ref=e8760]: Mickey Mouse Clubhouse+
+              - generic "SuperKitties 6:05 PM - 6:30 PM" [ref=e8761] [cursor=pointer]:
+                - generic [ref=e8763]: SuperKitties
+              - generic "Marvel's Spidey and His Amazing Friends 6:30 PM - 6:55 PM" [ref=e8764] [cursor=pointer]:
+                - generic [ref=e8766]: Marvel's Spidey and His Amazing Friends
+              - generic "Iron Man and His Awesome Friends 6:55 PM - 7:20 PM" [ref=e8767] [cursor=pointer]:
+                - generic [ref=e8769]: Iron Man and His Awesome Friends
+              - generic "Bluey 7:20 PM - 7:50 PM" [ref=e8770] [cursor=pointer]:
+                - generic [ref=e8772]: Bluey
+              - generic "Bluey 7:50 PM - 8:15 PM" [ref=e8773] [cursor=pointer]:
+                - generic [ref=e8775]: Bluey
+              - generic "Bluey 8:15 PM - 8:40 PM" [ref=e8776] [cursor=pointer]:
+                - generic [ref=e8778]: Bluey
+              - generic "SuperKitties 8:40 PM - 8:55 PM" [ref=e8779] [cursor=pointer]:
+                - generic [ref=e8781]: SuperKitties
+              - generic "SuperKitties 8:55 PM - 9:25 PM" [ref=e8782] [cursor=pointer]:
+                - generic [ref=e8784]: SuperKitties
+              - generic "Marvel's Spidey and His Amazing Friends 9:25 PM - 9:50 PM" [ref=e8785] [cursor=pointer]:
+                - generic [ref=e8787]: Marvel's Spidey and His Amazing Friends
+              - generic "Marvel's Spidey and His Amazing Friends 9:50 PM - 10:15 PM" [ref=e8788] [cursor=pointer]:
+                - generic [ref=e8790]: Marvel's Spidey and His Amazing Friends
+            - generic [ref=e8791]:
+              - generic "High School Musical 5:10 PM - 7:00 PM" [ref=e8804] [cursor=pointer]:
+                - generic [ref=e8805]:
+                  - generic [ref=e8806]: High School Musical
+                  - generic [ref=e8807]: 5:10 PM - 7:00 PM
+                  - generic [ref=e8808]: Troy Bolton (Zac Efron), the star athlete at a small-town high school, falls for nerdy beauty Gabriella Montez (Vanessa Anne Hudgens) at a holiday karaoke party. When they return to campus, Troy and Gabriella audition for the upcoming school musical. Meanwhile, the jealous Sharpay Evans (Ashley Tisdale) conspires to squelch their chances. The two must struggle to make it to auditions while also meeting their existing obligations to the basketball team and the academic decathlon.
+              - generic "High School Musical 2 7:00 PM - 9:00 PM" [ref=e8809] [cursor=pointer]:
+                - generic [ref=e8810]:
+                  - generic [ref=e8811]: High School Musical 2
+                  - generic [ref=e8812]: 7:00 PM - 9:00 PM
+                  - generic [ref=e8813]: During summer vacation, Troy gets a job at Sharpay's resort but doesn't realize she has an ulterior motive for hiring him.
+              - generic "Electric Bloom 9:00 PM - 9:30 PM" [ref=e8814] [cursor=pointer]:
+                - generic [ref=e8816]: Electric Bloom
+              - generic "Kiff 9:30 PM - 10:00 PM" [ref=e8817] [cursor=pointer]:
+                - generic [ref=e8819]: Kiff
+            - generic [ref=e8820]:
+              - generic "The Owl House 5:00 PM - 5:30 PM" [ref=e8833] [cursor=pointer]:
+                - generic [ref=e8835]: The Owl House
+              - generic "The Owl House 5:30 PM - 6:00 PM" [ref=e8836] [cursor=pointer]:
+                - generic [ref=e8838]: The Owl House
+              - generic "The Owl House 6:00 PM - 6:30 PM" [ref=e8839] [cursor=pointer]:
+                - generic [ref=e8841]: The Owl House
+              - generic "The Owl House 6:30 PM - 7:00 PM" [ref=e8842] [cursor=pointer]:
+                - generic [ref=e8844]: The Owl House
+              - generic "Kiff 7:00 PM - 7:30 PM" [ref=e8845] [cursor=pointer]:
+                - generic [ref=e8847]: Kiff
+              - generic "Kiff 7:30 PM - 8:00 PM" [ref=e8848] [cursor=pointer]:
+                - generic [ref=e8850]: Kiff
+              - generic "Big City Greens 8:00 PM - 8:30 PM" [ref=e8851] [cursor=pointer]:
+                - generic [ref=e8853]: Live
+                - generic [ref=e8855]: Big City Greens
+              - generic "Big City Greens 8:30 PM - 9:00 PM" [ref=e8856] [cursor=pointer]:
+                - generic [ref=e8858]: Big City Greens
+              - generic "Big City Greens 9:00 PM - 9:30 PM" [ref=e8859] [cursor=pointer]:
+                - generic [ref=e8861]: Big City Greens
+              - generic "Phineas and Ferb 9:30 PM - 10:00 PM" [ref=e8862] [cursor=pointer]:
+                - generic [ref=e8864]: Phineas and Ferb
+            - generic [ref=e8865]:
+              - generic "BabyFirst Club 5:00 PM - 5:30 PM" [ref=e8878] [cursor=pointer]:
+                - generic [ref=e8880]: BabyFirst Club
+              - generic "BabyFirst Club 5:30 PM - 6:00 PM" [ref=e8881] [cursor=pointer]:
+                - generic [ref=e8883]: BabyFirst Club
+              - generic "Playful Tuesday Fun 6:00 PM - 6:30 PM" [ref=e8884] [cursor=pointer]:
+                - generic [ref=e8886]: Playful Tuesday Fun
+              - generic "Playful Tuesday Fun 6:30 PM - 7:00 PM" [ref=e8887] [cursor=pointer]:
+                - generic [ref=e8889]: Playful Tuesday Fun
+              - generic "Playful Tuesday Fun 7:00 PM - 7:30 PM" [ref=e8890] [cursor=pointer]:
+                - generic [ref=e8892]: Playful Tuesday Fun
+              - generic "Playful Tuesday Fun 7:30 PM - 8:00 PM" [ref=e8893] [cursor=pointer]:
+                - generic [ref=e8895]: Playful Tuesday Fun
+              - 'generic "Mama & Me: Sing Along 8:00 PM - 8:30 PM" [ref=e8896] [cursor=pointer]':
+                - generic [ref=e8898]: "Mama & Me: Sing Along"
+              - generic "Art & Music 8:30 PM - 9:00 PM" [ref=e8899] [cursor=pointer]:
+                - generic [ref=e8901]: Art & Music
+              - generic "Art & Music 9:00 PM - 9:30 PM" [ref=e8902] [cursor=pointer]:
+                - generic [ref=e8904]: Art & Music
+              - generic "Cuddle up & watch 9:30 PM - 10:00 PM" [ref=e8905] [cursor=pointer]:
+                - generic [ref=e8907]: Cuddle up & watch
+            - generic [ref=e8908]:
+              - generic "Kids Baking Championship 5:00 PM - 6:00 PM" [ref=e8921] [cursor=pointer]:
+                - generic [ref=e8922]:
+                  - generic [ref=e8923]: Kids Baking Championship
+                  - generic [ref=e8924]: 5:00 PM - 6:00 PM
+              - generic "Kids Baking Championship 6:00 PM - 7:00 PM" [ref=e8925] [cursor=pointer]:
+                - generic [ref=e8927]: Live
+                - generic [ref=e8928]:
+                  - generic [ref=e8929]: Kids Baking Championship
+                  - generic [ref=e8930]: 6:00 PM - 7:00 PM
+              - generic "Kids Baking Championship 7:00 PM - 8:00 PM" [ref=e8931] [cursor=pointer]:
+                - generic [ref=e8932]:
+                  - generic [ref=e8933]: Kids Baking Championship
+                  - generic [ref=e8934]: 7:00 PM - 8:00 PM
+              - generic "Kids Baking Championship 8:00 PM - 9:00 PM" [ref=e8935] [cursor=pointer]:
+                - generic [ref=e8936]:
+                  - generic [ref=e8937]: Kids Baking Championship
+                  - generic [ref=e8938]: 8:00 PM - 9:00 PM
+              - generic "Kids Baking Championship 9:00 PM - 10:00 PM" [ref=e8939] [cursor=pointer]:
+                - generic [ref=e8940]:
+                  - generic [ref=e8941]: Kids Baking Championship
+                  - generic [ref=e8942]: 9:00 PM - 10:00 PM
+            - generic [ref=e8943]:
+              - generic "The Yogi Bear Show 5:00 PM - 5:30 PM" [ref=e8956] [cursor=pointer]:
+                - generic [ref=e8958]: The Yogi Bear Show
+              - generic "The Yogi Bear Show 5:30 PM - 6:00 PM" [ref=e8959] [cursor=pointer]:
+                - generic [ref=e8961]: The Yogi Bear Show
+              - generic "The Tom and Jerry Show 6:00 PM - 7:00 PM" [ref=e8962] [cursor=pointer]:
+                - generic [ref=e8963]:
+                  - generic [ref=e8964]: The Tom and Jerry Show
+                  - generic [ref=e8965]: 6:00 PM - 7:00 PM
+              - generic "Bugs Bunny and Friends 7:00 PM - 9:00 PM" [ref=e8966] [cursor=pointer]:
+                - generic [ref=e8967]:
+                  - generic [ref=e8968]: Bugs Bunny and Friends
+                  - generic [ref=e8969]: 7:00 PM - 9:00 PM
+                  - generic [ref=e8970]: The greatest animated characters and cartoons produced at Warner Bros. legendary Termite Terrace; Bugs Bunny, Daffy Duck, Road Runner and all their friends are featured here weekly.
+              - generic "Cartoon All-Stars 9:00 PM - 10:00 PM" [ref=e8971] [cursor=pointer]:
+                - generic [ref=e8972]:
+                  - generic [ref=e8973]: Cartoon All-Stars
+                  - generic [ref=e8974]: 9:00 PM - 10:00 PM
+            - generic [ref=e8975]:
+              - generic "Bob's Burgers 5:00 PM - 5:30 PM" [ref=e8988] [cursor=pointer]:
+                - generic [ref=e8990]: Bob's Burgers
+              - generic "Bob's Burgers 5:30 PM - 6:00 PM" [ref=e8991] [cursor=pointer]:
+                - generic [ref=e8993]: Bob's Burgers
+              - generic "Bob's Burgers 6:00 PM - 6:30 PM" [ref=e8994] [cursor=pointer]:
+                - generic [ref=e8996]: Bob's Burgers
+              - generic "Bob's Burgers 6:30 PM - 7:00 PM" [ref=e8997] [cursor=pointer]:
+                - generic [ref=e8999]: Bob's Burgers
+              - generic "Bob's Burgers 7:00 PM - 7:30 PM" [ref=e9000] [cursor=pointer]:
+                - generic [ref=e9002]: Bob's Burgers
+              - generic "Family Guy 7:30 PM - 8:00 PM" [ref=e9003] [cursor=pointer]:
+                - generic [ref=e9005]: Family Guy
+              - generic "Family Guy 8:00 PM - 8:30 PM" [ref=e9006] [cursor=pointer]:
+                - generic [ref=e9008]: Family Guy
+              - generic "Family Guy 8:30 PM - 9:00 PM" [ref=e9009] [cursor=pointer]:
+                - generic [ref=e9011]: Family Guy
+              - generic "Family Guy 9:00 PM - 9:30 PM" [ref=e9012] [cursor=pointer]:
+                - generic [ref=e9014]: Family Guy
+              - generic "Family Guy 9:30 PM - 10:00 PM" [ref=e9015] [cursor=pointer]:
+                - generic [ref=e9017]: Family Guy
+            - generic [ref=e9018]:
+              - generic "Looney Tunes 5:10 PM - 5:20 PM" [ref=e9031] [cursor=pointer]:
+                - generic [ref=e9033]: Looney Tunes
+              - generic "Looney Tunes 5:20 PM - 5:30 PM" [ref=e9034] [cursor=pointer]:
+                - generic [ref=e9036]: Looney Tunes
+              - generic "Looney Tunes 5:30 PM - 5:40 PM" [ref=e9037] [cursor=pointer]:
+                - generic [ref=e9039]: Looney Tunes
+              - generic "Looney Tunes 5:40 PM - 5:50 PM" [ref=e9040] [cursor=pointer]:
+                - generic [ref=e9042]: Looney Tunes
+              - generic "Looney Tunes 5:50 PM - 6:00 PM" [ref=e9043] [cursor=pointer]:
+                - generic [ref=e9045]: Looney Tunes
+              - generic "Jellystone! 6:00 PM - 6:15 PM" [ref=e9046] [cursor=pointer]:
+                - generic [ref=e9048]: Jellystone!
+              - generic "Jellystone! 6:15 PM - 6:30 PM" [ref=e9049] [cursor=pointer]:
+                - generic [ref=e9051]: Jellystone!
+              - generic "Duck Dodgers 6:30 PM - 7:00 PM" [ref=e9052] [cursor=pointer]:
+                - generic [ref=e9054]: Duck Dodgers
+              - 'generic "Codename: Kids Next Door 7:00 PM - 7:30 PM" [ref=e9055] [cursor=pointer]':
+                - generic [ref=e9057]: "Codename: Kids Next Door"
+              - 'generic "Codename: Kids Next Door 7:30 PM - 8:00 PM" [ref=e9058] [cursor=pointer]':
+                - generic [ref=e9060]: "Codename: Kids Next Door"
+              - generic "Ben 10 8:00 PM - 8:30 PM" [ref=e9061] [cursor=pointer]:
+                - generic [ref=e9063]: Ben 10
+              - generic "Looney Tunes 8:30 PM - 8:40 PM" [ref=e9064] [cursor=pointer]:
+                - generic [ref=e9066]: Looney Tunes
+              - generic "Looney Tunes 8:40 PM - 8:50 PM" [ref=e9067] [cursor=pointer]:
+                - generic [ref=e9069]: Looney Tunes
+              - generic "Looney Tunes 8:50 PM - 9:00 PM" [ref=e9070] [cursor=pointer]:
+                - generic [ref=e9072]: Looney Tunes
+              - generic "The Flintstones 9:00 PM - 9:30 PM" [ref=e9073] [cursor=pointer]:
+                - generic [ref=e9075]: The Flintstones
+              - generic "The Jetsons 9:30 PM - 10:00 PM" [ref=e9076] [cursor=pointer]:
+                - generic [ref=e9078]: The Jetsons
+            - generic [ref=e9079]:
+              - generic "Wylde Pak 5:00 PM - 5:30 PM" [ref=e9092] [cursor=pointer]:
+                - generic [ref=e9094]: Wylde Pak
+              - generic "SpongeBob SquarePants 5:30 PM - 6:00 PM" [ref=e9095] [cursor=pointer]:
+                - generic [ref=e9097]: SpongeBob SquarePants
+              - generic "Friends 6:00 PM - 6:30 PM" [ref=e9098] [cursor=pointer]:
+                - generic [ref=e9100]: Friends
+              - generic "Friends 6:30 PM - 7:00 PM" [ref=e9101] [cursor=pointer]:
+                - generic [ref=e9103]: Friends
+              - generic "Friends 7:00 PM - 7:30 PM" [ref=e9104] [cursor=pointer]:
+                - generic [ref=e9106]: Friends
+              - generic "Friends 7:30 PM - 8:00 PM" [ref=e9107] [cursor=pointer]:
+                - generic [ref=e9109]: Friends
+              - generic "Friends 8:00 PM - 8:30 PM" [ref=e9110] [cursor=pointer]:
+                - generic [ref=e9112]: Friends
+              - generic "Friends 8:30 PM - 9:00 PM" [ref=e9113] [cursor=pointer]:
+                - generic [ref=e9115]: Friends
+              - generic "The Big Bang Theory 9:00 PM - 9:30 PM" [ref=e9116] [cursor=pointer]:
+                - generic [ref=e9118]: The Big Bang Theory
+              - generic "The Big Bang Theory 9:30 PM - 10:00 PM" [ref=e9119] [cursor=pointer]:
+                - generic [ref=e9121]: The Big Bang Theory
+            - generic [ref=e9122]:
+              - generic "PAW Patrol 5:00 PM - 5:30 PM" [ref=e9135] [cursor=pointer]:
+                - generic [ref=e9137]: PAW Patrol
+              - generic "PAW Patrol 5:30 PM - 6:00 PM" [ref=e9138] [cursor=pointer]:
+                - generic [ref=e9140]: PAW Patrol
+              - generic "Rubble & Crew 6:00 PM - 6:30 PM" [ref=e9141] [cursor=pointer]:
+                - generic [ref=e9143]: Rubble & Crew
+              - generic "Rubble & Crew 6:30 PM - 7:00 PM" [ref=e9144] [cursor=pointer]:
+                - generic [ref=e9146]: Rubble & Crew
+              - generic "PAW Patrol 7:00 PM - 7:30 PM" [ref=e9147] [cursor=pointer]:
+                - generic [ref=e9149]: PAW Patrol
+              - generic "PAW Patrol 7:30 PM - 8:00 PM" [ref=e9150] [cursor=pointer]:
+                - generic [ref=e9152]: PAW Patrol
+              - generic "Peppa Pig 8:00 PM - 8:30 PM" [ref=e9153] [cursor=pointer]:
+                - generic [ref=e9155]: Peppa Pig
+              - generic "Peppa Pig 8:30 PM - 9:00 PM" [ref=e9156] [cursor=pointer]:
+                - generic [ref=e9158]: Peppa Pig
+              - generic "Peppa Pig 9:00 PM - 9:30 PM" [ref=e9159] [cursor=pointer]:
+                - generic [ref=e9161]: Peppa Pig
+              - generic "Peppa Pig 9:30 PM - 10:00 PM" [ref=e9162] [cursor=pointer]:
+                - generic [ref=e9164]: Peppa Pig
+            - generic [ref=e9165]:
+              - 'generic "The Boss Baby: Back in Business 5:08 PM - 5:34 PM" [ref=e9178] [cursor=pointer]':
+                - generic [ref=e9180]: "The Boss Baby: Back in Business"
+              - generic "SpongeBob SquarePants 5:34 PM - 6:00 PM" [ref=e9181] [cursor=pointer]:
+                - generic [ref=e9183]: SpongeBob SquarePants
+              - generic "SpongeBob SquarePants 6:00 PM - 6:27 PM" [ref=e9184] [cursor=pointer]:
+                - generic [ref=e9186]: SpongeBob SquarePants
+              - generic "SpongeBob SquarePants 6:27 PM - 6:53 PM" [ref=e9187] [cursor=pointer]:
+                - generic [ref=e9189]: SpongeBob SquarePants
+              - generic "SpongeBob SquarePants 6:53 PM - 7:19 PM" [ref=e9190] [cursor=pointer]:
+                - generic [ref=e9192]: SpongeBob SquarePants
+              - generic "SpongeBob SquarePants 7:19 PM - 7:45 PM" [ref=e9193] [cursor=pointer]:
+                - generic [ref=e9195]: SpongeBob SquarePants
+              - generic "SpongeBob SquarePants 7:45 PM - 8:11 PM" [ref=e9196] [cursor=pointer]:
+                - generic [ref=e9198]: SpongeBob SquarePants
+              - generic "SpongeBob SquarePants 8:11 PM - 8:38 PM" [ref=e9199] [cursor=pointer]:
+                - generic [ref=e9201]: SpongeBob SquarePants
+              - generic "SpongeBob SquarePants 8:38 PM - 9:04 PM" [ref=e9202] [cursor=pointer]:
+                - generic [ref=e9204]: SpongeBob SquarePants
+              - generic "SpongeBob SquarePants 9:04 PM - 9:30 PM" [ref=e9205] [cursor=pointer]:
+                - generic [ref=e9207]: SpongeBob SquarePants
+              - generic "SpongeBob SquarePants 9:30 PM - 9:56 PM" [ref=e9208] [cursor=pointer]:
+                - generic [ref=e9210]: SpongeBob SquarePants
+            - generic [ref=e9211]:
+              - generic "Henry Danger 4:54 PM - 5:21 PM" [ref=e9224] [cursor=pointer]:
+                - generic [ref=e9226]: Henry Danger
+              - generic "Henry Danger 5:21 PM - 5:48 PM" [ref=e9227] [cursor=pointer]:
+                - generic [ref=e9229]: Henry Danger
+              - generic "Henry Danger 5:48 PM - 6:15 PM" [ref=e9230] [cursor=pointer]:
+                - generic [ref=e9232]: Henry Danger
+              - generic "The Loud House 6:15 PM - 6:42 PM" [ref=e9233] [cursor=pointer]:
+                - generic [ref=e9235]: The Loud House
+              - generic "The Loud House 6:42 PM - 7:09 PM" [ref=e9236] [cursor=pointer]:
+                - generic [ref=e9238]: The Loud House
+              - generic "The Loud House 7:09 PM - 7:36 PM" [ref=e9239] [cursor=pointer]:
+                - generic [ref=e9241]: The Loud House
+              - generic "The Loud House 7:36 PM - 8:03 PM" [ref=e9242] [cursor=pointer]:
+                - generic [ref=e9244]: The Loud House
+              - generic "The Loud House 8:03 PM - 8:30 PM" [ref=e9245] [cursor=pointer]:
+                - generic [ref=e9247]: The Loud House
+              - generic "The Loud House 8:30 PM - 8:57 PM" [ref=e9248] [cursor=pointer]:
+                - generic [ref=e9250]: The Loud House
+              - generic "The Loud House 8:57 PM - 9:24 PM" [ref=e9251] [cursor=pointer]:
+                - generic [ref=e9253]: The Loud House
+              - generic "The Loud House 9:24 PM - 9:51 PM" [ref=e9254] [cursor=pointer]:
+                - generic [ref=e9256]: The Loud House
+              - generic "The Loud House 9:51 PM - 10:18 PM" [ref=e9257] [cursor=pointer]:
+                - generic [ref=e9259]: The Loud House
+            - generic [ref=e9260]:
+              - generic "The Andy Griffith Show 5:00 PM - 5:30 PM" [ref=e9273] [cursor=pointer]:
+                - generic [ref=e9275]: The Andy Griffith Show
+              - generic "The Andy Griffith Show 5:30 PM - 6:00 PM" [ref=e9276] [cursor=pointer]:
+                - generic [ref=e9278]: The Andy Griffith Show
+              - generic "Everybody Loves Raymond 6:00 PM - 6:35 PM" [ref=e9279] [cursor=pointer]:
+                - generic [ref=e9281]: Everybody Loves Raymond
+              - generic "Everybody Loves Raymond 6:35 PM - 7:10 PM" [ref=e9282] [cursor=pointer]:
+                - generic [ref=e9284]: Everybody Loves Raymond
+              - generic "Everybody Loves Raymond 7:10 PM - 7:45 PM" [ref=e9285] [cursor=pointer]:
+                - generic [ref=e9287]: Everybody Loves Raymond
+              - generic "Everybody Loves Raymond 7:45 PM - 8:20 PM" [ref=e9288] [cursor=pointer]:
+                - generic [ref=e9290]: Everybody Loves Raymond
+              - generic "Everybody Loves Raymond 8:20 PM - 8:55 PM" [ref=e9291] [cursor=pointer]:
+                - generic [ref=e9293]: Everybody Loves Raymond
+              - generic "Everybody Loves Raymond 8:55 PM - 9:30 PM" [ref=e9294] [cursor=pointer]:
+                - generic [ref=e9296]: Everybody Loves Raymond
+              - generic "Everybody Loves Raymond 9:30 PM - 10:00 PM" [ref=e9297] [cursor=pointer]:
+                - generic [ref=e9299]: Everybody Loves Raymond
+            - generic [ref=e9314]: No program info
+            - generic [ref=e9329]: No program info
+            - generic [ref=e9330]:
+              - generic "To Be Announced 12:00 PM - 6:00 PM" [ref=e9343] [cursor=pointer]:
+                - generic [ref=e9344]:
+                  - generic [ref=e9345]: To Be Announced
+                  - generic [ref=e9346]: 12:00 PM - 6:00 PM
+                  - generic [ref=e9347]: To Be Announced
+              - generic "Chicago Fire 5:00 PM - 6:00 PM" [ref=e9348] [cursor=pointer]:
+                - generic [ref=e9349]:
+                  - generic [ref=e9350]: Chicago Fire
+                  - generic [ref=e9351]: 5:00 PM - 6:00 PM
+              - generic "To Be Announced 6:00 PM - 12:00 AM" [ref=e9352] [cursor=pointer]:
+                - generic [ref=e9353]:
+                  - generic [ref=e9354]: To Be Announced
+                  - generic [ref=e9355]: 6:00 PM - 12:00 AM
+                  - generic [ref=e9356]: To Be Announced
+              - generic "Chicago Fire 7:00 PM - 8:00 PM" [ref=e9357] [cursor=pointer]:
+                - generic [ref=e9358]:
+                  - generic [ref=e9359]: Chicago Fire
+                  - generic [ref=e9360]: 7:00 PM - 8:00 PM
+              - generic "Chicago Fire 8:00 PM - 9:00 PM" [ref=e9361] [cursor=pointer]:
+                - generic [ref=e9362]:
+                  - generic [ref=e9363]: Chicago Fire
+                  - generic [ref=e9364]: 8:00 PM - 9:00 PM
+              - generic "Chicago Fire 9:00 PM - 10:00 PM" [ref=e9365] [cursor=pointer]:
+                - generic [ref=e9366]:
+                  - generic [ref=e9367]: Chicago Fire
+                  - generic [ref=e9368]: 9:00 PM - 10:00 PM
+            - generic [ref=e9383]: No program info
+            - generic [ref=e9384]:
+              - generic "The Hill with Blake Burman 5:00 PM - 6:00 PM" [ref=e9397] [cursor=pointer]:
+                - generic [ref=e9398]:
+                  - generic [ref=e9399]: The Hill with Blake Burman
+                  - generic [ref=e9400]: 5:00 PM - 6:00 PM
+              - generic "Elizabeth Vargas Reports 6:00 PM - 7:00 PM" [ref=e9401] [cursor=pointer]:
+                - generic [ref=e9403]: Live
+                - generic [ref=e9404]:
+                  - generic [ref=e9405]: Elizabeth Vargas Reports
+                  - generic [ref=e9406]: 6:00 PM - 7:00 PM
+              - 'generic "Cuomo Special Edition: One Year of Trump 7:00 PM - 8:00 PM" [ref=e9407] [cursor=pointer]':
+                - generic [ref=e9408]:
+                  - generic [ref=e9409]: "Cuomo Special Edition: One Year of Trump"
+                  - generic [ref=e9410]: 7:00 PM - 8:00 PM
+              - generic "On Balance With Leland Vittert 8:00 PM - 9:00 PM" [ref=e9411] [cursor=pointer]:
+                - generic [ref=e9412]:
+                  - generic [ref=e9413]: On Balance With Leland Vittert
+                  - generic [ref=e9414]: 8:00 PM - 9:00 PM
+              - generic "Katie Pavlich Tonight 9:00 PM - 10:00 PM" [ref=e9415] [cursor=pointer]:
+                - generic [ref=e9416]:
+                  - generic [ref=e9417]: Katie Pavlich Tonight
+                  - generic [ref=e9418]: 9:00 PM - 10:00 PM
+            - generic [ref=e9419]:
+              - generic "Let's Play Everyday 4:00 PM - 6:00 PM" [ref=e9432] [cursor=pointer]:
+                - generic [ref=e9433]:
+                  - generic [ref=e9434]: Let's Play Everyday
+                  - generic [ref=e9435]: 4:00 PM - 6:00 PM
+                  - generic [ref=e9436]: Nursery rhymes keep kids entertained all day long, no boring moments in sight!
+              - generic "Dance and Freeze 6:00 PM - 8:00 PM" [ref=e9437] [cursor=pointer]:
+                - generic [ref=e9438]:
+                  - generic [ref=e9439]: Dance and Freeze
+                  - generic [ref=e9440]: 6:00 PM - 8:00 PM
+                  - generic [ref=e9441]: This show teaches dance moves through catchy songs and animated pals; engage and energize kids - fun and fitness in one!
+              - generic "Sweet Dreams 8:00 PM - 8:59 PM" [ref=e9442] [cursor=pointer]:
+                - generic [ref=e9443]:
+                  - generic [ref=e9444]: Sweet Dreams
+                  - generic [ref=e9445]: 8:00 PM - 8:59 PM
+              - generic "Sweet Dreams 8:59 PM - 11:59 PM" [ref=e9446] [cursor=pointer]:
+                - generic [ref=e9447]:
+                  - generic [ref=e9448]: Sweet Dreams
+                  - generic [ref=e9449]: 8:59 PM - 11:59 PM
+            - generic [ref=e9450]:
+              - generic "Mulan 4:00 PM - 6:00 PM" [ref=e9463] [cursor=pointer]:
+                - generic [ref=e9464]:
+                  - generic [ref=e9465]: Mulan
+                  - generic [ref=e9466]: 4:00 PM - 6:00 PM
+                  - generic [ref=e9467]: Fearful that her ailing father will be drafted into the Chinese military, Mulan (Ming-Na Wen) takes his spot -- though, as a girl living under a patriarchal regime, she is technically unqualified to serve. She cleverly impersonates a man and goes off to train with fellow recruits. Accompanied by her dragon, Mushu (Eddie Murphy), she uses her smarts to help ward off a Hun invasion, falling in love with a dashing captain along the way.
+              - generic "The Lion King 6:00 PM - 8:00 PM" [ref=e9468] [cursor=pointer]:
+                - generic [ref=e9469]:
+                  - generic [ref=e9470]: The Lion King
+                  - generic [ref=e9471]: 6:00 PM - 8:00 PM
+                  - generic [ref=e9472]: This Disney animated feature follows the adventures of the young lion Simba (Jonathan Taylor Thomas), the heir of his father, Mufasa (James Earl Jones). Simba's wicked uncle, Scar (Jeremy Irons), plots to usurp Mufasa's throne by luring father and son into a stampede of wildebeests. But Simba escapes, and only Mufasa is killed. Simba returns as an adult (Matthew Broderick) to take back his homeland from Scar with the help of his friends Timon (Nathan Lane) and Pumbaa (Ernie Sabella).
+              - generic "The Little Mermaid 8:00 PM - 10:00 PM" [ref=e9473] [cursor=pointer]:
+                - generic [ref=e9474]:
+                  - generic [ref=e9475]: The Little Mermaid
+                  - generic [ref=e9476]: 8:00 PM - 10:00 PM
+                  - generic [ref=e9477]: In Disney's beguiling animated romp, rebellious 16-year-old mermaid Ariel (Jodi Benson) is fascinated with life on land. On one of her visits to the surface, which are forbidden by her controlling father, King Triton, she falls for a human prince. Determined to be with her new love, Ariel makes a dangerous deal with the sea witch Ursula (Pat Carroll) to become human for three days. But when plans go awry for the star-crossed lovers, the king must make the ultimate sacrifice for his daughter.
+            - generic [ref=e9478]:
+              - generic "My Secret Valentine 5:00 PM - 7:00 PM" [ref=e9491] [cursor=pointer]:
+                - generic [ref=e9492]:
+                  - generic [ref=e9493]: My Secret Valentine
+                  - generic [ref=e9494]: 5:00 PM - 7:00 PM
+                  - generic [ref=e9495]: A young woman takes advice from the chalkboard notes that her mysterious tenant leaves when a slick sales rep arrives with plans to buy her family's prized winery.
+              - generic "An Unexpected Valentine 7:00 PM - 9:00 PM" [ref=e9496] [cursor=pointer]:
+                - generic [ref=e9497]:
+                  - generic [ref=e9498]: An Unexpected Valentine
+                  - generic [ref=e9499]: 7:00 PM - 9:00 PM
+                  - generic [ref=e9500]: A chance encounter on Valentine's Day brings Hannah and Finn together as they race through New York City to return a lost engagement ring and save one couple's special day.
+              - generic "The Golden Girls 9:00 PM - 9:30 PM" [ref=e9501] [cursor=pointer]:
+                - generic [ref=e9503]: The Golden Girls
+              - generic "The Golden Girls 9:30 PM - 10:00 PM" [ref=e9504] [cursor=pointer]:
+                - generic [ref=e9506]: The Golden Girls
+            - generic [ref=e9507]:
+              - generic "Artisan of Turkey Jewelry Collection 5:00 PM - 7:00 PM" [ref=e9520] [cursor=pointer]:
+                - generic [ref=e9521]:
+                  - generic [ref=e9522]: Artisan of Turkey Jewelry Collection
+                  - generic [ref=e9523]: 5:00 PM - 7:00 PM
+                  - generic [ref=e9524]: Old world charm meets modern vibe in Artisan of Turkey jewelry. Enjoy timeless designs with fresh attitude in this collection.
+              - generic "Silver Showcase Jewelry 7:00 PM - 11:00 PM" [ref=e9525] [cursor=pointer]:
+                - generic [ref=e9526]:
+                  - generic [ref=e9527]: Silver Showcase Jewelry
+                  - generic [ref=e9528]: 7:00 PM - 11:00 PM
+                  - generic [ref=e9529]: Shop fantastic values in timeless yet trendy sterling silver jewelry and gemstones. Then wow your friends with your new looks!
+              - generic "Color Crush Jewelry 9:00 PM - 11:00 PM" [ref=e9530] [cursor=pointer]:
+                - generic [ref=e9531]:
+                  - generic [ref=e9532]: Color Crush Jewelry
+                  - generic [ref=e9533]: 9:00 PM - 11:00 PM
+            - generic [ref=e9534]:
+              - generic "Badman's Territory 3:00 PM - 5:15 PM" [ref=e9547] [cursor=pointer]:
+                - generic [ref=e9548]:
+                  - generic [ref=e9549]: Badman's Territory
+                  - generic [ref=e9550]: 3:00 PM - 5:15 PM
+                  - generic [ref=e9551]: After Jesse and Frank James rob a bank in a northern Texas country, Sheriff Mark Rowley (Randolph Scott) and his deputy brother Johnny (James Warren) pursue them into the "Badlands" territory, an outlaw haven not associated with any government. The James brothers are also wanted by a devious federal marshal, who battles Mark for their custody. Soon Mark and Johnny are embroiled with the Dalton Gang and an effort by a female newspaper owner (Ann Richards) to make the territory part of Oklahoma.
+              - generic "The Tall T 5:15 PM - 7:00 PM" [ref=e9552] [cursor=pointer]:
+                - generic [ref=e9553]:
+                  - generic [ref=e9554]: The Tall T
+                  - generic [ref=e9555]: 5:15 PM - 7:00 PM
+                  - generic [ref=e9556]: The luck of Pat Brennan (Randolph Scott) is about to go from bad to worse; after gambling his horse away, he gets a ride from Willard (John Hubbard) and Doretta Mims (Maureen O'Sullivan). Soon, their stagecoach is hijacked by a trio of merciless bandits, led by the especially heartless Frank Usher (Richard Boone). As Usher holds the coach passengers hostage, Brennan falls in love with Doretta and develops a risky plan to free himself and the Mimses, leading to a bloody final standoff.
+              - generic "Paradise, Hawaiian Style 7:00 PM - 9:00 PM" [ref=e9557] [cursor=pointer]:
+                - generic [ref=e9558]:
+                  - generic [ref=e9559]: Paradise, Hawaiian Style
+                  - generic [ref=e9560]: 7:00 PM - 9:00 PM
+                  - generic [ref=e9561]: Girlfriends help a singing pilot (Elvis Presley) and his buddy (James Shigeta) get their helicopter-charter service off the ground.
+              - generic "Day of the Evil Gun 9:00 PM - 11:00 PM" [ref=e9562] [cursor=pointer]:
+                - generic [ref=e9563]:
+                  - generic [ref=e9564]: Day of the Evil Gun
+                  - generic [ref=e9565]: 9:00 PM - 11:00 PM
+            - generic [ref=e9566]:
+              - generic "Gourmet Holiday 5:00 PM - 7:00 PM" [ref=e9579] [cursor=pointer]:
+                - generic [ref=e9580]:
+                  - generic [ref=e9581]: Gourmet Holiday
+                  - generic [ref=e9582]: 5:00 PM - 7:00 PM
+              - generic "Samsung Electronics 7:00 PM - 8:00 PM" [ref=e9583] [cursor=pointer]:
+                - generic [ref=e9584]:
+                  - generic [ref=e9585]: Samsung Electronics
+                  - generic [ref=e9586]: 7:00 PM - 8:00 PM
+              - generic "Me by Jennie Garth - Fashion 8:00 PM - 9:00 PM" [ref=e9587] [cursor=pointer]:
+                - generic [ref=e9588]:
+                  - generic [ref=e9589]: Me by Jennie Garth - Fashion
+                  - generic [ref=e9590]: 8:00 PM - 9:00 PM
+              - generic "JAI Jewelry 9:00 PM - 10:00 PM" [ref=e9591] [cursor=pointer]:
+                - generic [ref=e9592]:
+                  - generic [ref=e9593]: JAI Jewelry
+                  - generic [ref=e9594]: 9:00 PM - 10:00 PM
+            - generic [ref=e9595]:
+              - generic "PM Style With Amy Stran 4:00 PM - 6:00 PM" [ref=e9608] [cursor=pointer]:
+                - generic [ref=e9609]:
+                  - generic [ref=e9610]: PM Style With Amy Stran
+                  - generic [ref=e9611]: 4:00 PM - 6:00 PM
+                  - generic [ref=e9612]: Fashion, fun and friends with Amy Stran.
+              - generic "Shopping 5:00 PM - 6:00 PM" [ref=e9613] [cursor=pointer]:
+                - generic [ref=e9614]:
+                  - generic [ref=e9615]: Shopping
+                  - generic [ref=e9616]: 5:00 PM - 6:00 PM
+              - generic "Menopause Monday 6:00 PM - 7:00 PM" [ref=e9617] [cursor=pointer]:
+                - generic [ref=e9618]:
+                  - generic [ref=e9619]: Menopause Monday
+                  - generic [ref=e9620]: 6:00 PM - 7:00 PM
+              - generic "Mark Peters & Friends 7:00 PM - 9:00 PM" [ref=e9621] [cursor=pointer]:
+                - generic [ref=e9622]:
+                  - generic [ref=e9623]: Mark Peters & Friends
+                  - generic [ref=e9624]: 7:00 PM - 9:00 PM
+                  - generic [ref=e9625]: Join Mark Peters, NYDJ director of consumer experience, and his stylish sidekicks for fashion, friendship and fun.
+              - generic "Shopping 8:00 PM - 9:00 PM" [ref=e9626] [cursor=pointer]:
+                - generic [ref=e9627]:
+                  - generic [ref=e9628]: Shopping
+                  - generic [ref=e9629]: 8:00 PM - 9:00 PM
+              - generic "Gourmet Holiday 9:00 PM - 11:00 PM" [ref=e9630] [cursor=pointer]:
+                - generic [ref=e9631]:
+                  - generic [ref=e9632]: Gourmet Holiday
+                  - generic [ref=e9633]: 9:00 PM - 11:00 PM
+            - generic [ref=e9634]:
+              - generic "Meet a Scientologist 5:00 PM - 5:30 PM" [ref=e9647] [cursor=pointer]:
+                - generic [ref=e9649]: Meet a Scientologist
+              - generic "Destination Scientology 5:30 PM - 6:00 PM" [ref=e9650] [cursor=pointer]:
+                - generic [ref=e9652]: Destination Scientology
+              - generic "I Am a Scientologist 6:00 PM - 6:30 PM" [ref=e9653] [cursor=pointer]:
+                - generic [ref=e9655]: I Am a Scientologist
+              - generic "Voices for Humanity 6:30 PM - 7:00 PM" [ref=e9656] [cursor=pointer]:
+                - generic [ref=e9658]: Voices for Humanity
+              - generic "Meet a Scientologist 7:00 PM - 7:30 PM" [ref=e9659] [cursor=pointer]:
+                - generic [ref=e9661]: Meet a Scientologist
+              - generic "Inside Scientology 7:30 PM - 8:30 PM" [ref=e9662] [cursor=pointer]:
+                - generic [ref=e9663]:
+                  - generic [ref=e9664]: Inside Scientology
+                  - generic [ref=e9665]: 7:30 PM - 8:30 PM
+              - generic "Destination Scientology 8:30 PM - 9:00 PM" [ref=e9666] [cursor=pointer]:
+                - generic [ref=e9668]: Destination Scientology
+              - 'generic "Chick Corea: In the Mind of a Master 9:00 PM - 10:00 PM" [ref=e9669] [cursor=pointer]':
+                - generic [ref=e9670]:
+                  - generic [ref=e9671]: "Chick Corea: In the Mind of a Master"
+                  - generic [ref=e9672]: 9:00 PM - 10:00 PM
+              - 'generic "Dianetics: An Introduction 9:30 PM - 10:00 PM" [ref=e9673] [cursor=pointer]':
+                - generic [ref=e9675]: "Dianetics: An Introduction"
+            - generic [ref=e9676]:
+              - generic "Perry Mason 4:35 PM - 5:50 PM" [ref=e9689] [cursor=pointer]:
+                - generic [ref=e9690]:
+                  - generic [ref=e9691]: Perry Mason
+                  - generic [ref=e9692]: 4:35 PM - 5:50 PM
+                  - generic [ref=e9693]: Perry's client in a blackmail payoff is charged with a double murder he believes she did not commit; guest Angie Dickinson.
+              - generic "The Jeffersons 5:50 PM - 6:25 PM" [ref=e9694] [cursor=pointer]:
+                - generic [ref=e9696]: The Jeffersons
+              - generic "The Jeffersons 6:25 PM - 7:00 PM" [ref=e9697] [cursor=pointer]:
+                - generic [ref=e9699]: The Jeffersons
+              - generic "Perry Mason 7:00 PM - 8:15 PM" [ref=e9700] [cursor=pointer]:
+                - generic [ref=e9701]:
+                  - generic [ref=e9702]: Perry Mason
+                  - generic [ref=e9703]: 7:00 PM - 8:15 PM
+                  - generic [ref=e9704]: Perry is retained to defend a client on a homicide charge before the murder takes place; guests Constance Ford, Denver Pyle.
+              - generic "Emergency! 8:15 PM - 9:25 PM" [ref=e9705] [cursor=pointer]:
+                - generic [ref=e9706]:
+                  - generic [ref=e9707]: Emergency!
+                  - generic [ref=e9708]: 8:15 PM - 9:25 PM
+                  - generic [ref=e9709]: A woman believes her dead sister is the cause of accidents in her home; a man is trapped underwater in his car with the doors jammed.
+              - generic "Adam-12 9:25 PM - 10:00 PM" [ref=e9710] [cursor=pointer]:
+                - generic [ref=e9712]: Adam-12
+            - generic [ref=e9713]:
+              - generic "In Touch With Dr. Charles Stanley 4:59 PM - 5:29 PM" [ref=e9726] [cursor=pointer]:
+                - generic [ref=e9728]: In Touch With Dr. Charles Stanley
+              - generic "In Touch With Dr. Charles Stanley 5:00 PM - 5:30 PM" [ref=e9729] [cursor=pointer]:
+                - generic [ref=e9731]: In Touch With Dr. Charles Stanley
+              - generic "Ed Young Ministries 5:29 PM - 5:59 PM" [ref=e9732] [cursor=pointer]:
+                - generic [ref=e9734]: Ed Young Ministries
+              - generic "Ed Young Ministries 5:30 PM - 6:00 PM" [ref=e9735] [cursor=pointer]:
+                - generic [ref=e9737]: Ed Young Ministries
+              - generic "Lift Up Jesus With Dudley Rutherford 5:59 PM - 6:29 PM" [ref=e9738] [cursor=pointer]:
+                - generic [ref=e9740]: Live
+                - generic [ref=e9742]: Lift Up Jesus With Dudley Rutherford
+              - generic "Lift Up Jesus With Dudley Rutherford 6:00 PM - 6:30 PM" [ref=e9743] [cursor=pointer]:
+                - generic [ref=e9745]: Live
+                - generic [ref=e9747]: Lift Up Jesus With Dudley Rutherford
+              - generic "PowerPoint With Jack Graham 6:29 PM - 6:59 PM" [ref=e9748] [cursor=pointer]:
+                - generic [ref=e9750]: PowerPoint With Jack Graham
+              - generic "PowerPoint With Jack Graham 6:30 PM - 7:00 PM" [ref=e9751] [cursor=pointer]:
+                - generic [ref=e9753]: PowerPoint With Jack Graham
+              - generic "In Touch With Dr. Charles Stanley 6:59 PM - 7:59 PM" [ref=e9754] [cursor=pointer]:
+                - generic [ref=e9755]:
+                  - generic [ref=e9756]: In Touch With Dr. Charles Stanley
+                  - generic [ref=e9757]: 6:59 PM - 7:59 PM
+              - generic "In Touch With Dr. Charles Stanley 7:00 PM - 8:00 PM" [ref=e9758] [cursor=pointer]:
+                - generic [ref=e9759]:
+                  - generic [ref=e9760]: In Touch With Dr. Charles Stanley
+                  - generic [ref=e9761]: 7:00 PM - 8:00 PM
+              - 'generic "Harvest: Greg Laurie 7:59 PM - 8:29 PM" [ref=e9762] [cursor=pointer]':
+                - generic [ref=e9764]: "Harvest: Greg Laurie"
+              - generic "Harvest With Pastor Greg Laurie 8:00 PM - 8:30 PM" [ref=e9765] [cursor=pointer]:
+                - generic [ref=e9767]: Harvest With Pastor Greg Laurie
+              - generic "Charles Stanley Institute 8:29 PM - 8:59 PM" [ref=e9768] [cursor=pointer]:
+                - generic [ref=e9770]: Charles Stanley Institute
+              - generic "Charles Stanley Institute 8:30 PM - 9:00 PM" [ref=e9771] [cursor=pointer]:
+                - generic [ref=e9773]: Charles Stanley Institute
+              - generic "In Touch With Dr. Charles Stanley 8:59 PM - 9:29 PM" [ref=e9774] [cursor=pointer]:
+                - generic [ref=e9776]: In Touch With Dr. Charles Stanley
+              - generic "In Touch With Dr. Charles Stanley 9:00 PM - 9:30 PM" [ref=e9777] [cursor=pointer]:
+                - generic [ref=e9779]: In Touch With Dr. Charles Stanley
+              - generic "In Touch With Dr. Charles Stanley 9:29 PM - 10:00 PM" [ref=e9780] [cursor=pointer]:
+                - generic [ref=e9782]: In Touch With Dr. Charles Stanley
+              - generic "In Touch With Dr. Charles Stanley 9:30 PM - 10:00 PM" [ref=e9783] [cursor=pointer]:
+                - generic [ref=e9785]: In Touch With Dr. Charles Stanley
+            - generic [ref=e9786]:
+              - generic "Passport to Love 5:00 PM - 7:00 PM" [ref=e9799] [cursor=pointer]:
+                - generic [ref=e9800]:
+                  - generic [ref=e9801]: Passport to Love
+                  - generic [ref=e9802]: 5:00 PM - 7:00 PM
+                  - generic [ref=e9803]: Travel blogger Nicole meets Kade, a competing magazine rep while travelling abroad. When Kade's boss tasks him with buying her out, he struggles between doing his job and his growing feelings for Nicole.
+              - generic "One Perfect Match 7:00 PM - 9:00 PM" [ref=e9804] [cursor=pointer]:
+                - generic [ref=e9805]:
+                  - generic [ref=e9806]: One Perfect Match
+                  - generic [ref=e9807]: 7:00 PM - 9:00 PM
+                  - generic [ref=e9808]: A professional match maker finds that she has unexpectedly fallen for one of her clients.
+              - generic "Stepping Into Love 9:00 PM - 11:00 PM" [ref=e9809] [cursor=pointer]:
+                - generic [ref=e9810]:
+                  - generic [ref=e9811]: Stepping Into Love
+                  - generic [ref=e9812]: 9:00 PM - 11:00 PM
+            - generic [ref=e9813]:
+              - generic "Mama's Family 5:00 PM - 5:30 PM" [ref=e9826] [cursor=pointer]:
+                - generic [ref=e9828]: Mama's Family
+              - generic "Mama's Family 5:30 PM - 6:00 PM" [ref=e9829] [cursor=pointer]:
+                - generic [ref=e9831]: Mama's Family
+              - generic "Mama's Family 6:00 PM - 6:30 PM" [ref=e9832] [cursor=pointer]:
+                - generic [ref=e9834]: Mama's Family
+              - generic "Mama's Family 6:30 PM - 7:00 PM" [ref=e9835] [cursor=pointer]:
+                - generic [ref=e9837]: Mama's Family
+              - generic "Reba 7:00 PM - 7:30 PM" [ref=e9838] [cursor=pointer]:
+                - generic [ref=e9840]: Reba
+              - generic "Reba 7:30 PM - 8:00 PM" [ref=e9841] [cursor=pointer]:
+                - generic [ref=e9843]: Reba
+              - generic "Reba 8:00 PM - 8:30 PM" [ref=e9844] [cursor=pointer]:
+                - generic [ref=e9846]: Reba
+              - generic "Reba 8:30 PM - 9:00 PM" [ref=e9847] [cursor=pointer]:
+                - generic [ref=e9849]: Reba
+              - generic "Reba 9:00 PM - 9:30 PM" [ref=e9850] [cursor=pointer]:
+                - generic [ref=e9852]: Reba
+              - generic "Reba 9:30 PM - 10:00 PM" [ref=e9853] [cursor=pointer]:
+                - generic [ref=e9855]: Reba
+            - generic [ref=e9856]:
+              - generic "The Cosby Show 5:00 PM - 5:30 PM" [ref=e9869] [cursor=pointer]:
+                - generic [ref=e9871]: Live
+                - generic [ref=e9873]: The Cosby Show
+              - generic "The Cosby Show 5:30 PM - 6:00 PM" [ref=e9874] [cursor=pointer]:
+                - generic [ref=e9876]: The Cosby Show
+              - generic "The Cosby Show 6:00 PM - 6:30 PM" [ref=e9877] [cursor=pointer]:
+                - generic [ref=e9879]: The Cosby Show
+              - generic "The Cosby Show 6:30 PM - 7:00 PM" [ref=e9880] [cursor=pointer]:
+                - generic [ref=e9882]: The Cosby Show
+              - generic "Living Single 7:00 PM - 7:30 PM" [ref=e9883] [cursor=pointer]:
+                - generic [ref=e9885]: Living Single
+              - generic "Living Single 7:30 PM - 8:00 PM" [ref=e9886] [cursor=pointer]:
+                - generic [ref=e9888]: Living Single
+              - generic "Living Single 8:00 PM - 8:30 PM" [ref=e9889] [cursor=pointer]:
+                - generic [ref=e9891]: Living Single
+              - generic "Living Single 8:30 PM - 9:00 PM" [ref=e9892] [cursor=pointer]:
+                - generic [ref=e9894]: Living Single
+              - generic "Living Single 9:00 PM - 9:30 PM" [ref=e9895] [cursor=pointer]:
+                - generic [ref=e9897]: Living Single
+              - generic "Living Single 9:30 PM - 10:00 PM" [ref=e9898] [cursor=pointer]:
+                - generic [ref=e9900]: Living Single
+            - generic [ref=e9915]: No program info
+            - generic [ref=e9916]:
+              - generic "The Neighborhood 5:00 PM - 5:30 PM" [ref=e9929] [cursor=pointer]:
+                - generic [ref=e9931]: The Neighborhood
+              - generic "The Neighborhood 5:30 PM - 6:00 PM" [ref=e9932] [cursor=pointer]:
+                - generic [ref=e9934]: The Neighborhood
+              - generic "Fatherhood 6:00 PM - 9:00 PM" [ref=e9935] [cursor=pointer]:
+                - generic [ref=e9936]:
+                  - generic [ref=e9937]: Fatherhood
+                  - generic [ref=e9938]: 6:00 PM - 9:00 PM
+                  - generic [ref=e9939]: A widowed dad copes with doubts, fears, heartache and dirty diapers as he sets out to raise his daughter on his own.
+              - generic "Martin 6:30 PM - 7:00 PM" [ref=e9940] [cursor=pointer]:
+                - generic [ref=e9942]: Martin
+              - generic "Martin 7:00 PM - 7:30 PM" [ref=e9943] [cursor=pointer]:
+                - generic [ref=e9945]: Martin
+              - generic "Martin 7:30 PM - 8:00 PM" [ref=e9946] [cursor=pointer]:
+                - generic [ref=e9948]: Martin
+              - generic "The Neighborhood 8:00 PM - 8:30 PM" [ref=e9949] [cursor=pointer]:
+                - generic [ref=e9951]: The Neighborhood
+              - generic "The Neighborhood 8:30 PM - 9:00 PM" [ref=e9952] [cursor=pointer]:
+                - generic [ref=e9954]: The Neighborhood
+              - generic "Tyler Perry's House of Payne 9:00 PM - 9:36 PM" [ref=e9955] [cursor=pointer]:
+                - generic [ref=e9957]: Tyler Perry's House of Payne
+              - generic "Tyler Perry's House of Payne 9:36 PM - 10:12 PM" [ref=e9958] [cursor=pointer]:
+                - generic [ref=e9960]: Tyler Perry's House of Payne
+            - generic [ref=e9961]:
+              - generic "Rebel 5:00 PM - 6:00 PM" [ref=e9974] [cursor=pointer]:
+                - generic [ref=e9975]:
+                  - generic [ref=e9976]: Rebel
+                  - generic [ref=e9977]: 5:00 PM - 6:00 PM
+              - generic "Rebel 6:00 PM - 7:00 PM" [ref=e9978] [cursor=pointer]:
+                - generic [ref=e9979]:
+                  - generic [ref=e9980]: Rebel
+                  - generic [ref=e9981]: 6:00 PM - 7:00 PM
+              - generic "Rebel 7:00 PM - 8:00 PM" [ref=e9982] [cursor=pointer]:
+                - generic [ref=e9983]:
+                  - generic [ref=e9984]: Rebel
+                  - generic [ref=e9985]: 7:00 PM - 8:00 PM
+              - generic "Being Mary Jane 8:00 PM - 9:00 PM" [ref=e9986] [cursor=pointer]:
+                - generic [ref=e9987]:
+                  - generic [ref=e9988]: Being Mary Jane
+                  - generic [ref=e9989]: 8:00 PM - 9:00 PM
+              - generic "Being Mary Jane 9:00 PM - 10:00 PM" [ref=e9990] [cursor=pointer]:
+                - generic [ref=e9991]:
+                  - generic [ref=e9992]: Being Mary Jane
+                  - generic [ref=e9993]: 9:00 PM - 10:00 PM
+            - generic [ref=e9994]:
+              - generic "Ridiculousness 5:00 PM - 5:30 PM" [ref=e10007] [cursor=pointer]:
+                - generic [ref=e10009]: Live
+                - generic [ref=e10011]: Ridiculousness
+              - generic "Ridiculousness 5:30 PM - 6:00 PM" [ref=e10012] [cursor=pointer]:
+                - generic [ref=e10014]: Ridiculousness
+              - generic "Ridiculousness 6:00 PM - 6:30 PM" [ref=e10015] [cursor=pointer]:
+                - generic [ref=e10017]: Ridiculousness
+              - generic "Ridiculousness 6:30 PM - 7:00 PM" [ref=e10018] [cursor=pointer]:
+                - generic [ref=e10020]: Ridiculousness
+              - generic "Ridiculousness 7:00 PM - 7:30 PM" [ref=e10021] [cursor=pointer]:
+                - generic [ref=e10023]: Ridiculousness
+              - generic "Ridiculousness 7:30 PM - 8:00 PM" [ref=e10024] [cursor=pointer]:
+                - generic [ref=e10026]: Ridiculousness
+              - 'generic "Caught in the Act: Unfaithful 8:00 PM - 9:00 PM" [ref=e10027] [cursor=pointer]':
+                - generic [ref=e10028]:
+                  - generic [ref=e10029]: "Caught in the Act: Unfaithful"
+                  - generic [ref=e10030]: 8:00 PM - 9:00 PM
+              - 'generic "Caught in the Act: Unfaithful 9:00 PM - 10:00 PM" [ref=e10031] [cursor=pointer]':
+                - generic [ref=e10032]:
+                  - generic [ref=e10033]: "Caught in the Act: Unfaithful"
+                  - generic [ref=e10034]: 9:00 PM - 10:00 PM
+            - generic [ref=e10049]: No program info
+            - generic [ref=e10050]:
+              - generic "Ridiculousness 5:00 PM - 5:30 PM" [ref=e10063] [cursor=pointer]:
+                - generic [ref=e10065]: Ridiculousness
+              - generic "Ridiculousness 5:30 PM - 6:00 PM" [ref=e10066] [cursor=pointer]:
+                - generic [ref=e10068]: Ridiculousness
+              - generic "Ridiculousness 6:00 PM - 6:30 PM" [ref=e10069] [cursor=pointer]:
+                - generic [ref=e10071]: Ridiculousness
+              - generic "Ridiculousness 6:30 PM - 7:00 PM" [ref=e10072] [cursor=pointer]:
+                - generic [ref=e10074]: Ridiculousness
+              - generic "Ridiculousness 7:00 PM - 7:30 PM" [ref=e10075] [cursor=pointer]:
+                - generic [ref=e10077]: Ridiculousness
+              - generic "Ridiculousness 7:30 PM - 8:00 PM" [ref=e10078] [cursor=pointer]:
+                - generic [ref=e10080]: Ridiculousness
+              - generic "Ridiculousness 8:00 PM - 8:30 PM" [ref=e10081] [cursor=pointer]:
+                - generic [ref=e10083]: Ridiculousness
+              - generic "Ridiculousness 8:30 PM - 9:00 PM" [ref=e10084] [cursor=pointer]:
+                - generic [ref=e10086]: Ridiculousness
+              - generic "Ridiculousness 9:00 PM - 9:30 PM" [ref=e10087] [cursor=pointer]:
+                - generic [ref=e10089]: Ridiculousness
+              - generic "Ridiculousness 9:30 PM - 10:00 PM" [ref=e10090] [cursor=pointer]:
+                - generic [ref=e10092]: Ridiculousness
+            - generic [ref=e10093]:
+              - generic "Everybody Loves Raymond 5:00 PM - 5:30 PM" [ref=e10106] [cursor=pointer]:
+                - generic [ref=e10108]: Everybody Loves Raymond
+              - generic "Everybody Loves Raymond 5:30 PM - 6:00 PM" [ref=e10109] [cursor=pointer]:
+                - generic [ref=e10111]: Everybody Loves Raymond
+              - generic "Two and a Half Men 6:00 PM - 6:30 PM" [ref=e10112] [cursor=pointer]:
+                - generic [ref=e10114]: Two and a Half Men
+              - generic "Two and a Half Men 6:30 PM - 7:00 PM" [ref=e10115] [cursor=pointer]:
+                - generic [ref=e10117]: Two and a Half Men
+              - generic "Two and a Half Men 7:00 PM - 7:30 PM" [ref=e10118] [cursor=pointer]:
+                - generic [ref=e10120]: Two and a Half Men
+              - generic "Two and a Half Men 7:30 PM - 8:00 PM" [ref=e10121] [cursor=pointer]:
+                - generic [ref=e10123]: Two and a Half Men
+              - generic "Two and a Half Men 8:00 PM - 8:30 PM" [ref=e10124] [cursor=pointer]:
+                - generic [ref=e10126]: Two and a Half Men
+              - generic "Two and a Half Men 8:30 PM - 9:00 PM" [ref=e10127] [cursor=pointer]:
+                - generic [ref=e10129]: Two and a Half Men
+              - generic "Two and a Half Men 9:00 PM - 9:30 PM" [ref=e10130] [cursor=pointer]:
+                - generic [ref=e10132]: Two and a Half Men
+              - generic "Two and a Half Men 9:30 PM - 10:00 PM" [ref=e10133] [cursor=pointer]:
+                - generic [ref=e10135]: Two and a Half Men
+            - generic [ref=e10136]:
+              - 'generic "The Crew League: 3-Point Contest 5:00 PM - 5:30 PM" [ref=e10149] [cursor=pointer]':
+                - generic [ref=e10151]: "The Crew League: 3-Point Contest"
+              - generic "Overtime Hustle 5:30 PM - 6:00 PM" [ref=e10152] [cursor=pointer]:
+                - generic [ref=e10154]: Overtime Hustle
+              - generic "The Baller Alert Show 6:00 PM - 7:00 PM" [ref=e10155] [cursor=pointer]:
+                - generic [ref=e10156]:
+                  - generic [ref=e10157]: The Baller Alert Show
+                  - generic [ref=e10158]: 6:00 PM - 7:00 PM
+              - generic "Short & Fresh 7:00 PM - 8:00 PM" [ref=e10159] [cursor=pointer]:
+                - generic [ref=e10160]:
+                  - generic [ref=e10161]: Short & Fresh
+                  - generic [ref=e10162]: 7:00 PM - 8:00 PM
+              - generic "The People's Brief With Lynae Vanee 8:00 PM - 9:00 PM" [ref=e10163] [cursor=pointer]:
+                - generic [ref=e10164]:
+                  - generic [ref=e10165]: The People's Brief With Lynae Vanee
+                  - generic [ref=e10166]: 8:00 PM - 9:00 PM
+              - generic "Talk With Flee 9:00 PM - 10:00 PM" [ref=e10167] [cursor=pointer]:
+                - generic [ref=e10168]:
+                  - generic [ref=e10169]: Talk With Flee
+                  - generic [ref=e10170]: 9:00 PM - 10:00 PM
+            - generic [ref=e10171]:
+              - 'generic "Love & Hip Hop: Hollywood 5:00 PM - 6:00 PM" [ref=e10184] [cursor=pointer]':
+                - generic [ref=e10185]:
+                  - generic [ref=e10186]: "Love & Hip Hop: Hollywood"
+                  - generic [ref=e10187]: 5:00 PM - 6:00 PM
+              - 'generic "Love & Hip Hop: Hollywood 6:00 PM - 7:00 PM" [ref=e10188] [cursor=pointer]':
+                - generic [ref=e10189]:
+                  - generic [ref=e10190]: "Love & Hip Hop: Hollywood"
+                  - generic [ref=e10191]: 6:00 PM - 7:00 PM
+              - generic "Basketball Wives LA 7:00 PM - 8:00 PM" [ref=e10192] [cursor=pointer]:
+                - generic [ref=e10193]:
+                  - generic [ref=e10194]: Basketball Wives LA
+                  - generic [ref=e10195]: 7:00 PM - 8:00 PM
+              - generic "Basketball Wives LA 8:00 PM - 9:00 PM" [ref=e10196] [cursor=pointer]:
+                - generic [ref=e10197]:
+                  - generic [ref=e10198]: Basketball Wives LA
+                  - generic [ref=e10199]: 8:00 PM - 9:00 PM
+              - generic "Basketball Wives LA 9:00 PM - 10:00 PM" [ref=e10200] [cursor=pointer]:
+                - generic [ref=e10201]:
+                  - generic [ref=e10202]: Basketball Wives LA
+                  - generic [ref=e10203]: 9:00 PM - 10:00 PM
+            - generic [ref=e10204]:
+              - generic "Total Request Playlist 5:00 PM - 6:00 PM" [ref=e10217] [cursor=pointer]:
+                - generic [ref=e10218]:
+                  - generic [ref=e10219]: Total Request Playlist
+                  - generic [ref=e10220]: 5:00 PM - 6:00 PM
+              - generic "Total Request Playlist 6:00 PM - 7:00 PM" [ref=e10221] [cursor=pointer]:
+                - generic [ref=e10222]:
+                  - generic [ref=e10223]: Total Request Playlist
+                  - generic [ref=e10224]: 6:00 PM - 7:00 PM
+              - generic "Total Request Playlist 7:00 PM - 8:00 PM" [ref=e10225] [cursor=pointer]:
+                - generic [ref=e10226]:
+                  - generic [ref=e10227]: Total Request Playlist
+                  - generic [ref=e10228]: 7:00 PM - 8:00 PM
+              - generic "Yo! Hip Hop Mix 8:00 PM - 9:00 PM" [ref=e10229] [cursor=pointer]:
+                - generic [ref=e10230]:
+                  - generic [ref=e10231]: Yo! Hip Hop Mix
+                  - generic [ref=e10232]: 8:00 PM - 9:00 PM
+              - generic "Yo! Hip Hop Mix 9:00 PM - 10:00 PM" [ref=e10233] [cursor=pointer]:
+                - generic [ref=e10234]:
+                  - generic [ref=e10235]: Yo! Hip Hop Mix
+                  - generic [ref=e10236]: 9:00 PM - 10:00 PM
+            - generic [ref=e10237]:
+              - generic "Hudson & Rex 5:00 PM - 6:00 PM" [ref=e10250] [cursor=pointer]:
+                - generic [ref=e10251]:
+                  - generic [ref=e10252]: Hudson & Rex
+                  - generic [ref=e10253]: 5:00 PM - 6:00 PM
+              - generic "The Rookie 6:00 PM - 7:00 PM" [ref=e10254] [cursor=pointer]:
+                - generic [ref=e10255]:
+                  - generic [ref=e10256]: The Rookie
+                  - generic [ref=e10257]: 6:00 PM - 7:00 PM
+              - generic "The Rookie 7:00 PM - 8:00 PM" [ref=e10258] [cursor=pointer]:
+                - generic [ref=e10259]:
+                  - generic [ref=e10260]: The Rookie
+                  - generic [ref=e10261]: 7:00 PM - 8:00 PM
+              - generic "The Rookie 8:00 PM - 9:00 PM" [ref=e10262] [cursor=pointer]:
+                - generic [ref=e10263]:
+                  - generic [ref=e10264]: The Rookie
+                  - generic [ref=e10265]: 8:00 PM - 9:00 PM
+              - generic "The Rookie 9:00 PM - 10:00 PM" [ref=e10266] [cursor=pointer]:
+                - generic [ref=e10267]:
+                  - generic [ref=e10268]: The Rookie
+                  - generic [ref=e10269]: 9:00 PM - 10:00 PM
+            - generic [ref=e10270]:
+              - generic "My Wife and Kids 5:00 PM - 5:30 PM" [ref=e10283] [cursor=pointer]:
+                - generic [ref=e10285]: My Wife and Kids
+              - generic "My Wife and Kids 5:30 PM - 6:00 PM" [ref=e10286] [cursor=pointer]:
+                - generic [ref=e10288]: My Wife and Kids
+              - generic "My Wife and Kids 6:00 PM - 6:30 PM" [ref=e10289] [cursor=pointer]:
+                - generic [ref=e10291]: My Wife and Kids
+              - generic "My Wife and Kids 6:30 PM - 7:00 PM" [ref=e10292] [cursor=pointer]:
+                - generic [ref=e10294]: My Wife and Kids
+              - generic "My Wife and Kids 7:00 PM - 7:30 PM" [ref=e10295] [cursor=pointer]:
+                - generic [ref=e10297]: My Wife and Kids
+              - generic "My Wife and Kids 7:30 PM - 8:00 PM" [ref=e10298] [cursor=pointer]:
+                - generic [ref=e10300]: My Wife and Kids
+              - 'generic "Domino: Battle of the Bones 8:00 PM - 10:30 PM" [ref=e10301] [cursor=pointer]':
+                - generic [ref=e10302]:
+                  - generic [ref=e10303]: "Domino: Battle of the Bones"
+                  - generic [ref=e10304]: 8:00 PM - 10:30 PM
+                  - generic [ref=e10305]: Hoping to reclaim his former glory, a fallen dominoes champion recruits his step-grandson to help him win an off-the-wall tournament.
+            - generic [ref=e10306]:
+              - generic "Music's Greatest Mysteries 5:00 PM - 5:30 PM" [ref=e10319] [cursor=pointer]:
+                - generic [ref=e10321]: Music's Greatest Mysteries
+              - generic "Music's Greatest Mysteries 5:30 PM - 6:00 PM" [ref=e10322] [cursor=pointer]:
+                - generic [ref=e10324]: Music's Greatest Mysteries
+              - generic "The Top Ten Revealed 6:00 PM - 6:30 PM" [ref=e10325] [cursor=pointer]:
+                - generic [ref=e10327]: The Top Ten Revealed
+              - generic "The Top Ten Revealed 6:30 PM - 7:00 PM" [ref=e10328] [cursor=pointer]:
+                - generic [ref=e10330]: The Top Ten Revealed
+              - generic "The Top Ten Revealed 7:00 PM - 7:30 PM" [ref=e10331] [cursor=pointer]:
+                - generic [ref=e10333]: The Top Ten Revealed
+              - generic "The Top Ten Revealed 7:30 PM - 8:00 PM" [ref=e10334] [cursor=pointer]:
+                - generic [ref=e10336]: The Top Ten Revealed
+              - generic "The Top Ten Revealed 8:00 PM - 8:30 PM" [ref=e10337] [cursor=pointer]:
+                - generic [ref=e10339]: The Top Ten Revealed
+              - generic "The Top Ten Revealed 8:30 PM - 9:00 PM" [ref=e10340] [cursor=pointer]:
+                - generic [ref=e10342]: The Top Ten Revealed
+              - generic "Rock & Roll Road Trip With Sammy Hagar 9:00 PM - 9:30 PM" [ref=e10343] [cursor=pointer]:
+                - generic [ref=e10345]: Rock & Roll Road Trip With Sammy Hagar
+              - generic "Rock & Roll Road Trip With Sammy Hagar 9:30 PM - 10:00 PM" [ref=e10346] [cursor=pointer]:
+                - generic [ref=e10348]: Rock & Roll Road Trip With Sammy Hagar
+            - generic [ref=e10349]:
+              - generic "The Parkers 5:00 PM - 5:30 PM" [ref=e10362] [cursor=pointer]:
+                - generic [ref=e10364]: The Parkers
+              - generic "The Parkers 5:30 PM - 6:00 PM" [ref=e10365] [cursor=pointer]:
+                - generic [ref=e10367]: The Parkers
+              - generic "The Parkers 6:00 PM - 6:30 PM" [ref=e10368] [cursor=pointer]:
+                - generic [ref=e10370]: The Parkers
+              - generic "The Parkers 6:30 PM - 7:00 PM" [ref=e10371] [cursor=pointer]:
+                - generic [ref=e10373]: The Parkers
+              - generic "The Parkers 7:00 PM - 7:30 PM" [ref=e10374] [cursor=pointer]:
+                - generic [ref=e10376]: The Parkers
+              - generic "The Parkers 7:30 PM - 8:00 PM" [ref=e10377] [cursor=pointer]:
+                - generic [ref=e10379]: The Parkers
+              - generic "Half & Half 8:00 PM - 8:30 PM" [ref=e10380] [cursor=pointer]:
+                - generic [ref=e10382]: Half & Half
+              - generic "Half & Half 8:30 PM - 9:00 PM" [ref=e10383] [cursor=pointer]:
+                - generic [ref=e10385]: Half & Half
+              - generic "Half & Half 9:00 PM - 9:30 PM" [ref=e10386] [cursor=pointer]:
+                - generic [ref=e10388]: Half & Half
+              - generic "Half & Half 9:30 PM - 10:00 PM" [ref=e10389] [cursor=pointer]:
+                - generic [ref=e10391]: Half & Half
+            - generic [ref=e10392]:
+              - generic "Sanford and Son 5:00 PM - 5:30 PM" [ref=e10405] [cursor=pointer]:
+                - generic [ref=e10407]: Sanford and Son
+              - generic "Sanford and Son 5:30 PM - 6:00 PM" [ref=e10408] [cursor=pointer]:
+                - generic [ref=e10410]: Sanford and Son
+              - generic "Sanford and Son 6:00 PM - 6:30 PM" [ref=e10411] [cursor=pointer]:
+                - generic [ref=e10413]: Sanford and Son
+              - generic "Sanford and Son 6:30 PM - 7:00 PM" [ref=e10414] [cursor=pointer]:
+                - generic [ref=e10416]: Sanford and Son
+              - generic "The Cosby Show 7:00 PM - 7:30 PM" [ref=e10417] [cursor=pointer]:
+                - generic [ref=e10419]: The Cosby Show
+              - generic "The Cosby Show 7:30 PM - 8:00 PM" [ref=e10420] [cursor=pointer]:
+                - generic [ref=e10422]: The Cosby Show
+              - generic "The Cosby Show 8:00 PM - 8:30 PM" [ref=e10423] [cursor=pointer]:
+                - generic [ref=e10425]: The Cosby Show
+              - generic "The Cosby Show 8:30 PM - 9:00 PM" [ref=e10426] [cursor=pointer]:
+                - generic [ref=e10428]: The Cosby Show
+              - generic "The Jeffersons 9:00 PM - 9:30 PM" [ref=e10429] [cursor=pointer]:
+                - generic [ref=e10431]: The Jeffersons
+              - generic "The Jeffersons 9:30 PM - 10:00 PM" [ref=e10432] [cursor=pointer]:
+                - generic [ref=e10434]: The Jeffersons
+            - generic [ref=e10435]:
+              - generic "Innov Nation 5:00 PM - 5:30 PM" [ref=e10448] [cursor=pointer]:
+                - generic [ref=e10450]: Innov Nation
+              - generic "Jewish World Weekly 5:30 PM - 6:00 PM" [ref=e10451] [cursor=pointer]:
+                - generic [ref=e10453]: Jewish World Weekly
+              - generic "Middle East Now 6:00 PM - 7:00 PM" [ref=e10454] [cursor=pointer]:
+                - generic [ref=e10456]: Live
+                - generic [ref=e10457]:
+                  - generic [ref=e10458]: Middle East Now
+                  - generic [ref=e10459]: 6:00 PM - 7:00 PM
+              - generic "RUNDOWN 7:00 PM - 8:00 PM" [ref=e10460] [cursor=pointer]:
+                - generic [ref=e10462]: Live
+                - generic [ref=e10463]:
+                  - generic [ref=e10464]: RUNDOWN
+                  - generic [ref=e10465]: 7:00 PM - 8:00 PM
+              - generic "Innov Nation 8:00 PM - 8:30 PM" [ref=e10466] [cursor=pointer]:
+                - generic [ref=e10468]: Innov Nation
+              - generic "Jewish World Weekly 8:30 PM - 9:00 PM" [ref=e10469] [cursor=pointer]:
+                - generic [ref=e10471]: Jewish World Weekly
+              - generic "Middle East Now 9:00 PM - 10:00 PM" [ref=e10472] [cursor=pointer]:
+                - generic [ref=e10474]: Live
+                - generic [ref=e10475]:
+                  - generic [ref=e10476]: Middle East Now
+                  - generic [ref=e10477]: 9:00 PM - 10:00 PM
+            - generic [ref=e10478]:
+              - generic "Texas Our Texas 5:00 PM - 5:30 PM" [ref=e10491] [cursor=pointer]:
+                - generic [ref=e10493]: Texas Our Texas
+              - generic "The Texas Bucket List 5:30 PM - 6:00 PM" [ref=e10494] [cursor=pointer]:
+                - generic [ref=e10496]: The Texas Bucket List
+              - generic "Rural Evening News 6:00 PM - 6:30 PM" [ref=e10497] [cursor=pointer]:
+                - generic [ref=e10499]: Rural Evening News
+              - generic "SharkFarmer TV 6:30 PM - 7:00 PM" [ref=e10500] [cursor=pointer]:
+                - generic [ref=e10502]: SharkFarmer TV
+              - generic "Ag PhD 7:00 PM - 7:30 PM" [ref=e10503] [cursor=pointer]:
+                - generic [ref=e10505]: Ag PhD
+              - generic "Top Crop 7:30 PM - 8:00 PM" [ref=e10506] [cursor=pointer]:
+                - generic [ref=e10508]: Top Crop
+              - generic "Outback Farm 8:00 PM - 9:00 PM" [ref=e10509] [cursor=pointer]:
+                - generic [ref=e10510]:
+                  - generic [ref=e10511]: Outback Farm
+                  - generic [ref=e10512]: 8:00 PM - 9:00 PM
+              - generic "Gaither Gospel Hour 9:00 PM - 10:00 PM" [ref=e10513] [cursor=pointer]:
+                - generic [ref=e10514]:
+                  - generic [ref=e10515]: Gaither Gospel Hour
+                  - generic [ref=e10516]: 9:00 PM - 10:00 PM
+            - generic [ref=e10517]:
+              - generic "BBC World News America 5:00 PM - 6:00 PM" [ref=e10530] [cursor=pointer]:
+                - generic [ref=e10531]:
+                  - generic [ref=e10532]: BBC World News America
+                  - generic [ref=e10533]: 5:00 PM - 6:00 PM
+              - generic "BBC News 6:00 PM - 6:30 PM" [ref=e10534] [cursor=pointer]:
+                - generic [ref=e10536]: BBC News
+              - generic "Newscast 6:30 PM - 7:00 PM" [ref=e10537] [cursor=pointer]:
+                - generic [ref=e10539]: Newscast
+              - generic "BBC News 7:00 PM - 7:30 PM" [ref=e10540] [cursor=pointer]:
+                - generic [ref=e10542]: BBC News
+              - generic "Tech Now 7:30 PM - 8:00 PM" [ref=e10543] [cursor=pointer]:
+                - generic [ref=e10545]: Tech Now
+              - generic "Newsday 8:00 PM - 8:30 PM" [ref=e10546] [cursor=pointer]:
+                - generic [ref=e10548]: Newsday
+              - generic "Business Today 8:30 PM - 8:45 PM" [ref=e10549] [cursor=pointer]:
+                - generic [ref=e10551]: Business Today
+              - generic "BBC Sport 8:45 PM - 9:00 PM" [ref=e10552] [cursor=pointer]:
+                - generic [ref=e10554]: BBC Sport
+              - generic "Newsday 9:00 PM - 9:30 PM" [ref=e10555] [cursor=pointer]:
+                - generic [ref=e10557]: Newsday
+              - generic "Business Today 9:30 PM - 9:45 PM" [ref=e10558] [cursor=pointer]:
+                - generic [ref=e10560]: Business Today
+              - generic "BBC Sport 9:45 PM - 10:00 PM" [ref=e10561] [cursor=pointer]:
+                - generic [ref=e10563]: BBC Sport
+            - generic [ref=e10564]:
+              - generic "The Dana Show 5:00 PM - 6:00 PM" [ref=e10577] [cursor=pointer]:
+                - generic [ref=e10578]:
+                  - generic [ref=e10579]: The Dana Show
+                  - generic [ref=e10580]: 5:00 PM - 6:00 PM
+              - generic "The Liz Wheeler Show 6:00 PM - 7:00 PM" [ref=e10581] [cursor=pointer]:
+                - generic [ref=e10582]:
+                  - generic [ref=e10583]: The Liz Wheeler Show
+                  - generic [ref=e10584]: 6:00 PM - 7:00 PM
+              - 'generic "Bill O''Reilly: No Spin News 7:00 PM - 8:00 PM" [ref=e10585] [cursor=pointer]':
+                - generic [ref=e10586]:
+                  - generic [ref=e10587]: "Bill O'Reilly: No Spin News"
+                  - generic [ref=e10588]: 7:00 PM - 8:00 PM
+              - generic "I'm Right...With Jesse Kelly 8:00 PM - 9:00 PM" [ref=e10589] [cursor=pointer]:
+                - generic [ref=e10591]: Live
+                - generic [ref=e10592]:
+                  - generic [ref=e10593]: I'm Right...With Jesse Kelly
+                  - generic [ref=e10594]: 8:00 PM - 9:00 PM
+              - generic "The Liz Wheeler Show 9:00 PM - 10:00 PM" [ref=e10595] [cursor=pointer]:
+                - generic [ref=e10596]:
+                  - generic [ref=e10597]: The Liz Wheeler Show
+                  - generic [ref=e10598]: 9:00 PM - 10:00 PM
+            - generic [ref=e10599]:
+              - generic "Carl Higbie Frontline 5:00 PM - 6:00 PM" [ref=e10612] [cursor=pointer]:
+                - generic [ref=e10613]:
+                  - generic [ref=e10614]: Carl Higbie Frontline
+                  - generic [ref=e10615]: 5:00 PM - 6:00 PM
+              - generic "Rob Schmitt Tonight 6:00 PM - 7:00 PM" [ref=e10616] [cursor=pointer]:
+                - generic [ref=e10617]:
+                  - generic [ref=e10618]: Rob Schmitt Tonight
+                  - generic [ref=e10619]: 6:00 PM - 7:00 PM
+              - generic "Finnerty 7:00 PM - 8:00 PM" [ref=e10620] [cursor=pointer]:
+                - generic [ref=e10621]:
+                  - generic [ref=e10622]: Finnerty
+                  - generic [ref=e10623]: 7:00 PM - 8:00 PM
+              - generic "Greg Kelly Reports 8:00 PM - 9:00 PM" [ref=e10624] [cursor=pointer]:
+                - generic [ref=e10625]:
+                  - generic [ref=e10626]: Greg Kelly Reports
+                  - generic [ref=e10627]: 8:00 PM - 9:00 PM
+              - generic "The Right Squad 9:00 PM - 10:00 PM" [ref=e10628] [cursor=pointer]:
+                - generic [ref=e10629]:
+                  - generic [ref=e10630]: The Right Squad
+                  - generic [ref=e10631]: 9:00 PM - 10:00 PM
+            - generic [ref=e10632]:
+              - generic "U.S. House of Representatives 11:00 AM - 7:00 PM" [ref=e10645] [cursor=pointer]:
+                - generic [ref=e10646]:
+                  - generic [ref=e10647]: U.S. House of Representatives
+                  - generic [ref=e10648]: 11:00 AM - 7:00 PM
+                  - generic [ref=e10649]: Gavel-to-gavel coverage of the U.S. House of Representatives from the Capitol Building in Washington, D.C.
+              - generic "Public Affairs Events 7:00 PM - 8:00 PM" [ref=e10650] [cursor=pointer]:
+                - generic [ref=e10651]:
+                  - generic [ref=e10652]: Public Affairs Events
+                  - generic [ref=e10653]: 7:00 PM - 8:00 PM
+              - generic "America 250 8:00 PM - 8:45 PM" [ref=e10654] [cursor=pointer]:
+                - generic [ref=e10655]:
+                  - generic [ref=e10656]: America 250
+                  - generic [ref=e10657]: 8:00 PM - 8:45 PM
+              - generic "Public Affairs Events 8:45 PM - 11:00 PM" [ref=e10658] [cursor=pointer]:
+                - generic [ref=e10659]:
+                  - generic [ref=e10660]: Public Affairs Events
+                  - generic [ref=e10661]: 8:45 PM - 11:00 PM
+                  - generic [ref=e10662]: Public affairs events, congressional hearings, speeches, and interviews.
+            - generic [ref=e10663]:
+              - generic "Public Affairs Events 2:30 PM - 7:00 PM" [ref=e10676] [cursor=pointer]:
+                - generic [ref=e10677]:
+                  - generic [ref=e10678]: Public Affairs Events
+                  - generic [ref=e10679]: 2:30 PM - 7:00 PM
+                  - generic [ref=e10680]: Public affairs events, congressional hearings, speeches, and interviews.
+              - generic "Public Affairs Events 3:00 PM - 11:00 PM" [ref=e10681] [cursor=pointer]:
+                - generic [ref=e10682]:
+                  - generic [ref=e10683]: Public Affairs Events
+                  - generic [ref=e10684]: 3:00 PM - 11:00 PM
+                  - generic [ref=e10685]: Public affairs events, congressional hearings, speeches, and interviews.
+              - generic "Public Affairs Events 3:02 PM - 11:00 PM" [ref=e10686] [cursor=pointer]:
+                - generic [ref=e10687]:
+                  - generic [ref=e10688]: Public Affairs Events
+                  - generic [ref=e10689]: 3:02 PM - 11:00 PM
+                  - generic [ref=e10690]: Public affairs events, congressional hearings, speeches, and interviews.
+              - generic "The Courts 7:00 PM - 8:30 PM" [ref=e10691] [cursor=pointer]:
+                - generic [ref=e10692]:
+                  - generic [ref=e10693]: The Courts
+                  - generic [ref=e10694]: 7:00 PM - 8:30 PM
+                  - generic [ref=e10695]: The Supreme Court hears oral argument in Wolford v. Lopez, a case examining whether states may prohibit legal gun owners from bringing handguns onto private property open to the public, such as restaurants and stores.
+              - generic "Public Affairs Events 8:30 PM - 11:00 PM" [ref=e10696] [cursor=pointer]:
+                - generic [ref=e10697]:
+                  - generic [ref=e10698]: Public Affairs Events
+                  - generic [ref=e10699]: 8:30 PM - 11:00 PM
+                  - generic [ref=e10700]: Public affairs events, congressional hearings, speeches, and interviews.
+            - generic [ref=e10701]:
+              - generic "Bloomberg The Asia Trade 5:00 PM - 7:00 PM" [ref=e10714] [cursor=pointer]:
+                - generic [ref=e10715]:
+                  - generic [ref=e10716]: Bloomberg The Asia Trade
+                  - generic [ref=e10717]: 5:00 PM - 7:00 PM
+              - generic "The Circuit 5:30 PM - 6:00 PM" [ref=e10718] [cursor=pointer]:
+                - generic [ref=e10720]: The Circuit
+              - generic "Bloomberg The Asia Trade 6:00 PM - 8:00 PM" [ref=e10721] [cursor=pointer]:
+                - generic [ref=e10722]:
+                  - generic [ref=e10723]: Bloomberg The Asia Trade
+                  - generic [ref=e10724]: 6:00 PM - 8:00 PM
+              - 'generic "Bloomberg: The China Show 7:00 PM - 9:00 PM" [ref=e10725] [cursor=pointer]':
+                - generic [ref=e10726]:
+                  - generic [ref=e10727]: "Bloomberg: The China Show"
+                  - generic [ref=e10728]: 7:00 PM - 9:00 PM
+              - 'generic "Bloomberg: The China Show 8:00 PM - 9:00 PM" [ref=e10729] [cursor=pointer]':
+                - generic [ref=e10730]:
+                  - generic [ref=e10731]: "Bloomberg: The China Show"
+                  - generic [ref=e10732]: 8:00 PM - 9:00 PM
+              - generic "Insight With Haslinda Amin 9:00 PM - 11:00 PM" [ref=e10733] [cursor=pointer]:
+                - generic [ref=e10734]:
+                  - generic [ref=e10735]: Insight With Haslinda Amin
+                  - generic [ref=e10736]: 9:00 PM - 11:00 PM
+              - generic "The Circuit 9:30 PM - 10:00 PM" [ref=e10737] [cursor=pointer]:
+                - generic [ref=e10739]: The Circuit
+            - generic [ref=e10740]:
+              - generic "Power Players 5:00 PM - 5:30 PM" [ref=e10753] [cursor=pointer]:
+                - generic [ref=e10755]: Power Players
+              - generic "The CEO Series 5:30 PM - 6:00 PM" [ref=e10756] [cursor=pointer]:
+                - generic [ref=e10758]: The CEO Series
+              - generic "NYC Revealed 6:00 PM - 6:30 PM" [ref=e10759] [cursor=pointer]:
+                - generic [ref=e10761]: NYC Revealed
+              - generic "NYC Revealed 6:30 PM - 7:00 PM" [ref=e10762] [cursor=pointer]:
+                - generic [ref=e10764]: NYC Revealed
+              - generic "Go Fund Yourself 7:00 PM - 7:30 PM" [ref=e10765] [cursor=pointer]:
+                - generic [ref=e10767]: Go Fund Yourself
+              - generic "The Disruptors 7:30 PM - 8:00 PM" [ref=e10768] [cursor=pointer]:
+                - generic [ref=e10770]: The Disruptors
+              - generic "Entrepreneur Elevator Pitch 8:00 PM - 9:00 PM" [ref=e10771] [cursor=pointer]:
+                - generic [ref=e10772]:
+                  - generic [ref=e10773]: Entrepreneur Elevator Pitch
+                  - generic [ref=e10774]: 8:00 PM - 9:00 PM
+              - generic "NYC Revealed 8:30 PM - 9:00 PM" [ref=e10775] [cursor=pointer]:
+                - generic [ref=e10777]: NYC Revealed
+              - generic "Entrepreneur Elevator Pitch 9:00 PM - 9:30 PM" [ref=e10778] [cursor=pointer]:
+                - generic [ref=e10780]: Entrepreneur Elevator Pitch
+              - generic "Today in Tech 9:30 PM - 10:00 PM" [ref=e10781] [cursor=pointer]:
+                - generic [ref=e10783]: Today in Tech
+            - generic [ref=e10784]:
+              - generic "Mad Money 5:00 PM - 6:00 PM" [ref=e10797] [cursor=pointer]:
+                - generic [ref=e10798]:
+                  - generic [ref=e10799]: Mad Money
+                  - generic [ref=e10800]: 5:00 PM - 6:00 PM
+              - generic "Shark Tank 6:00 PM - 7:00 PM" [ref=e10801] [cursor=pointer]:
+                - generic [ref=e10802]:
+                  - generic [ref=e10803]: Shark Tank
+                  - generic [ref=e10804]: 6:00 PM - 7:00 PM
+              - generic "Shark Tank 7:00 PM - 8:00 PM" [ref=e10805] [cursor=pointer]:
+                - generic [ref=e10807]: Live
+                - generic [ref=e10808]:
+                  - generic [ref=e10809]: Shark Tank
+                  - generic [ref=e10810]: 7:00 PM - 8:00 PM
+              - generic "Shark Tank 8:00 PM - 9:00 PM" [ref=e10811] [cursor=pointer]:
+                - generic [ref=e10812]:
+                  - generic [ref=e10813]: Shark Tank
+                  - generic [ref=e10814]: 8:00 PM - 9:00 PM
+              - generic "Shark Tank 9:00 PM - 10:00 PM" [ref=e10815] [cursor=pointer]:
+                - generic [ref=e10816]:
+                  - generic [ref=e10817]: Shark Tank
+                  - generic [ref=e10818]: 9:00 PM - 10:00 PM
+            - generic [ref=e10819]:
+              - generic "The Beat With Ari Melber 5:00 PM - 6:00 PM" [ref=e10832] [cursor=pointer]:
+                - generic [ref=e10833]:
+                  - generic [ref=e10834]: The Beat With Ari Melber
+                  - generic [ref=e10835]: 5:00 PM - 6:00 PM
+              - generic "The Weeknight 6:00 PM - 7:00 PM" [ref=e10836] [cursor=pointer]:
+                - generic [ref=e10838]: Live
+                - generic [ref=e10839]:
+                  - generic [ref=e10840]: The Weeknight
+                  - generic [ref=e10841]: 6:00 PM - 7:00 PM
+              - generic "All In With Chris Hayes 7:00 PM - 8:00 PM" [ref=e10842] [cursor=pointer]:
+                - generic [ref=e10843]:
+                  - generic [ref=e10844]: All In With Chris Hayes
+                  - generic [ref=e10845]: 7:00 PM - 8:00 PM
+              - generic "The Briefing With Jen Psaki 8:00 PM - 9:00 PM" [ref=e10846] [cursor=pointer]:
+                - generic [ref=e10847]:
+                  - generic [ref=e10848]: The Briefing With Jen Psaki
+                  - generic [ref=e10849]: 8:00 PM - 9:00 PM
+              - generic "The Last Word With Lawrence O'Donnell 9:00 PM - 10:00 PM" [ref=e10850] [cursor=pointer]:
+                - generic [ref=e10851]:
+                  - generic [ref=e10852]: The Last Word With Lawrence O'Donnell
+                  - generic [ref=e10853]: 9:00 PM - 10:00 PM
+            - generic [ref=e10854]:
+              - generic "Squawk Box Asia 5:00 PM - 8:00 PM" [ref=e10867] [cursor=pointer]:
+                - generic [ref=e10868]:
+                  - generic [ref=e10869]: Squawk Box Asia
+                  - generic [ref=e10870]: 5:00 PM - 8:00 PM
+              - generic "The China Connection 8:00 PM - 9:00 PM" [ref=e10871] [cursor=pointer]:
+                - generic [ref=e10872]:
+                  - generic [ref=e10873]: The China Connection
+                  - generic [ref=e10874]: 8:00 PM - 9:00 PM
+              - generic "Inside India 9:00 PM - 10:00 PM" [ref=e10875] [cursor=pointer]:
+                - generic [ref=e10876]:
+                  - generic [ref=e10877]: Inside India
+                  - generic [ref=e10878]: 9:00 PM - 10:00 PM
+            - generic [ref=e10879]:
+              - generic "The Brief With Jim Sciutto 5:00 PM - 6:00 PM" [ref=e10892] [cursor=pointer]:
+                - generic [ref=e10893]:
+                  - generic [ref=e10894]: The Brief With Jim Sciutto
+                  - generic [ref=e10895]: 5:00 PM - 6:00 PM
+              - generic "Erin Burnett OutFront 6:00 PM - 7:00 PM" [ref=e10896] [cursor=pointer]:
+                - generic [ref=e10898]: Live
+                - generic [ref=e10899]:
+                  - generic [ref=e10900]: Erin Burnett OutFront
+                  - generic [ref=e10901]: 6:00 PM - 7:00 PM
+              - generic "Anderson Cooper 360 7:00 PM - 8:00 PM" [ref=e10902] [cursor=pointer]:
+                - generic [ref=e10903]:
+                  - generic [ref=e10904]: Anderson Cooper 360
+                  - generic [ref=e10905]: 7:00 PM - 8:00 PM
+              - generic "The Source With Kaitlan Collins 8:00 PM - 9:00 PM" [ref=e10906] [cursor=pointer]:
+                - generic [ref=e10907]:
+                  - generic [ref=e10908]: The Source With Kaitlan Collins
+                  - generic [ref=e10909]: 8:00 PM - 9:00 PM
+              - generic "CNN NewsNight With Abby Phillip 9:00 PM - 10:00 PM" [ref=e10910] [cursor=pointer]:
+                - generic [ref=e10911]:
+                  - generic [ref=e10912]: CNN NewsNight With Abby Phillip
+                  - generic [ref=e10913]: 9:00 PM - 10:00 PM
+            - generic [ref=e10914]:
+              - generic "The Bottom Line 5:00 PM - 6:00 PM" [ref=e10927] [cursor=pointer]:
+                - generic [ref=e10928]:
+                  - generic [ref=e10929]: The Bottom Line
+                  - generic [ref=e10930]: 5:00 PM - 6:00 PM
+              - generic "Kudlow 6:00 PM - 7:00 PM" [ref=e10931] [cursor=pointer]:
+                - generic [ref=e10932]:
+                  - generic [ref=e10933]: Kudlow
+                  - generic [ref=e10934]: 6:00 PM - 7:00 PM
+              - generic "The Fixer 7:00 PM - 8:00 PM" [ref=e10935] [cursor=pointer]:
+                - generic [ref=e10936]:
+                  - generic [ref=e10937]: The Fixer
+                  - generic [ref=e10938]: 7:00 PM - 8:00 PM
+              - generic "The Fixer 8:00 PM - 9:00 PM" [ref=e10939] [cursor=pointer]:
+                - generic [ref=e10940]:
+                  - generic [ref=e10941]: The Fixer
+                  - generic [ref=e10942]: 8:00 PM - 9:00 PM
+              - generic "The Fixer 9:00 PM - 10:00 PM" [ref=e10943] [cursor=pointer]:
+                - generic [ref=e10944]:
+                  - generic [ref=e10945]: The Fixer
+                  - generic [ref=e10946]: 9:00 PM - 10:00 PM
+            - generic [ref=e10947]:
+              - generic "Special Report With Bret Baier 5:00 PM - 6:00 PM" [ref=e10960] [cursor=pointer]:
+                - generic [ref=e10961]:
+                  - generic [ref=e10962]: Special Report With Bret Baier
+                  - generic [ref=e10963]: 5:00 PM - 6:00 PM
+              - generic "The Ingraham Angle 6:00 PM - 7:00 PM" [ref=e10964] [cursor=pointer]:
+                - generic [ref=e10965]:
+                  - generic [ref=e10966]: The Ingraham Angle
+                  - generic [ref=e10967]: 6:00 PM - 7:00 PM
+              - generic "Jesse Watters Primetime 7:00 PM - 8:00 PM" [ref=e10968] [cursor=pointer]:
+                - generic [ref=e10969]:
+                  - generic [ref=e10970]: Jesse Watters Primetime
+                  - generic [ref=e10971]: 7:00 PM - 8:00 PM
+              - generic "Hannity 8:00 PM - 9:00 PM" [ref=e10972] [cursor=pointer]:
+                - generic [ref=e10973]:
+                  - generic [ref=e10974]: Hannity
+                  - generic [ref=e10975]: 8:00 PM - 9:00 PM
+              - generic "Gutfeld! 9:00 PM - 10:00 PM" [ref=e10976] [cursor=pointer]:
+                - generic [ref=e10977]:
+                  - generic [ref=e10978]: Gutfeld!
+                  - generic [ref=e10979]: 9:00 PM - 10:00 PM
+            - generic [ref=e10980]:
+              - generic "AccuWeather Ahead 3:00 PM - 7:00 PM" [ref=e10993] [cursor=pointer]:
+                - generic [ref=e10994]:
+                  - generic [ref=e10995]: AccuWeather Ahead
+                  - generic [ref=e10996]: 3:00 PM - 7:00 PM
+              - generic "Ask the Experts 7:00 PM - 11:00 PM" [ref=e10997] [cursor=pointer]:
+                - generic [ref=e10998]:
+                  - generic [ref=e10999]: Ask the Experts
+                  - generic [ref=e11000]: 7:00 PM - 11:00 PM
+            - generic [ref=e11001]:
+              - generic "Weather Unfiltered 5:00 PM - 6:00 PM" [ref=e11014] [cursor=pointer]:
+                - generic [ref=e11015]:
+                  - generic [ref=e11016]: Weather Unfiltered
+                  - generic [ref=e11017]: 5:00 PM - 6:00 PM
+              - generic "Weather Unfiltered 6:00 PM - 7:00 PM" [ref=e11018] [cursor=pointer]:
+                - generic [ref=e11019]:
+                  - generic [ref=e11020]: Weather Unfiltered
+                  - generic [ref=e11021]: 6:00 PM - 7:00 PM
+              - generic "Weather Unfiltered 7:00 PM - 8:00 PM" [ref=e11022] [cursor=pointer]:
+                - generic [ref=e11023]:
+                  - generic [ref=e11024]: Weather Unfiltered
+                  - generic [ref=e11025]: 7:00 PM - 8:00 PM
+              - generic "Weather Unfiltered 8:00 PM - 9:00 PM" [ref=e11026] [cursor=pointer]:
+                - generic [ref=e11027]:
+                  - generic [ref=e11028]: Weather Unfiltered
+                  - generic [ref=e11029]: 8:00 PM - 9:00 PM
+              - generic "Backroad Truckers 9:00 PM - 10:00 PM" [ref=e11030] [cursor=pointer]:
+                - generic [ref=e11031]:
+                  - generic [ref=e11032]: Backroad Truckers
+                  - generic [ref=e11033]: 9:00 PM - 10:00 PM
+            - generic [ref=e11034]:
+              - generic "FOX Weather Live 5:00 PM - 6:00 PM" [ref=e11047] [cursor=pointer]:
+                - generic [ref=e11049]: Live
+                - generic [ref=e11050]:
+                  - generic [ref=e11051]: FOX Weather Live
+                  - generic [ref=e11052]: 5:00 PM - 6:00 PM
+              - generic "FOX Weather Live 6:00 PM - 7:00 PM" [ref=e11053] [cursor=pointer]:
+                - generic [ref=e11055]: Live
+                - generic [ref=e11056]:
+                  - generic [ref=e11057]: FOX Weather Live
+                  - generic [ref=e11058]: 6:00 PM - 7:00 PM
+              - generic "FOX Weather Live 7:00 PM - 8:00 PM" [ref=e11059] [cursor=pointer]:
+                - generic [ref=e11061]: Live
+                - generic [ref=e11062]:
+                  - generic [ref=e11063]: FOX Weather Live
+                  - generic [ref=e11064]: 7:00 PM - 8:00 PM
+              - generic "Fox Weather @ Night 8:00 PM - 4:00 AM" [ref=e11065] [cursor=pointer]:
+                - generic [ref=e11066]:
+                  - generic [ref=e11067]: Fox Weather @ Night
+                  - generic [ref=e11068]: 8:00 PM - 4:00 AM
+                  - generic [ref=e11069]: Pull an all-nighter with fox weather as our meteorologists recap the day in weather news and forecast across America for tomorrow.
+            - generic [ref=e11070]:
+              - generic "Cheyenne 5:00 PM - 6:00 PM" [ref=e11083] [cursor=pointer]:
+                - generic [ref=e11084]:
+                  - generic [ref=e11085]: Cheyenne
+                  - generic [ref=e11086]: 5:00 PM - 6:00 PM
+              - generic "Gunsmoke 6:00 PM - 6:30 PM" [ref=e11087] [cursor=pointer]:
+                - generic [ref=e11089]: Gunsmoke
+              - generic "Gunsmoke 6:30 PM - 7:00 PM" [ref=e11090] [cursor=pointer]:
+                - generic [ref=e11092]: Gunsmoke
+              - generic "Gunsmoke 7:00 PM - 7:30 PM" [ref=e11093] [cursor=pointer]:
+                - generic [ref=e11095]: Gunsmoke
+              - generic "Gunsmoke 7:30 PM - 8:00 PM" [ref=e11096] [cursor=pointer]:
+                - generic [ref=e11098]: Gunsmoke
+              - generic "Gunsmoke 8:00 PM - 9:00 PM" [ref=e11099] [cursor=pointer]:
+                - generic [ref=e11100]:
+                  - generic [ref=e11101]: Gunsmoke
+                  - generic [ref=e11102]: 8:00 PM - 9:00 PM
+              - generic "Gunsmoke 9:00 PM - 10:00 PM" [ref=e11103] [cursor=pointer]:
+                - generic [ref=e11104]:
+                  - generic [ref=e11105]: Gunsmoke
+                  - generic [ref=e11106]: 9:00 PM - 10:00 PM
+            - generic [ref=e11107]:
+              - generic "Healing Time With Dr. Doug Weiss 5:00 PM - 5:30 PM" [ref=e11120] [cursor=pointer]:
+                - generic [ref=e11122]: Healing Time With Dr. Doug Weiss
+              - generic "Paula Today 5:30 PM - 6:00 PM" [ref=e11123] [cursor=pointer]:
+                - generic [ref=e11125]: Paula Today
+              - generic "Talk Truth 6:00 PM - 6:30 PM" [ref=e11126] [cursor=pointer]:
+                - generic [ref=e11128]: Talk Truth
+              - generic "Reflections 6:30 PM - 7:00 PM" [ref=e11129] [cursor=pointer]:
+                - generic [ref=e11131]: Reflections
+              - 'generic "Andrew Wommack: Gospel Truth 7:00 PM - 7:30 PM" [ref=e11132] [cursor=pointer]':
+                - generic [ref=e11134]: "Andrew Wommack: Gospel Truth"
+              - generic "Joni Table Talk 7:30 PM - 8:00 PM" [ref=e11135] [cursor=pointer]:
+                - generic [ref=e11137]: Joni Table Talk
+              - generic "Ministry Now 8:00 PM - 9:00 PM" [ref=e11138] [cursor=pointer]:
+                - generic [ref=e11139]:
+                  - generic [ref=e11140]: Ministry Now
+                  - generic [ref=e11141]: 8:00 PM - 9:00 PM
+              - generic "Discovering the Jewish Jesus 9:00 PM - 9:30 PM" [ref=e11142] [cursor=pointer]:
+                - generic [ref=e11144]: Discovering the Jewish Jesus
+              - generic "Faith Is the Victory 9:30 PM - 10:00 PM" [ref=e11145] [cursor=pointer]:
+                - generic [ref=e11147]: Faith Is the Victory
+            - generic [ref=e11148]:
+              - generic "The Steve Harvey Show 5:00 PM - 5:30 PM" [ref=e11161] [cursor=pointer]:
+                - generic [ref=e11163]: The Steve Harvey Show
+              - generic "The Steve Harvey Show 5:30 PM - 6:00 PM" [ref=e11164] [cursor=pointer]:
+                - generic [ref=e11166]: The Steve Harvey Show
+              - generic "The Steve Harvey Show 6:00 PM - 6:30 PM" [ref=e11167] [cursor=pointer]:
+                - generic [ref=e11169]: The Steve Harvey Show
+              - generic "The Steve Harvey Show 6:30 PM - 7:00 PM" [ref=e11170] [cursor=pointer]:
+                - generic [ref=e11172]: The Steve Harvey Show
+              - generic "Urban Indie Film Block 7:00 PM - 8:00 PM" [ref=e11173] [cursor=pointer]:
+                - generic [ref=e11174]:
+                  - generic [ref=e11175]: Urban Indie Film Block
+                  - generic [ref=e11176]: 7:00 PM - 8:00 PM
+              - generic "Urban Indie Film Block 8:00 PM - 9:00 PM" [ref=e11177] [cursor=pointer]:
+                - generic [ref=e11178]:
+                  - generic [ref=e11179]: Urban Indie Film Block
+                  - generic [ref=e11180]: 8:00 PM - 9:00 PM
+              - generic "Urban Indie Film Block 9:00 PM - 10:00 PM" [ref=e11181] [cursor=pointer]:
+                - generic [ref=e11182]:
+                  - generic [ref=e11183]: Urban Indie Film Block
+                  - generic [ref=e11184]: 9:00 PM - 10:00 PM
+            - generic [ref=e11185]:
+              - generic "Weather Gone Viral 5:00 PM - 6:00 PM" [ref=e11198] [cursor=pointer]:
+                - generic [ref=e11199]:
+                  - generic [ref=e11200]: Weather Gone Viral
+                  - generic [ref=e11201]: 5:00 PM - 6:00 PM
+              - generic "Comics Unleashed With Byron Allen 5:30 PM - 6:00 PM" [ref=e11202] [cursor=pointer]:
+                - generic [ref=e11204]: Comics Unleashed With Byron Allen
+              - generic "Weather Gone Viral 6:00 PM - 7:00 PM" [ref=e11205] [cursor=pointer]:
+                - generic [ref=e11206]:
+                  - generic [ref=e11207]: Weather Gone Viral
+                  - generic [ref=e11208]: 6:00 PM - 7:00 PM
+              - generic "Funny You Should Ask 6:30 PM - 7:00 PM" [ref=e11209] [cursor=pointer]:
+                - generic [ref=e11211]: Funny You Should Ask
+              - generic "The World's Funniest Weather 7:00 PM - 7:30 PM" [ref=e11212] [cursor=pointer]:
+                - generic [ref=e11214]: The World's Funniest Weather
+              - generic "The World's Funniest Weather 7:30 PM - 8:00 PM" [ref=e11215] [cursor=pointer]:
+                - generic [ref=e11217]: The World's Funniest Weather
+              - generic "The World's Funniest Weather 8:00 PM - 8:30 PM" [ref=e11218] [cursor=pointer]:
+                - generic [ref=e11220]: The World's Funniest Weather
+              - generic "The World's Funniest Weather 8:30 PM - 9:00 PM" [ref=e11221] [cursor=pointer]:
+                - generic [ref=e11223]: The World's Funniest Weather
+              - generic "Funny You Should Ask 9:00 PM - 9:30 PM" [ref=e11224] [cursor=pointer]:
+                - generic [ref=e11226]: Funny You Should Ask
+              - generic "Funny You Should Ask 9:30 PM - 10:00 PM" [ref=e11227] [cursor=pointer]:
+                - generic [ref=e11229]: Funny You Should Ask
+            - generic [ref=e11230]:
+              - generic "America's Court With Judge Ross 5:00 PM - 5:30 PM" [ref=e11243] [cursor=pointer]:
+                - generic [ref=e11245]: America's Court With Judge Ross
+              - generic "America's Court With Judge Ross 5:30 PM - 6:00 PM" [ref=e11246] [cursor=pointer]:
+                - generic [ref=e11248]: America's Court With Judge Ross
+              - generic "Mathis Court With Judge Mathis 6:00 PM - 6:30 PM" [ref=e11249] [cursor=pointer]:
+                - generic [ref=e11251]: Mathis Court With Judge Mathis
+              - generic "Mathis Court With Judge Mathis 6:30 PM - 7:00 PM" [ref=e11252] [cursor=pointer]:
+                - generic [ref=e11254]: Mathis Court With Judge Mathis
+              - generic "Justice for the People With Judge Milian 7:00 PM - 7:30 PM" [ref=e11255] [cursor=pointer]:
+                - generic [ref=e11257]: Justice for the People With Judge Milian
+              - generic "Justice for the People With Judge Milian 7:30 PM - 8:00 PM" [ref=e11258] [cursor=pointer]:
+                - generic [ref=e11260]: Live
+                - generic [ref=e11262]: Justice for the People With Judge Milian
+              - generic "Justice for All With Judge Cristina Pérez 8:00 PM - 8:30 PM" [ref=e11263] [cursor=pointer]:
+                - generic [ref=e11265]: Justice for All With Judge Cristina Pérez
+              - generic "Justice for All With Judge Cristina Pérez 8:30 PM - 9:00 PM" [ref=e11266] [cursor=pointer]:
+                - generic [ref=e11268]: Justice for All With Judge Cristina Pérez
+              - generic "The Verdict With Judge Hatchett 9:00 PM - 9:30 PM" [ref=e11269] [cursor=pointer]:
+                - generic [ref=e11271]: The Verdict With Judge Hatchett
+              - generic "The Verdict With Judge Hatchett 9:30 PM - 10:00 PM" [ref=e11272] [cursor=pointer]:
+                - generic [ref=e11274]: The Verdict With Judge Hatchett
+            - generic [ref=e11275]:
+              - 'generic "Michael Jackson: Ungloved 4:00 PM - 5:30 PM" [ref=e11288] [cursor=pointer]':
+                - generic [ref=e11289]:
+                  - generic [ref=e11290]: "Michael Jackson: Ungloved"
+                  - generic [ref=e11291]: 4:00 PM - 5:30 PM
+                  - generic [ref=e11292]: The untold story of Michael Jackson, from his meteoric rise to his legacy and personal struggles behind the spotlight.
+              - 'generic "Michael Jackson: What Killed the King of Pop 5:30 PM - 7:00 PM" [ref=e11293] [cursor=pointer]':
+                - generic [ref=e11294]:
+                  - generic [ref=e11295]: "Michael Jackson: What Killed the King of Pop"
+                  - generic [ref=e11296]: 5:30 PM - 7:00 PM
+                  - generic [ref=e11297]: Documentary delving into facts, exclusive footage and testimony to explore the death of the pop singer.
+              - 'generic "Janet Jackson: In Control 7:00 PM - 8:00 PM" [ref=e11298] [cursor=pointer]':
+                - generic [ref=e11299]:
+                  - generic [ref=e11300]: "Janet Jackson: In Control"
+                  - generic [ref=e11301]: 7:00 PM - 8:00 PM
+              - 'generic "The Last 24 Hours: Michael Jackson 8:00 PM - 9:30 PM" [ref=e11302] [cursor=pointer]':
+                - generic [ref=e11303]:
+                  - generic [ref=e11304]: "The Last 24 Hours: Michael Jackson"
+                  - generic [ref=e11305]: 8:00 PM - 9:30 PM
+                  - generic [ref=e11306]: Michael Jackson, the "King of Pop," spends his last hours battling insomnia and pleading with his personal physician.
+              - 'generic "The Last 24 Hours: Elvis Presley 9:30 PM - 11:00 PM" [ref=e11307] [cursor=pointer]':
+                - generic [ref=e11309]: "The Last 24 Hours: Elvis Presley"
+            - generic [ref=e11310]:
+              - generic "Baking at Ballyknocken 5:00 PM - 5:30 PM" [ref=e11323] [cursor=pointer]:
+                - generic [ref=e11325]: Baking at Ballyknocken
+              - generic "Paris Bistro Cooking 5:30 PM - 6:00 PM" [ref=e11326] [cursor=pointer]:
+                - generic [ref=e11328]: Paris Bistro Cooking
+              - 'generic "Vera''s Latin America: Panama! 6:00 PM - 6:30 PM" [ref=e11329] [cursor=pointer]':
+                - generic [ref=e11331]: "Vera's Latin America: Panama!"
+              - generic "Celebrating With Lorna Maseko 6:30 PM - 7:00 PM" [ref=e11332] [cursor=pointer]:
+                - generic [ref=e11334]: Celebrating With Lorna Maseko
+              - generic "A Parisian Food Affair 7:00 PM - 7:30 PM" [ref=e11335] [cursor=pointer]:
+                - generic [ref=e11337]: A Parisian Food Affair
+              - generic "Katie Parla's Roman Kitchen 7:30 PM - 8:00 PM" [ref=e11338] [cursor=pointer]:
+                - generic [ref=e11340]: Katie Parla's Roman Kitchen
+              - generic "French Country Cooking With Edward Delling-Williams 8:00 PM - 8:30 PM" [ref=e11341] [cursor=pointer]:
+                - generic [ref=e11343]: French Country Cooking With Edward Delling-Williams
+              - generic "Tastes of the World 8:30 PM - 9:00 PM" [ref=e11344] [cursor=pointer]:
+                - generic [ref=e11346]: Tastes of the World
+              - generic "Katie Parla's Rome 9:00 PM - 9:30 PM" [ref=e11347] [cursor=pointer]:
+                - generic [ref=e11349]: Katie Parla's Rome
+              - generic "Eleni's Greek Odyssey 9:30 PM - 10:00 PM" [ref=e11350] [cursor=pointer]:
+                - generic [ref=e11352]: Eleni's Greek Odyssey
+            - generic [ref=e11353]:
+              - 'generic "Noticiero Univision: Edición digital 5:00 PM - 5:30 PM" [ref=e11366] [cursor=pointer]':
+                - generic [ref=e11368]: "Noticiero Univision: Edición digital"
+              - generic "Noticiero Univisión 5:30 PM - 6:00 PM" [ref=e11369] [cursor=pointer]:
+                - generic [ref=e11371]: Noticiero Univisión
+              - generic "La rosa de Guadalupe 6:00 PM - 7:00 PM" [ref=e11372] [cursor=pointer]:
+                - generic [ref=e11373]:
+                  - generic [ref=e11374]: La rosa de Guadalupe
+                  - generic [ref=e11375]: 6:00 PM - 7:00 PM
+              - generic "Papás por siempre 7:00 PM - 8:00 PM" [ref=e11376] [cursor=pointer]:
+                - generic [ref=e11377]:
+                  - generic [ref=e11378]: Papás por siempre
+                  - generic [ref=e11379]: 7:00 PM - 8:00 PM
+              - generic "Doménica Montero 8:00 PM - 9:00 PM" [ref=e11380] [cursor=pointer]:
+                - generic [ref=e11381]:
+                  - generic [ref=e11382]: Doménica Montero
+                  - generic [ref=e11383]: 8:00 PM - 9:00 PM
+              - generic "Monteverde 9:00 PM - 10:00 PM" [ref=e11384] [cursor=pointer]:
+                - generic [ref=e11385]:
+                  - generic [ref=e11386]: Monteverde
+                  - generic [ref=e11387]: 9:00 PM - 10:00 PM
+            - generic [ref=e11388]:
+              - generic "Bola de locos 5:00 PM - 6:00 PM" [ref=e11401] [cursor=pointer]:
+                - generic [ref=e11402]:
+                  - generic [ref=e11403]: Bola de locos
+                  - generic [ref=e11404]: 5:00 PM - 6:00 PM
+              - generic "La familia P. Luche 6:00 PM - 7:00 PM" [ref=e11405] [cursor=pointer]:
+                - generic [ref=e11406]:
+                  - generic [ref=e11407]: La familia P. Luche
+                  - generic [ref=e11408]: 6:00 PM - 7:00 PM
+              - generic "Una familia de diez 7:00 PM - 8:00 PM" [ref=e11409] [cursor=pointer]:
+                - generic [ref=e11410]:
+                  - generic [ref=e11411]: Una familia de diez
+                  - generic [ref=e11412]: 7:00 PM - 8:00 PM
+              - generic "Nosotros los guapos 8:00 PM - 9:00 PM" [ref=e11413] [cursor=pointer]:
+                - generic [ref=e11414]:
+                  - generic [ref=e11415]: Nosotros los guapos
+                  - generic [ref=e11416]: 8:00 PM - 9:00 PM
+              - generic "Vecinos 9:00 PM - 10:00 PM" [ref=e11417] [cursor=pointer]:
+                - generic [ref=e11418]:
+                  - generic [ref=e11419]: Vecinos
+                  - generic [ref=e11420]: 9:00 PM - 10:00 PM
+            - generic [ref=e11421]:
+              - generic "Noticias Telemundo mediodía 5:00 PM - 5:30 PM" [ref=e11434] [cursor=pointer]:
+                - generic [ref=e11436]: Noticias Telemundo mediodía
+              - generic "Noticias Telemundo 5:30 PM - 6:00 PM" [ref=e11437] [cursor=pointer]:
+                - generic [ref=e11439]: Noticias Telemundo
+              - generic "Exatlón Estados Unidos 6:00 PM - 8:00 PM" [ref=e11440] [cursor=pointer]:
+                - generic [ref=e11441]:
+                  - generic [ref=e11442]: Exatlón Estados Unidos
+                  - generic [ref=e11443]: 6:00 PM - 8:00 PM
+                  - generic [ref=e11444]: Los contenedores explosivos estremecen las arenas más feroces del planeta. Es un momento clave en Exatlón por una recompensa que todos quieren y por la que compiten a toda velocidad.
+              - generic "Dinastía Casillas 8:00 PM - 9:00 PM" [ref=e11445] [cursor=pointer]:
+                - generic [ref=e11446]:
+                  - generic [ref=e11447]: Dinastía Casillas
+                  - generic [ref=e11448]: 8:00 PM - 9:00 PM
+              - generic "Lejos de ti 9:00 PM - 10:00 PM" [ref=e11449] [cursor=pointer]:
+                - generic [ref=e11450]:
+                  - generic [ref=e11451]: Lejos de ti
+                  - generic [ref=e11452]: 9:00 PM - 10:00 PM
+            - generic [ref=e11453]:
+              - generic "Miss XV 5:00 PM - 6:00 PM" [ref=e11466] [cursor=pointer]:
+                - generic [ref=e11467]:
+                  - generic [ref=e11468]: Miss XV
+                  - generic [ref=e11469]: 5:00 PM - 6:00 PM
+              - generic "Te doy la vida 6:00 PM - 7:00 PM" [ref=e11470] [cursor=pointer]:
+                - generic [ref=e11471]:
+                  - generic [ref=e11472]: Te doy la vida
+                  - generic [ref=e11473]: 6:00 PM - 7:00 PM
+              - generic "¿Apostarías por mí? 7:00 PM - 9:00 PM" [ref=e11474] [cursor=pointer]:
+                - generic [ref=e11475]:
+                  - generic [ref=e11476]: ¿Apostarías por mí?
+                  - generic [ref=e11477]: 7:00 PM - 9:00 PM
+                  - generic [ref=e11478]: Comienza la primera competencia de hombres o mujeres, con apuestas cruzadas. También se descubre cuánto apostó cada pareja al desempeño de su compañero/a. El dinero ganado o perdido es decisivo para determinar a la segunda pareja nominada.
+              - generic "¿Quién caerá? 9:00 PM - 10:00 PM" [ref=e11479] [cursor=pointer]:
+                - generic [ref=e11480]:
+                  - generic [ref=e11481]: ¿Quién caerá?
+                  - generic [ref=e11482]: 9:00 PM - 10:00 PM
+            - generic [ref=e11483]:
+              - generic "Acércate a Rocío 5:00 PM - 6:00 PM" [ref=e11496] [cursor=pointer]:
+                - generic [ref=e11497]:
+                  - generic [ref=e11498]: Acércate a Rocío
+                  - generic [ref=e11499]: 5:00 PM - 6:00 PM
+              - generic "Acércate a Rocío 6:00 PM - 7:00 PM" [ref=e11500] [cursor=pointer]:
+                - generic [ref=e11501]:
+                  - generic [ref=e11502]: Acércate a Rocío
+                  - generic [ref=e11503]: 6:00 PM - 7:00 PM
+              - generic "Caso cerrado 7:00 PM - 8:00 PM" [ref=e11504] [cursor=pointer]:
+                - generic [ref=e11505]:
+                  - generic [ref=e11506]: Caso cerrado
+                  - generic [ref=e11507]: 7:00 PM - 8:00 PM
+              - generic "Caso cerrado 8:00 PM - 9:00 PM" [ref=e11508] [cursor=pointer]:
+                - generic [ref=e11509]:
+                  - generic [ref=e11510]: Caso cerrado
+                  - generic [ref=e11511]: 8:00 PM - 9:00 PM
+              - generic "Acércate a Rocío 9:00 PM - 10:00 PM" [ref=e11512] [cursor=pointer]:
+                - generic [ref=e11513]:
+                  - generic [ref=e11514]: Acércate a Rocío
+                  - generic [ref=e11515]: 9:00 PM - 10:00 PM
+            - generic [ref=e11516]:
+              - generic "Perspectivas con Mario González 5:00 PM - 6:00 PM" [ref=e11529] [cursor=pointer]:
+                - generic [ref=e11530]:
+                  - generic [ref=e11531]: Perspectivas con Mario González
+                  - generic [ref=e11532]: 5:00 PM - 6:00 PM
+              - generic "Directo USA 6:00 PM - 7:00 PM" [ref=e11533] [cursor=pointer]:
+                - generic [ref=e11534]:
+                  - generic [ref=e11535]: Directo USA
+                  - generic [ref=e11536]: 6:00 PM - 7:00 PM
+              - generic "Panorama mundial 7:00 PM - 8:00 PM" [ref=e11537] [cursor=pointer]:
+                - generic [ref=e11538]:
+                  - generic [ref=e11539]: Panorama mundial
+                  - generic [ref=e11540]: 7:00 PM - 8:00 PM
+              - generic "Conclusiones 8:00 PM - 9:00 PM" [ref=e11541] [cursor=pointer]:
+                - generic [ref=e11542]:
+                  - generic [ref=e11543]: Conclusiones
+                  - generic [ref=e11544]: 8:00 PM - 9:00 PM
+              - generic "Deportes CNN 9:00 PM - 10:00 PM" [ref=e11545] [cursor=pointer]:
+                - generic [ref=e11546]:
+                  - generic [ref=e11547]: Deportes CNN
+                  - generic [ref=e11548]: 9:00 PM - 10:00 PM
+            - generic [ref=e11549]:
+              - generic "México biocultural 5:00 PM - 5:30 PM" [ref=e11562] [cursor=pointer]:
+                - generic [ref=e11564]: México biocultural
+              - generic "México en la edad de hielo 5:30 PM - 6:00 PM" [ref=e11565] [cursor=pointer]:
+                - generic [ref=e11567]: México en la edad de hielo
+              - generic "Tu futuro, nuestro futuro 6:03 PM - 6:30 PM" [ref=e11568] [cursor=pointer]:
+                - generic [ref=e11570]: Tu futuro, nuestro futuro
+              - generic "Factor ciencia 6:30 PM - 7:00 PM" [ref=e11571] [cursor=pointer]:
+                - generic [ref=e11573]: Factor ciencia
+              - generic "Entre mitos y realidades 7:03 PM - 7:30 PM" [ref=e11574] [cursor=pointer]:
+                - generic [ref=e11576]: Entre mitos y realidades
+              - generic "Todos a bordo 7:30 PM - 8:00 PM" [ref=e11577] [cursor=pointer]:
+                - generic [ref=e11579]: Todos a bordo
+              - 'generic "Rincones de México: Aromas y tradiciones 8:00 PM - 8:30 PM" [ref=e11580] [cursor=pointer]':
+                - generic [ref=e11582]: "Rincones de México: Aromas y tradiciones"
+              - generic "Tríptico 8:30 PM - 9:00 PM" [ref=e11583] [cursor=pointer]:
+                - generic [ref=e11585]: Tríptico
+              - generic "Masiosare 9:00 PM - 10:00 PM" [ref=e11586] [cursor=pointer]:
+                - generic [ref=e11587]:
+                  - generic [ref=e11588]: Masiosare
+                  - generic [ref=e11589]: 9:00 PM - 10:00 PM
+            - generic [ref=e11590]:
+              - generic "La voz de victoria del creyente 5:00 PM - 5:30 PM" [ref=e11603] [cursor=pointer]:
+                - generic [ref=e11605]: La voz de victoria del creyente
+              - generic "Especial 5:30 PM - 6:00 PM" [ref=e11606] [cursor=pointer]:
+                - generic [ref=e11608]: Especial
+              - generic "Otoniel Font 6:00 PM - 6:30 PM" [ref=e11609] [cursor=pointer]:
+                - generic [ref=e11611]: Otoniel Font
+              - generic "Esperanza hoy 6:30 PM - 7:00 PM" [ref=e11612] [cursor=pointer]:
+                - generic [ref=e11614]: Esperanza hoy
+              - generic "Aquí entre nos 7:00 PM - 8:00 PM" [ref=e11615] [cursor=pointer]:
+                - generic [ref=e11616]:
+                  - generic [ref=e11617]: Aquí entre nos
+                  - generic [ref=e11618]: 7:00 PM - 8:00 PM
+              - generic "Él puede hacerlo de nuevo 8:00 PM - 8:30 PM" [ref=e11619] [cursor=pointer]:
+                - generic [ref=e11621]: Él puede hacerlo de nuevo
+              - generic "Palabra pura 8:30 PM - 9:00 PM" [ref=e11622] [cursor=pointer]:
+                - generic [ref=e11624]: Palabra pura
+              - generic "Show de la fe 9:00 PM - 9:30 PM" [ref=e11625] [cursor=pointer]:
+                - generic [ref=e11627]: Show de la fe
+              - generic "Casa de Dios 9:30 PM - 10:00 PM" [ref=e11628] [cursor=pointer]:
+                - generic [ref=e11630]: Casa de Dios
+            - generic [ref=e11631]:
+              - generic "Centro médico 5:00 PM - 5:30 PM" [ref=e11644] [cursor=pointer]:
+                - generic [ref=e11646]: Centro médico
+              - generic "Centro médico 5:30 PM - 6:00 PM" [ref=e11647] [cursor=pointer]:
+                - generic [ref=e11649]: Centro médico
+              - generic "Historia de la vida 6:00 PM - 7:00 PM" [ref=e11650] [cursor=pointer]:
+                - generic [ref=e11651]:
+                  - generic [ref=e11652]: Historia de la vida
+                  - generic [ref=e11653]: 6:00 PM - 7:00 PM
+              - generic "Planeta helado 7:00 PM - 8:00 PM" [ref=e11654] [cursor=pointer]:
+                - generic [ref=e11655]:
+                  - generic [ref=e11656]: Planeta helado
+                  - generic [ref=e11657]: 7:00 PM - 8:00 PM
+              - generic "Planeta tierra II 8:00 PM - 9:00 PM" [ref=e11658] [cursor=pointer]:
+                - generic [ref=e11659]:
+                  - generic [ref=e11660]: Planeta tierra II
+                  - generic [ref=e11661]: 8:00 PM - 9:00 PM
+              - generic "Al descubierto 9:00 PM - 10:00 PM" [ref=e11662] [cursor=pointer]:
+                - generic [ref=e11663]:
+                  - generic [ref=e11664]: Al descubierto
+                  - generic [ref=e11665]: 9:00 PM - 10:00 PM
+            - generic [ref=e11666]:
+              - generic "El cielo en la Tierra 4:30 PM - 5:30 PM" [ref=e11679] [cursor=pointer]:
+                - generic [ref=e11680]:
+                  - generic [ref=e11681]: El cielo en la Tierra
+                  - generic [ref=e11682]: 4:30 PM - 5:30 PM
+              - generic "Jason Lozano 5:30 PM - 6:00 PM" [ref=e11683] [cursor=pointer]:
+                - generic [ref=e11685]: Jason Lozano
+              - generic "Voz News 6:00 PM - 7:00 PM" [ref=e11686] [cursor=pointer]:
+                - generic [ref=e11687]:
+                  - generic [ref=e11688]: Voz News
+                  - generic [ref=e11689]: 6:00 PM - 7:00 PM
+              - 'generic "Sid Roth: ¡Es sobrenatural! 7:00 PM - 7:30 PM" [ref=e11690] [cursor=pointer]':
+                - generic [ref=e11692]: "Sid Roth: ¡Es sobrenatural!"
+              - generic "Joni Table Talk 7:30 PM - 8:00 PM" [ref=e11693] [cursor=pointer]:
+                - generic [ref=e11695]: Joni Table Talk
+              - generic "Ministry Now 8:00 PM - 9:00 PM" [ref=e11696] [cursor=pointer]:
+                - generic [ref=e11697]:
+                  - generic [ref=e11698]: Ministry Now
+                  - generic [ref=e11699]: 8:00 PM - 9:00 PM
+              - generic "The Supernatural Now 9:00 PM - 9:30 PM" [ref=e11700] [cursor=pointer]:
+                - generic [ref=e11702]: The Supernatural Now
+              - generic "Andrés Spyker de \"Más vida\" 9:30 PM - 10:00 PM" [ref=e11703] [cursor=pointer]:
+                - generic [ref=e11705]: Andrés Spyker de "Más vida"
+            - generic [ref=e11706]:
+              - generic "Misión Europa 5:00 PM - 6:00 PM" [ref=e11719] [cursor=pointer]:
+                - generic [ref=e11720]:
+                  - generic [ref=e11721]: Misión Europa
+                  - generic [ref=e11722]: 5:00 PM - 6:00 PM
+              - generic "UEFA Champions League en 60 6:00 PM - 7:00 PM" [ref=e11723] [cursor=pointer]:
+                - generic [ref=e11724]:
+                  - generic [ref=e11725]: UEFA Champions League en 60
+                  - generic [ref=e11726]: 6:00 PM - 7:00 PM
+              - generic "Línea de cuatro 7:00 PM - 8:00 PM" [ref=e11727] [cursor=pointer]:
+                - generic [ref=e11728]:
+                  - generic [ref=e11729]: Línea de cuatro
+                  - generic [ref=e11730]: 7:00 PM - 8:00 PM
+              - generic "Contacto deportivo 8:00 PM - 9:00 PM" [ref=e11731] [cursor=pointer]:
+                - generic [ref=e11732]:
+                  - generic [ref=e11733]: Contacto deportivo
+                  - generic [ref=e11734]: 8:00 PM - 9:00 PM
+              - generic "Tricolor al día 9:00 PM - 10:00 PM" [ref=e11735] [cursor=pointer]:
+                - generic [ref=e11736]:
+                  - generic [ref=e11737]: Tricolor al día
+                  - generic [ref=e11738]: 9:00 PM - 10:00 PM
+            - generic [ref=e11739]:
+              - generic "Industry 4:20 PM - 5:22 PM" [ref=e11752] [cursor=pointer]:
+                - generic [ref=e11753]:
+                  - generic [ref=e11754]: Industry
+                  - generic [ref=e11755]: 4:20 PM - 5:22 PM
+              - generic "Moonlight 5:22 PM - 7:15 PM" [ref=e11756] [cursor=pointer]:
+                - generic [ref=e11757]:
+                  - generic [ref=e11758]: Moonlight
+                  - generic [ref=e11759]: 5:22 PM - 7:15 PM
+                  - generic [ref=e11760]: A look at three defining chapters in the life of Chiron, a young black man growing up in Miami. His epic journey to manhood is guided by the kindness, support and love of the community that helps raise him.
+              - generic "A Knight of the Seven Kingdoms 7:15 PM - 8:00 PM" [ref=e11761] [cursor=pointer]:
+                - generic [ref=e11762]:
+                  - generic [ref=e11763]: A Knight of the Seven Kingdoms
+                  - generic [ref=e11764]: 7:15 PM - 8:00 PM
+              - generic "Industry 8:00 PM - 9:02 PM" [ref=e11765] [cursor=pointer]:
+                - generic [ref=e11766]:
+                  - generic [ref=e11767]: Industry
+                  - generic [ref=e11768]: 8:00 PM - 9:02 PM
+              - generic "One Battle After Another 9:02 PM - 11:47 PM" [ref=e11769] [cursor=pointer]:
+                - generic [ref=e11771]: Live
+                - generic [ref=e11772]:
+                  - generic [ref=e11773]: One Battle After Another
+                  - generic [ref=e11774]: 9:02 PM - 11:47 PM
+            - generic [ref=e11775]:
+              - generic "Sinners 3:40 PM - 5:58 PM" [ref=e11788] [cursor=pointer]:
+                - generic [ref=e11790]: Live
+                - generic [ref=e11791]:
+                  - generic [ref=e11792]: Sinners
+                  - generic [ref=e11793]: 3:40 PM - 5:58 PM
+                  - generic [ref=e11794]: Trying to leave their troubled lives behind, twin brothers return to their Mississippi hometown to start again, only to discover that an even greater evil is waiting to welcome them back.
+              - generic "A Knight of the Seven Kingdoms 5:58 PM - 6:43 PM" [ref=e11795] [cursor=pointer]:
+                - generic [ref=e11796]:
+                  - generic [ref=e11797]: A Knight of the Seven Kingdoms
+                  - generic [ref=e11798]: 5:58 PM - 6:43 PM
+              - generic "Industry 6:43 PM - 7:46 PM" [ref=e11799] [cursor=pointer]:
+                - generic [ref=e11800]:
+                  - generic [ref=e11801]: Industry
+                  - generic [ref=e11802]: 6:43 PM - 7:46 PM
+              - generic "Magic Mike's Last Dance 7:46 PM - 9:38 PM" [ref=e11803] [cursor=pointer]:
+                - generic [ref=e11804]:
+                  - generic [ref=e11805]: Magic Mike's Last Dance
+                  - generic [ref=e11806]: 7:46 PM - 9:38 PM
+                  - generic [ref=e11807]: Mike Lane takes to the stage once again when a business deal that went bust leaves him broke and bartending in Florida. Hoping for one last hurrah, Mike heads to London with a wealthy socialite who lures him with an offer he can't refuse -- and an agenda all her own. With everything on the line, he soon finds himself trying to whip a hot new roster of talented dancers into shape.
+              - generic "A Knight of the Seven Kingdoms 9:38 PM - 10:23 PM" [ref=e11808] [cursor=pointer]:
+                - generic [ref=e11810]: A Knight of the Seven Kingdoms
+            - generic [ref=e11811]:
+              - generic "Rules Don't Apply 4:05 PM - 6:13 PM" [ref=e11824] [cursor=pointer]:
+                - generic [ref=e11825]:
+                  - generic [ref=e11826]: Rules Don't Apply
+                  - generic [ref=e11827]: 4:05 PM - 6:13 PM
+                  - generic [ref=e11828]: "Small-town beauty queen and devout Baptist Marla Mabrey (Lily Collins), under contract to the infamous Howard Hughes (Warren Beatty), arrives in Los Angeles. At the airport, she meets her driver, Frank Forbes, only two weeks on the job and also from a religiously conservative background. Their instant attraction not only puts their religious convictions to the test but also defies Hughes' number one rule: no employee is allowed to have an intimate relationship with a contract actress."
+              - generic "Atomic Blonde 6:13 PM - 8:08 PM" [ref=e11829] [cursor=pointer]:
+                - generic [ref=e11831]: Live
+                - generic [ref=e11832]:
+                  - generic [ref=e11833]: Atomic Blonde
+                  - generic [ref=e11834]: 6:13 PM - 8:08 PM
+                  - generic [ref=e11835]: Sensual and savage, Lorraine Broughton is the most elite spy in MI6, an agent who's willing to use all of her lethal skills to stay alive during an impossible mission. With the Berlin Wall about to fall, she travels into the heart of the city to retrieve a priceless dossier and take down a ruthless espionage ring. Once there, she teams up with an embedded station chief to navigate her way through the deadliest game of spies.
+              - generic "A Knight of the Seven Kingdoms 8:08 PM - 8:53 PM" [ref=e11836] [cursor=pointer]:
+                - generic [ref=e11837]:
+                  - generic [ref=e11838]: A Knight of the Seven Kingdoms
+                  - generic [ref=e11839]: 8:08 PM - 8:53 PM
+              - generic "Hidden Figures 8:53 PM - 11:00 PM" [ref=e11840] [cursor=pointer]:
+                - generic [ref=e11841]:
+                  - generic [ref=e11842]: Hidden Figures
+                  - generic [ref=e11843]: 8:53 PM - 11:00 PM
+                  - generic [ref=e11844]: Three brilliant African American women at NASA, Katherine Johnson, Dorothy Vaughan and Mary Jackson, serve as the brains behind one of the greatest operations in history, the launch of astronaut John Glenn into orbit, a stunning achievement that restored the nation's confidence, turned around the Space Race and galvanized the world.
+            - generic [ref=e11845]:
+              - 'generic "The Conjuring: Last Rites 4:17 PM - 6:35 PM" [ref=e11858] [cursor=pointer]':
+                - generic [ref=e11859]:
+                  - generic [ref=e11860]: "The Conjuring: Last Rites"
+                  - generic [ref=e11861]: 4:17 PM - 6:35 PM
+                  - generic [ref=e11862]: In 1986 paranormal investigators Ed and Lorraine Warren travel to Pennsylvania to vanquish a demon from a family's home.
+              - generic "A Knight of the Seven Kingdoms 6:35 PM - 7:20 PM" [ref=e11863] [cursor=pointer]:
+                - generic [ref=e11864]:
+                  - generic [ref=e11865]: A Knight of the Seven Kingdoms
+                  - generic [ref=e11866]: 6:35 PM - 7:20 PM
+              - generic "Industry 7:20 PM - 8:22 PM" [ref=e11867] [cursor=pointer]:
+                - generic [ref=e11868]:
+                  - generic [ref=e11869]: Industry
+                  - generic [ref=e11870]: 7:20 PM - 8:22 PM
+              - generic "Moonlight 8:22 PM - 10:15 PM" [ref=e11871] [cursor=pointer]:
+                - generic [ref=e11872]:
+                  - generic [ref=e11873]: Moonlight
+                  - generic [ref=e11874]: 8:22 PM - 10:15 PM
+                  - generic [ref=e11875]: A look at three defining chapters in the life of Chiron, a young black man growing up in Miami. His epic journey to manhood is guided by the kindness, support and love of the community that helps raise him.
+            - generic [ref=e11876]:
+              - generic "Industry 4:09 PM - 5:12 PM" [ref=e11889] [cursor=pointer]:
+                - generic [ref=e11890]:
+                  - generic [ref=e11891]: Industry
+                  - generic [ref=e11892]: 4:09 PM - 5:12 PM
+              - generic "Table 19 5:12 PM - 6:40 PM" [ref=e11893] [cursor=pointer]:
+                - generic [ref=e11894]:
+                  - generic [ref=e11895]: Table 19
+                  - generic [ref=e11896]: 5:12 PM - 6:40 PM
+                  - generic [ref=e11897]: Ex-maid of honor Eloise - having been relieved of her duties after being unceremoniously dumped by the best man via text - decides to hold her head high and attend her oldest friend's wedding anyway. She finds herself seated at the random table in the back of the ballroom with a disparate group of strangers, most of whom should have known to just send regrets. As everyone's secrets are revealed, Eloise learns a thing or two from the denizens of Table 19.
+              - generic "Sinners 6:40 PM - 8:58 PM" [ref=e11898] [cursor=pointer]:
+                - generic [ref=e11900]: Live
+                - generic [ref=e11901]:
+                  - generic [ref=e11902]: Sinners
+                  - generic [ref=e11903]: 6:40 PM - 8:58 PM
+                  - generic [ref=e11904]: Trying to leave their troubled lives behind, twin brothers return to their Mississippi hometown to start again, only to discover that an even greater evil is waiting to welcome them back.
+              - generic "A Knight of the Seven Kingdoms 8:58 PM - 9:43 PM" [ref=e11905] [cursor=pointer]:
+                - generic [ref=e11906]:
+                  - generic [ref=e11907]: A Knight of the Seven Kingdoms
+                  - generic [ref=e11908]: 8:58 PM - 9:43 PM
+              - generic "Industry 9:43 PM - 10:46 PM" [ref=e11909] [cursor=pointer]:
+                - generic [ref=e11911]: Industry
+            - generic [ref=e11912]:
+              - 'generic "Chris Rock: Kill the Messenger 4:00 PM - 5:20 PM" [ref=e11925] [cursor=pointer]':
+                - generic [ref=e11926]:
+                  - generic [ref=e11927]: "Chris Rock: Kill the Messenger"
+                  - generic [ref=e11928]: 4:00 PM - 5:20 PM
+                  - generic [ref=e11929]: The comic performs at South Africa's Carnival City Casino, the Apollo Theatre in New York and the Carling Apollo Hammersmith in London.
+              - 'generic "Leo Reich: Literally Who Cares?! 5:20 PM - 6:26 PM" [ref=e11930] [cursor=pointer]':
+                - generic [ref=e11931]:
+                  - generic [ref=e11932]: "Leo Reich: Literally Who Cares?!"
+                  - generic [ref=e11933]: 5:20 PM - 6:26 PM
+              - generic "War on Everyone 6:26 PM - 8:05 PM" [ref=e11934] [cursor=pointer]:
+                - generic [ref=e11935]:
+                  - generic [ref=e11936]: War on Everyone
+                  - generic [ref=e11937]: 6:26 PM - 8:05 PM
+                  - generic [ref=e11938]: Two corrupt cops, who make money blackmailing criminals, come up against one who may be far more dangerous than both of them.
+              - generic "The House 8:05 PM - 9:35 PM" [ref=e11939] [cursor=pointer]:
+                - generic [ref=e11940]:
+                  - generic [ref=e11941]: The House
+                  - generic [ref=e11942]: 8:05 PM - 9:35 PM
+                  - generic [ref=e11943]: Scott and Kate Johansen must figure out a way to earn some money after their daughter's scholarship falls through. When all else fails, the desperate couple join forces with their neighbor Frank to start an underground casino in his home. As the cash rolls in and the good times fly, Scott and Kate soon learn that they may have bitten off more than they can chew.
+              - 'generic "The Day the Earth Blew Up: A Looney Tunes Movie 9:35 PM - 11:06 PM" [ref=e11944] [cursor=pointer]':
+                - generic [ref=e11946]: "The Day the Earth Blew Up: A Looney Tunes Movie"
+            - generic [ref=e11947]:
+              - generic "Charlie and the Chocolate Factory 5:03 PM - 6:58 PM" [ref=e11960] [cursor=pointer]:
+                - generic [ref=e11961]:
+                  - generic [ref=e11962]: Charlie and the Chocolate Factory
+                  - generic [ref=e11963]: 5:03 PM - 6:58 PM
+                  - generic [ref=e11964]: Based on the beloved Roald Dahl tale, this comedic and fantastical film follows young Charlie Bucket (Freddie Highmore) and his Grandpa Joe (David Kelly) as they join a small group of contest winners who get to tour the magical and mysterious factory of eccentric candy maker Willy Wonka (Johnny Depp). Aided by his diminutive Oompa Loompa workers (Deep Roy), Wonka has a hidden motivation for the tour, one that he will reveal only after the children in the group show their true colors.
+              - generic "Brick Mansions 6:58 PM - 8:29 PM" [ref=e11965] [cursor=pointer]:
+                - generic [ref=e11966]:
+                  - generic [ref=e11967]: Brick Mansions
+                  - generic [ref=e11968]: 6:58 PM - 8:29 PM
+                  - generic [ref=e11969]: In a dystopian Detroit, grand houses that once housed the wealthy are now homes of the city's most-dangerous criminals. Surrounding the area is a giant wall to keep the rest of Detroit safe. For undercover cop Damien Collier (Paul Walker), every day is a battle against corruption as he struggles to bring his father's killer, Tremaine (RZA), to justice. Meanwhile, Damien and an ex-con named Lino (David Belle) work together to save the city from a plot to destroy it.
+              - generic "Martha Marcy May Marlene 8:29 PM - 10:11 PM" [ref=e11970] [cursor=pointer]:
+                - generic [ref=e11971]:
+                  - generic [ref=e11972]: Martha Marcy May Marlene
+                  - generic [ref=e11973]: 8:29 PM - 10:11 PM
+                  - generic [ref=e11974]: After several years of living with a cult, Martha (Elizabeth Olsen) finally escapes and calls her estranged sister, Lucy (Sarah Paulson), for help. Martha finds herself at the quiet Connecticut home Lucy shares with her new husband, Ted (Hugh Dancy), but the memories of what she experienced in the cult make peace hard to find. As flashbacks continue to torment her, Martha fails to shake a terrible sense of dread, especially in regard to the cult's manipulative leader (John Hawkes).
+            - generic [ref=e11975]:
+              - generic "Industry 4:20 PM - 5:22 PM" [ref=e11988] [cursor=pointer]:
+                - generic [ref=e11989]:
+                  - generic [ref=e11990]: Industry
+                  - generic [ref=e11991]: 4:20 PM - 5:22 PM
+              - generic "Moonlight 5:22 PM - 7:15 PM" [ref=e11992] [cursor=pointer]:
+                - generic [ref=e11993]:
+                  - generic [ref=e11994]: Moonlight
+                  - generic [ref=e11995]: 5:22 PM - 7:15 PM
+                  - generic [ref=e11996]: Un joven de familia humilde que vive en Miami en la época en que los cárteles de la droga libran en la ciudad una auténtica batalla, tiene problemas para aceptar su homosexualidad. Mientras madura en un ambiente hostil, experimenta la alegría, la ira, el placer de la belleza, el éxtasis y el dolor. Todo lo conocerá y de todo aprenderá.
+              - generic "A Knight of the Seven Kingdoms 7:15 PM - 8:00 PM" [ref=e11997] [cursor=pointer]:
+                - generic [ref=e11998]:
+                  - generic [ref=e11999]: A Knight of the Seven Kingdoms
+                  - generic [ref=e12000]: 7:15 PM - 8:00 PM
+              - generic "Industry 8:00 PM - 9:02 PM" [ref=e12001] [cursor=pointer]:
+                - generic [ref=e12002]:
+                  - generic [ref=e12003]: Industry
+                  - generic [ref=e12004]: 8:00 PM - 9:02 PM
+              - generic "Una batalla tras otra 9:02 PM - 11:47 PM" [ref=e12005] [cursor=pointer]:
+                - generic [ref=e12006]:
+                  - generic [ref=e12007]: Una batalla tras otra
+                  - generic [ref=e12008]: 9:02 PM - 11:47 PM
+            - generic [ref=e12009]:
+              - generic "Carol 4:46 PM - 6:45 PM" [ref=e12022] [cursor=pointer]:
+                - generic [ref=e12023]:
+                  - generic [ref=e12024]: Carol
+                  - generic [ref=e12025]: 4:46 PM - 6:45 PM
+                  - generic [ref=e12026]: Aspiring photographer Therese spots the beautiful, elegant Carol perusing the doll displays in a 1950s Manhattan department store. The two women develop a fast bond that becomes a love with complicated consequences.
+              - generic "This Means War 6:45 PM - 8:23 PM" [ref=e12027] [cursor=pointer]:
+                - generic [ref=e12028]:
+                  - generic [ref=e12029]: This Means War
+                  - generic [ref=e12030]: 6:45 PM - 8:23 PM
+                  - generic [ref=e12031]: CIA operatives FDR Foster (Chris Pine) and Tuck (Tom Hardy) are inseparable best friends and partners. Together, their good looks, covert abilities and combat skills rank them among the CIA's elite, but their longstanding personal and professional bond is put to the test when they meet Lauren (Reese Witherspoon). FDR and Tuck both fall hard for the beautiful blonde, turning their deadly skills and an array of high-tech gadgetry against each other in an all-out battle for her love.
+              - generic "The Hitman's Wife's Bodyguard 8:23 PM - 10:03 PM" [ref=e12032] [cursor=pointer]:
+                - generic [ref=e12033]:
+                  - generic [ref=e12034]: The Hitman's Wife's Bodyguard
+                  - generic [ref=e12035]: 8:23 PM - 10:03 PM
+                  - generic [ref=e12036]: Bodyguard Michael Bryce and hitman Darius Kincaid are back for another life-threatening mission; still unlicensed and under scrutiny, Bryce is forced into action by Darius's even more volatile wife; soon, all three are in over their heads when a madman's sinister plot threatens to leave Europe in chaos.
+            - generic [ref=e12037]:
+              - generic "Sunshine Cleaning 4:38 PM - 6:10 PM" [ref=e12050] [cursor=pointer]:
+                - generic [ref=e12052]: Live
+                - generic [ref=e12053]:
+                  - generic [ref=e12054]: Sunshine Cleaning
+                  - generic [ref=e12055]: 4:38 PM - 6:10 PM
+                  - generic [ref=e12056]: Though they once seemed to have a bright future, life seems to be passing by the Norkowski sisters. Rose (Amy Adams), once the most popular girl in high school, is a single mom and works as a maid. Norah (Emily Blunt) still lives at home with their father (Alan Arkin) and parties all the time. When Rose's married lover tells her about the lucrative field of crime-scene cleanup, she pours all her remaining resources into her new business, and recruits the squeamish Norah to help.
+              - generic "Due Date 6:10 PM - 7:46 PM" [ref=e12057] [cursor=pointer]:
+                - generic [ref=e12059]: Live
+                - generic [ref=e12060]:
+                  - generic [ref=e12061]: Due Date
+                  - generic [ref=e12062]: 6:10 PM - 7:46 PM
+                  - generic [ref=e12063]: Peter Highman (Robert Downey Jr.) will be a dad for the first time when his wife gives birth in five days. He intends to catch a flight home from Atlanta so he can be there for the delivery, but a chance encounter with aspiring actor Ethan Tremblay (Zach Galifianakis) throws a monkey wrench into his plans. Desperate to reach his wife before their baby is born, Peter's sanity is tested when he must take a road trip cross-country with dog-toting Ethan.
+              - generic "Carol 7:46 PM - 9:45 PM" [ref=e12064] [cursor=pointer]:
+                - generic [ref=e12065]:
+                  - generic [ref=e12066]: Carol
+                  - generic [ref=e12067]: 7:46 PM - 9:45 PM
+                  - generic [ref=e12068]: Aspiring photographer Therese spots the beautiful, elegant Carol perusing the doll displays in a 1950s Manhattan department store. The two women develop a fast bond that becomes a love with complicated consequences.
+              - generic "This Means War 9:45 PM - 11:23 PM" [ref=e12069] [cursor=pointer]:
+                - generic [ref=e12071]: This Means War
+            - generic [ref=e12072]:
+              - generic "Maggie 4:49 PM - 6:24 PM" [ref=e12085] [cursor=pointer]:
+                - generic [ref=e12086]:
+                  - generic [ref=e12087]: Maggie
+                  - generic [ref=e12088]: 4:49 PM - 6:24 PM
+                  - generic [ref=e12089]: When a deadly zombie virus sweeps the nation, a father stops at nothing to save his infected daughter.
+              - generic "Aquaman and the Lost Kingdom 6:24 PM - 8:29 PM" [ref=e12090] [cursor=pointer]:
+                - generic [ref=e12091]:
+                  - generic [ref=e12092]: Aquaman and the Lost Kingdom
+                  - generic [ref=e12093]: 6:24 PM - 8:29 PM
+                  - generic [ref=e12094]: After failing to defeat Aquaman the first time, Black Manta wields the power of the mythic Black Trident to unleash an ancient and malevolent force. Hoping to end his reign of terror, Aquaman forges an unlikely alliance with his brother, Orm, the former king of Atlantis. Setting aside their differences, they join forces to protect their kingdom and save the world from irreversible destruction.
+              - generic "Wonka 8:29 PM - 10:26 PM" [ref=e12095] [cursor=pointer]:
+                - generic [ref=e12096]:
+                  - generic [ref=e12097]: Wonka
+                  - generic [ref=e12098]: 8:29 PM - 10:26 PM
+                  - generic [ref=e12099]: Armed with nothing but a hatful of dreams, young chocolatier Willy Wonka manages to change the world, one delectable bite at a time.
+            - generic [ref=e12100]:
+              - generic "Deepwater Horizon 4:40 PM - 6:28 PM" [ref=e12113] [cursor=pointer]:
+                - generic [ref=e12115]: Live
+                - generic [ref=e12116]:
+                  - generic [ref=e12117]: Deepwater Horizon
+                  - generic [ref=e12118]: 4:40 PM - 6:28 PM
+                  - generic [ref=e12119]: On April 20, 2010, the Deepwater Horizon drilling rig explodes in the Gulf of Mexico, igniting a massive fireball that kills several crew members. Chief electronics technician Mike Williams (Mark Wahlberg) and his colleagues find themselves fighting for survival as the heat and the flames become stifling and overwhelming. Banding together, the co-workers must use their wits to make it out alive amid all the chaos.
+              - generic "Shoplifters 6:28 PM - 8:29 PM" [ref=e12120] [cursor=pointer]:
+                - generic [ref=e12121]:
+                  - generic [ref=e12122]: Shoplifters
+                  - generic [ref=e12123]: 6:28 PM - 8:29 PM
+                  - generic [ref=e12124]: On the margins of Tokyo, a dysfunctional band of outsiders is united by fierce loyalty and a penchant for petty theft. When the young son is arrested, secrets are exposed that upend their tenuous, below-the-radar existence.
+              - 'generic "Abraham Lincoln: Vampire Hunter 8:29 PM - 10:14 PM" [ref=e12125] [cursor=pointer]':
+                - generic [ref=e12126]:
+                  - generic [ref=e12127]: "Abraham Lincoln: Vampire Hunter"
+                  - generic [ref=e12128]: 8:29 PM - 10:14 PM
+                  - generic [ref=e12129]: While still a boy, Abraham Lincoln loses his mother to a vampire's bite. He vows revenge, but fails in the attempt, narrowly escaping with his life. He is rescued by Henry (Dominic Cooper), a charismatic vampire hunter who instructs Abe in the fine art of dispatching bloodsuckers. Abe (Benjamin Walker) continues his fight against the undead well into adulthood and his presidency, making a last stand against the ultimate vampire foe (Rufus Sewell) on the eve of the Civil War's defining battle.
+            - generic [ref=e12130]:
+              - generic "Blue Beetle 3:24 PM - 5:32 PM" [ref=e12143] [cursor=pointer]:
+                - generic [ref=e12144]:
+                  - generic [ref=e12145]: Blue Beetle
+                  - generic [ref=e12146]: 3:24 PM - 5:32 PM
+                  - generic [ref=e12147]: Jaime Reyes suddenly finds himself in possession of an ancient relic of alien biotechnology called the Scarab. When the Scarab chooses Jaime to be its symbiotic host, he's bestowed with an incredible suit of armor that's capable of extraordinary and unpredictable powers, forever changing his destiny as he becomes the superhero Blue Beetle.
+              - generic "Inception 5:32 PM - 8:01 PM" [ref=e12148] [cursor=pointer]:
+                - generic [ref=e12149]:
+                  - generic [ref=e12150]: Inception
+                  - generic [ref=e12151]: 5:32 PM - 8:01 PM
+                  - generic [ref=e12152]: "Dom Cobb (Leonardo DiCaprio) is a thief with the rare ability to enter people's dreams and steal their secrets from their subconscious. His skill has made him a hot commodity in the world of corporate espionage but has also cost him everything he loves. Cobb gets a chance at redemption when he is offered a seemingly impossible task: Plant an idea in someone's mind. If he succeeds, it will be the perfect crime, but a dangerous enemy anticipates Cobb's every move."
+              - generic "Papillon 8:01 PM - 10:14 PM" [ref=e12153] [cursor=pointer]:
+                - generic [ref=e12154]:
+                  - generic [ref=e12155]: Papillon
+                  - generic [ref=e12156]: 8:01 PM - 10:14 PM
+                  - generic [ref=e12157]: The epic story of Henri Papillon Charrière, a safecracker from the Parisian underworld who is framed for murder and condemned to life in the notorious penal colony on Devil's Island. Determined to regain his freedom, Papillon forms an unlikely alliance with convicted counterfeiter Louis Dega, who in exchange for protection, agrees to finance Papillon's escape.
+            - generic [ref=e12158]:
+              - generic "Carol 4:46 PM - 6:45 PM" [ref=e12171] [cursor=pointer]:
+                - generic [ref=e12172]:
+                  - generic [ref=e12173]: Carol
+                  - generic [ref=e12174]: 4:46 PM - 6:45 PM
+                  - generic [ref=e12175]: En la Nueva York de la década de 1950, una joven trabajadora de una tienda de moda y una mujer elegante y sofisticada, que vive inmersa en un matrimonio en el que no encuentra la felicidad, entablan una amistad que dará paso a una creciente atracción mutua para desembocar en una relación lésbica de consecuencias complicadas para las vidas de ambas.
+              - generic "This Means War 6:45 PM - 8:23 PM" [ref=e12176] [cursor=pointer]:
+                - generic [ref=e12177]:
+                  - generic [ref=e12178]: This Means War
+                  - generic [ref=e12179]: 6:45 PM - 8:23 PM
+                  - generic [ref=e12180]: Los agentes de la CIA FDR Foster y Tuck son inseparables mejores amigos y compañeros. En conjunto, su buena apariencia y habilidades secretas y de combate los clasifican en la élite de la CIA, pero su relación personal y profesional es puesta a prueba cuando conocen a Lauren. FDR y Tuck se enamoran de la hermosa rubia, transformando sus habilidades mortales y artefactos de alta tecnología en contra de ellos en una gran batalla por el amor de la mujer.
+              - generic "The Hitman's Wife's Bodyguard 8:23 PM - 10:03 PM" [ref=e12181] [cursor=pointer]:
+                - generic [ref=e12182]:
+                  - generic [ref=e12183]: The Hitman's Wife's Bodyguard
+                  - generic [ref=e12184]: 8:23 PM - 10:03 PM
+                  - generic [ref=e12185]: La pareja más letal del mundo, el guardaespaldas Michael Bryce y el sicario Darius Kincaid, lucha contra una villana que pretende destruir Europa. Pero no lo harán solos, la impredecible esposa de Darius los acompaña en la misión.
+            - generic [ref=e12186]:
+              - generic "The Ministry of Ungentlemanly Warfare 3:36 PM - 5:40 PM" [ref=e12199] [cursor=pointer]:
+                - generic [ref=e12200]:
+                  - generic [ref=e12201]: The Ministry of Ungentlemanly Warfare
+                  - generic [ref=e12202]: 3:36 PM - 5:40 PM
+                  - generic [ref=e12203]: British Prime Minister Winston Churchill and a group of military officials hatch a daring plan to neutralize Hitler's fleet of German U-boats during World War II. Made up of a motley crew of rogues and mavericks, the top-secret combat unit uses unconventional techniques to battle the Nazis and change the course of the war.
+              - 'generic "Terminator 2: Judgment Day 5:40 PM - 8:00 PM" [ref=e12204] [cursor=pointer]':
+                - generic [ref=e12205]:
+                  - generic [ref=e12206]: "Terminator 2: Judgment Day"
+                  - generic [ref=e12207]: 5:40 PM - 8:00 PM
+                  - generic [ref=e12208]: In this sequel set eleven years after "The Terminator," young John Connor (Edward Furlong), the key to civilization's victory over a future robot uprising, is the target of the shape-shifting T-1000 (Robert Patrick), a Terminator sent from the future to kill him. Another Terminator, the revamped T-800 (Arnold Schwarzenegger), has been sent back to protect the boy. As John and his mother (Linda Hamilton) go on the run with the T-800, the boy forms an unexpected bond with the robot.
+              - generic "Terminator Genisys 8:00 PM - 10:10 PM" [ref=e12209] [cursor=pointer]:
+                - generic [ref=e12210]:
+                  - generic [ref=e12211]: Terminator Genisys
+                  - generic [ref=e12212]: 8:00 PM - 10:10 PM
+                  - generic [ref=e12213]: "When John Connor (Jason Clarke), leader of the human resistance against Skynet, sends Kyle Reese (Jai Courtney) back to 1984 to protect his mother, Sarah (Emilia Clarke), from a Terminator assassin, an unexpected turn of events creates an altered timeline. Instead of a scared waitress, Sarah is a skilled fighter and has a Terminator guardian (Arnold Schwarzenegger) by her side. Faced with unlikely allies and dangerous new enemies, Reese sets out on an unexpected new mission: reset the future."
+            - generic [ref=e12214]:
+              - generic "I Now Pronounce You Chuck and Larry 4:36 PM - 6:36 PM" [ref=e12227] [cursor=pointer]:
+                - generic [ref=e12228]:
+                  - generic [ref=e12229]: I Now Pronounce You Chuck and Larry
+                  - generic [ref=e12230]: 4:36 PM - 6:36 PM
+                  - generic [ref=e12231]: "Chuck Levine (Adam Sandler) and Larry Valentine (Kevin James) are firefighters and true-blue buddies. When Larry, a widower, learns he cannot name his children as beneficiaries on his life insurance policy, he needs a big favor from Chuck: Sign on as Larry's domestic partner. The pals unexpectedly become front-page news and must carry the masquerade to extremes when an overzealous bureaucrat becomes suspicious of their true relationship."
+              - generic "The Ministry of Ungentlemanly Warfare 6:36 PM - 8:40 PM" [ref=e12232] [cursor=pointer]:
+                - generic [ref=e12233]:
+                  - generic [ref=e12234]: The Ministry of Ungentlemanly Warfare
+                  - generic [ref=e12235]: 6:36 PM - 8:40 PM
+                  - generic [ref=e12236]: British Prime Minister Winston Churchill and a group of military officials hatch a daring plan to neutralize Hitler's fleet of German U-boats during World War II. Made up of a motley crew of rogues and mavericks, the top-secret combat unit uses unconventional techniques to battle the Nazis and change the course of the war.
+              - 'generic "Terminator 2: Judgment Day 8:40 PM - 11:00 PM" [ref=e12237] [cursor=pointer]':
+                - generic [ref=e12238]:
+                  - generic [ref=e12239]: "Terminator 2: Judgment Day"
+                  - generic [ref=e12240]: 8:40 PM - 11:00 PM
+                  - generic [ref=e12241]: In this sequel set eleven years after "The Terminator," young John Connor (Edward Furlong), the key to civilization's victory over a future robot uprising, is the target of the shape-shifting T-1000 (Robert Patrick), a Terminator sent from the future to kill him. Another Terminator, the revamped T-800 (Arnold Schwarzenegger), has been sent back to protect the boy. As John and his mother (Linda Hamilton) go on the run with the T-800, the boy forms an unexpected bond with the robot.
+            - generic [ref=e12242]:
+              - generic "A Dog and Pony Show 3:59 PM - 5:38 PM" [ref=e12255] [cursor=pointer]:
+                - generic [ref=e12256]:
+                  - generic [ref=e12257]: A Dog and Pony Show
+                  - generic [ref=e12258]: 3:59 PM - 5:38 PM
+                  - generic [ref=e12259]: Dede, a famous performing circus dog, gets left behind when her show leaves town. When she is adopted by a lonely boy on a farm, the vain dog has to learn to get along with the other animals.
+              - generic "Race to Win 5:38 PM - 7:01 PM" [ref=e12260] [cursor=pointer]:
+                - generic [ref=e12261]:
+                  - generic [ref=e12262]: Race to Win
+                  - generic [ref=e12263]: 5:38 PM - 7:01 PM
+                  - generic [ref=e12264]: A young woman has to face her fears and compete in the race of her life or her family will lose everything after her father dies.
+              - 'generic "Pegasus: Pony With a Broken Wing 7:01 PM - 8:28 PM" [ref=e12265] [cursor=pointer]':
+                - generic [ref=e12266]:
+                  - generic [ref=e12267]: "Pegasus: Pony With a Broken Wing"
+                  - generic [ref=e12268]: 7:01 PM - 8:28 PM
+                  - generic [ref=e12269]: When Sydney and a neighbor boy find a mysterious pony that has an injured wing, they secretly heal the creature while racing to save Sydney's family ranch from developers.
+              - generic "Go Fish 8:28 PM - 9:44 PM" [ref=e12270] [cursor=pointer]:
+                - generic [ref=e12271]:
+                  - generic [ref=e12272]: Go Fish
+                  - generic [ref=e12273]: 8:28 PM - 9:44 PM
+                  - generic [ref=e12274]: A parrotfish and its friends bravely confront a menace that threatens their reef home.
+              - generic "My Best Friend 9:44 PM - 11:24 PM" [ref=e12275] [cursor=pointer]:
+                - generic [ref=e12277]: My Best Friend
+            - generic [ref=e12278]:
+              - generic "Trading Places 5:01 PM - 7:00 PM" [ref=e12291] [cursor=pointer]:
+                - generic [ref=e12292]:
+                  - generic [ref=e12293]: Trading Places
+                  - generic [ref=e12294]: 5:01 PM - 7:00 PM
+                  - generic [ref=e12295]: Upper-crust executive Louis Winthorpe III (Dan Aykroyd) and down-and-out hustler Billy Ray Valentine (Eddie Murphy) are the subjects of a bet by successful brokers Mortimer (Don Ameche) and Randolph Duke (Ralph Bellamy). An employee of the Dukes, Winthorpe is framed by the brothers for a crime he didn't commit, with the siblings then installing the street-smart Valentine in his position. When Winthorpe and Valentine uncover the scheme, they set out to turn the tables on the Dukes.
+              - generic "Think Like a Dog 7:00 PM - 8:33 PM" [ref=e12296] [cursor=pointer]:
+                - generic [ref=e12297]:
+                  - generic [ref=e12298]: Think Like a Dog
+                  - generic [ref=e12299]: 7:00 PM - 8:33 PM
+                  - generic [ref=e12300]: A 12-year-old boy develops a telepathic connection with his dog after a middle-school science experiment goes awry.
+              - generic "Click 8:33 PM - 10:23 PM" [ref=e12301] [cursor=pointer]:
+                - generic [ref=e12302]:
+                  - generic [ref=e12303]: Click
+                  - generic [ref=e12304]: 8:33 PM - 10:23 PM
+                  - generic [ref=e12305]: Michael Newman seems to have it all but his wife, Donna, is increasingly frustrated by the amount of time he has to spend at work. Michael cannot find time to be at home until he meets an eccentric inventor who gives him a universal remote that controls time. At first, he happily skips the boring times until he realizes the remote is in control of his life, and he learns to cherish all the precious moments with his family.
+            - generic [ref=e12306]:
+              - generic "The Nowhere Man 4:43 PM - 5:34 PM" [ref=e12319] [cursor=pointer]:
+                - generic [ref=e12321]: Live
+                - generic [ref=e12322]:
+                  - generic [ref=e12323]: The Nowhere Man
+                  - generic [ref=e12324]: 4:43 PM - 5:34 PM
+              - generic "The Crow 5:34 PM - 7:28 PM" [ref=e12325] [cursor=pointer]:
+                - generic [ref=e12326]:
+                  - generic [ref=e12327]: The Crow
+                  - generic [ref=e12328]: 5:34 PM - 7:28 PM
+                  - generic [ref=e12329]: Soulmates Eric Draven and Shelly Webster are brutally murdered when the demons of her dark past catch up with them. Given the chance to save his true love by sacrificing himself, Draven returns to seek bloody revenge against the killers, traversing the worlds of the living and the dead to put the wrong things right.
+              - 'generic "Transformers: Revenge of the Fallen 7:28 PM - 10:00 PM" [ref=e12330] [cursor=pointer]':
+                - generic [ref=e12331]:
+                  - generic [ref=e12332]: "Transformers: Revenge of the Fallen"
+                  - generic [ref=e12333]: 7:28 PM - 10:00 PM
+                  - generic [ref=e12334]: "Two years after he and his Autobot friends saved the Earth from the Decepticons, Sam Witwicky (Shia LaBeouf) faces a new battle: college. Meanwhile, Optimus Prime and the Autobots are working with a secret military organization and trying to make a home for themselves on Earth. When an ancient Decepticon known as The Fallen rises up to wreak vengeance, Sam and his girlfriend, Mikaela, must figure out the history of the Transformers on Earth and find a way to defeat The Fallen once and for all."
+            - generic [ref=e12335]:
+              - generic "Armed Response 4:12 PM - 5:48 PM" [ref=e12348] [cursor=pointer]:
+                - generic [ref=e12349]:
+                  - generic [ref=e12350]: Armed Response
+                  - generic [ref=e12351]: 4:12 PM - 5:48 PM
+                  - generic [ref=e12352]: Owners (Ethan Embry, Michael Gladis) of a failing security company in a practically crime-free community decide to boost business by robbing their neighbors' homes.
+              - generic "Pompeii 5:48 PM - 7:35 PM" [ref=e12353] [cursor=pointer]:
+                - generic [ref=e12354]:
+                  - generic [ref=e12355]: Pompeii
+                  - generic [ref=e12356]: 5:48 PM - 7:35 PM
+                  - generic [ref=e12357]: In 79 A.D., Pompeii, a bustling port city, stands in the shadow of Mount Vesuvius. Milo (Kit Harington), a former slave, is a gladiator who has caught the eye of Cassia (Emily Browning), a wealthy merchant's daughter. However, their difference in social status is not the only obstacle to their love; Cassia has been promised to Corvus (Kiefer Sutherland), a corrupt Roman senator. When the eruption of Mount Vesuvius rains lava and ash down on the city, Milo races to save her before it's too late.
+              - generic "Saturday Church 7:35 PM - 9:00 PM" [ref=e12358] [cursor=pointer]:
+                - generic [ref=e12359]:
+                  - generic [ref=e12360]: Saturday Church
+                  - generic [ref=e12361]: 7:35 PM - 9:00 PM
+                  - generic [ref=e12362]: Ulysses is a shy and effeminate boy who finds himself coping with new responsibilities as man of the house after the death of his father. Living alongside his mother, younger brother, and conservative aunt, Ulysses is also struggling with questions about his gender identity. He finds an escape by creating a world of fantasy filled with dance and music. Ulysses' journey takes a turn for the better when he finds a vibrant transgender community.
+              - generic "The Nowhere Man 9:00 PM - 9:53 PM" [ref=e12363] [cursor=pointer]:
+                - generic [ref=e12365]: Live
+                - generic [ref=e12366]:
+                  - generic [ref=e12367]: The Nowhere Man
+                  - generic [ref=e12368]: 9:00 PM - 9:53 PM
+              - generic "Hostile Takeover 9:53 PM - 11:25 PM" [ref=e12369] [cursor=pointer]:
+                - generic [ref=e12371]: Hostile Takeover
+            - generic [ref=e12372]:
+              - generic "Rememory 3:31 PM - 5:24 PM" [ref=e12385] [cursor=pointer]:
+                - generic [ref=e12386]:
+                  - generic [ref=e12387]: Rememory
+                  - generic [ref=e12388]: 3:31 PM - 5:24 PM
+                  - generic [ref=e12389]: An amateur sleuth steals a machine that can extract, record and play the memories of another person. He uses the device to try and solve the mysterious death of the man who invented it.
+              - generic "Diana 5:24 PM - 7:18 PM" [ref=e12390] [cursor=pointer]:
+                - generic [ref=e12391]:
+                  - generic [ref=e12392]: Diana
+                  - generic [ref=e12393]: 5:24 PM - 7:18 PM
+                  - generic [ref=e12394]: During the last two years of her life, Princess Diana (Naomi Watts) campaigns against the use of land mines and has a secret love affair with a Pakistani heart surgeon (Naveen Andrews).
+              - generic "You and I 7:18 PM - 9:00 PM" [ref=e12395] [cursor=pointer]:
+                - generic [ref=e12396]:
+                  - generic [ref=e12397]: You and I
+                  - generic [ref=e12398]: 7:18 PM - 9:00 PM
+                  - generic [ref=e12399]: Two young women (Mischa Barton, Shantel VanSanten) fall in love after meeting at a concert.
+              - generic "Imperium 9:00 PM - 10:50 PM" [ref=e12400] [cursor=pointer]:
+                - generic [ref=e12401]:
+                  - generic [ref=e12402]: Imperium
+                  - generic [ref=e12403]: 9:00 PM - 10:50 PM
+            - generic [ref=e12404]:
+              - generic "Non-Stop 5:10 PM - 7:00 PM" [ref=e12417] [cursor=pointer]:
+                - generic [ref=e12419]: Live
+                - generic [ref=e12420]:
+                  - generic [ref=e12421]: Non-Stop
+                  - generic [ref=e12422]: 5:10 PM - 7:00 PM
+                  - generic [ref=e12423]: Alcoholic and world-weary, U.S. Air Marshal Bill Marks (Liam Neeson) lost his passion for his work long ago. Even though lives are potentially at stake during every flight, he sees the assignment as just a desk job. However, his "ordinary day at the office" becomes a high-stakes crisis during a flight to London. Marks receives a series of text messages demanding that he instruct the airline to transfer $150 million into an offshore account, or a passenger will die every 20 minutes.
+              - 'generic "Transformers: Age of Extinction 7:00 PM - 9:49 PM" [ref=e12424] [cursor=pointer]':
+                - generic [ref=e12425]:
+                  - generic [ref=e12426]: "Transformers: Age of Extinction"
+                  - generic [ref=e12427]: 7:00 PM - 9:49 PM
+                  - generic [ref=e12428]: "After an epic battle, a great city lies in ruins, but the Earth itself is saved. As humanity begins to pick up the pieces, a shadowy group emerges to try to take control of history. Meanwhile, an ancient and powerful new menace sets its sights on Earth. A new group of humans, led by Cade Yeager (Mark Wahlberg), helps Optimus Prime (Peter Cullen) and the Autobots rise up to meet their most fearsome challenge yet: a worldwide war of good versus evil."
+              - generic "Scarface 9:49 PM - 12:42 AM" [ref=e12429] [cursor=pointer]:
+                - generic [ref=e12431]: Scarface
+            - generic [ref=e12432]:
+              - generic "Bring It On Again 5:05 PM - 6:38 PM" [ref=e12445] [cursor=pointer]:
+                - generic [ref=e12446]:
+                  - generic [ref=e12447]: Bring It On Again
+                  - generic [ref=e12448]: 5:05 PM - 6:38 PM
+                  - generic [ref=e12449]: College freshman Whittier (Anne Judson-Yager) and her friend Monica (Faune A. Chambers) make the Cal State cheerleading squad, but can't stand its snobbish leader, Tina (Bree Turner). They resolve to form their own team, pulling together a collection of geeky art students and hippie bleeding hearts whose extracurricular programs were cut for budgetary reasons. Through teamwork, they challenge the official squad's right to represent the school at the upcoming cheerleading championship.
+              - generic "The Wedding Date 6:38 PM - 8:10 PM" [ref=e12450] [cursor=pointer]:
+                - generic [ref=e12451]:
+                  - generic [ref=e12452]: The Wedding Date
+                  - generic [ref=e12453]: 6:38 PM - 8:10 PM
+                  - generic [ref=e12454]: With the wedding of her younger sister (Amy Adams) fast approaching, Kat Ellis (Debra Messing) faces the undesirable prospect of traveling alone to London for the ceremony. While this is bad enough, Jeffrey (Jeremy Sheffield), the man who left her as they moved closer to marriage, happens to be the groom's best man. Determined to show everyone -- most of all Jeffrey -- that her romantic life is as full and thrilling as ever, Kat hires a charming male escort (Dermot Mulroney) as her date.
+              - generic "Non-Stop 8:10 PM - 10:00 PM" [ref=e12455] [cursor=pointer]:
+                - generic [ref=e12457]: Live
+                - generic [ref=e12458]:
+                  - generic [ref=e12459]: Non-Stop
+                  - generic [ref=e12460]: 8:10 PM - 10:00 PM
+                  - generic [ref=e12461]: Alcoholic and world-weary, U.S. Air Marshal Bill Marks (Liam Neeson) lost his passion for his work long ago. Even though lives are potentially at stake during every flight, he sees the assignment as just a desk job. However, his "ordinary day at the office" becomes a high-stakes crisis during a flight to London. Marks receives a series of text messages demanding that he instruct the airline to transfer $150 million into an offshore account, or a passenger will die every 20 minutes.
+            - generic [ref=e12462]:
+              - generic "First Sunday 4:30 PM - 6:09 PM" [ref=e12475] [cursor=pointer]:
+                - generic [ref=e12476]:
+                  - generic [ref=e12477]: First Sunday
+                  - generic [ref=e12478]: 4:30 PM - 6:09 PM
+                  - generic [ref=e12479]: "Petty thieves Durell (Ice Cube) and LeeJohn (Tracy Morgan) face a big problem: The two must come up with $17,000 in one week, or Durell will no longer be able to see his son. The goofy scoundrels embark on a haphazard plan to rob the neighborhood church, but they find the mission trickier than expected. When they arrive, they discover that somebody equally disreputable has already had his hand in the coffers. Now, they must trace the money to a group of parishioners."
+              - generic "White Chicks 6:09 PM - 7:59 PM" [ref=e12480] [cursor=pointer]:
+                - generic [ref=e12481]:
+                  - generic [ref=e12482]: White Chicks
+                  - generic [ref=e12483]: 6:09 PM - 7:59 PM
+                  - generic [ref=e12484]: Two FBI agent brothers, Marcus (Marlon Wayans) and Kevin Copeland (Shawn Wayans), accidentally foil a drug bust. As punishment, they are forced to escort a pair of socialites (Anne Dudek, Rochelle Aytes) to the Hamptons, where they're going to be used as bait for a kidnapper. But when the girls realize the FBI's plan, they refuse to go. Left without options, Marcus and Kevin decide to pose as the sisters, transforming themselves from African-American men into a pair of blonde, white women.
+              - generic "Enough 7:59 PM - 9:55 PM" [ref=e12485] [cursor=pointer]:
+                - generic [ref=e12486]:
+                  - generic [ref=e12487]: Enough
+                  - generic [ref=e12488]: 7:59 PM - 9:55 PM
+                  - generic [ref=e12489]: Working-class waitress Slim (Jennifer Lopez) finds her life transformed when she marries wealthy contractor Mitch (Billy Campbell). She settles into an idyllic suburban life and seems to have everything she wants. Her dream is shattered when she discovers her husband is anything but perfect. His abusive behavior forces her to go on the run, eluding an increasingly obsessive Mitch and his lethal henchman.
+            - generic [ref=e12490]:
+              - generic "Lawman 5:06 PM - 5:32 PM" [ref=e12503] [cursor=pointer]:
+                - generic [ref=e12505]: Lawman
+              - generic "Cheyenne 5:32 PM - 6:15 PM" [ref=e12506] [cursor=pointer]:
+                - generic [ref=e12507]:
+                  - generic [ref=e12508]: Cheyenne
+                  - generic [ref=e12509]: 5:32 PM - 6:15 PM
+              - generic "Cheyenne 6:15 PM - 6:58 PM" [ref=e12510] [cursor=pointer]:
+                - generic [ref=e12511]:
+                  - generic [ref=e12512]: Cheyenne
+                  - generic [ref=e12513]: 6:15 PM - 6:58 PM
+              - generic "Maverick 6:58 PM - 7:48 PM" [ref=e12514] [cursor=pointer]:
+                - generic [ref=e12515]:
+                  - generic [ref=e12516]: Maverick
+                  - generic [ref=e12517]: 6:58 PM - 7:48 PM
+              - generic "Maverick 7:48 PM - 8:38 PM" [ref=e12518] [cursor=pointer]:
+                - generic [ref=e12520]: Live
+                - generic [ref=e12521]:
+                  - generic [ref=e12522]: Maverick
+                  - generic [ref=e12523]: 7:48 PM - 8:38 PM
+              - generic "Borderland 8:38 PM - 10:00 PM" [ref=e12524] [cursor=pointer]:
+                - generic [ref=e12525]:
+                  - generic [ref=e12526]: Borderland
+                  - generic [ref=e12527]: 8:38 PM - 10:00 PM
+                  - generic [ref=e12528]: Hopalong Cassidy (William Boyd) fools even his partner (James Ellison) by acting like a badman to catch a gang of badmen.
+            - generic [ref=e12529]:
+              - generic "Afterwards 4:27 PM - 6:16 PM" [ref=e12542] [cursor=pointer]:
+                - generic [ref=e12543]:
+                  - generic [ref=e12544]: Afterwards
+                  - generic [ref=e12545]: 4:27 PM - 6:16 PM
+                  - generic [ref=e12546]: A doctor tells Nathan he senses that the man is about to die.
+              - generic "Goodbye World 6:16 PM - 7:58 PM" [ref=e12547] [cursor=pointer]:
+                - generic [ref=e12548]:
+                  - generic [ref=e12549]: Goodbye World
+                  - generic [ref=e12550]: 6:16 PM - 7:58 PM
+                  - generic [ref=e12551]: Friends and strangers find shelter in a remote cabin after the collapse of the power grid leads to mass panic.
+              - generic "Imaginary 7:58 PM - 9:43 PM" [ref=e12552] [cursor=pointer]:
+                - generic [ref=e12553]:
+                  - generic [ref=e12554]: Imaginary
+                  - generic [ref=e12555]: 7:58 PM - 9:43 PM
+                  - generic [ref=e12556]: When Jessica moves back into her childhood home with her family, her youngest stepdaughter, Alice, finds a stuffed bear named Chauncey. As Alice's behavior becomes more and more concerning, Jessica intervenes only to realize that Chauncey is much more than the stuffed toy bear she believed him to be.
+              - generic "Looking Glass 9:43 PM - 11:28 PM" [ref=e12557] [cursor=pointer]:
+                - generic [ref=e12559]: Looking Glass
+            - generic [ref=e12560]:
+              - generic "A Journal for Jordan 3:29 PM - 5:43 PM" [ref=e12573] [cursor=pointer]:
+                - generic [ref=e12574]:
+                  - generic [ref=e12575]: A Journal for Jordan
+                  - generic [ref=e12576]: 3:29 PM - 5:43 PM
+                  - generic [ref=e12577]: Deployed to Iraq, First Sgt. Charles Monroe King starts to keep a journal of love and advice for his infant son. Back at home, Dana Canedy, a senior editor for The New York Times, revisits the story of her unlikely, life-altering relationship with King and his enduring devotion to his beloved family.
+              - generic "Baby Mama's Club 5:43 PM - 7:26 PM" [ref=e12578] [cursor=pointer]:
+                - generic [ref=e12579]:
+                  - generic [ref=e12580]: Baby Mama's Club
+                  - generic [ref=e12581]: 5:43 PM - 7:26 PM
+                  - generic [ref=e12582]: Randall becomes a father at the same time that his buddy James has his 17th child. The men begin an eccentric style of counseling to help them in their relationships.
+              - generic "The Target 7:26 PM - 9:00 PM" [ref=e12583] [cursor=pointer]:
+                - generic [ref=e12584]:
+                  - generic [ref=e12585]: The Target
+                  - generic [ref=e12586]: 7:26 PM - 9:00 PM
+                  - generic [ref=e12587]: A bodyguard (Christopher Lambert) discovers that the prominent businessman (Dennis Hopper) he has been assigned to protect murdered his parents many years earlier.
+              - generic "Wrong Side of Town 9:00 PM - 10:28 PM" [ref=e12588] [cursor=pointer]:
+                - generic [ref=e12589]:
+                  - generic [ref=e12590]: Wrong Side of Town
+                  - generic [ref=e12591]: 9:00 PM - 10:28 PM
+            - generic [ref=e12592]:
+              - generic "47 Ronin 4:59 PM - 7:00 PM" [ref=e12605] [cursor=pointer]:
+                - generic [ref=e12606]:
+                  - generic [ref=e12607]: 47 Ronin
+                  - generic [ref=e12608]: 4:59 PM - 7:00 PM
+                  - generic [ref=e12609]: A band of samurai sets out to avenge the death and dishonor of their master at the hands of a ruthless shogun.
+              - 'generic "Transformers: Dark of the Moon 7:00 PM - 9:37 PM" [ref=e12610] [cursor=pointer]':
+                - generic [ref=e12611]:
+                  - generic [ref=e12612]: "Transformers: Dark of the Moon"
+                  - generic [ref=e12613]: 7:00 PM - 9:37 PM
+                  - generic [ref=e12614]: Sam Witwicky and his new girlfriend, Carly, join the fray when the evil Decepticons renew their longstanding war against the Autobots. Optimus Prime believes that resurrecting ancient Transformer Sentinel Prime, once the leader of the Autobots, may lead to victory. That decision, however, has devastating consequences. The war appears to tip in favor of the Decepticons, leading to a climactic battle in Chicago.
+              - generic "Shadow Force 9:37 PM - 11:23 PM" [ref=e12615] [cursor=pointer]:
+                - generic [ref=e12617]: Shadow Force
+            - generic [ref=e12618]:
+              - generic "Four Kids and It 4:31 PM - 6:22 PM" [ref=e12631] [cursor=pointer]:
+                - generic [ref=e12632]:
+                  - generic [ref=e12633]: Four Kids and It
+                  - generic [ref=e12634]: 4:31 PM - 6:22 PM
+                  - generic [ref=e12635]: Four kids on holiday in Cornwall meet a magical creature on the beach with the power to grant wishes.
+              - generic "Star Kid 6:22 PM - 8:04 PM" [ref=e12636] [cursor=pointer]:
+                - generic [ref=e12637]:
+                  - generic [ref=e12638]: Star Kid
+                  - generic [ref=e12639]: 6:22 PM - 8:04 PM
+                  - generic [ref=e12640]: A withdrawn boy (Joseph Mazzello) dons the shell of an amiable space robot (Alex Daniels), gains superpowers and must fight a giant alien.
+              - generic "The Ladybug 8:04 PM - 9:21 PM" [ref=e12641] [cursor=pointer]:
+                - generic [ref=e12642]:
+                  - generic [ref=e12643]: The Ladybug
+                  - generic [ref=e12644]: 8:04 PM - 9:21 PM
+                  - generic [ref=e12645]: A seven-spotted ladybug dreams of escaping its glass cage and finding the Golden Canyon, a legendary insect utopia.
+              - generic "Man of the House 9:21 PM - 11:02 PM" [ref=e12646] [cursor=pointer]:
+                - generic [ref=e12648]: Live
+                - generic [ref=e12650]: Man of the House
+            - generic [ref=e12651]:
+              - generic "Flight 4:35 PM - 7:00 PM" [ref=e12664] [cursor=pointer]:
+                - generic [ref=e12666]: Live
+                - generic [ref=e12667]:
+                  - generic [ref=e12668]: Flight
+                  - generic [ref=e12669]: 4:35 PM - 7:00 PM
+                  - generic [ref=e12670]: Commercial airline pilot Whip Whitaker (Denzel Washington) has a problem with drugs and alcohol, though so far he's managed to complete his flights safely. His luck runs out when a disastrous mechanical malfunction sends his plane hurtling toward the ground. Whip pulls off a miraculous crash-landing that results in only six lives lost. Shaken to the core, Whip vows to get sober -- but when the crash investigation exposes his addiction, he finds himself in an even worse situation.
+              - generic "The Aviator 7:00 PM - 10:00 PM" [ref=e12671] [cursor=pointer]:
+                - generic [ref=e12672]:
+                  - generic [ref=e12673]: The Aviator
+                  - generic [ref=e12674]: 7:00 PM - 10:00 PM
+                  - generic [ref=e12675]: "Billionaire and aviation tycoon Howard Hughes (Leonardo DiCaprio) is a successful public figure: a director of big-budget Hollywood films such as \"Hell's Angels,\" a passionate lover of Hollywood leading ladies Katharine Hepburn (Cate Blanchett) and Ava Gardner (Kate Beckinsale), and an aviation pioneer who helps build TWA into a major airline. But in private, Hughes remains tormented, suffering from paralyzing phobias and depression. The higher he rises, the farther has to fall."
+            - generic [ref=e12676]:
+              - generic "Strange Darling 3:55 PM - 5:35 PM" [ref=e12689] [cursor=pointer]:
+                - generic [ref=e12690]:
+                  - generic [ref=e12691]: Strange Darling
+                  - generic [ref=e12692]: 3:55 PM - 5:35 PM
+                  - generic [ref=e12693]: Nothing is what it seems when a twisted one-night stand spirals into a serial killer's vicious murder spree.
+              - generic "Barron's Cove 5:35 PM - 7:35 PM" [ref=e12694] [cursor=pointer]:
+                - generic [ref=e12695]:
+                  - generic [ref=e12696]: Barron's Cove
+                  - generic [ref=e12697]: 5:35 PM - 7:35 PM
+                  - generic [ref=e12698]: A man with a violent past kidnaps the boy he holds responsible for his son's death. As he grows closer to uncovering the truth, he's left to wonder whether his pursuers are really seeking to protect the boy, or merely the secrets he keeps.
+              - generic "Flight 7:35 PM - 10:00 PM" [ref=e12699] [cursor=pointer]:
+                - generic [ref=e12701]: Live
+                - generic [ref=e12702]:
+                  - generic [ref=e12703]: Flight
+                  - generic [ref=e12704]: 7:35 PM - 10:00 PM
+                  - generic [ref=e12705]: Commercial airline pilot Whip Whitaker (Denzel Washington) has a problem with drugs and alcohol, though so far he's managed to complete his flights safely. His luck runs out when a disastrous mechanical malfunction sends his plane hurtling toward the ground. Whip pulls off a miraculous crash-landing that results in only six lives lost. Shaken to the core, Whip vows to get sober -- but when the crash investigation exposes his addiction, he finds himself in an even worse situation.
+            - generic [ref=e12706]:
+              - generic "Dinner for Schmucks 5:05 PM - 7:00 PM" [ref=e12719] [cursor=pointer]:
+                - generic [ref=e12720]:
+                  - generic [ref=e12721]: Dinner for Schmucks
+                  - generic [ref=e12722]: 5:05 PM - 7:00 PM
+                  - generic [ref=e12723]: Tim (Paul Rudd) a rising executive, works for a boss who hosts a monthly event in which the guest who brings the biggest buffoon gets a career boost. Though he declines the invitation at first, he changes his mind when he meets Barry (Steve Carell), a man who builds dioramas using stuffed mice. The scheme backfires when Barry's blundering good intentions send Tim's life into a downward spiral, threatening a major business deal and possibly scuttling Tim's romantic relationship.
+              - generic "No Strings Attached 7:00 PM - 9:00 PM" [ref=e12724] [cursor=pointer]:
+                - generic [ref=e12725]:
+                  - generic [ref=e12726]: No Strings Attached
+                  - generic [ref=e12727]: 7:00 PM - 9:00 PM
+                  - generic [ref=e12728]: "Lifelong friends Emma (Natalie Portman) and Adam (Ashton Kutcher) take their relationship to the next level by having sex. Afraid of ruining their friendship, the new lovers make a pact to keep things purely physical, with no fighting, no jealousy and no expectations. Emma and Adam pledge to do whatever they want, wherever they want, as long as they do not fall in love. The question then becomes: Who will fall first?"
+              - generic "She's Out of My League 9:00 PM - 10:45 PM" [ref=e12729] [cursor=pointer]:
+                - generic [ref=e12730]:
+                  - generic [ref=e12731]: She's Out of My League
+                  - generic [ref=e12732]: 9:00 PM - 10:45 PM
+            - generic [ref=e12733]:
+              - generic "Blue Story 3:40 PM - 5:20 PM" [ref=e12746] [cursor=pointer]:
+                - generic [ref=e12748]: Live
+                - generic [ref=e12749]:
+                  - generic [ref=e12750]: Blue Story
+                  - generic [ref=e12751]: 3:40 PM - 5:20 PM
+                  - generic [ref=e12752]: Best friends Timmy and Marco go to the same high school in Peckham but live in neighboring London boroughs. When Marco gets beaten up by one of Timmy's primary school friends, the two boys wind up on rival sides of a never-ending cycle of gang wars in which there are no winners, only hapless victims.
+              - generic "Shaft 5:20 PM - 7:00 PM" [ref=e12753] [cursor=pointer]:
+                - generic [ref=e12754]:
+                  - generic [ref=e12755]: Shaft
+                  - generic [ref=e12756]: 5:20 PM - 7:00 PM
+                  - generic [ref=e12757]: Crooked cops on the take -- small-time drug lords -- sleazy informers and sadistic rich kids ready to kill --- for police detective John Shaft, its just another night in the underbelly of New York City, another shift facing down cops and criminals who want him dead and a legal system that thrives on money, not justice.
+              - generic "Good Burger 7:00 PM - 8:35 PM" [ref=e12758] [cursor=pointer]:
+                - generic [ref=e12759]:
+                  - generic [ref=e12760]: Good Burger
+                  - generic [ref=e12761]: 7:00 PM - 8:35 PM
+                  - generic [ref=e12762]: Teen misfits (Kel Mitchell, Kenan Thompson) at a modest burger joint face competition from a hamburger emporium across the street.
+              - generic "Norbit 8:35 PM - 10:20 PM" [ref=e12763] [cursor=pointer]:
+                - generic [ref=e12764]:
+                  - generic [ref=e12765]: Norbit
+                  - generic [ref=e12766]: 8:35 PM - 10:20 PM
+                  - generic [ref=e12767]: Mild-mannered Norbit (Eddie Murphy) has always had it rough, since the day he was left abandoned at a combination Chinese restaurant and orphanage. Recently forced to marry the shrewish glutton Rasputia, he is at wit's end. Then his childhood sweetheart, Kate (Thandie Newton), moves back to town, and he tries to figure out a way back to his true love.
+            - generic [ref=e12768]:
+              - generic "Indiana Jones and the Kingdom of the Crystal Skull 5:10 PM - 7:15 PM" [ref=e12781] [cursor=pointer]:
+                - generic [ref=e12782]:
+                  - generic [ref=e12783]: Indiana Jones and the Kingdom of the Crystal Skull
+                  - generic [ref=e12784]: 5:10 PM - 7:15 PM
+                  - generic [ref=e12785]: It's the height of the Cold War, and famous archaeologist Indiana Jones (Harrison Ford), returning from his latest adventure, finds out his job at Marshall College is in jeopardy. He meets Mutt (Shia La Beouf), a young man who wants Indy to help him find the legendary Crystal Skull of Akator, and the pair set out for Peru. However, deadly agent Irina Spalko (Cate Blanchett) is searching for the powerful artifact, too, because the Soviets believe it can help them conquer the world.
+              - generic "Guns Up 7:15 PM - 9:00 PM" [ref=e12786] [cursor=pointer]:
+                - generic [ref=e12787]:
+                  - generic [ref=e12788]: Guns Up
+                  - generic [ref=e12789]: 7:15 PM - 9:00 PM
+                  - generic [ref=e12790]: After a job goes horribly wrong, a man who moonlights as a mob henchman has one night to get his family out of the city while keeping his dark secret hidden.
+              - generic "The Comeback Trail 9:00 PM - 11:00 PM" [ref=e12791] [cursor=pointer]:
+                - generic [ref=e12792]:
+                  - generic [ref=e12793]: The Comeback Trail
+                  - generic [ref=e12794]: 9:00 PM - 11:00 PM
+            - generic [ref=e12795]:
+              - generic "Breathe 3:30 PM - 5:15 PM" [ref=e12808] [cursor=pointer]:
+                - generic [ref=e12810]: Live
+                - generic [ref=e12811]:
+                  - generic [ref=e12812]: Breathe
+                  - generic [ref=e12813]: 3:30 PM - 5:15 PM
+                  - generic [ref=e12814]: Maya and her young daughter, Zora, are forced to live underground when Earth is left uninhabitable due to a lack of oxygen. When a mysterious couple arrive and claim to know the fate of Maya's husband, she tentatively agrees to let them into the bunker. However, mother and daughter soon find themselves in a fight for survival when the truth about the strangers comes to light.
+              - 'generic "Star Trek: Section 31 5:15 PM - 7:00 PM" [ref=e12815] [cursor=pointer]':
+                - generic [ref=e12816]:
+                  - generic [ref=e12817]: "Star Trek: Section 31"
+                  - generic [ref=e12818]: 5:15 PM - 7:00 PM
+                  - generic [ref=e12819]: Emperor Philippa Georgiou faces the sins of her past after joining a secret division of Starfleet that's tasked with protecting the United Federation of Planets.
+              - 'generic "Spider-Man: Homecoming 7:00 PM - 9:15 PM" [ref=e12820] [cursor=pointer]':
+                - generic [ref=e12822]: Live
+                - generic [ref=e12823]:
+                  - generic [ref=e12824]: "Spider-Man: Homecoming"
+                  - generic [ref=e12825]: 7:00 PM - 9:15 PM
+                  - generic [ref=e12826]: Thrilled by his experience with the Avengers, young Peter Parker returns home to live with his Aunt May. Under the watchful eye of mentor Tony Stark, Parker starts to embrace his newfound identity as Spider-Man. He also tries to return to his normal daily routine -- distracted by thoughts of proving himself to be more than just a friendly neighborhood superhero. Peter must soon put his powers to the test when the evil Vulture emerges to threaten everything that he holds dear.
+              - generic "Jack Reacher 9:15 PM - 11:30 PM" [ref=e12827] [cursor=pointer]:
+                - generic [ref=e12828]:
+                  - generic [ref=e12829]: Jack Reacher
+                  - generic [ref=e12830]: 9:15 PM - 11:30 PM
+            - generic [ref=e12831]:
+              - generic "Footloose 4:30 PM - 6:30 PM" [ref=e12844] [cursor=pointer]:
+                - generic [ref=e12845]:
+                  - generic [ref=e12846]: Footloose
+                  - generic [ref=e12847]: 4:30 PM - 6:30 PM
+                  - generic [ref=e12848]: Moving in from Chicago, newcomer Ren McCormack (Kevin Bacon) is in shock when he discovers the small Midwestern town he now calls home has made dancing and rock music illegal. As he struggles to fit in, Ren faces an uphill battle to change things. With the help of his new friend, Willard Hewitt (Christopher Penn), and defiant teen Ariel Moore (Lori Singer), he might loosen up this conservative town. But Ariel's influential father, Reverend Shaw Moore (John Lithgow), stands in the way.
+              - generic "Chocolate City 6:30 PM - 8:00 PM" [ref=e12849] [cursor=pointer]:
+                - generic [ref=e12850]:
+                  - generic [ref=e12851]: Chocolate City
+                  - generic [ref=e12852]: 6:30 PM - 8:00 PM
+                  - generic [ref=e12853]: Michael (Robert Ri'chard) takes a job as an exotic dancer to make ends meet, and as the money rolls in, he has to deal with the attention of the female club goers while hiding his job from his mother (Vivica A. Fox) and girlfriend.
+              - generic "Hustle & Flow 8:00 PM - 10:00 PM" [ref=e12854] [cursor=pointer]:
+                - generic [ref=e12855]:
+                  - generic [ref=e12856]: Hustle & Flow
+                  - generic [ref=e12857]: 8:00 PM - 10:00 PM
+                  - generic [ref=e12858]: DJay (Terrence Howard) is a pimp living day to day on the tough streets of Memphis, Tennessee. Pushing 40, he's tired of the life he's living and dreams of something greater. When he meets up with an old friend who is now in the recording industry, he's inspired to turn his life around and uses his criminal life as an inspiration to create rap music. When he hears that a rap superstar is coming to town, Djay works a hustle to gain the rapper's attention and hopefully get signed by a label.
+            - generic [ref=e12859]:
+              - generic "Seabiscuit 4:35 PM - 7:00 PM" [ref=e12872] [cursor=pointer]:
+                - generic [ref=e12873]:
+                  - generic [ref=e12874]: Seabiscuit
+                  - generic [ref=e12875]: 4:35 PM - 7:00 PM
+                  - generic [ref=e12876]: In the midst of the Great Depression, a businessman (Jeff Bridges) coping with the tragic death of his son, a jockey with a history of brutal injuries (Tobey Maguire) and a down-and-out horse trainer (Chris Cooper) team up to help Seabiscuit, a temperamental, undersized racehorse. At first the horse struggles to win, but eventually Seabiscuit becomes one of the most successful thoroughbreds of all time, and inspires a nation at a time when it needs it most.
+              - 'generic "Star Trek III: The Search for Spock 7:00 PM - 9:00 PM" [ref=e12877] [cursor=pointer]':
+                - generic [ref=e12878]:
+                  - generic [ref=e12879]: "Star Trek III: The Search for Spock"
+                  - generic [ref=e12880]: 7:00 PM - 9:00 PM
+                  - generic [ref=e12881]: Adm. James T. Kirk (William Shatner) has defeated his archenemy but at great cost. His friend Spock has apparently been killed, the USS Enterprise is being scrapped, and starship physician Dr. Leonard "Bones" McCoy (DeForest Kelley) has taken ill. McCoy's odd behavior is evidence he's harboring Spock's katra, or animating spirit, and Kirk seeks to take the Enterprise back to the Genesis Planet and find his friend. Rebuffed, Kirk takes dramatic action that results in war with deadly Klingons.
+              - 'generic "Star Trek IV: The Voyage Home 9:00 PM - 11:00 PM" [ref=e12882] [cursor=pointer]':
+                - generic [ref=e12883]:
+                  - generic [ref=e12884]: "Star Trek IV: The Voyage Home"
+                  - generic [ref=e12885]: 9:00 PM - 11:00 PM
+            - generic [ref=e12886]:
+              - generic "Planes, Trains and Automobiles 3:45 PM - 5:20 PM" [ref=e12899] [cursor=pointer]:
+                - generic [ref=e12900]:
+                  - generic [ref=e12901]: Planes, Trains and Automobiles
+                  - generic [ref=e12902]: 3:45 PM - 5:20 PM
+                  - generic [ref=e12903]: Easily excitable Neal Page (Steve Martin) is somewhat of a control freak. Trying to get home to Chicago to spend Thanksgiving with his wife (Laila Robins) and kids, his flight is rerouted to a distant city in Kansas because of a freak snowstorm, and his sanity begins to fray. Worse yet, he is forced to bunk up with talkative Del Griffith (John Candy), whom he finds extremely annoying. Together they must overcome the insanity of holiday travel to reach their intended destination.
+              - generic "Critical Condition 5:20 PM - 7:00 PM" [ref=e12904] [cursor=pointer]:
+                - generic [ref=e12905]:
+                  - generic [ref=e12906]: Critical Condition
+                  - generic [ref=e12907]: 5:20 PM - 7:00 PM
+                  - generic [ref=e12908]: After faking insanity to avoid jail, a con man (Richard Pryor) poses as a hospital doctor in the chaos of a power failure.
+              - generic "Head of State 7:00 PM - 8:40 PM" [ref=e12909] [cursor=pointer]:
+                - generic [ref=e12910]:
+                  - generic [ref=e12911]: Head of State
+                  - generic [ref=e12912]: 7:00 PM - 8:40 PM
+                  - generic [ref=e12913]: A low-level Washington, D.C., public servant, Mays Gilliam (Chris Rock), is thrust into the national spotlight when he's asked by Martin Geller (Dylan Baker), the head of the Democratic Party, to run for president after the party's presidential and vice-presidential nominees are killed in a plane crash. The odds are against Gilliam, mostly because he has a penchant for telling the truth about what is wrong with the country. Remarkably, his straight-talking style catches on with the public.
+              - generic "Fifty Shades of Black 8:40 PM - 10:15 PM" [ref=e12914] [cursor=pointer]:
+                - generic [ref=e12915]:
+                  - generic [ref=e12916]: Fifty Shades of Black
+                  - generic [ref=e12917]: 8:40 PM - 10:15 PM
+                  - generic [ref=e12918]: In a spoof of "Fifty Shades of Grey," Hannah Steele interviews entrepreneur Christian Black (Marlon Wayans) for her roommate's school newspaper. The wealthy and eligible Black quickly learns how clumsy the young woman is. As flirtation leads to attraction, Christian invites Hannah to his home and introduces her to his kinky world of S&M. Despite their different backgrounds, the new couple consistently surprise each other with how far they're willing to go to make their relationship work.
+            - generic [ref=e12919]:
+              - generic "War Pony 4:05 PM - 6:15 PM" [ref=e12932] [cursor=pointer]:
+                - generic [ref=e12933]:
+                  - generic [ref=e12934]: War Pony
+                  - generic [ref=e12935]: 4:05 PM - 6:15 PM
+                  - generic [ref=e12936]: The interlocking stories of two young Oglala Lakota men grappling with a world built against them as they navigate their unique paths to manhood.
+              - generic "Doubt 6:15 PM - 8:00 PM" [ref=e12937] [cursor=pointer]:
+                - generic [ref=e12938]:
+                  - generic [ref=e12939]: Doubt
+                  - generic [ref=e12940]: 6:15 PM - 8:00 PM
+                  - generic [ref=e12941]: In 1964 the winds of change are sweeping through Sister Aloysius' (Meryl Streep) St. Nicholas school. Father Flynn (Philip Seymour Hoffman), a charismatic priest, is advocating reform of the school's strict customs, and the first black student has just been accepted. When a fellow nun (Amy Adams) tells Sister Aloysius that Father Flynn may be paying too much personal attention to the student, Sister Aloysius begins a personal crusade against the priest -- despite her lack of evidence.
+              - generic "Dreamland 8:00 PM - 9:45 PM" [ref=e12942] [cursor=pointer]:
+                - generic [ref=e12943]:
+                  - generic [ref=e12944]: Dreamland
+                  - generic [ref=e12945]: 8:00 PM - 9:45 PM
+                  - generic [ref=e12946]: A teen bounty hunter is torn between helping or capturing a seductive fugitive bank robber hiding in his small town during the Great Depression.
+              - generic "Dead Man Walking 9:45 PM - 11:50 PM" [ref=e12947] [cursor=pointer]:
+                - generic [ref=e12949]: Dead Man Walking
+            - generic [ref=e12950]:
+              - generic "Hotel Rwanda 4:55 PM - 7:00 PM" [ref=e12963] [cursor=pointer]:
+                - generic [ref=e12965]: Live
+                - generic [ref=e12966]:
+                  - generic [ref=e12967]: Hotel Rwanda
+                  - generic [ref=e12968]: 4:55 PM - 7:00 PM
+                  - generic [ref=e12969]: Hutu Paul Rusesabagina manages the Hôtel des Mille Collines and lives a happy life with his Tutsi wife and their three children, but when Hutu military forces initiate a campaign of ethnic cleansing against the Tutsi minority, Paul is compelled to allow refugees to take shelter in his hotel. As the U.N. pulls out, Paul must struggle alone to protect the Tutsi refugees in the face of the escalating violence later known as the Rwandan genocide.
+              - generic "Challengers 7:00 PM - 9:15 PM" [ref=e12970] [cursor=pointer]:
+                - generic [ref=e12971]:
+                  - generic [ref=e12972]: Challengers
+                  - generic [ref=e12973]: 7:00 PM - 9:15 PM
+                  - generic [ref=e12974]: Tashi, a tennis player turned coach, has transformed her husband from a mediocre player into a world-famous grand slam champion. To jolt him out of his recent losing streak, she makes him play a challenger event -- close to the lowest level of tournament on the pro tour. Tensions soon run high when he finds himself standing across the net from the once-promising, now burnt-out Patrick, his former best friend and Tashi's former boyfriend.
+              - generic "Fences 9:15 PM - 11:35 PM" [ref=e12975] [cursor=pointer]:
+                - generic [ref=e12976]:
+                  - generic [ref=e12977]: Fences
+                  - generic [ref=e12978]: 9:15 PM - 11:35 PM
+            - generic [ref=e12979]:
+              - generic "Frank Miller's Sin City 4:55 PM - 7:00 PM" [ref=e12992] [cursor=pointer]:
+                - generic [ref=e12994]: Live
+                - generic [ref=e12995]:
+                  - generic [ref=e12996]: Frank Miller's Sin City
+                  - generic [ref=e12997]: 4:55 PM - 7:00 PM
+                  - generic [ref=e12998]: In this quartet of neo-noir tales, a mysterious salesman (Josh Hartnett) narrates a tragic story of co-dependency, while a musclebound vigilante (Mickey Rourke) tears his way through the criminal underworld in search of his lost love (Jaime King). In another part of the city, a grizzled cop (Bruce Willis) foils the ambitions of a child-killer (Nick Stahl), and an ex-prostitute (Brittany Murphy) evades her ex-pimp (Benicio del Toro) with the help of her new boyfriend, Dwight (Clive Owen).
+              - generic "The Girl With the Dragon Tattoo 7:00 PM - 9:40 PM" [ref=e12999] [cursor=pointer]:
+                - generic [ref=e13000]:
+                  - generic [ref=e13001]: The Girl With the Dragon Tattoo
+                  - generic [ref=e13002]: 7:00 PM - 9:40 PM
+                  - generic [ref=e13003]: Disgraced financial reporter Mikael Blomkvist (Daniel Craig) finds a chance to redeem his honor after being hired by wealthy Swedish industrialist Henrik Vanger (Christopher Plummer) to solve the 40-year-old murder of Vanger's niece, Harriet. Vanger believes that Harriet was killed by a member of his own family. Eventually joining Blomkvist on his dangerous quest for the truth is Lisbeth Salander (Rooney Mara), an unusual but ingenious investigator whose fragile trust is not easily won.
+              - generic "Gangs of New York 9:40 PM - 12:30 AM" [ref=e13004] [cursor=pointer]:
+                - generic [ref=e13006]: Gangs of New York
+            - generic [ref=e13007]:
+              - generic "Bulletproof Monk 3:30 PM - 5:15 PM" [ref=e13020] [cursor=pointer]:
+                - generic [ref=e13021]:
+                  - generic [ref=e13022]: Bulletproof Monk
+                  - generic [ref=e13023]: 3:30 PM - 5:15 PM
+                  - generic [ref=e13024]: For 60 years, a mysterious monk with no name (Chow Yun-Fat) has zigzagged the globe to protect an ancient scroll -- a scroll that holds the key to unlimited power. Now the Monk must look for a new scroll keeper. Kar (Seann William Scott) is an unlikely candidate, a streetwise young man whose only interest is himself. But when he inadvertently saves the Bulletproof Monk from capture, the two become partners in a scheme to save the world from the scroll's most avid pursuer.
+              - generic "Tank Girl 5:15 PM - 7:00 PM" [ref=e13025] [cursor=pointer]:
+                - generic [ref=e13026]:
+                  - generic [ref=e13027]: Tank Girl
+                  - generic [ref=e13028]: 5:15 PM - 7:00 PM
+                  - generic [ref=e13029]: After a comet disrupts the rain cycle of Earth, the planet has become a desolate, barren desert by the year 2033. With resources scarce, Kesslee (Malcolm McDowell) -- head of the powerful and evil Water & Power Corporation, the de facto government -- has taken control of the water supply. Unwilling to cower under Kesslee's tyrannical rule, a pair of outlaws known as Tank Girl (Lori Petty) and Jet Girl (Naomi Watts) rise up, joining the mysterious rebel Rippers to destroy the corrupt system.
+              - generic "Galaxy Quest 7:00 PM - 8:45 PM" [ref=e13030] [cursor=pointer]:
+                - generic [ref=e13031]:
+                  - generic [ref=e13032]: Galaxy Quest
+                  - generic [ref=e13033]: 7:00 PM - 8:45 PM
+                  - generic [ref=e13034]: The stars of a 1970s sci-fi show -- now scraping a living through re-runs and sci-fi conventions are beamed aboard an alien spacecraft. Believing the cast's heroic on-screen dramas are historical documents of real-life adventures, the band of aliens turn to the ailing celebrities for help in their quest to overcome the oppressive regime in their solar system.
+              - generic "Ghostbusters 8:45 PM - 10:35 PM" [ref=e13035] [cursor=pointer]:
+                - generic [ref=e13036]:
+                  - generic [ref=e13037]: Ghostbusters
+                  - generic [ref=e13038]: 8:45 PM - 10:35 PM
+                  - generic [ref=e13039]: After the members of a team of scientists (Harold Ramis, Dan Aykroyd, Bill Murray) lose their cushy positions at a university in New York City, they decide to become "ghostbusters" to wage a high-tech battle with the supernatural for money. They stumble upon a gateway to another dimension, a doorway that will release evil upon the city. The Ghostbusters must now save New York from complete destruction.
+            - generic [ref=e13040]:
+              - generic "Murder, She Baked 5:00 PM - 7:00 PM" [ref=e13053] [cursor=pointer]:
+                - generic [ref=e13055]: Live
+                - generic [ref=e13056]:
+                  - generic [ref=e13057]: Murder, She Baked
+                  - generic [ref=e13058]: 5:00 PM - 7:00 PM
+                  - generic [ref=e13059]: A baker in small-town Minnesota turns amateur sleuth after finding her friend and delivery driver shot to death behind her shop.
+              - generic "Murder, She Baked 7:00 PM - 9:00 PM" [ref=e13060] [cursor=pointer]:
+                - generic [ref=e13061]:
+                  - generic [ref=e13062]: Murder, She Baked
+                  - generic [ref=e13063]: 7:00 PM - 9:00 PM
+                  - generic [ref=e13064]: Hannah Swensen has her hands full with two romantic suitors, her baking business, a murdered customer, and the case to find her customer's killer.
+              - generic "Murder, She Wrote 9:00 PM - 10:00 PM" [ref=e13065] [cursor=pointer]:
+                - generic [ref=e13066]:
+                  - generic [ref=e13067]: Murder, She Wrote
+                  - generic [ref=e13068]: 9:00 PM - 10:00 PM
+            - generic [ref=e13069]:
+              - generic "Force 10 From Navarone 5:05 PM - 8:10 PM" [ref=e13082] [cursor=pointer]:
+                - generic [ref=e13083]:
+                  - generic [ref=e13084]: Force 10 From Navarone
+                  - generic [ref=e13085]: 5:05 PM - 8:10 PM
+                  - generic [ref=e13086]: After successfully sabotaging radar-guided Nazi guns, Mallory (Robert Shaw) and Miller (Edward Fox) find themselves attached to an elite American unit known as Force 10. The unlikely duo must accompany Force 10 leader Col. Barnsby (Harrison Ford) and his men as they search for an escaped Nazi spy whom only Mallory and Miller can identify. As the team travels behind enemy lines, Barnsby begins to fall for rugged Russian resistance fighter Maritza (Barbara Bach).
+              - generic "Triple Cross 8:10 PM - 11:20 PM" [ref=e13087] [cursor=pointer]:
+                - generic [ref=e13088]:
+                  - generic [ref=e13089]: Triple Cross
+                  - generic [ref=e13090]: 8:10 PM - 11:20 PM
+                  - generic [ref=e13091]: Safecracker Eddie Chapman (Christopher Plummer) is languishing in prison on the island of Jersey when the Nazis arrive. An adept manipulator of situations, Chapman convinces the Germans to use him to spy on the British. And when the would-be traitor arrives home, he convinces the English to use him as a double agent -- in exchange for a full pardon. So begins the hair-raising true story of a professional thief turned self-sacrificing World War II patriot.
+            - generic [ref=e13092]:
+              - generic "Mighty Cruise Ships 5:00 PM - 6:00 PM" [ref=e13105] [cursor=pointer]:
+                - generic [ref=e13106]:
+                  - generic [ref=e13107]: Mighty Cruise Ships
+                  - generic [ref=e13108]: 5:00 PM - 6:00 PM
+              - generic "Mighty Cruise Ships 6:00 PM - 7:00 PM" [ref=e13109] [cursor=pointer]:
+                - generic [ref=e13110]:
+                  - generic [ref=e13111]: Mighty Cruise Ships
+                  - generic [ref=e13112]: 6:00 PM - 7:00 PM
+              - generic "Mighty Planes 7:00 PM - 8:00 PM" [ref=e13113] [cursor=pointer]:
+                - generic [ref=e13115]: Live
+                - generic [ref=e13116]:
+                  - generic [ref=e13117]: Mighty Planes
+                  - generic [ref=e13118]: 7:00 PM - 8:00 PM
+              - generic "Mighty Trains 8:00 PM - 9:00 PM" [ref=e13119] [cursor=pointer]:
+                - generic [ref=e13120]:
+                  - generic [ref=e13121]: Mighty Trains
+                  - generic [ref=e13122]: 8:00 PM - 9:00 PM
+              - generic "Mighty Cruise Ships 9:00 PM - 10:00 PM" [ref=e13123] [cursor=pointer]:
+                - generic [ref=e13124]:
+                  - generic [ref=e13125]: Mighty Cruise Ships
+                  - generic [ref=e13126]: 9:00 PM - 10:00 PM
+            - generic [ref=e13127]:
+              - generic "5:00 PM - 6:00 PM" [ref=e13140] [cursor=pointer]:
+                - generic [ref=e13142]: 5:00 PM - 6:00 PM
+              - generic "Family Ties 6:00 PM - 7:00 PM" [ref=e13143] [cursor=pointer]:
+                - generic [ref=e13144]:
+                  - generic [ref=e13145]: Family Ties
+                  - generic [ref=e13146]: 6:00 PM - 7:00 PM
+              - generic "The Hot Ticket 7:00 PM - 8:00 PM" [ref=e13147] [cursor=pointer]:
+                - generic [ref=e13148]:
+                  - generic [ref=e13149]: The Hot Ticket
+                  - generic [ref=e13150]: 7:00 PM - 8:00 PM
+              - generic "8:00 PM - 9:00 PM" [ref=e13151] [cursor=pointer]:
+                - generic [ref=e13153]: 8:00 PM - 9:00 PM
+              - generic "Unmissable Shorts 9:00 PM - 10:00 PM" [ref=e13154] [cursor=pointer]:
+                - generic [ref=e13155]:
+                  - generic [ref=e13156]: Unmissable Shorts
+                  - generic [ref=e13157]: 9:00 PM - 10:00 PM
+            - generic [ref=e13158]:
+              - generic "Live Racing! West Coast 5:00 PM - 8:00 PM" [ref=e13171] [cursor=pointer]:
+                - generic [ref=e13173]: Live
+                - generic [ref=e13174]:
+                  - generic [ref=e13175]: Live Racing! West Coast
+                  - generic [ref=e13176]: 5:00 PM - 8:00 PM
+                  - generic [ref=e13177]: Pacific Coast racing takes center stage as we feature the best in the West.
+              - generic "Live Racing! Night Cap 8:00 PM - 11:00 PM" [ref=e13178] [cursor=pointer]:
+                - generic [ref=e13180]: Live
+                - generic [ref=e13181]:
+                  - generic [ref=e13182]: Live Racing! Night Cap
+                  - generic [ref=e13183]: 8:00 PM - 11:00 PM
+                  - generic [ref=e13184]: Racing under the lights is featured from race tracks across the country.
+            - generic [ref=e13185]:
+              - generic "National Western Stock Show 4:00 PM - 6:30 PM" [ref=e13198] [cursor=pointer]:
+                - generic [ref=e13199]:
+                  - generic [ref=e13200]: National Western Stock Show
+                  - generic [ref=e13201]: 4:00 PM - 6:30 PM
+                  - generic [ref=e13202]: ProRodeo coverage of the MLK Jr. Heritage Rodeo at the National Western Stock Show and Rodeo in Denver, Colorado.
+              - generic "Western Sports Roundup 6:30 PM - 7:30 PM" [ref=e13203] [cursor=pointer]:
+                - generic [ref=e13204]:
+                  - generic [ref=e13205]: Western Sports Roundup
+                  - generic [ref=e13206]: 6:30 PM - 7:30 PM
+              - generic "Fort Worth Stock Show and Rodeo 7:30 PM - 10:00 PM" [ref=e13207] [cursor=pointer]:
+                - generic [ref=e13209]: Live
+                - generic [ref=e13210]:
+                  - generic [ref=e13211]: Fort Worth Stock Show and Rodeo
+                  - generic [ref=e13212]: 7:30 PM - 10:00 PM
+                  - generic [ref=e13213]: Live from Dickies Arena in Forth Worth, Texas Watch PRCA's toughest bull riders take their shot on some of the rankest bulls in the country.
+            - generic [ref=e13214]:
+              - generic "Sportsman's Adventures With Captain Rick Murphy 5:00 PM - 5:30 PM" [ref=e13227] [cursor=pointer]:
+                - generic [ref=e13229]: Sportsman's Adventures With Captain Rick Murphy
+              - generic "Chasin The Sun 5:30 PM - 6:00 PM" [ref=e13230] [cursor=pointer]:
+                - generic [ref=e13232]: Chasin The Sun
+              - generic "Jimmy Houston Outdoors 6:00 PM - 6:30 PM" [ref=e13233] [cursor=pointer]:
+                - generic [ref=e13235]: Jimmy Houston Outdoors
+              - generic "National Walleye Tour 6:30 PM - 7:00 PM" [ref=e13236] [cursor=pointer]:
+                - generic [ref=e13238]: National Walleye Tour
+              - generic "Federation Angler TV 7:00 PM - 7:30 PM" [ref=e13239] [cursor=pointer]:
+                - generic [ref=e13241]: Federation Angler TV
+              - generic "Texas Team Trail 7:30 PM - 8:00 PM" [ref=e13242] [cursor=pointer]:
+                - generic [ref=e13244]: Texas Team Trail
+              - generic "Scott Martin Challenge 8:00 PM - 8:30 PM" [ref=e13245] [cursor=pointer]:
+                - generic [ref=e13247]: Scott Martin Challenge
+              - generic "Hank Parker's Outdoor Magazine 8:30 PM - 9:00 PM" [ref=e13248] [cursor=pointer]:
+                - generic [ref=e13250]: Hank Parker's Outdoor Magazine
+              - generic "Bass Pro Shop's Fisherman's Handbook 9:00 PM - 9:30 PM" [ref=e13251] [cursor=pointer]:
+                - generic [ref=e13253]: Bass Pro Shop's Fisherman's Handbook
+              - generic "Bass Pro Shop's Collegiate Bass Series 9:30 PM - 10:00 PM" [ref=e13254] [cursor=pointer]:
+                - generic [ref=e13256]: Live
+                - generic [ref=e13258]: Bass Pro Shop's Collegiate Bass Series
+            - generic [ref=e13259]:
+              - generic "MeatEater 5:00 PM - 5:30 PM" [ref=e13272] [cursor=pointer]:
+                - generic [ref=e13274]: MeatEater
+              - generic "MeatEater 5:30 PM - 6:00 PM" [ref=e13275] [cursor=pointer]:
+                - generic [ref=e13277]: MeatEater
+              - generic "Realtree's Monster Bucks 6:00 PM - 6:30 PM" [ref=e13278] [cursor=pointer]:
+                - generic [ref=e13280]: Realtree's Monster Bucks
+              - generic "Backwoods Life 6:30 PM - 7:00 PM" [ref=e13281] [cursor=pointer]:
+                - generic [ref=e13283]: Backwoods Life
+              - generic "Roger Raglin On Target 7:00 PM - 7:30 PM" [ref=e13284] [cursor=pointer]:
+                - generic [ref=e13286]: Roger Raglin On Target
+              - generic "Canada in the Rough 7:30 PM - 8:00 PM" [ref=e13287] [cursor=pointer]:
+                - generic [ref=e13289]: Canada in the Rough
+              - generic "Descendants of the North 8:00 PM - 8:30 PM" [ref=e13290] [cursor=pointer]:
+                - generic [ref=e13292]: Descendants of the North
+              - generic "The Given Right 8:30 PM - 9:00 PM" [ref=e13293] [cursor=pointer]:
+                - generic [ref=e13295]: The Given Right
+              - generic "Backwoods Life 9:00 PM - 9:30 PM" [ref=e13296] [cursor=pointer]:
+                - generic [ref=e13298]: Backwoods Life
+              - generic "Small Town Hunting 9:30 PM - 10:00 PM" [ref=e13299] [cursor=pointer]:
+                - generic [ref=e13301]: Small Town Hunting
+            - generic [ref=e13302]:
+              - generic "Gale Force Twins 5:00 PM - 5:30 PM" [ref=e13315] [cursor=pointer]:
+                - generic [ref=e13317]: Gale Force Twins
+              - generic "The Obsession of Carter Andrews 5:30 PM - 6:00 PM" [ref=e13318] [cursor=pointer]:
+                - generic [ref=e13320]: The Obsession of Carter Andrews
+              - generic "Wild Upland 6:00 PM - 6:30 PM" [ref=e13321] [cursor=pointer]:
+                - generic [ref=e13323]: Wild Upland
+              - generic "American Archer 6:30 PM - 7:00 PM" [ref=e13324] [cursor=pointer]:
+                - generic [ref=e13326]: American Archer
+              - generic "Driven With Pat & Nicole 7:00 PM - 7:30 PM" [ref=e13327] [cursor=pointer]:
+                - generic [ref=e13329]: Driven With Pat & Nicole
+              - generic "The One 7:30 PM - 8:00 PM" [ref=e13330] [cursor=pointer]:
+                - generic [ref=e13332]: The One
+              - generic "Small Town Hunting 8:00 PM - 8:30 PM" [ref=e13333] [cursor=pointer]:
+                - generic [ref=e13335]: Small Town Hunting
+              - generic "The Lindsey Way 8:30 PM - 9:00 PM" [ref=e13336] [cursor=pointer]:
+                - generic [ref=e13338]: The Lindsey Way
+              - generic "Gale Force Twins 9:00 PM - 9:30 PM" [ref=e13339] [cursor=pointer]:
+                - generic [ref=e13341]: Gale Force Twins
+              - generic "The Obsession of Carter Andrews 9:30 PM - 10:00 PM" [ref=e13342] [cursor=pointer]:
+                - generic [ref=e13344]: The Obsession of Carter Andrews
+            - generic [ref=e13345]:
+              - 'generic "B1G Live: Basketball Tip-Off Show 5:00 PM - 5:30 PM" [ref=e13358] [cursor=pointer]':
+                - generic [ref=e13360]: Live
+                - generic [ref=e13362]: "B1G Live: Basketball Tip-Off Show"
+              - generic "College Basketball 5:30 PM - 7:30 PM" [ref=e13363] [cursor=pointer]:
+                - generic [ref=e13364]:
+                  - generic [ref=e13365]: College Basketball
+                  - generic [ref=e13366]: 5:30 PM - 7:30 PM
+                  - generic [ref=e13367]: From Value City Arena in Columbus, Ohio.
+              - generic "College Basketball 7:30 PM - 9:30 PM" [ref=e13368] [cursor=pointer]:
+                - generic [ref=e13369]:
+                  - generic [ref=e13370]: College Basketball
+                  - generic [ref=e13371]: 7:30 PM - 9:30 PM
+                  - generic [ref=e13372]: From Carver-Hawkeye Arena in Iowa City, Iowa.
+              - 'generic "The Journey: Big Ten Basketball 9:30 PM - 10:00 PM" [ref=e13373] [cursor=pointer]':
+                - generic [ref=e13375]: "The Journey: Big Ten Basketball"
+            - generic [ref=e13390]: No program info
+            - generic [ref=e13405]: No program info
+            - generic [ref=e13420]: No program info
+            - generic [ref=e13421]:
+              - generic "The Paul Finebaum Show 2:00 PM - 5:30 PM" [ref=e13434] [cursor=pointer]:
+                - generic [ref=e13435]:
+                  - generic [ref=e13436]: The Paul Finebaum Show
+                  - generic [ref=e13437]: 2:00 PM - 5:30 PM
+              - generic "SEC Now 5:30 PM - 6:00 PM" [ref=e13438] [cursor=pointer]:
+                - generic [ref=e13440]: SEC Now
+              - generic "College Basketball 6:00 PM - 8:00 PM" [ref=e13441] [cursor=pointer]:
+                - generic [ref=e13442]:
+                  - generic [ref=e13443]: College Basketball
+                  - generic [ref=e13444]: 6:00 PM - 8:00 PM
+                  - generic [ref=e13445]: From Colonial Life Arena in Columbia, S.C.
+              - generic "College Basketball 8:00 PM - 10:00 PM" [ref=e13446] [cursor=pointer]:
+                - generic [ref=e13447]:
+                  - generic [ref=e13448]: College Basketball
+                  - generic [ref=e13449]: 8:00 PM - 10:00 PM
+                  - generic [ref=e13450]: From Mizzou Arena in Columbia, Mo.
+            - generic [ref=e13451]:
+              - generic "ACC PM 5:00 PM - 6:00 PM" [ref=e13464] [cursor=pointer]:
+                - generic [ref=e13465]:
+                  - generic [ref=e13466]: ACC PM
+                  - generic [ref=e13467]: 5:00 PM - 6:00 PM
+              - generic "College Basketball 6:00 PM - 8:00 PM" [ref=e13468] [cursor=pointer]:
+                - generic [ref=e13469]:
+                  - generic [ref=e13470]: College Basketball
+                  - generic [ref=e13471]: 6:00 PM - 8:00 PM
+                  - generic [ref=e13472]: From Littlejohn Coliseum in Clemson, S.C.
+              - generic "College Basketball 8:00 PM - 10:00 PM" [ref=e13473] [cursor=pointer]:
+                - generic [ref=e13474]:
+                  - generic [ref=e13475]: College Basketball
+                  - generic [ref=e13476]: 8:00 PM - 10:00 PM
+                  - generic [ref=e13477]: SMU travels to Winston-Salem following a thrilling buzzer-beater win over Virginia Tech to take on Wake Forest. While Boopie Miller anchors SMU's top-ranked offense, Juke Harris (20.4 PPG) leads Wake Forest in a pivotal conference matchup.
+            - generic [ref=e13478]:
+              - generic "STIHL Timbersports 5:00 PM - 5:30 PM" [ref=e13491] [cursor=pointer]:
+                - generic [ref=e13493]: STIHL Timbersports
+              - generic "STIHL Timbersports 5:30 PM - 6:00 PM" [ref=e13494] [cursor=pointer]:
+                - generic [ref=e13496]: STIHL Timbersports
+              - generic "Rising 6:00 PM - 7:00 PM" [ref=e13497] [cursor=pointer]:
+                - generic [ref=e13499]: Live
+                - generic [ref=e13500]:
+                  - generic [ref=e13501]: Rising
+                  - generic [ref=e13502]: 6:00 PM - 7:00 PM
+              - generic "Rising 7:00 PM - 8:00 PM" [ref=e13503] [cursor=pointer]:
+                - generic [ref=e13504]:
+                  - generic [ref=e13505]: Rising
+                  - generic [ref=e13506]: 7:00 PM - 8:00 PM
+              - generic "Rising 8:00 PM - 9:00 PM" [ref=e13507] [cursor=pointer]:
+                - generic [ref=e13509]: Live
+                - generic [ref=e13510]:
+                  - generic [ref=e13511]: Rising
+                  - generic [ref=e13512]: 8:00 PM - 9:00 PM
+              - generic "Rising 9:00 PM - 10:00 PM" [ref=e13513] [cursor=pointer]:
+                - generic [ref=e13515]: Live
+                - generic [ref=e13516]:
+                  - generic [ref=e13517]: Rising
+                  - generic [ref=e13518]: 9:00 PM - 10:00 PM
+            - generic [ref=e13519]:
+              - generic "Street Cricket 3:30 PM - 6:00 PM" [ref=e13532] [cursor=pointer]:
+                - generic [ref=e13533]:
+                  - generic [ref=e13534]: Street Cricket
+                  - generic [ref=e13535]: 3:30 PM - 6:00 PM
+                  - generic [ref=e13536]: Coverage of the informal game of cricket where a tennis ball is wrapped in electrical tape.
+              - 'generic "All In: More to Gain 5:00 PM - 6:00 PM" [ref=e13537] [cursor=pointer]':
+                - generic [ref=e13538]:
+                  - generic [ref=e13539]: "All In: More to Gain"
+                  - generic [ref=e13540]: 5:00 PM - 6:00 PM
+              - generic "World Games 2025 6:00 PM - 8:00 PM" [ref=e13541] [cursor=pointer]:
+                - generic [ref=e13542]:
+                  - generic [ref=e13543]: World Games 2025
+                  - generic [ref=e13544]: 6:00 PM - 8:00 PM
+              - generic "The Short List 6:30 PM - 7:00 PM" [ref=e13545] [cursor=pointer]:
+                - generic [ref=e13547]: The Short List
+              - generic "Rivals 7:00 PM - 7:30 PM" [ref=e13548] [cursor=pointer]:
+                - generic [ref=e13550]: Rivals
+              - generic "Rivals 7:30 PM - 8:00 PM" [ref=e13551] [cursor=pointer]:
+                - generic [ref=e13553]: Rivals
+              - generic "Handball 8:00 PM - 10:00 PM" [ref=e13554] [cursor=pointer]:
+                - generic [ref=e13555]:
+                  - generic [ref=e13556]: Handball
+                  - generic [ref=e13557]: 8:00 PM - 10:00 PM
+                  - generic [ref=e13558]: From Nov. 9, 2025.
+            - generic [ref=e13559]:
+              - generic "Cricket Highlights 5:00 PM - 6:00 PM" [ref=e13572] [cursor=pointer]:
+                - generic [ref=e13573]:
+                  - generic [ref=e13574]: Cricket Highlights
+                  - generic [ref=e13575]: 5:00 PM - 6:00 PM
+              - generic "Cricket Highlights 6:00 PM - 7:00 PM" [ref=e13576] [cursor=pointer]:
+                - generic [ref=e13577]:
+                  - generic [ref=e13578]: Cricket Highlights
+                  - generic [ref=e13579]: 6:00 PM - 7:00 PM
+              - generic "Cricket Highlights 7:00 PM - 8:00 PM" [ref=e13580] [cursor=pointer]:
+                - generic [ref=e13581]:
+                  - generic [ref=e13582]: Cricket Highlights
+                  - generic [ref=e13583]: 7:00 PM - 8:00 PM
+              - generic "Cricket Highlights 8:00 PM - 9:00 PM" [ref=e13584] [cursor=pointer]:
+                - generic [ref=e13585]:
+                  - generic [ref=e13586]: Cricket Highlights
+                  - generic [ref=e13587]: 8:00 PM - 9:00 PM
+              - generic "Game On with Grace Hayden 9:00 PM - 10:00 PM" [ref=e13588] [cursor=pointer]:
+                - generic [ref=e13589]:
+                  - generic [ref=e13590]: Game On with Grace Hayden
+                  - generic [ref=e13591]: 9:00 PM - 10:00 PM
+            - generic [ref=e13592]:
+              - generic "Cricket Highlights 5:00 PM - 6:00 PM" [ref=e13605] [cursor=pointer]:
+                - generic [ref=e13606]:
+                  - generic [ref=e13607]: Cricket Highlights
+                  - generic [ref=e13608]: 5:00 PM - 6:00 PM
+              - generic "Game On with Grace Hayden 6:00 PM - 7:00 PM" [ref=e13609] [cursor=pointer]:
+                - generic [ref=e13610]:
+                  - generic [ref=e13611]: Game On with Grace Hayden
+                  - generic [ref=e13612]: 6:00 PM - 7:00 PM
+              - generic "Cricket Highlights 7:00 PM - 8:00 PM" [ref=e13613] [cursor=pointer]:
+                - generic [ref=e13614]:
+                  - generic [ref=e13615]: Cricket Highlights
+                  - generic [ref=e13616]: 7:00 PM - 8:00 PM
+              - generic "Cricket Highlights 8:00 PM - 9:00 PM" [ref=e13617] [cursor=pointer]:
+                - generic [ref=e13618]:
+                  - generic [ref=e13619]: Cricket Highlights
+                  - generic [ref=e13620]: 8:00 PM - 9:00 PM
+              - 'generic "ICC Men''s T20 World Cup 2026: The Greatest Matches 9:00 PM - 10:00 PM" [ref=e13621] [cursor=pointer]':
+                - generic [ref=e13622]:
+                  - generic [ref=e13623]: "ICC Men's T20 World Cup 2026: The Greatest Matches"
+                  - generic [ref=e13624]: 9:00 PM - 10:00 PM
+            - generic [ref=e13639]: No program info
+            - generic [ref=e13640]:
+              - generic "Women's College Hockey 3:30 PM - 5:30 PM" [ref=e13653] [cursor=pointer]:
+                - generic [ref=e13654]:
+                  - generic [ref=e13655]: Women's College Hockey
+                  - generic [ref=e13656]: 3:30 PM - 5:30 PM
+                  - generic [ref=e13657]: Third-Place Game.
+              - generic "Bruins Pregame Hub 5:30 PM - 6:00 PM" [ref=e13658] [cursor=pointer]:
+                - generic [ref=e13660]: Bruins Pregame Hub
+              - generic "Bruins Face-Off Live 6:00 PM - 6:30 PM" [ref=e13661] [cursor=pointer]:
+                - generic [ref=e13663]: Live
+                - generic [ref=e13665]: Bruins Face-Off Live
+              - generic "NHL Hockey 6:30 PM - 9:00 PM" [ref=e13666] [cursor=pointer]:
+                - generic [ref=e13667]:
+                  - generic [ref=e13668]: NHL Hockey
+                  - generic [ref=e13669]: 6:30 PM - 9:00 PM
+                  - generic [ref=e13670]: The Boston Bruins visit the Dallas Stars at American Airlines Center. Dallas right wing Mikko Rantanen ranks sixth in the NHL with 62 points and 18 goals. Boston seeks to extend its win streak, while the Stars look to rebound from a 3-1 loss.
+              - generic "Bruins Overtime Live 9:00 PM - 9:30 PM" [ref=e13671] [cursor=pointer]:
+                - generic [ref=e13673]: Live
+                - generic [ref=e13675]: Bruins Overtime Live
+              - generic "Bruins Postgame Final 9:30 PM - 10:00 PM" [ref=e13676] [cursor=pointer]:
+                - generic [ref=e13678]: Bruins Postgame Final
+            - generic [ref=e13679]:
+              - generic "Tom Curran's Patriots Talk Podcast 5:00 PM - 5:30 PM" [ref=e13692] [cursor=pointer]:
+                - generic [ref=e13694]: Tom Curran's Patriots Talk Podcast
+              - generic "Early Edition 5:30 PM - 6:30 PM" [ref=e13695] [cursor=pointer]:
+                - generic [ref=e13696]:
+                  - generic [ref=e13697]: Early Edition
+                  - generic [ref=e13698]: 5:30 PM - 6:30 PM
+              - generic "Early Edition 6:30 PM - 7:30 PM" [ref=e13699] [cursor=pointer]:
+                - generic [ref=e13700]:
+                  - generic [ref=e13701]: Early Edition
+                  - generic [ref=e13702]: 6:30 PM - 7:30 PM
+              - generic "Tom Curran's Patriots Talk Podcast 7:30 PM - 8:00 PM" [ref=e13703] [cursor=pointer]:
+                - generic [ref=e13705]: Tom Curran's Patriots Talk Podcast
+              - generic "The Breakdown 8:00 PM - 8:30 PM" [ref=e13706] [cursor=pointer]:
+                - generic [ref=e13708]: The Breakdown
+              - generic "Tom Curran's Patriots Talk Podcast 8:30 PM - 9:00 PM" [ref=e13709] [cursor=pointer]:
+                - generic [ref=e13711]: Tom Curran's Patriots Talk Podcast
+              - generic "Boston Sports Tonight with Felger and Holley 9:00 PM - 10:00 PM" [ref=e13712] [cursor=pointer]:
+                - generic [ref=e13714]: Live
+                - generic [ref=e13715]:
+                  - generic [ref=e13716]: Boston Sports Tonight with Felger and Holley
+                  - generic [ref=e13717]: 9:00 PM - 10:00 PM
+            - generic [ref=e13732]: No program info
+            - generic [ref=e13733]:
+              - generic "Yankees Classics 3:00 PM - 6:00 PM" [ref=e13746] [cursor=pointer]:
+                - generic [ref=e13747]:
+                  - generic [ref=e13748]: Yankees Classics
+                  - generic [ref=e13749]: 3:00 PM - 6:00 PM
+                  - generic [ref=e13750]: New York Yankees play the Oakland Athletics in their season opener. From April 10, 1998.
+              - generic "College Basketball 6:00 PM - 8:00 PM" [ref=e13751] [cursor=pointer]:
+                - generic [ref=e13752]:
+                  - generic [ref=e13753]: College Basketball
+                  - generic [ref=e13754]: 6:00 PM - 8:00 PM
+                  - generic [ref=e13755]: From The Reilly Center in St. Bonaventure, N.Y.
+              - generic "Yankees Hot Stove 8:00 PM - 9:00 PM" [ref=e13756] [cursor=pointer]:
+                - generic [ref=e13757]:
+                  - generic [ref=e13758]: Yankees Hot Stove
+                  - generic [ref=e13759]: 8:00 PM - 9:00 PM
+              - generic "Yankees News & Views 9:00 PM - 9:30 PM" [ref=e13760] [cursor=pointer]:
+                - generic [ref=e13762]: Yankees News & Views
+              - generic "Sportico Sports Business 9:30 PM - 10:00 PM" [ref=e13763] [cursor=pointer]:
+                - generic [ref=e13765]: Sportico Sports Business
+            - generic [ref=e13766]:
+              - generic "N.Y. Giants Press Conference 5:00 PM - 5:30 PM" [ref=e13779] [cursor=pointer]:
+                - generic [ref=e13781]: N.Y. Giants Press Conference
+              - generic "N.Y. Giants Press Conference 5:30 PM - 6:00 PM" [ref=e13782] [cursor=pointer]:
+                - generic [ref=e13784]: N.Y. Giants Press Conference
+              - generic "Club 30 6:00 PM - 7:00 PM" [ref=e13785] [cursor=pointer]:
+                - generic [ref=e13786]:
+                  - generic [ref=e13787]: Club 30
+                  - generic [ref=e13788]: 6:00 PM - 7:00 PM
+              - generic "N.Y. Giants Press Conference 7:00 PM - 7:30 PM" [ref=e13789] [cursor=pointer]:
+                - generic [ref=e13791]: N.Y. Giants Press Conference
+              - generic "N.Y. Giants Press Conference 7:30 PM - 8:00 PM" [ref=e13792] [cursor=pointer]:
+                - generic [ref=e13794]: N.Y. Giants Press Conference
+              - generic "NY Rangers Shorts 8:00 PM - 8:30 PM" [ref=e13795] [cursor=pointer]:
+                - generic [ref=e13797]: NY Rangers Shorts
+              - generic "NY Rangers Pre-Game 8:30 PM - 9:00 PM" [ref=e13798] [cursor=pointer]:
+                - generic [ref=e13800]: NY Rangers Pre-Game
+              - generic "NHL Hockey 9:00 PM - 11:30 PM" [ref=e13801] [cursor=pointer]:
+                - generic [ref=e13802]:
+                  - generic [ref=e13803]: NHL Hockey
+                  - generic [ref=e13804]: 9:00 PM - 11:30 PM
+            - generic [ref=e13805]:
+              - generic "SIGN OFF 5:00 PM - 9:00 PM" [ref=e13818] [cursor=pointer]:
+                - generic [ref=e13819]:
+                  - generic [ref=e13820]: SIGN OFF
+                  - generic [ref=e13821]: 5:00 PM - 9:00 PM
+                  - generic [ref=e13822]: Sign off.
+              - generic "Beat the Champ 5:30 PM - 6:30 PM" [ref=e13823] [cursor=pointer]:
+                - generic [ref=e13824]:
+                  - generic [ref=e13825]: Beat the Champ
+                  - generic [ref=e13826]: 5:30 PM - 6:30 PM
+              - generic "PWHL Hockey 6:00 PM - 8:30 PM" [ref=e13827] [cursor=pointer]:
+                - generic [ref=e13828]:
+                  - generic [ref=e13829]: PWHL Hockey
+                  - generic [ref=e13830]: 6:00 PM - 8:30 PM
+                  - generic [ref=e13831]: From Prudential Center in Newark, N.J.
+              - generic "Sabres Pregame 6:30 PM - 7:00 PM" [ref=e13832] [cursor=pointer]:
+                - generic [ref=e13834]: Sabres Pregame
+              - generic "NHL Hockey 7:00 PM - 9:30 PM" [ref=e13835] [cursor=pointer]:
+                - generic [ref=e13836]:
+                  - generic [ref=e13837]: NHL Hockey
+                  - generic [ref=e13838]: 7:00 PM - 9:30 PM
+                  - generic [ref=e13839]: From Bridgestone Arena in Nashville, Tenn.
+              - generic "Islanders Shorts 8:30 PM - 9:00 PM" [ref=e13840] [cursor=pointer]:
+                - generic [ref=e13842]: Islanders Shorts
+              - generic "SIGN OFF 9:00 PM - 10:00 PM" [ref=e13843] [cursor=pointer]:
+                - generic [ref=e13844]:
+                  - generic [ref=e13845]: SIGN OFF
+                  - generic [ref=e13846]: 9:00 PM - 10:00 PM
+              - generic "Sabres Postgame 9:30 PM - 10:00 PM" [ref=e13847] [cursor=pointer]:
+                - generic [ref=e13849]: Sabres Postgame
+            - generic [ref=e13864]: No program info
+            - generic [ref=e13879]: No program info
+            - generic [ref=e13894]: No program info
+            - generic [ref=e13895]:
+              - generic "Baseball Night in N.Y. 5:00 PM - 5:30 PM" [ref=e13908] [cursor=pointer]:
+                - generic [ref=e13910]: Baseball Night in N.Y.
+              - generic "Mets Classics 5:30 PM - 8:30 PM" [ref=e13911] [cursor=pointer]:
+                - generic [ref=e13912]:
+                  - generic [ref=e13913]: Mets Classics
+                  - generic [ref=e13914]: 5:30 PM - 8:30 PM
+                  - generic [ref=e13915]: From Sept. 19, 2022. Mets clinch a playoff spot.
+              - generic "Baseball 8:30 PM - 10:00 PM" [ref=e13916] [cursor=pointer]:
+                - generic [ref=e13917]:
+                  - generic [ref=e13918]: Baseball
+                  - generic [ref=e13919]: 8:30 PM - 10:00 PM
+                  - generic [ref=e13920]: Coverage of baseball action.
+            - generic [ref=e13935]: No program info
+            - generic [ref=e13936]:
+              - generic "Follow the Money 3:00 PM - 6:00 PM" [ref=e13949] [cursor=pointer]:
+                - generic [ref=e13950]:
+                  - generic [ref=e13951]: Follow the Money
+                  - generic [ref=e13952]: 3:00 PM - 6:00 PM
+                  - generic [ref=e13953]: Mitch Moss and Paul Howard share their knowledge of pop culture, sports, and gambling.
+              - generic "BKFC Fight Night Omaha 5:00 PM - 6:00 PM" [ref=e13954] [cursor=pointer]:
+                - generic [ref=e13955]:
+                  - generic [ref=e13956]: BKFC Fight Night Omaha
+                  - generic [ref=e13957]: 5:00 PM - 6:00 PM
+              - generic "Nationals Classics 6:00 PM - 9:30 PM" [ref=e13958] [cursor=pointer]:
+                - generic [ref=e13959]:
+                  - generic [ref=e13960]: Nationals Classics
+                  - generic [ref=e13961]: 6:00 PM - 9:30 PM
+                  - generic [ref=e13962]: Nationals hit four straight homers in 8th to stun Padres. From June 9, 2019.
+              - generic "Sports Stars of Tomorrow 6:30 PM - 7:00 PM" [ref=e13963] [cursor=pointer]:
+                - generic [ref=e13965]: Sports Stars of Tomorrow
+              - 'generic "Fight Sports: World Class Championship Boxing 7:00 PM - 9:00 PM" [ref=e13966] [cursor=pointer]':
+                - generic [ref=e13967]:
+                  - generic [ref=e13968]: "Fight Sports: World Class Championship Boxing"
+                  - generic [ref=e13969]: 7:00 PM - 9:00 PM
+                  - generic [ref=e13970]: Boxing action.
+              - generic "In Depth With Graham Bensinger 9:00 PM - 9:30 PM" [ref=e13971] [cursor=pointer]:
+                - generic [ref=e13973]: In Depth With Graham Bensinger
+              - generic "Touchdown Baltimore 9:30 PM - 10:30 PM" [ref=e13974] [cursor=pointer]:
+                - generic [ref=e13976]: Touchdown Baltimore
+            - generic [ref=e13977]:
+              - generic "Hometown With Rachel Nichols 5:00 PM - 5:30 PM" [ref=e13990] [cursor=pointer]:
+                - generic [ref=e13992]: Hometown With Rachel Nichols
+              - generic "District Countdown 5:30 PM - 6:00 PM" [ref=e13993] [cursor=pointer]:
+                - generic [ref=e13995]: District Countdown
+              - generic "NBA Basketball 6:00 PM - 8:00 PM" [ref=e13996] [cursor=pointer]:
+                - generic [ref=e13997]:
+                  - generic [ref=e13998]: NBA Basketball
+                  - generic [ref=e13999]: 6:00 PM - 8:00 PM
+                  - generic [ref=e14000]: From Capital One Arena in Washington, D.C.
+              - generic "Hometown With Rachel Nichols 8:00 PM - 8:30 PM" [ref=e14001] [cursor=pointer]:
+                - generic [ref=e14003]: Hometown With Rachel Nichols
+              - generic "Building Up 8:30 PM - 9:00 PM" [ref=e14004] [cursor=pointer]:
+                - generic [ref=e14006]: Building Up
+              - generic "Politics Aside with Chris Cillizza 9:00 PM - 9:30 PM" [ref=e14007] [cursor=pointer]:
+                - generic [ref=e14009]: Politics Aside with Chris Cillizza
+              - generic "Caps Classics 9:30 PM - 11:30 PM" [ref=e14010] [cursor=pointer]:
+                - generic [ref=e14012]: Caps Classics
+            - generic [ref=e14027]: No program info
+            - generic [ref=e14028]:
+              - generic "FanDuel Sports Network Countdown Live 4:30 PM - 5:30 PM" [ref=e14041] [cursor=pointer]:
+                - generic [ref=e14043]: Live
+                - generic [ref=e14044]:
+                  - generic [ref=e14045]: FanDuel Sports Network Countdown Live
+                  - generic [ref=e14046]: 4:30 PM - 5:30 PM
+              - generic "Pulse of the Pack 5:30 PM - 6:00 PM" [ref=e14047] [cursor=pointer]:
+                - generic [ref=e14049]: Pulse of the Pack
+              - generic "Carolina Insider 6:00 PM - 6:30 PM" [ref=e14050] [cursor=pointer]:
+                - generic [ref=e14052]: Carolina Insider
+              - generic "The Card Life 6:30 PM - 7:00 PM" [ref=e14053] [cursor=pointer]:
+                - generic [ref=e14055]: The Card Life
+              - generic "Golic / Golic 7:00 PM - 9:00 PM" [ref=e14056] [cursor=pointer]:
+                - generic [ref=e14057]:
+                  - generic [ref=e14058]: Golic / Golic
+                  - generic [ref=e14059]: 7:00 PM - 9:00 PM
+              - generic "Carolina Insider 9:00 PM - 9:30 PM" [ref=e14060] [cursor=pointer]:
+                - generic [ref=e14062]: Carolina Insider
+              - generic "Pulse of the Pack 9:30 PM - 10:00 PM" [ref=e14063] [cursor=pointer]:
+                - generic [ref=e14065]: Pulse of the Pack
+            - generic [ref=e14066]:
+              - generic "FanDuel Sports Network Countdown Live 4:30 PM - 5:30 PM" [ref=e14079] [cursor=pointer]:
+                - generic [ref=e14081]: Live
+                - generic [ref=e14082]:
+                  - generic [ref=e14083]: FanDuel Sports Network Countdown Live
+                  - generic [ref=e14084]: 4:30 PM - 5:30 PM
+              - generic "Gamecock Insider 5:30 PM - 6:00 PM" [ref=e14085] [cursor=pointer]:
+                - generic [ref=e14087]: Gamecock Insider
+              - 'generic "Fight Sports: Boxing 6:00 PM - 8:00 PM" [ref=e14088] [cursor=pointer]':
+                - generic [ref=e14089]:
+                  - generic [ref=e14090]: "Fight Sports: Boxing"
+                  - generic [ref=e14091]: 6:00 PM - 8:00 PM
+                  - generic [ref=e14092]: Replays of classic boxing matches.
+              - generic "FIBA World Basketball 8:00 PM - 8:30 PM" [ref=e14093] [cursor=pointer]:
+                - generic [ref=e14095]: FIBA World Basketball
+              - generic "PTO T100 Highlights Show '25 8:30 PM - 9:30 PM" [ref=e14096] [cursor=pointer]:
+                - generic [ref=e14097]:
+                  - generic [ref=e14098]: PTO T100 Highlights Show '25
+                  - generic [ref=e14099]: 8:30 PM - 9:30 PM
+              - generic "O'Neill Outside 9:30 PM - 10:00 PM" [ref=e14100] [cursor=pointer]:
+                - generic [ref=e14102]: O'Neill Outside
+            - generic [ref=e14103]:
+              - generic "FanDuel Sports Network Countdown Live 4:30 PM - 5:30 PM" [ref=e14116] [cursor=pointer]:
+                - generic [ref=e14118]: Live
+                - generic [ref=e14119]:
+                  - generic [ref=e14120]: FanDuel Sports Network Countdown Live
+                  - generic [ref=e14121]: 4:30 PM - 5:30 PM
+              - generic "Up & Adams 5:30 PM - 6:30 PM" [ref=e14122] [cursor=pointer]:
+                - generic [ref=e14123]:
+                  - generic [ref=e14124]: Up & Adams
+                  - generic [ref=e14125]: 5:30 PM - 6:30 PM
+              - generic "The Card Life 6:30 PM - 7:00 PM" [ref=e14126] [cursor=pointer]:
+                - generic [ref=e14128]: The Card Life
+              - generic "Golic / Golic 7:00 PM - 9:00 PM" [ref=e14129] [cursor=pointer]:
+                - generic [ref=e14130]:
+                  - generic [ref=e14131]: Golic / Golic
+                  - generic [ref=e14132]: 7:00 PM - 9:00 PM
+              - generic "Up & Adams 9:00 PM - 10:00 PM" [ref=e14133] [cursor=pointer]:
+                - generic [ref=e14134]:
+                  - generic [ref=e14135]: Up & Adams
+                  - generic [ref=e14136]: 9:00 PM - 10:00 PM
+            - generic [ref=e14137]:
+              - generic "FanDuel Sports Network Countdown Live 4:30 PM - 5:30 PM" [ref=e14150] [cursor=pointer]:
+                - generic [ref=e14152]: Live
+                - generic [ref=e14153]:
+                  - generic [ref=e14154]: FanDuel Sports Network Countdown Live
+                  - generic [ref=e14155]: 4:30 PM - 5:30 PM
+              - generic "Run It Back 5:30 PM - 6:30 PM" [ref=e14156] [cursor=pointer]:
+                - generic [ref=e14157]:
+                  - generic [ref=e14158]: Run It Back
+                  - generic [ref=e14159]: 5:30 PM - 6:30 PM
+              - generic "FIBA World Basketball 6:30 PM - 7:00 PM" [ref=e14160] [cursor=pointer]:
+                - generic [ref=e14162]: FIBA World Basketball
+              - generic "Golic / Golic 7:00 PM - 9:00 PM" [ref=e14163] [cursor=pointer]:
+                - generic [ref=e14164]:
+                  - generic [ref=e14165]: Golic / Golic
+                  - generic [ref=e14166]: 7:00 PM - 9:00 PM
+              - 'generic "SBJ: Inside the Industry 9:00 PM - 9:30 PM" [ref=e14167] [cursor=pointer]':
+                - generic [ref=e14169]: "SBJ: Inside the Industry"
+              - generic "The Card Life 9:30 PM - 10:00 PM" [ref=e14170] [cursor=pointer]:
+                - generic [ref=e14172]: The Card Life
+            - generic [ref=e14173]:
+              - generic "Follow the Money 3:00 PM - 6:00 PM" [ref=e14186] [cursor=pointer]:
+                - generic [ref=e14187]:
+                  - generic [ref=e14188]: Follow the Money
+                  - generic [ref=e14189]: 3:00 PM - 6:00 PM
+                  - generic [ref=e14190]: Mitch Moss and Paul Howard share their knowledge of pop culture, sports, and gambling.
+              - generic "Charlie Moore Outdoors 5:00 PM - 5:30 PM" [ref=e14191] [cursor=pointer]:
+                - generic [ref=e14193]: Charlie Moore Outdoors
+              - 'generic "Charlie Moore: No Offense 5:30 PM - 6:00 PM" [ref=e14194] [cursor=pointer]':
+                - generic [ref=e14196]: "Charlie Moore: No Offense"
+              - generic "Baseball 6:00 PM - 8:00 PM" [ref=e14197] [cursor=pointer]:
+                - generic [ref=e14198]:
+                  - generic [ref=e14199]: Baseball
+                  - generic [ref=e14200]: 6:00 PM - 8:00 PM
+                  - generic [ref=e14201]: Coverage of baseball action.
+              - generic "The Card Life 8:00 PM - 8:30 PM" [ref=e14202] [cursor=pointer]:
+                - generic [ref=e14204]: The Card Life
+              - generic "Hobby House 8:30 PM - 9:00 PM" [ref=e14205] [cursor=pointer]:
+                - generic [ref=e14207]: Hobby House
+              - generic "PWHL Hockey 9:00 PM - 11:30 PM" [ref=e14208] [cursor=pointer]:
+                - generic [ref=e14209]:
+                  - generic [ref=e14210]: PWHL Hockey
+                  - generic [ref=e14211]: 9:00 PM - 11:30 PM
+            - generic [ref=e14226]: No program info
+            - generic [ref=e14227]:
+              - generic "FanDuel Sports Network Countdown Live 4:30 PM - 5:30 PM" [ref=e14240] [cursor=pointer]:
+                - generic [ref=e14242]: Live
+                - generic [ref=e14243]:
+                  - generic [ref=e14244]: FanDuel Sports Network Countdown Live
+                  - generic [ref=e14245]: 4:30 PM - 5:30 PM
+              - generic "FanDuel Sports Network Countdown Live 5:30 PM - 6:30 PM" [ref=e14246] [cursor=pointer]:
+                - generic [ref=e14248]: Live
+                - generic [ref=e14249]:
+                  - generic [ref=e14250]: FanDuel Sports Network Countdown Live
+                  - generic [ref=e14251]: 5:30 PM - 6:30 PM
+              - generic "The Card Life 6:30 PM - 7:00 PM" [ref=e14252] [cursor=pointer]:
+                - generic [ref=e14254]: The Card Life
+              - generic "Golic / Golic 7:00 PM - 9:00 PM" [ref=e14255] [cursor=pointer]:
+                - generic [ref=e14256]:
+                  - generic [ref=e14257]: Golic / Golic
+                  - generic [ref=e14258]: 7:00 PM - 9:00 PM
+              - generic "Golic / Golic 9:00 PM - 10:00 PM" [ref=e14259] [cursor=pointer]:
+                - generic [ref=e14260]:
+                  - generic [ref=e14261]: Golic / Golic
+                  - generic [ref=e14262]: 9:00 PM - 10:00 PM
+            - generic [ref=e14263]:
+              - generic "FanDuel Sports Network Countdown Live 4:30 PM - 5:30 PM" [ref=e14276] [cursor=pointer]:
+                - generic [ref=e14278]: Live
+                - generic [ref=e14279]:
+                  - generic [ref=e14280]: FanDuel Sports Network Countdown Live
+                  - generic [ref=e14281]: 4:30 PM - 5:30 PM
+              - generic "FanDuel Sports Network Countdown Live 5:30 PM - 6:30 PM" [ref=e14282] [cursor=pointer]:
+                - generic [ref=e14284]: Live
+                - generic [ref=e14285]:
+                  - generic [ref=e14286]: FanDuel Sports Network Countdown Live
+                  - generic [ref=e14287]: 5:30 PM - 6:30 PM
+              - generic "The Card Life 6:30 PM - 7:00 PM" [ref=e14288] [cursor=pointer]:
+                - generic [ref=e14290]: The Card Life
+              - generic "Golic / Golic 7:00 PM - 9:00 PM" [ref=e14291] [cursor=pointer]:
+                - generic [ref=e14292]:
+                  - generic [ref=e14293]: Golic / Golic
+                  - generic [ref=e14294]: 7:00 PM - 9:00 PM
+              - generic "Up & Adams 9:00 PM - 10:00 PM" [ref=e14295] [cursor=pointer]:
+                - generic [ref=e14296]:
+                  - generic [ref=e14297]: Up & Adams
+                  - generic [ref=e14298]: 9:00 PM - 10:00 PM
+            - generic [ref=e14299]:
+              - generic "FanDuel Sports Network Countdown Live 4:30 PM - 5:30 PM" [ref=e14312] [cursor=pointer]:
+                - generic [ref=e14314]: Live
+                - generic [ref=e14315]:
+                  - generic [ref=e14316]: FanDuel Sports Network Countdown Live
+                  - generic [ref=e14317]: 4:30 PM - 5:30 PM
+              - generic "Follow the Money 5:30 PM - 6:00 PM" [ref=e14318] [cursor=pointer]:
+                - generic [ref=e14320]: Follow the Money
+              - generic "Cubs 360 6:00 PM - 7:00 PM" [ref=e14321] [cursor=pointer]:
+                - generic [ref=e14323]: Live
+                - generic [ref=e14324]:
+                  - generic [ref=e14325]: Cubs 360
+                  - generic [ref=e14326]: 6:00 PM - 7:00 PM
+              - generic "College Basketball 7:00 PM - 9:00 PM" [ref=e14327] [cursor=pointer]:
+                - generic [ref=e14328]:
+                  - generic [ref=e14329]: College Basketball
+                  - generic [ref=e14330]: 7:00 PM - 9:00 PM
+                  - generic [ref=e14331]: From Credit Union 1 Arena in Chicago.
+              - generic "Cubs Classics 9:00 PM - 12:00 AM" [ref=e14332] [cursor=pointer]:
+                - generic [ref=e14333]:
+                  - generic [ref=e14334]: Cubs Classics
+                  - generic [ref=e14335]: 9:00 PM - 12:00 AM
+            - generic [ref=e14350]: No program info
+            - generic [ref=e14351]:
+              - generic "Journey to the Chi 5:00 PM - 5:30 PM" [ref=e14364] [cursor=pointer]:
+                - generic [ref=e14366]: Journey to the Chi
+              - generic "The Big Pro Football Show 5:30 PM - 6:00 PM" [ref=e14367] [cursor=pointer]:
+                - generic [ref=e14369]: The Big Pro Football Show
+              - generic "The Chicago Lead 6:00 PM - 6:30 PM" [ref=e14370] [cursor=pointer]:
+                - generic [ref=e14372]: The Chicago Lead
+              - generic "Bulls Countdown Live 6:30 PM - 7:00 PM" [ref=e14373] [cursor=pointer]:
+                - generic [ref=e14375]: Live
+                - generic [ref=e14377]: Bulls Countdown Live
+              - generic "NBA Basketball 7:00 PM - 9:30 PM" [ref=e14378] [cursor=pointer]:
+                - generic [ref=e14379]:
+                  - generic [ref=e14380]: NBA Basketball
+                  - generic [ref=e14381]: 7:00 PM - 9:30 PM
+                  - generic [ref=e14382]: From the United Center in Chicago.
+              - generic "The Big Pro Football Show 7:30 PM - 8:00 PM" [ref=e14383] [cursor=pointer]:
+                - generic [ref=e14385]: The Big Pro Football Show
+              - generic "CHSN Podcast Come Alive! 8:00 PM - 9:00 PM" [ref=e14386] [cursor=pointer]:
+                - generic [ref=e14388]: Live
+                - generic [ref=e14389]:
+                  - generic [ref=e14390]: CHSN Podcast Come Alive!
+                  - generic [ref=e14391]: 8:00 PM - 9:00 PM
+              - generic "CHSN Podcast Come Alive! 9:00 PM - 10:00 PM" [ref=e14392] [cursor=pointer]:
+                - generic [ref=e14394]: Live
+                - generic [ref=e14395]:
+                  - generic [ref=e14396]: CHSN Podcast Come Alive!
+                  - generic [ref=e14397]: 9:00 PM - 10:00 PM
+              - generic "Bulls Postgame Live 9:30 PM - 10:00 PM" [ref=e14398] [cursor=pointer]:
+                - generic [ref=e14400]: Live
+                - generic [ref=e14402]: Bulls Postgame Live
+            - generic [ref=e14403]:
+              - generic "FanDuel Sports Network Countdown Live 4:30 PM - 5:30 PM" [ref=e14416] [cursor=pointer]:
+                - generic [ref=e14418]: Live
+                - generic [ref=e14419]:
+                  - generic [ref=e14420]: FanDuel Sports Network Countdown Live
+                  - generic [ref=e14421]: 4:30 PM - 5:30 PM
+              - generic "FanDuel Sports Network Countdown Live 5:30 PM - 6:30 PM" [ref=e14422] [cursor=pointer]:
+                - generic [ref=e14424]: Live
+                - generic [ref=e14425]:
+                  - generic [ref=e14426]: FanDuel Sports Network Countdown Live
+                  - generic [ref=e14427]: 5:30 PM - 6:30 PM
+              - generic "The Card Life 6:30 PM - 7:00 PM" [ref=e14428] [cursor=pointer]:
+                - generic [ref=e14430]: The Card Life
+              - generic "Golic / Golic 7:00 PM - 9:00 PM" [ref=e14431] [cursor=pointer]:
+                - generic [ref=e14432]:
+                  - generic [ref=e14433]: Golic / Golic
+                  - generic [ref=e14434]: 7:00 PM - 9:00 PM
+              - generic "Up & Adams 9:00 PM - 10:00 PM" [ref=e14435] [cursor=pointer]:
+                - generic [ref=e14436]:
+                  - generic [ref=e14437]: Up & Adams
+                  - generic [ref=e14438]: 9:00 PM - 10:00 PM
+            - generic [ref=e14439]:
+              - generic "FanDuel Sports Network Countdown Live 4:30 PM - 5:30 PM" [ref=e14452] [cursor=pointer]:
+                - generic [ref=e14454]: Live
+                - generic [ref=e14455]:
+                  - generic [ref=e14456]: FanDuel Sports Network Countdown Live
+                  - generic [ref=e14457]: 4:30 PM - 5:30 PM
+              - generic "FanDuel Sports Network Countdown Live 5:30 PM - 6:30 PM" [ref=e14458] [cursor=pointer]:
+                - generic [ref=e14460]: Live
+                - generic [ref=e14461]:
+                  - generic [ref=e14462]: FanDuel Sports Network Countdown Live
+                  - generic [ref=e14463]: 5:30 PM - 6:30 PM
+              - generic "The Card Life 6:30 PM - 7:00 PM" [ref=e14464] [cursor=pointer]:
+                - generic [ref=e14466]: The Card Life
+              - generic "Golic / Golic 7:00 PM - 9:00 PM" [ref=e14467] [cursor=pointer]:
+                - generic [ref=e14468]:
+                  - generic [ref=e14469]: Golic / Golic
+                  - generic [ref=e14470]: 7:00 PM - 9:00 PM
+              - generic "Up & Adams 9:00 PM - 10:00 PM" [ref=e14471] [cursor=pointer]:
+                - generic [ref=e14472]:
+                  - generic [ref=e14473]: Up & Adams
+                  - generic [ref=e14474]: 9:00 PM - 10:00 PM
+            - generic [ref=e14475]:
+              - generic "FanDuel Sports Network Countdown Live 4:30 PM - 5:30 PM" [ref=e14488] [cursor=pointer]:
+                - generic [ref=e14490]: Live
+                - generic [ref=e14491]:
+                  - generic [ref=e14492]: FanDuel Sports Network Countdown Live
+                  - generic [ref=e14493]: 4:30 PM - 5:30 PM
+              - generic "FanDuel Sports Network Countdown Live 5:30 PM - 6:30 PM" [ref=e14494] [cursor=pointer]:
+                - generic [ref=e14496]: Live
+                - generic [ref=e14497]:
+                  - generic [ref=e14498]: FanDuel Sports Network Countdown Live
+                  - generic [ref=e14499]: 5:30 PM - 6:30 PM
+              - generic "The Card Life 6:30 PM - 7:00 PM" [ref=e14500] [cursor=pointer]:
+                - generic [ref=e14502]: The Card Life
+              - generic "Golic / Golic 7:00 PM - 9:00 PM" [ref=e14503] [cursor=pointer]:
+                - generic [ref=e14504]:
+                  - generic [ref=e14505]: Golic / Golic
+                  - generic [ref=e14506]: 7:00 PM - 9:00 PM
+              - generic "Up & Adams 9:00 PM - 10:00 PM" [ref=e14507] [cursor=pointer]:
+                - generic [ref=e14508]:
+                  - generic [ref=e14509]: Up & Adams
+                  - generic [ref=e14510]: 9:00 PM - 10:00 PM
+            - generic [ref=e14511]:
+              - 'generic "Sports Talk 790: The A Team 3:00 PM - 6:00 PM" [ref=e14524] [cursor=pointer]':
+                - generic [ref=e14525]:
+                  - generic [ref=e14526]: "Sports Talk 790: The A Team"
+                  - generic [ref=e14527]: 3:00 PM - 6:00 PM
+              - generic "Rockets All Access 6:00 PM - 6:30 PM" [ref=e14528] [cursor=pointer]:
+                - generic [ref=e14530]: Rockets All Access
+              - generic "Rockets Pregame 6:30 PM - 7:00 PM" [ref=e14531] [cursor=pointer]:
+                - generic [ref=e14533]: Rockets Pregame
+              - generic "NBA Basketball 7:00 PM - 9:30 PM" [ref=e14534] [cursor=pointer]:
+                - generic [ref=e14535]:
+                  - generic [ref=e14536]: NBA Basketball
+                  - generic [ref=e14537]: 7:00 PM - 9:30 PM
+                  - generic [ref=e14538]: The Spurs visit the Rockets at Toyota Center for a Southwest Division clash led by Harrison Barnes. Guard Devin Vassell is out due to an injury. Kevin Durant leads the offense in a battle for position near the top of the Western Conference.
+              - 'generic "Fight Sports: World Class Championship Boxing 8:00 PM - 10:00 PM" [ref=e14539] [cursor=pointer]':
+                - generic [ref=e14540]:
+                  - generic [ref=e14541]: "Fight Sports: World Class Championship Boxing"
+                  - generic [ref=e14542]: 8:00 PM - 10:00 PM
+                  - generic [ref=e14543]: Boxing action.
+              - generic "Rockets Postgame 9:30 PM - 10:00 PM" [ref=e14544] [cursor=pointer]:
+                - generic [ref=e14546]: Rockets Postgame
+            - generic [ref=e14561]: No program info
+            - generic [ref=e14562]:
+              - generic "FanDuel Sports Network Countdown Live 4:30 PM - 5:30 PM" [ref=e14575] [cursor=pointer]:
+                - generic [ref=e14577]: Live
+                - generic [ref=e14578]:
+                  - generic [ref=e14579]: FanDuel Sports Network Countdown Live
+                  - generic [ref=e14580]: 4:30 PM - 5:30 PM
+              - generic "FanDuel Sports Network Countdown Live 5:30 PM - 6:30 PM" [ref=e14581] [cursor=pointer]:
+                - generic [ref=e14583]: Live
+                - generic [ref=e14584]:
+                  - generic [ref=e14585]: FanDuel Sports Network Countdown Live
+                  - generic [ref=e14586]: 5:30 PM - 6:30 PM
+              - generic "The Card Life 6:30 PM - 7:00 PM" [ref=e14587] [cursor=pointer]:
+                - generic [ref=e14589]: The Card Life
+              - generic "Golic / Golic 7:00 PM - 9:00 PM" [ref=e14590] [cursor=pointer]:
+                - generic [ref=e14591]:
+                  - generic [ref=e14592]: Golic / Golic
+                  - generic [ref=e14593]: 7:00 PM - 9:00 PM
+              - generic "Up & Adams 9:00 PM - 10:00 PM" [ref=e14594] [cursor=pointer]:
+                - generic [ref=e14595]:
+                  - generic [ref=e14596]: Up & Adams
+                  - generic [ref=e14597]: 9:00 PM - 10:00 PM
+            - generic [ref=e14612]: No program info
+            - generic [ref=e14613]:
+              - generic "Pure Outdoor 5:00 PM - 5:30 PM" [ref=e14626] [cursor=pointer]:
+                - generic [ref=e14628]: Pure Outdoor
+              - generic "Fairways of Life 5:30 PM - 6:30 PM" [ref=e14629] [cursor=pointer]:
+                - generic [ref=e14631]: Live
+                - generic [ref=e14632]:
+                  - generic [ref=e14633]: Fairways of Life
+                  - generic [ref=e14634]: 5:30 PM - 6:30 PM
+              - generic "Mile High Postgame Live 6:30 PM - 7:30 PM" [ref=e14635] [cursor=pointer]:
+                - generic [ref=e14637]: Live
+                - generic [ref=e14638]:
+                  - generic [ref=e14639]: Mile High Postgame Live
+                  - generic [ref=e14640]: 6:30 PM - 7:30 PM
+              - generic "Off the Court 7:30 PM - 8:00 PM" [ref=e14641] [cursor=pointer]:
+                - generic [ref=e14643]: Off the Court
+              - 'generic "Fight Sports: Boxing 8:00 PM - 10:00 PM" [ref=e14644] [cursor=pointer]':
+                - generic [ref=e14645]:
+                  - generic [ref=e14646]: "Fight Sports: Boxing"
+                  - generic [ref=e14647]: 8:00 PM - 10:00 PM
+                  - generic [ref=e14648]: Replays of classic boxing matches.
+              - generic "NBA Basketball 9:00 PM - 11:30 PM" [ref=e14649] [cursor=pointer]:
+                - generic [ref=e14650]:
+                  - generic [ref=e14651]: NBA Basketball
+                  - generic [ref=e14652]: 9:00 PM - 11:30 PM
+            - generic [ref=e14653]:
+              - generic "Dodgers Rewind 4:30 PM - 7:00 PM" [ref=e14666] [cursor=pointer]:
+                - generic [ref=e14667]:
+                  - generic [ref=e14668]: Dodgers Rewind
+                  - generic [ref=e14669]: 4:30 PM - 7:00 PM
+              - generic "Dodgers Rewind 7:00 PM - 10:00 PM" [ref=e14670] [cursor=pointer]:
+                - generic [ref=e14671]:
+                  - generic [ref=e14672]: Dodgers Rewind
+                  - generic [ref=e14673]: 7:00 PM - 10:00 PM
+                  - generic [ref=e14674]: From Sept. 21, 2023.
+            - generic [ref=e14675]:
+              - generic "Birth of a Dynasty 5:00 PM - 6:00 PM" [ref=e14688] [cursor=pointer]:
+                - generic [ref=e14689]:
+                  - generic [ref=e14690]: Birth of a Dynasty
+                  - generic [ref=e14691]: 5:00 PM - 6:00 PM
+              - generic "Birth of a Dynasty 6:00 PM - 7:00 PM" [ref=e14692] [cursor=pointer]:
+                - generic [ref=e14693]:
+                  - generic [ref=e14694]: Birth of a Dynasty
+                  - generic [ref=e14695]: 6:00 PM - 7:00 PM
+              - generic "Lakers Compacto 7:00 PM - 8:00 PM" [ref=e14696] [cursor=pointer]:
+                - generic [ref=e14697]:
+                  - generic [ref=e14698]: Lakers Compacto
+                  - generic [ref=e14699]: 7:00 PM - 8:00 PM
+              - 'generic "Access SportsNet: Lakers 8:00 PM - 9:00 PM" [ref=e14700] [cursor=pointer]':
+                - generic [ref=e14701]:
+                  - generic [ref=e14702]: "Access SportsNet: Lakers"
+                  - generic [ref=e14703]: 8:00 PM - 9:00 PM
+              - generic "NBA Basketball 9:00 PM - 11:30 PM" [ref=e14704] [cursor=pointer]:
+                - generic [ref=e14705]:
+                  - generic [ref=e14706]: NBA Basketball
+                  - generic [ref=e14707]: 9:00 PM - 11:30 PM
+            - generic [ref=e14708]:
+              - generic "FanDuel Sports Network Countdown Live 4:30 PM - 5:30 PM" [ref=e14721] [cursor=pointer]:
+                - generic [ref=e14723]: Live
+                - generic [ref=e14724]:
+                  - generic [ref=e14725]: FanDuel Sports Network Countdown Live
+                  - generic [ref=e14726]: 4:30 PM - 5:30 PM
+              - generic "FanDuel Sports Network Countdown Live 5:30 PM - 6:30 PM" [ref=e14727] [cursor=pointer]:
+                - generic [ref=e14729]: Live
+                - generic [ref=e14730]:
+                  - generic [ref=e14731]: FanDuel Sports Network Countdown Live
+                  - generic [ref=e14732]: 5:30 PM - 6:30 PM
+              - generic "The Card Life 6:30 PM - 7:00 PM" [ref=e14733] [cursor=pointer]:
+                - generic [ref=e14735]: The Card Life
+              - generic "Golic / Golic 7:00 PM - 9:00 PM" [ref=e14736] [cursor=pointer]:
+                - generic [ref=e14737]:
+                  - generic [ref=e14738]: Golic / Golic
+                  - generic [ref=e14739]: 7:00 PM - 9:00 PM
+              - generic "Up & Adams 9:00 PM - 10:00 PM" [ref=e14740] [cursor=pointer]:
+                - generic [ref=e14741]:
+                  - generic [ref=e14742]: Up & Adams
+                  - generic [ref=e14743]: 9:00 PM - 10:00 PM
+            - generic [ref=e14744]:
+              - generic "FanDuel Sports Network Countdown Live 4:30 PM - 5:30 PM" [ref=e14757] [cursor=pointer]:
+                - generic [ref=e14759]: Live
+                - generic [ref=e14760]:
+                  - generic [ref=e14761]: FanDuel Sports Network Countdown Live
+                  - generic [ref=e14762]: 4:30 PM - 5:30 PM
+              - generic "FanDuel Sports Network Countdown Live 5:30 PM - 6:30 PM" [ref=e14763] [cursor=pointer]:
+                - generic [ref=e14765]: Live
+                - generic [ref=e14766]:
+                  - generic [ref=e14767]: FanDuel Sports Network Countdown Live
+                  - generic [ref=e14768]: 5:30 PM - 6:30 PM
+              - generic "The Card Life 6:30 PM - 7:00 PM" [ref=e14769] [cursor=pointer]:
+                - generic [ref=e14771]: The Card Life
+              - generic "Golic / Golic 7:00 PM - 9:00 PM" [ref=e14772] [cursor=pointer]:
+                - generic [ref=e14773]:
+                  - generic [ref=e14774]: Golic / Golic
+                  - generic [ref=e14775]: 7:00 PM - 9:00 PM
+              - generic "Up & Adams 9:00 PM - 10:00 PM" [ref=e14776] [cursor=pointer]:
+                - generic [ref=e14777]:
+                  - generic [ref=e14778]: Up & Adams
+                  - generic [ref=e14779]: 9:00 PM - 10:00 PM
+            - generic [ref=e14780]:
+              - generic "SIGN OFF 4:00 PM - 12:00 AM" [ref=e14793] [cursor=pointer]:
+                - generic [ref=e14794]:
+                  - generic [ref=e14795]: SIGN OFF
+                  - generic [ref=e14796]: 4:00 PM - 12:00 AM
+                  - generic [ref=e14797]: Sign off.
+              - generic "Fantasy Football Happy Hour With Matthew Berry 5:00 PM - 6:00 PM" [ref=e14798] [cursor=pointer]:
+                - generic [ref=e14799]:
+                  - generic [ref=e14800]: Fantasy Football Happy Hour With Matthew Berry
+                  - generic [ref=e14801]: 5:00 PM - 6:00 PM
+              - generic "World Poker Tour 6:00 PM - 7:00 PM" [ref=e14802] [cursor=pointer]:
+                - generic [ref=e14803]:
+                  - generic [ref=e14804]: World Poker Tour
+                  - generic [ref=e14805]: 6:00 PM - 7:00 PM
+              - generic "49ers Talk 7:00 PM - 7:30 PM" [ref=e14806] [cursor=pointer]:
+                - generic [ref=e14808]: 49ers Talk
+              - generic "49ers Talk 7:30 PM - 8:00 PM" [ref=e14809] [cursor=pointer]:
+                - generic [ref=e14811]: 49ers Talk
+              - generic "Warriors Pregame 8:00 PM - 9:00 PM" [ref=e14812] [cursor=pointer]:
+                - generic [ref=e14813]:
+                  - generic [ref=e14814]: Warriors Pregame
+                  - generic [ref=e14815]: 8:00 PM - 9:00 PM
+              - generic "NBA Basketball 9:00 PM - 11:30 PM" [ref=e14816] [cursor=pointer]:
+                - generic [ref=e14817]:
+                  - generic [ref=e14818]: NBA Basketball
+                  - generic [ref=e14819]: 9:00 PM - 11:30 PM
+            - generic [ref=e14834]: No program info
+            - generic [ref=e14849]: No program info
+            - generic [ref=e14850]:
+              - generic "SIGN OFF 4:00 PM - 12:00 AM" [ref=e14863] [cursor=pointer]:
+                - generic [ref=e14864]:
+                  - generic [ref=e14865]: SIGN OFF
+                  - generic [ref=e14866]: 4:00 PM - 12:00 AM
+                  - generic [ref=e14867]: Sign off.
+              - generic "Fair Territory with Ken Rosenthal 5:00 PM - 5:30 PM" [ref=e14868] [cursor=pointer]:
+                - generic [ref=e14870]: Fair Territory with Ken Rosenthal
+              - generic "Sharks Pregame 5:30 PM - 6:00 PM" [ref=e14871] [cursor=pointer]:
+                - generic [ref=e14873]: Sharks Pregame
+              - generic "NHL Hockey 6:00 PM - 8:30 PM" [ref=e14874] [cursor=pointer]:
+                - generic [ref=e14875]:
+                  - generic [ref=e14876]: NHL Hockey
+                  - generic [ref=e14877]: 6:00 PM - 8:30 PM
+                  - generic [ref=e14878]: The Tampa Bay Lightning host the San Jose Sharks at Benchmark International Arena for a cross-division game. Darren Raddysh previously scored a hat trick against the Sharks. San Jose's Macklin Celebrini is third in the NHL with 70 points.
+              - generic "Pure Outdoor 6:30 PM - 7:00 PM" [ref=e14879] [cursor=pointer]:
+                - generic [ref=e14881]: Pure Outdoor
+              - generic "World Championship Kickboxing 7:00 PM - 8:00 PM" [ref=e14882] [cursor=pointer]:
+                - generic [ref=e14883]:
+                  - generic [ref=e14884]: World Championship Kickboxing
+                  - generic [ref=e14885]: 7:00 PM - 8:00 PM
+              - generic "Kings Central 8:00 PM - 8:30 PM" [ref=e14886] [cursor=pointer]:
+                - generic [ref=e14888]: Kings Central
+              - generic "Sharks Postgame 8:30 PM - 9:00 PM" [ref=e14889] [cursor=pointer]:
+                - generic [ref=e14891]: Sharks Postgame
+              - generic "U.S. Olympic Trials 9:00 PM - 11:00 PM" [ref=e14892] [cursor=pointer]:
+                - generic [ref=e14893]:
+                  - generic [ref=e14894]: U.S. Olympic Trials
+                  - generic [ref=e14895]: 9:00 PM - 11:00 PM
+            - generic [ref=e14910]: No program info
+            - generic [ref=e14911]:
+              - generic "Upcoming - MLB Network Strike Zone 1:00 PM - 5:30 PM" [ref=e14924] [cursor=pointer]:
+                - generic [ref=e14926]: Live
+                - generic [ref=e14927]:
+                  - generic [ref=e14928]: Upcoming - MLB Network Strike Zone
+                  - generic [ref=e14929]: 1:00 PM - 5:30 PM
+                  - generic [ref=e14930]: A high-speed trip around MLB, showing up-to-the-minute highlights, live look-ins & updates on Wednesday & Friday nights.
+              - generic "Upcoming - MLB Network Strike Zone 5:30 PM - 6:00 PM" [ref=e14931] [cursor=pointer]:
+                - generic [ref=e14933]: Live
+                - generic [ref=e14935]: Upcoming - MLB Network Strike Zone
+              - generic "Upcoming - MLB Network Strike Zone 6:00 PM - 9:00 PM" [ref=e14936] [cursor=pointer]:
+                - generic [ref=e14938]: Live
+                - generic [ref=e14939]:
+                  - generic [ref=e14940]: Upcoming - MLB Network Strike Zone
+                  - generic [ref=e14941]: 6:00 PM - 9:00 PM
+                  - generic [ref=e14942]: A high-speed trip around MLB, showing up-to-the-minute highlights, live look-ins & updates on Wednesday & Friday nights.
+              - generic "Upcoming - MLB Network Strike Zone 9:00 PM - 9:30 PM" [ref=e14943] [cursor=pointer]:
+                - generic [ref=e14945]: Live
+                - generic [ref=e14947]: Upcoming - MLB Network Strike Zone
+              - generic "Upcoming - MLB Network Strike Zone 9:30 PM - 1:00 AM" [ref=e14948] [cursor=pointer]:
+                - generic [ref=e14950]: Live
+                - generic [ref=e14952]: Upcoming - MLB Network Strike Zone
+            - generic [ref=e14953]:
+              - generic "K-arts Artists 5:00 PM - 5:15 PM" [ref=e14966] [cursor=pointer]:
+                - generic [ref=e14968]: K-arts Artists
+              - generic "Exploring Korean Literature B 5:15 PM - 5:30 PM" [ref=e14969] [cursor=pointer]:
+                - generic [ref=e14971]: Exploring Korean Literature B
+              - 'generic "K-culture Minutes: K-story 5:30 PM - 5:50 PM" [ref=e14972] [cursor=pointer]':
+                - generic [ref=e14974]: "K-culture Minutes: K-story"
+              - generic "SMARTBIZ ACCEL 5:50 PM - 6:00 PM" [ref=e14975] [cursor=pointer]:
+                - generic [ref=e14977]: SMARTBIZ ACCEL
+              - generic "Premium Collection B 6:00 PM - 6:30 PM" [ref=e14978] [cursor=pointer]:
+                - generic [ref=e14980]: Premium Collection B
+              - generic "Cooking Possible 6:05 PM - 7:00 PM" [ref=e14981] [cursor=pointer]:
+                - generic [ref=e14982]:
+                  - generic [ref=e14983]: Cooking Possible
+                  - generic [ref=e14984]: 6:05 PM - 7:00 PM
+              - generic "Seoulscape 6:30 PM - 7:00 PM" [ref=e14985] [cursor=pointer]:
+                - generic [ref=e14987]: Seoulscape
+              - generic "New Day At Arirang 7:00 PM - 7:30 PM" [ref=e14988] [cursor=pointer]:
+                - generic [ref=e14990]: New Day At Arirang
+              - generic "Arirang Special 7:05 PM - 8:00 PM" [ref=e14991] [cursor=pointer]:
+                - generic [ref=e14992]:
+                  - generic [ref=e14993]: Arirang Special
+                  - generic [ref=e14994]: 7:05 PM - 8:00 PM
+              - generic "News Generation 7:30 PM - 8:00 PM" [ref=e14995] [cursor=pointer]:
+                - generic [ref=e14997]: News Generation
+              - generic "Culture Crunch 8:00 PM - 9:00 PM" [ref=e14998] [cursor=pointer]:
+                - generic [ref=e14999]:
+                  - generic [ref=e15000]: Culture Crunch
+                  - generic [ref=e15001]: 8:00 PM - 9:00 PM
+              - generic "Heart to Heart 8:30 PM - 9:00 PM" [ref=e15002] [cursor=pointer]:
+                - generic [ref=e15004]: Heart to Heart
+              - generic "Arirang News 9:00 PM - 9:30 PM" [ref=e15005] [cursor=pointer]:
+                - generic [ref=e15007]: Arirang News
+              - generic "K-phile 9:05 PM - 9:30 PM" [ref=e15008] [cursor=pointer]:
+                - generic [ref=e15010]: K-phile
+              - generic "Talk Room 9:30 PM - 10:00 PM" [ref=e15011] [cursor=pointer]:
+                - generic [ref=e15013]: Talk Room
+            - generic [ref=e15014]:
+              - generic "Hallie Jackson NOW 4:00 PM - 6:00 PM" [ref=e15027] [cursor=pointer]:
+                - generic [ref=e15029]: Live
+                - generic [ref=e15030]:
+                  - generic [ref=e15031]: Hallie Jackson NOW
+                  - generic [ref=e15032]: 4:00 PM - 6:00 PM
+                  - generic [ref=e15033]: Reporting breaking news and developing stories in real time; covering the most important stories of the day and taking deep dives on issues.
+              - generic "Top Story With Tom Llamas 5:00 PM - 6:00 PM" [ref=e15034] [cursor=pointer]:
+                - generic [ref=e15036]: Live
+                - generic [ref=e15037]:
+                  - generic [ref=e15038]: Top Story With Tom Llamas
+                  - generic [ref=e15039]: 5:00 PM - 6:00 PM
+              - generic "Top Story With Tom Llamas 6:00 PM - 7:00 PM" [ref=e15040] [cursor=pointer]:
+                - generic [ref=e15042]: Live
+                - generic [ref=e15043]:
+                  - generic [ref=e15044]: Top Story With Tom Llamas
+                  - generic [ref=e15045]: 6:00 PM - 7:00 PM
+              - generic "Stay Tuned NOW With Gadi Schwartz 7:00 PM - 8:00 PM" [ref=e15046] [cursor=pointer]:
+                - generic [ref=e15048]: Live
+                - generic [ref=e15049]:
+                  - generic [ref=e15050]: Stay Tuned NOW With Gadi Schwartz
+                  - generic [ref=e15051]: 7:00 PM - 8:00 PM
+              - generic "Top Story With Tom Llamas 8:00 PM - 9:00 PM" [ref=e15052] [cursor=pointer]:
+                - generic [ref=e15054]: Live
+                - generic [ref=e15055]:
+                  - generic [ref=e15056]: Top Story With Tom Llamas
+                  - generic [ref=e15057]: 8:00 PM - 9:00 PM
+              - generic "Stay Tuned NOW With Gadi Schwartz 8:30 PM - 9:30 PM" [ref=e15058] [cursor=pointer]:
+                - generic [ref=e15060]: Live
+                - generic [ref=e15061]:
+                  - generic [ref=e15062]: Stay Tuned NOW With Gadi Schwartz
+                  - generic [ref=e15063]: 8:30 PM - 9:30 PM
+              - generic "NBC Nightly News With Tom Llamas 9:00 PM - 9:30 PM" [ref=e15064] [cursor=pointer]:
+                - generic [ref=e15066]: Live
+                - generic [ref=e15068]: NBC Nightly News With Tom Llamas
+              - generic "Stay Tuned NOW With Gadi Schwartz 9:30 PM - 10:30 PM" [ref=e15069] [cursor=pointer]:
+                - generic [ref=e15071]: Live
+                - generic [ref=e15073]: Stay Tuned NOW With Gadi Schwartz
+            - generic [ref=e15074]:
+              - generic "Today 3rd Hour 4:30 PM - 5:15 PM" [ref=e15087] [cursor=pointer]:
+                - generic [ref=e15088]:
+                  - generic [ref=e15089]: Today 3rd Hour
+                  - generic [ref=e15090]: 4:30 PM - 5:15 PM
+              - generic "Today With Jenna & Sheinelle 5:15 PM - 6:00 PM" [ref=e15091] [cursor=pointer]:
+                - generic [ref=e15093]: Live
+                - generic [ref=e15094]:
+                  - generic [ref=e15095]: Today With Jenna & Sheinelle
+                  - generic [ref=e15096]: 5:15 PM - 6:00 PM
+              - generic "Today 6:00 PM - 6:30 PM" [ref=e15097] [cursor=pointer]:
+                - generic [ref=e15099]: Today
+              - generic "Today 3rd Hour 6:30 PM - 7:15 PM" [ref=e15100] [cursor=pointer]:
+                - generic [ref=e15101]:
+                  - generic [ref=e15102]: Today 3rd Hour
+                  - generic [ref=e15103]: 6:30 PM - 7:15 PM
+              - generic "Today With Jenna & Sheinelle 7:15 PM - 8:00 PM" [ref=e15104] [cursor=pointer]:
+                - generic [ref=e15106]: Live
+                - generic [ref=e15107]:
+                  - generic [ref=e15108]: Today With Jenna & Sheinelle
+                  - generic [ref=e15109]: 7:15 PM - 8:00 PM
+              - generic "Today 8:00 PM - 8:30 PM" [ref=e15110] [cursor=pointer]:
+                - generic [ref=e15112]: Today
+              - generic "Today 3rd Hour 8:30 PM - 9:15 PM" [ref=e15113] [cursor=pointer]:
+                - generic [ref=e15114]:
+                  - generic [ref=e15115]: Today 3rd Hour
+                  - generic [ref=e15116]: 8:30 PM - 9:15 PM
+              - generic "Today With Jenna & Sheinelle 9:15 PM - 10:00 PM" [ref=e15117] [cursor=pointer]:
+                - generic [ref=e15119]: Live
+                - generic [ref=e15120]:
+                  - generic [ref=e15121]: Today With Jenna & Sheinelle
+                  - generic [ref=e15122]: 9:15 PM - 10:00 PM
+            - generic [ref=e15123]:
+              - generic "ABC News Live Reports 3:00 PM - 6:00 PM" [ref=e15136] [cursor=pointer]:
+                - generic [ref=e15138]: Live
+                - generic [ref=e15139]:
+                  - generic [ref=e15140]: ABC News Live Reports
+                  - generic [ref=e15141]: 3:00 PM - 6:00 PM
+                  - generic [ref=e15142]: 24/7 coverage of breaking news and live events.
+              - generic "ABCNL Prime With Linsey Davis 6:00 PM - 7:30 PM" [ref=e15143] [cursor=pointer]:
+                - generic [ref=e15144]:
+                  - generic [ref=e15145]: ABCNL Prime With Linsey Davis
+                  - generic [ref=e15146]: 6:00 PM - 7:30 PM
+                  - generic [ref=e15147]: Providing prime-time context and analysis of the day's top stories, as well as in-depth reporting and storytelling from around the country and the globe.
+              - generic "Nightline 7:30 PM - 8:00 PM" [ref=e15148] [cursor=pointer]:
+                - generic [ref=e15150]: Nightline
+              - generic "ABCNL Prime With Linsey Davis 8:00 PM - 9:00 PM" [ref=e15151] [cursor=pointer]:
+                - generic [ref=e15152]:
+                  - generic [ref=e15153]: ABCNL Prime With Linsey Davis
+                  - generic [ref=e15154]: 8:00 PM - 9:00 PM
+              - generic "ABC World News Tonight With David Muir 9:00 PM - 9:30 PM" [ref=e15155] [cursor=pointer]:
+                - generic [ref=e15157]: Live
+                - generic [ref=e15159]: ABC World News Tonight With David Muir
+              - generic "ABCNL Prime With Linsey Davis 9:30 PM - 10:00 PM" [ref=e15160] [cursor=pointer]:
+                - generic [ref=e15162]: ABCNL Prime With Linsey Davis
+            - generic [ref=e15163]:
+              - generic "Secretly Awesome 5:00 PM - 5:30 PM" [ref=e15176] [cursor=pointer]:
+                - generic [ref=e15178]: Secretly Awesome
+              - generic "Stroke of Genius 5:30 PM - 6:00 PM" [ref=e15179] [cursor=pointer]:
+                - generic [ref=e15181]: Stroke of Genius
+              - generic "Best of Localish 6:00 PM - 6:30 PM" [ref=e15182] [cursor=pointer]:
+                - generic [ref=e15184]: Best of Localish
+              - generic "Best of Localish 6:30 PM - 7:00 PM" [ref=e15185] [cursor=pointer]:
+                - generic [ref=e15187]: Best of Localish
+              - generic "Bite Size 7:00 PM - 7:30 PM" [ref=e15188] [cursor=pointer]:
+                - generic [ref=e15190]: Bite Size
+              - generic "Bite Size 7:30 PM - 8:00 PM" [ref=e15191] [cursor=pointer]:
+                - generic [ref=e15193]: Bite Size
+              - generic "All Good 8:00 PM - 8:30 PM" [ref=e15194] [cursor=pointer]:
+                - generic [ref=e15196]: All Good
+              - generic "My Go-To 8:30 PM - 9:00 PM" [ref=e15197] [cursor=pointer]:
+                - generic [ref=e15199]: My Go-To
+              - generic "FYI Philly 9:00 PM - 9:30 PM" [ref=e15200] [cursor=pointer]:
+                - generic [ref=e15202]: FYI Philly
+              - generic "Localish LA 9:30 PM - 10:00 PM" [ref=e15203] [cursor=pointer]:
+                - generic [ref=e15205]: Localish LA
+            - generic [ref=e15206]:
+              - generic "Today as It Happened 5:00 PM - 6:00 PM" [ref=e15219] [cursor=pointer]:
+                - generic [ref=e15220]:
+                  - generic [ref=e15221]: Today as It Happened
+                  - generic [ref=e15222]: 5:00 PM - 6:00 PM
+              - generic "Corrupt Crimes 6:00 PM - 6:30 PM" [ref=e15223] [cursor=pointer]:
+                - generic [ref=e15225]: Corrupt Crimes
+              - generic "Corrupt Crimes 6:30 PM - 7:00 PM" [ref=e15226] [cursor=pointer]:
+                - generic [ref=e15228]: Corrupt Crimes
+              - generic "Corrupt Crimes 7:00 PM - 7:30 PM" [ref=e15229] [cursor=pointer]:
+                - generic [ref=e15231]: Corrupt Crimes
+              - generic "Corrupt Crimes 7:30 PM - 8:00 PM" [ref=e15232] [cursor=pointer]:
+                - generic [ref=e15234]: Corrupt Crimes
+              - generic "Corrupt Crimes 8:00 PM - 8:30 PM" [ref=e15235] [cursor=pointer]:
+                - generic [ref=e15237]: Corrupt Crimes
+              - generic "Corrupt Crimes 8:30 PM - 9:00 PM" [ref=e15238] [cursor=pointer]:
+                - generic [ref=e15240]: Corrupt Crimes
+              - generic "Today as It Happened 9:00 PM - 10:00 PM" [ref=e15241] [cursor=pointer]:
+                - generic [ref=e15242]:
+                  - generic [ref=e15243]: Today as It Happened
+                  - generic [ref=e15244]: 9:00 PM - 10:00 PM
+            - generic [ref=e15245]:
+              - generic "20/20 4:31 PM - 6:13 PM" [ref=e15258] [cursor=pointer]:
+                - generic [ref=e15259]:
+                  - generic [ref=e15260]: 20/20
+                  - generic [ref=e15261]: 4:31 PM - 6:13 PM
+                  - generic [ref=e15262]: "03/10/23: A man wakes up to find his fiancée dead; a shocking confession."
+              - generic "20/20 6:13 PM - 7:56 PM" [ref=e15263] [cursor=pointer]:
+                - generic [ref=e15264]:
+                  - generic [ref=e15265]: 20/20
+                  - generic [ref=e15266]: 6:13 PM - 7:56 PM
+                  - generic [ref=e15267]: "02/10/23: The investigation into what happened to Julie Jensen."
+              - generic "20/20 7:56 PM - 9:38 PM" [ref=e15268] [cursor=pointer]:
+                - generic [ref=e15269]:
+                  - generic [ref=e15270]: 20/20
+                  - generic [ref=e15271]: 7:56 PM - 9:38 PM
+                  - generic [ref=e15272]: "06/02/23: A Facebook message holds the clue to two horrific murders."
+              - generic "20/20 9:38 PM - 11:21 PM" [ref=e15273] [cursor=pointer]:
+                - generic [ref=e15275]: 20/20
+            - generic [ref=e15276]:
+              - generic "Market Domination 5:00 PM - 6:00 PM" [ref=e15289] [cursor=pointer]:
+                - generic [ref=e15290]:
+                  - generic [ref=e15291]: Market Domination
+                  - generic [ref=e15292]: 5:00 PM - 6:00 PM
+              - 'generic "Market Domination: Overtime 6:00 PM - 6:30 PM" [ref=e15293] [cursor=pointer]':
+                - generic [ref=e15295]: "Market Domination: Overtime"
+              - generic "Asking for a Trend 6:30 PM - 7:00 PM" [ref=e15296] [cursor=pointer]:
+                - generic [ref=e15298]: Asking for a Trend
+              - generic "The Big Idea 7:00 PM - 7:30 PM" [ref=e15299] [cursor=pointer]:
+                - generic [ref=e15301]: The Big Idea
+              - generic "Trader Talk 7:30 PM - 8:00 PM" [ref=e15302] [cursor=pointer]:
+                - generic [ref=e15304]: Trader Talk
+              - generic "Stocks In Translation 8:00 PM - 8:30 PM" [ref=e15305] [cursor=pointer]:
+                - generic [ref=e15307]: Stocks In Translation
+              - 'generic "Opening Bid: Unfiltered 8:30 PM - 9:00 PM" [ref=e15308] [cursor=pointer]':
+                - generic [ref=e15310]: "Opening Bid: Unfiltered"
+              - generic "Market Movers 9:00 PM - 10:00 PM" [ref=e15311] [cursor=pointer]:
+                - generic [ref=e15312]:
+                  - generic [ref=e15313]: Market Movers
+                  - generic [ref=e15314]: 9:00 PM - 10:00 PM
+            - generic [ref=e15315]:
+              - generic "Gametime Decisions Live 5:00 PM - 7:00 PM" [ref=e15328] [cursor=pointer]:
+                - generic [ref=e15330]: Live
+                - generic [ref=e15331]:
+                  - generic [ref=e15332]: Gametime Decisions Live
+                  - generic [ref=e15333]: 5:00 PM - 7:00 PM
+                  - generic [ref=e15334]: Kevin Walsh leads Game Time Decisions, SportsGrid's weekday pregame show.
+              - generic "Gametime Decisions Live 5:30 PM - 7:00 PM" [ref=e15335] [cursor=pointer]:
+                - generic [ref=e15337]: Live
+                - generic [ref=e15338]:
+                  - generic [ref=e15339]: Gametime Decisions Live
+                  - generic [ref=e15340]: 5:30 PM - 7:00 PM
+                  - generic [ref=e15341]: Kevin Walsh leads Game Time Decisions, SportsGrid's weekday pregame show.
+              - generic "San Antonio Spurs vs. Houston Rockets NBA Basketball In-Game Live Gameday 7:00 PM - 9:00 PM" [ref=e15342] [cursor=pointer]:
+                - generic [ref=e15344]: Live
+                - generic [ref=e15345]:
+                  - generic [ref=e15346]: San Antonio Spurs vs. Houston Rockets NBA Basketball In-Game Live Gameday
+                  - generic [ref=e15347]: 7:00 PM - 9:00 PM
+                  - generic [ref=e15348]: Follow the live action across the NBA as hosts break down the changing scores and monitor the upset alerts while giving advice on the upcoming games.
+              - generic "NewsWire 9:00 PM - 10:30 PM" [ref=e15349] [cursor=pointer]:
+                - generic [ref=e15351]: Live
+                - generic [ref=e15352]:
+                  - generic [ref=e15353]: NewsWire
+                  - generic [ref=e15354]: 9:00 PM - 10:30 PM
+            - generic [ref=e15355]:
+              - generic "The Dan Le Batard Show With Stugotz 3:00 PM - 6:00 PM" [ref=e15368] [cursor=pointer]:
+                - generic [ref=e15369]:
+                  - generic [ref=e15370]: The Dan Le Batard Show With Stugotz
+                  - generic [ref=e15371]: 3:00 PM - 6:00 PM
+                  - generic [ref=e15372]: Dan Le Batard, Stugotz and company share their unique perspectives on sports, pop-culture and more.
+              - generic "Ross Tucker Football Podcast 6:00 PM - 6:30 PM" [ref=e15373] [cursor=pointer]:
+                - generic [ref=e15375]: Live
+                - generic [ref=e15377]: Ross Tucker Football Podcast
+              - generic "Ross Tucker Even Money 6:30 PM - 7:00 PM" [ref=e15378] [cursor=pointer]:
+                - generic [ref=e15380]: Ross Tucker Even Money
+              - generic "Football America 7:00 PM - 8:00 PM" [ref=e15381] [cursor=pointer]:
+                - generic [ref=e15382]:
+                  - generic [ref=e15383]: Football America
+                  - generic [ref=e15384]: 7:00 PM - 8:00 PM
+              - generic "Morning Kombat 8:00 PM - 9:00 PM" [ref=e15385] [cursor=pointer]:
+                - generic [ref=e15386]:
+                  - generic [ref=e15387]: Morning Kombat
+                  - generic [ref=e15388]: 8:00 PM - 9:00 PM
+              - generic "All the Smoke 9:00 PM - 10:30 PM" [ref=e15389] [cursor=pointer]:
+                - generic [ref=e15391]: Live
+                - generic [ref=e15392]:
+                  - generic [ref=e15393]: All the Smoke
+                  - generic [ref=e15394]: 9:00 PM - 10:30 PM
+            - generic [ref=e15395]:
+              - generic "US Quadball Invitational 5:01 PM - 6:00 PM" [ref=e15408] [cursor=pointer]:
+                - generic [ref=e15409]:
+                  - generic [ref=e15410]: US Quadball Invitational
+                  - generic [ref=e15411]: 5:01 PM - 6:00 PM
+              - generic "Cornhole 6:00 PM - 7:00 PM" [ref=e15412] [cursor=pointer]:
+                - generic [ref=e15413]:
+                  - generic [ref=e15414]: Cornhole
+                  - generic [ref=e15415]: 6:00 PM - 7:00 PM
+              - generic "Viii Sports 2024 National Championship 7:00 PM - 8:01 PM" [ref=e15416] [cursor=pointer]:
+                - generic [ref=e15417]:
+                  - generic [ref=e15418]: Viii Sports 2024 National Championship
+                  - generic [ref=e15419]: 7:00 PM - 8:01 PM
+              - generic "Turf Wars Kickball Tournament 8:01 PM - 9:00 PM" [ref=e15420] [cursor=pointer]:
+                - generic [ref=e15421]:
+                  - generic [ref=e15422]: Turf Wars Kickball Tournament
+                  - generic [ref=e15423]: 8:01 PM - 9:00 PM
+              - generic "Great American Events 9:00 PM - 9:55 PM" [ref=e15424] [cursor=pointer]:
+                - generic [ref=e15425]:
+                  - generic [ref=e15426]: Great American Events
+                  - generic [ref=e15427]: 9:00 PM - 9:55 PM
+            - generic [ref=e15428]:
+              - generic "Check 1, 2 5:00 PM - 5:30 PM" [ref=e15441] [cursor=pointer]:
+                - generic [ref=e15443]: Check 1, 2
+              - generic "M80 5:30 PM - 6:00 PM" [ref=e15444] [cursor=pointer]:
+                - generic [ref=e15446]: M80
+              - generic "Highlights Freeride World Tour 2023 6:00 PM - 6:35 PM" [ref=e15447] [cursor=pointer]:
+                - generic [ref=e15449]: Highlights Freeride World Tour 2023
+              - generic "O Marisquiño 2023 6:35 PM - 7:00 PM" [ref=e15450] [cursor=pointer]:
+                - generic [ref=e15452]: O Marisquiño 2023
+              - generic "The Making of Ultimate Wave Tahiti 3D 7:00 PM - 8:00 PM" [ref=e15453] [cursor=pointer]:
+                - generic [ref=e15454]:
+                  - generic [ref=e15455]: The Making of Ultimate Wave Tahiti 3D
+                  - generic [ref=e15456]: 7:00 PM - 8:00 PM
+              - generic "Drive Thru USA 8:00 PM - 8:45 PM" [ref=e15457] [cursor=pointer]:
+                - generic [ref=e15458]:
+                  - generic [ref=e15459]: Drive Thru USA
+                  - generic [ref=e15460]: 8:00 PM - 8:45 PM
+              - generic "Snowchef USA 8:45 PM - 9:00 PM" [ref=e15461] [cursor=pointer]:
+                - generic [ref=e15463]: Snowchef USA
+              - generic "Bubba's World 9:00 PM - 9:30 PM" [ref=e15464] [cursor=pointer]:
+                - generic [ref=e15466]: Bubba's World
+              - generic "M80 9:30 PM - 10:00 PM" [ref=e15467] [cursor=pointer]:
+                - generic [ref=e15469]: M80
+            - generic [ref=e15470]:
+              - generic "The Herd With Colin Cowherd 5:00 PM - 5:30 PM" [ref=e15483] [cursor=pointer]:
+                - generic [ref=e15485]: The Herd With Colin Cowherd
+              - generic "First Things First 5:30 PM - 6:00 PM" [ref=e15486] [cursor=pointer]:
+                - generic [ref=e15488]: First Things First
+              - 'generic "First Things First: OT 6:00 PM - 6:30 PM" [ref=e15489] [cursor=pointer]':
+                - generic [ref=e15491]: "First Things First: OT"
+              - generic "The Herd With Colin Cowherd 6:30 PM - 7:00 PM" [ref=e15492] [cursor=pointer]:
+                - generic [ref=e15494]: The Herd With Colin Cowherd
+              - generic "MLB Epic Moments 7:00 PM - 7:30 PM" [ref=e15495] [cursor=pointer]:
+                - generic [ref=e15497]: MLB Epic Moments
+              - generic "MLB Epic Moments 7:30 PM - 8:00 PM" [ref=e15498] [cursor=pointer]:
+                - generic [ref=e15500]: MLB Epic Moments
+              - generic "Best of Wake Up Barstool 8:00 PM - 8:45 PM" [ref=e15501] [cursor=pointer]:
+                - generic [ref=e15503]: Live
+                - generic [ref=e15504]:
+                  - generic [ref=e15505]: Best of Wake Up Barstool
+                  - generic [ref=e15506]: 8:00 PM - 8:45 PM
+              - generic "Best of Wake Up Barstool 8:45 PM - 9:30 PM" [ref=e15507] [cursor=pointer]:
+                - generic [ref=e15509]: Live
+                - generic [ref=e15510]:
+                  - generic [ref=e15511]: Best of Wake Up Barstool
+                  - generic [ref=e15512]: 8:45 PM - 9:30 PM
+              - generic "The Herd With Colin Cowherd 9:30 PM - 10:00 PM" [ref=e15513] [cursor=pointer]:
+                - generic [ref=e15515]: The Herd With Colin Cowherd
+            - generic [ref=e15516]:
+              - generic "Games of the Night 5:04 PM - 6:20 PM" [ref=e15529] [cursor=pointer]:
+                - generic [ref=e15530]:
+                  - generic [ref=e15531]: Games of the Night
+                  - generic [ref=e15532]: 5:04 PM - 6:20 PM
+                  - generic [ref=e15533]: Recap Monday's regular season action!
+              - 'generic "The Association: Post up 6:20 PM - 6:50 PM" [ref=e15534] [cursor=pointer]':
+                - generic [ref=e15536]: "The Association: Post up"
+              - generic "Games of the Year 6:50 PM - 8:46 PM" [ref=e15537] [cursor=pointer]:
+                - generic [ref=e15539]: Live
+                - generic [ref=e15540]:
+                  - generic [ref=e15541]: Games of the Year
+                  - generic [ref=e15542]: 6:50 PM - 8:46 PM
+                  - generic [ref=e15543]: Relive the best games of the 2025 calendar year!
+              - generic "Plays of the Week 8:46 PM - 9:22 PM" [ref=e15544] [cursor=pointer]:
+                - generic [ref=e15546]: Plays of the Week
+              - generic "NBA Action 9:22 PM - 9:50 PM" [ref=e15547] [cursor=pointer]:
+                - generic [ref=e15549]: NBA Action
+              - generic "Games of the Week 9:50 PM - 11:43 PM" [ref=e15550] [cursor=pointer]:
+                - generic [ref=e15552]: Games of the Week
+            - generic [ref=e15553]:
+              - generic "5 Clubs With Gary Williams 1:56 PM - 9:56 PM" [ref=e15566] [cursor=pointer]:
+                - generic [ref=e15567]:
+                  - generic [ref=e15568]: 5 Clubs With Gary Williams
+                  - generic [ref=e15569]: 1:56 PM - 9:56 PM
+                  - generic [ref=e15570]: Viewpoints of people in the game with people who love the game; we discuss what is of interest to them in the vast and deep reservoir of stories within the game of golf.
+              - generic "Highway 18 4:47 PM - 5:37 PM" [ref=e15571] [cursor=pointer]:
+                - generic [ref=e15572]:
+                  - generic [ref=e15573]: Highway 18
+                  - generic [ref=e15574]: 4:47 PM - 5:37 PM
+              - generic "Highway 18 5:37 PM - 6:27 PM" [ref=e15575] [cursor=pointer]:
+                - generic [ref=e15576]:
+                  - generic [ref=e15577]: Highway 18
+                  - generic [ref=e15578]: 5:37 PM - 6:27 PM
+              - generic "Highway 18 6:27 PM - 7:17 PM" [ref=e15579] [cursor=pointer]:
+                - generic [ref=e15580]:
+                  - generic [ref=e15581]: Highway 18
+                  - generic [ref=e15582]: 6:27 PM - 7:17 PM
+              - generic "Highway 18 7:17 PM - 8:07 PM" [ref=e15583] [cursor=pointer]:
+                - generic [ref=e15584]:
+                  - generic [ref=e15585]: Highway 18
+                  - generic [ref=e15586]: 7:17 PM - 8:07 PM
+              - generic "Highway 18 8:07 PM - 8:57 PM" [ref=e15587] [cursor=pointer]:
+                - generic [ref=e15588]:
+                  - generic [ref=e15589]: Highway 18
+                  - generic [ref=e15590]: 8:07 PM - 8:57 PM
+              - generic "Highway 18 8:57 PM - 9:47 PM" [ref=e15591] [cursor=pointer]:
+                - generic [ref=e15592]:
+                  - generic [ref=e15593]: Highway 18
+                  - generic [ref=e15594]: 8:57 PM - 9:47 PM
+              - generic "Highway 18 9:47 PM - 10:35 PM" [ref=e15595] [cursor=pointer]:
+                - generic [ref=e15597]: Highway 18
+            - generic [ref=e15598]:
+              - generic "WTA Encore 4:30 PM - 7:00 PM" [ref=e15611] [cursor=pointer]:
+                - generic [ref=e15612]:
+                  - generic [ref=e15613]: WTA Encore
+                  - generic [ref=e15614]: 4:30 PM - 7:00 PM
+                  - generic [ref=e15615]: Final Elina Svitolina (UKR) vs. Xinyu Wang (CHN).
+              - generic "2025 Billie Jean King Cup Tennis 5:00 PM - 9:00 PM" [ref=e15616] [cursor=pointer]:
+                - generic [ref=e15617]:
+                  - generic [ref=e15618]: 2025 Billie Jean King Cup Tennis
+                  - generic [ref=e15619]: 5:00 PM - 9:00 PM
+                  - generic [ref=e15620]: Coverage from the 62nd edition of the Billie Jean King Cup.
+              - generic "WTA Encore 7:00 PM - 8:30 PM" [ref=e15621] [cursor=pointer]:
+                - generic [ref=e15622]:
+                  - generic [ref=e15623]: WTA Encore
+                  - generic [ref=e15624]: 7:00 PM - 8:30 PM
+                  - generic [ref=e15625]: Final Aryna Sabalenka (BEL) vs. Marta Kostyuk (UKR).
+              - generic "United Cup Encore 8:30 PM - 11:00 PM" [ref=e15626] [cursor=pointer]:
+                - generic [ref=e15627]:
+                  - generic [ref=e15628]: United Cup Encore
+                  - generic [ref=e15629]: 8:30 PM - 11:00 PM
+                  - generic [ref=e15630]: Final Belinda Bencic (SUI) vs. Iga Swiatek (POL).
+              - generic "2025 Billie Jean King Cup Tennis 9:00 PM - 11:00 PM" [ref=e15631] [cursor=pointer]:
+                - generic [ref=e15632]:
+                  - generic [ref=e15633]: 2025 Billie Jean King Cup Tennis
+                  - generic [ref=e15634]: 9:00 PM - 11:00 PM
+            - generic [ref=e15635]:
+              - generic "Discovering Mavericks 4:31 PM - 6:00 PM" [ref=e15648] [cursor=pointer]:
+                - generic [ref=e15649]:
+                  - generic [ref=e15650]: Discovering Mavericks
+                  - generic [ref=e15651]: 4:31 PM - 6:00 PM
+                  - generic [ref=e15652]: The history of California's maverick waves and the people who surf them.
+              - generic "The Curious Tales of Ítalo Ferreira 4:54 PM - 5:56 PM" [ref=e15653] [cursor=pointer]:
+                - generic [ref=e15654]:
+                  - generic [ref=e15655]: The Curious Tales of Ítalo Ferreira
+                  - generic [ref=e15656]: 4:54 PM - 5:56 PM
+              - generic "Paradigm Lost 5:56 PM - 7:09 PM" [ref=e15657] [cursor=pointer]:
+                - generic [ref=e15658]:
+                  - generic [ref=e15659]: Paradigm Lost
+                  - generic [ref=e15660]: 5:56 PM - 7:09 PM
+                  - generic [ref=e15661]: An in-depth look at the life of one of the world's most complete watermen, Kai Lenny.
+              - generic "Unsurfed Afghanistan 6:00 PM - 6:36 PM" [ref=e15662] [cursor=pointer]:
+                - generic [ref=e15664]: Unsurfed Afghanistan
+              - generic "Philly Jazz Isn't Dead 6:36 PM - 7:12 PM" [ref=e15665] [cursor=pointer]:
+                - generic [ref=e15667]: Philly Jazz Isn't Dead
+              - generic "Empire of Surf 7:09 PM - 7:30 PM" [ref=e15668] [cursor=pointer]:
+                - generic [ref=e15670]: Empire of Surf
+              - generic "Bustin' Down the Door 7:12 PM - 9:06 PM" [ref=e15671] [cursor=pointer]:
+                - generic [ref=e15672]:
+                  - generic [ref=e15673]: Bustin' Down the Door
+                  - generic [ref=e15674]: 7:12 PM - 9:06 PM
+                  - generic [ref=e15675]: In 1975 a group of surfers revolutionizes the sport.
+              - generic "Let's Be Frank 7:30 PM - 8:32 PM" [ref=e15676] [cursor=pointer]:
+                - generic [ref=e15677]:
+                  - generic [ref=e15678]: Let's Be Frank
+                  - generic [ref=e15679]: 7:30 PM - 8:32 PM
+              - generic "Who Is JOB 8:32 PM - 8:46 PM" [ref=e15680] [cursor=pointer]:
+                - generic [ref=e15682]: Who Is JOB
+              - generic "Who Is JOB 8:46 PM - 8:59 PM" [ref=e15683] [cursor=pointer]:
+                - generic [ref=e15685]: Who Is JOB
+              - generic "Unsurfed Afghanistan 8:59 PM - 9:34 PM" [ref=e15686] [cursor=pointer]:
+                - generic [ref=e15688]: Unsurfed Afghanistan
+              - generic "Lost Atlas 9:06 PM - 10:01 PM" [ref=e15689] [cursor=pointer]:
+                - generic [ref=e15690]:
+                  - generic [ref=e15691]: Lost Atlas
+                  - generic [ref=e15692]: 9:06 PM - 10:01 PM
+              - generic "Philly Jazz Isn't Dead 9:34 PM - 10:09 PM" [ref=e15693] [cursor=pointer]:
+                - generic [ref=e15695]: Philly Jazz Isn't Dead
+            - generic [ref=e15696]:
+              - generic "Red Bull Signature Series 4:28 PM - 5:44 PM" [ref=e15709] [cursor=pointer]:
+                - generic [ref=e15710]:
+                  - generic [ref=e15711]: Red Bull Signature Series
+                  - generic [ref=e15712]: 4:28 PM - 5:44 PM
+                  - generic [ref=e15713]: The world's best snowboarders head back to Vail Mountain in Colorado to compete for the most prestigious halfpipe and slopestyle titles in the sport.
+              - 'generic "Snowmads: A Foreign Native 5:44 PM - 6:58 PM" [ref=e15714] [cursor=pointer]':
+                - generic [ref=e15715]:
+                  - generic [ref=e15716]: "Snowmads: A Foreign Native"
+                  - generic [ref=e15717]: 5:44 PM - 6:58 PM
+                  - generic [ref=e15718]: Freerider Fabian Lentsch immerses himself in local culture on a year-long road trip in Iran with his Snowmads truck. For once he wants to drop the tourist role when visiting a foreign country.
+              - generic "Ice Waterfalls 6:58 PM - 7:58 PM" [ref=e15719] [cursor=pointer]:
+                - generic [ref=e15720]:
+                  - generic [ref=e15721]: Ice Waterfalls
+                  - generic [ref=e15722]: 6:58 PM - 7:58 PM
+              - generic "Red Bull TV 7:58 PM - 8:33 PM" [ref=e15723] [cursor=pointer]:
+                - generic [ref=e15725]: Red Bull TV
+              - generic "Cake 8:33 PM - 9:16 PM" [ref=e15726] [cursor=pointer]:
+                - generic [ref=e15727]:
+                  - generic [ref=e15728]: Cake
+                  - generic [ref=e15729]: 8:33 PM - 9:16 PM
+              - generic "BLOOOM 9:16 PM - 9:37 PM" [ref=e15730] [cursor=pointer]:
+                - generic [ref=e15732]: BLOOOM
+              - generic "Hot Coco 9:37 PM - 9:58 PM" [ref=e15733] [cursor=pointer]:
+                - generic [ref=e15735]: Hot Coco
+            - generic [ref=e15736]:
+              - generic "2025 ICF Canoe Sprint World Championships 3:00 PM - 6:00 PM" [ref=e15749] [cursor=pointer]:
+                - generic [ref=e15750]:
+                  - generic [ref=e15751]: 2025 ICF Canoe Sprint World Championships
+                  - generic [ref=e15752]: 3:00 PM - 6:00 PM
+              - generic "2025 Africa Cup of Nations 6:00 PM - 8:00 PM" [ref=e15753] [cursor=pointer]:
+                - generic [ref=e15754]:
+                  - generic [ref=e15755]: 2025 Africa Cup of Nations
+                  - generic [ref=e15756]: 6:00 PM - 8:00 PM
+                  - generic [ref=e15757]: From Complexe sportif Prince Moulay-Abdallah in Rabat, Morocco.
+              - generic "Ligue 1 Show 8:00 PM - 8:30 PM" [ref=e15758] [cursor=pointer]:
+                - generic [ref=e15760]: Ligue 1 Show
+              - generic "The Knockout Room 8:30 PM - 9:00 PM" [ref=e15761] [cursor=pointer]:
+                - generic [ref=e15763]: The Knockout Room
+              - generic "Karate Combat 9:00 PM - 11:00 PM" [ref=e15764] [cursor=pointer]:
+                - generic [ref=e15765]:
+                  - generic [ref=e15766]: Karate Combat
+                  - generic [ref=e15767]: 9:00 PM - 11:00 PM
+            - generic [ref=e15768]:
+              - generic "Cricket Highlights 5:00 PM - 6:00 PM" [ref=e15781] [cursor=pointer]:
+                - generic [ref=e15782]:
+                  - generic [ref=e15783]: Cricket Highlights
+                  - generic [ref=e15784]: 5:00 PM - 6:00 PM
+              - generic "Cricket Highlights 6:00 PM - 7:00 PM" [ref=e15785] [cursor=pointer]:
+                - generic [ref=e15786]:
+                  - generic [ref=e15787]: Cricket Highlights
+                  - generic [ref=e15788]: 6:00 PM - 7:00 PM
+              - generic "The History of The ICC Men's T20 World Cup 7:00 PM - 8:00 PM" [ref=e15789] [cursor=pointer]:
+                - generic [ref=e15790]:
+                  - generic [ref=e15791]: The History of The ICC Men's T20 World Cup
+                  - generic [ref=e15792]: 7:00 PM - 8:00 PM
+              - generic "Cricket Highlights 8:00 PM - 9:00 PM" [ref=e15793] [cursor=pointer]:
+                - generic [ref=e15794]:
+                  - generic [ref=e15795]: Cricket Highlights
+                  - generic [ref=e15796]: 8:00 PM - 9:00 PM
+              - generic "Cricket Highlights 9:00 PM - 10:00 PM" [ref=e15797] [cursor=pointer]:
+                - generic [ref=e15798]:
+                  - generic [ref=e15799]: Cricket Highlights
+                  - generic [ref=e15800]: 9:00 PM - 10:00 PM
+            - generic [ref=e15801]:
+              - generic "Northwoods League Softball 2:31 PM - 5:17 PM" [ref=e15814] [cursor=pointer]:
+                - generic [ref=e15815]:
+                  - generic [ref=e15816]: Northwoods League Softball
+                  - generic [ref=e15817]: 2:31 PM - 5:17 PM
+                  - generic [ref=e15818]: From June 19, 2024.
+              - generic "Red Bull Rampage 5:17 PM - 7:42 PM" [ref=e15819] [cursor=pointer]:
+                - generic [ref=e15820]:
+                  - generic [ref=e15821]: Red Bull Rampage
+                  - generic [ref=e15822]: 5:17 PM - 7:42 PM
+                  - generic [ref=e15823]: 12 female MTB athletes compete in this invitation-only freeride event, showcasing their skill and creativity.
+              - generic "The SoccerGirl Podcast 7:42 PM - 8:15 PM" [ref=e15824] [cursor=pointer]:
+                - generic [ref=e15826]: The SoccerGirl Podcast
+              - generic "Redefined Podcast 8:15 PM - 9:08 PM" [ref=e15827] [cursor=pointer]:
+                - generic [ref=e15828]:
+                  - generic [ref=e15829]: Redefined Podcast
+                  - generic [ref=e15830]: 8:15 PM - 9:08 PM
+              - generic "SailGP 9:08 PM - 9:49 PM" [ref=e15831] [cursor=pointer]:
+                - generic [ref=e15832]:
+                  - generic [ref=e15833]: SailGP
+                  - generic [ref=e15834]: 9:08 PM - 9:49 PM
+              - generic "The World According to Sage 9:49 PM - 10:19 PM" [ref=e15835] [cursor=pointer]:
+                - generic [ref=e15837]: The World According to Sage
+            - generic [ref=e15838]:
+              - generic "Athletes Unlimited Pro Volleyball 3:54 PM - 5:37 PM" [ref=e15851] [cursor=pointer]:
+                - generic [ref=e15852]:
+                  - generic [ref=e15853]: Athletes Unlimited Pro Volleyball
+                  - generic [ref=e15854]: 3:54 PM - 5:37 PM
+                  - generic [ref=e15855]: From Alliant Energy Center in Madison, Wis.
+              - generic "Athletes Unlimited Pro Volleyball 5:37 PM - 7:20 PM" [ref=e15856] [cursor=pointer]:
+                - generic [ref=e15857]:
+                  - generic [ref=e15858]: Athletes Unlimited Pro Volleyball
+                  - generic [ref=e15859]: 5:37 PM - 7:20 PM
+                  - generic [ref=e15860]: From Alliant Energy Center in Madison, Wis.
+              - generic "Athletes Unlimited Pro Volleyball 7:20 PM - 9:07 PM" [ref=e15861] [cursor=pointer]:
+                - generic [ref=e15862]:
+                  - generic [ref=e15863]: Athletes Unlimited Pro Volleyball
+                  - generic [ref=e15864]: 7:20 PM - 9:07 PM
+                  - generic [ref=e15865]: From Alliant Energy Center in Madison, Wis.
+              - generic "Athletes Unlimited Pro Volleyball 9:07 PM - 11:00 PM" [ref=e15866] [cursor=pointer]:
+                - generic [ref=e15867]:
+                  - generic [ref=e15868]: Athletes Unlimited Pro Volleyball
+                  - generic [ref=e15869]: 9:07 PM - 11:00 PM
+            - generic [ref=e15870]:
+              - generic "DEEP - 62 Impact 4:00 PM - 7:00 PM" [ref=e15883] [cursor=pointer]:
+                - generic [ref=e15884]:
+                  - generic [ref=e15885]: DEEP - 62 Impact
+                  - generic [ref=e15886]: 4:00 PM - 7:00 PM
+                  - generic [ref=e15887]: Satoru Kitaoka vs. Daisuke Nakamura. From Tokyo.
+              - generic "Fight Network Recharged 7:00 PM - 7:55 PM" [ref=e15888] [cursor=pointer]:
+                - generic [ref=e15889]:
+                  - generic [ref=e15890]: Fight Network Recharged
+                  - generic [ref=e15891]: 7:00 PM - 7:55 PM
+              - generic "Fight Network Recharged 7:55 PM - 9:00 PM" [ref=e15892] [cursor=pointer]:
+                - generic [ref=e15893]:
+                  - generic [ref=e15894]: Fight Network Recharged
+                  - generic [ref=e15895]: 7:55 PM - 9:00 PM
+              - generic "IMPACT in 60 9:00 PM - 9:52 PM" [ref=e15896] [cursor=pointer]:
+                - generic [ref=e15897]:
+                  - generic [ref=e15898]: IMPACT in 60
+                  - generic [ref=e15899]: 9:00 PM - 9:52 PM
+              - 'generic "Impact in 60: Christopher Daniels 9:52 PM - 10:48 PM" [ref=e15900] [cursor=pointer]':
+                - generic [ref=e15902]: "Impact in 60: Christopher Daniels"
+            - generic [ref=e15903]:
+              - 'generic "TNA Wrestling: Lockdown 3:59 PM - 7:58 PM" [ref=e15916] [cursor=pointer]':
+                - generic [ref=e15917]:
+                  - generic [ref=e15918]: "TNA Wrestling: Lockdown"
+                  - generic [ref=e15919]: 3:59 PM - 7:58 PM
+                  - generic [ref=e15920]: Sting vs. Mick Foley; Lethal Lockdown match; Team 3D vs. Beer Money, Inc.; X Division Xscape match. From Philadelphia.
+              - generic "Sacrifice 7:58 PM - 11:58 PM" [ref=e15921] [cursor=pointer]:
+                - generic [ref=e15922]:
+                  - generic [ref=e15923]: Sacrifice
+                  - generic [ref=e15924]: 7:58 PM - 11:58 PM
+                  - generic [ref=e15925]: Featuring Sting versus Mick Foley versus Kurt Angle versus Jeff Jarrett in a four-way "Ultimate Sacrifice" match; A.J. Styles versus Booker T. in an "I Quit" match for the TNA Legends Championship, from Orlando, Fla.
+            - generic [ref=e15926]:
+              - generic "PFL Weigh-In Show 4:27 PM - 5:22 PM" [ref=e15939] [cursor=pointer]:
+                - generic [ref=e15940]:
+                  - generic [ref=e15941]: PFL Weigh-In Show
+                  - generic [ref=e15942]: 4:27 PM - 5:22 PM
+              - generic "PFL Europe 5:22 PM - 6:17 PM" [ref=e15943] [cursor=pointer]:
+                - generic [ref=e15944]:
+                  - generic [ref=e15945]: PFL Europe
+                  - generic [ref=e15946]: 5:22 PM - 6:17 PM
+              - 'generic "BKFC: Best of Women''s Division 6:17 PM - 8:00 PM" [ref=e15947] [cursor=pointer]':
+                - generic [ref=e15948]:
+                  - generic [ref=e15949]: "BKFC: Best of Women's Division"
+                  - generic [ref=e15950]: 6:17 PM - 8:00 PM
+                  - generic [ref=e15951]: BKFC's top women shine as Rawlings, Hart, and Ferea headline the division's most defining early battles.
+              - 'generic "LFA 102: Souza vs. St. Johns 8:00 PM - 11:23 PM" [ref=e15952] [cursor=pointer]':
+                - generic [ref=e15953]:
+                  - generic [ref=e15954]: "LFA 102: Souza vs. St. Johns"
+                  - generic [ref=e15955]: 8:00 PM - 11:23 PM
+            - generic [ref=e15956]:
+              - generic "Boxing 4:41 PM - 6:00 PM" [ref=e15969] [cursor=pointer]:
+                - generic [ref=e15970]:
+                  - generic [ref=e15971]: Boxing
+                  - generic [ref=e15972]: 4:41 PM - 6:00 PM
+                  - generic [ref=e15973]: Dillian Whyte (28-3) sought a return to winning ways on his boxing comeback, taking on American puncher Jermaime Franklin.
+              - generic "Boxing 4:56 PM - 6:15 PM" [ref=e15974] [cursor=pointer]:
+                - generic [ref=e15975]:
+                  - generic [ref=e15976]: Boxing
+                  - generic [ref=e15977]: 4:56 PM - 6:15 PM
+                  - generic [ref=e15978]: Dillian Whyte (28-3) sought a return to winning ways on his boxing comeback, taking on American puncher Jermaime Franklin.
+              - generic "Boxing 6:00 PM - 7:12 PM" [ref=e15979] [cursor=pointer]:
+                - generic [ref=e15980]:
+                  - generic [ref=e15981]: Boxing
+                  - generic [ref=e15982]: 6:00 PM - 7:12 PM
+                  - generic [ref=e15983]: Oscar De La Hoya vs. Pernell Whitaker, from April 12, 1997.
+              - generic "Boxing 6:15 PM - 7:26 PM" [ref=e15984] [cursor=pointer]:
+                - generic [ref=e15985]:
+                  - generic [ref=e15986]: Boxing
+                  - generic [ref=e15987]: 6:15 PM - 7:26 PM
+                  - generic [ref=e15988]: Oscar De La Hoya vs. Pernell Whitaker, from April 12, 1997.
+              - generic "Boxing 7:12 PM - 8:30 PM" [ref=e15989] [cursor=pointer]:
+                - generic [ref=e15990]:
+                  - generic [ref=e15991]: Boxing
+                  - generic [ref=e15992]: 7:12 PM - 8:30 PM
+                  - generic [ref=e15993]: Puerto Rican icon Miguel Cotto made the third defence of his WBA welterweight title against Shane Mosley.
+              - generic "Boxing 7:26 PM - 8:43 PM" [ref=e15994] [cursor=pointer]:
+                - generic [ref=e15995]:
+                  - generic [ref=e15996]: Boxing
+                  - generic [ref=e15997]: 7:26 PM - 8:43 PM
+                  - generic [ref=e15998]: Puerto Rican icon Miguel Cotto made the third defence of his WBA welterweight title against Shane Mosley.
+              - generic "Boxing 8:30 PM - 9:12 PM" [ref=e15999] [cursor=pointer]:
+                - generic [ref=e16000]:
+                  - generic [ref=e16001]: Boxing
+                  - generic [ref=e16002]: 8:30 PM - 9:12 PM
+              - generic "Boxing 8:43 PM - 9:25 PM" [ref=e16003] [cursor=pointer]:
+                - generic [ref=e16004]:
+                  - generic [ref=e16005]: Boxing
+                  - generic [ref=e16006]: 8:43 PM - 9:25 PM
+              - generic "Boxing 9:12 PM - 9:33 PM" [ref=e16007] [cursor=pointer]:
+                - generic [ref=e16009]: Boxing
+              - generic "Boxing 9:25 PM - 9:44 PM" [ref=e16010] [cursor=pointer]:
+                - generic [ref=e16012]: Boxing
+              - generic "Boxing 9:33 PM - 10:27 PM" [ref=e16013] [cursor=pointer]:
+                - generic [ref=e16015]: Boxing
+              - generic "Boxing 9:44 PM - 10:37 PM" [ref=e16016] [cursor=pointer]:
+                - generic [ref=e16018]: Boxing
+            - generic [ref=e16019]:
+              - generic "Poker After Dark 5:00 PM - 6:00 PM" [ref=e16032] [cursor=pointer]:
+                - generic [ref=e16033]:
+                  - generic [ref=e16034]: Poker After Dark
+                  - generic [ref=e16035]: 5:00 PM - 6:00 PM
+              - generic "Poker After Dark 6:00 PM - 7:00 PM" [ref=e16036] [cursor=pointer]:
+                - generic [ref=e16037]:
+                  - generic [ref=e16038]: Poker After Dark
+                  - generic [ref=e16039]: 6:00 PM - 7:00 PM
+              - generic "Poker After Dark 7:00 PM - 8:00 PM" [ref=e16040] [cursor=pointer]:
+                - generic [ref=e16041]:
+                  - generic [ref=e16042]: Poker After Dark
+                  - generic [ref=e16043]: 7:00 PM - 8:00 PM
+              - generic "Poker After Dark 8:00 PM - 9:00 PM" [ref=e16044] [cursor=pointer]:
+                - generic [ref=e16045]:
+                  - generic [ref=e16046]: Poker After Dark
+                  - generic [ref=e16047]: 8:00 PM - 9:00 PM
+              - generic "World Series of Poker 9:00 PM - 10:00 PM" [ref=e16048] [cursor=pointer]:
+                - generic [ref=e16049]:
+                  - generic [ref=e16050]: World Series of Poker
+                  - generic [ref=e16051]: 9:00 PM - 10:00 PM
+            - generic [ref=e16052]:
+              - 'generic "PPA Tour: Daytona Beach Open 1:00 PM - 5:30 PM" [ref=e16065] [cursor=pointer]':
+                - generic [ref=e16066]:
+                  - generic [ref=e16067]: "PPA Tour: Daytona Beach Open"
+                  - generic [ref=e16068]: 1:00 PM - 5:30 PM
+                  - generic [ref=e16069]: "Encore Pickleball coverage from PPA Tour: Daytona Beach Open."
+              - generic "The Pickle Program 5:30 PM - 6:00 PM" [ref=e16070] [cursor=pointer]:
+                - generic [ref=e16072]: The Pickle Program
+              - generic "The Tyson McGuffin Show 6:00 PM - 6:30 PM" [ref=e16073] [cursor=pointer]:
+                - generic [ref=e16075]: The Tyson McGuffin Show
+              - generic "Best of Tyson McGuffin 6:30 PM - 7:00 PM" [ref=e16076] [cursor=pointer]:
+                - generic [ref=e16078]: Best of Tyson McGuffin
+              - 'generic "PPA Tour: Daytona Beach Open 7:00 PM - 7:30 PM" [ref=e16079] [cursor=pointer]':
+                - generic [ref=e16081]: "PPA Tour: Daytona Beach Open"
+              - generic "Best of Tyson McGuffin 7:30 PM - 8:00 PM" [ref=e16082] [cursor=pointer]:
+                - generic [ref=e16084]: Best of Tyson McGuffin
+              - generic "Best of Tyson McGuffin 8:00 PM - 9:00 PM" [ref=e16085] [cursor=pointer]:
+                - generic [ref=e16086]:
+                  - generic [ref=e16087]: Best of Tyson McGuffin
+                  - generic [ref=e16088]: 8:00 PM - 9:00 PM
+              - generic "The Tyson McGuffin Show 9:00 PM - 9:30 PM" [ref=e16089] [cursor=pointer]:
+                - generic [ref=e16091]: The Tyson McGuffin Show
+              - generic "Best of Tyson McGuffin 9:30 PM - 11:00 PM" [ref=e16092] [cursor=pointer]:
+                - generic [ref=e16094]: Best of Tyson McGuffin
+            - generic [ref=e16095]:
+              - generic "Pro Billiards Series 4:00 PM - 5:30 PM" [ref=e16108] [cursor=pointer]:
+                - generic [ref=e16109]:
+                  - generic [ref=e16110]: Pro Billiards Series
+                  - generic [ref=e16111]: 4:00 PM - 5:30 PM
+                  - generic [ref=e16112]: "Winner Round 1: Sun Yi Hsuan vs. Chris Robinson-Reinhold from Dec. 16, 2025."
+              - generic "Pro Billiards Series 5:30 PM - 7:30 PM" [ref=e16113] [cursor=pointer]:
+                - generic [ref=e16114]:
+                  - generic [ref=e16115]: Pro Billiards Series
+                  - generic [ref=e16116]: 5:30 PM - 7:30 PM
+                  - generic [ref=e16117]: "Winner Round 1: Tzu-Chien Wei vs. Sakura Muramatsu from Dec. 18, 2025."
+              - generic "Pro Billiards Series 7:30 PM - 8:30 PM" [ref=e16118] [cursor=pointer]:
+                - generic [ref=e16119]:
+                  - generic [ref=e16120]: Pro Billiards Series
+                  - generic [ref=e16121]: 7:30 PM - 8:30 PM
+              - generic "Pro Billiards Series 8:30 PM - 10:00 PM" [ref=e16122] [cursor=pointer]:
+                - generic [ref=e16123]:
+                  - generic [ref=e16124]: Pro Billiards Series
+                  - generic [ref=e16125]: 8:30 PM - 10:00 PM
+                  - generic [ref=e16126]: "Final: Konrad Juszczyszyn and Chou Chieh-Yu vs. Jesus Atencio and Allison Fisher from Dec. 20, 2025."
+            - generic [ref=e16127]:
+              - 'generic "BKFC 31: Richman vs. Doolittle 5:00 PM - 9:00 PM" [ref=e16140] [cursor=pointer]':
+                - generic [ref=e16141]:
+                  - generic [ref=e16142]: "BKFC 31: Richman vs. Doolittle"
+                  - generic [ref=e16143]: 5:00 PM - 9:00 PM
+                  - generic [ref=e16144]: Features Mike Richman vs. Isaac Doolittle, Jake Lindsey vs. Brandon Girtz, plus Chris Camozzi vs. Bubba McDaniel in bare knuckle boxing action from Broomfield, Colo. From Oct.15, 2022.
+              - 'generic "GLORY: Collision 4 9:00 PM - 12:00 AM" [ref=e16145] [cursor=pointer]':
+                - generic [ref=e16146]:
+                  - generic [ref=e16147]: "GLORY: Collision 4"
+                  - generic [ref=e16148]: 9:00 PM - 12:00 AM
+            - generic [ref=e16149]:
+              - generic "2022 Women's Lacrosse Championship -- Boston College vs. North Carolina 2:59 PM - 5:29 PM" [ref=e16162] [cursor=pointer]:
+                - generic [ref=e16163]:
+                  - generic [ref=e16164]: 2022 Women's Lacrosse Championship -- Boston College vs. North Carolina
+                  - generic [ref=e16165]: 2:59 PM - 5:29 PM
+                  - generic [ref=e16166]: The top two teams in the nation in women's lacrosse face off for the 2022 ACC Women's Championship. From May 22, 2022.
+              - generic "Basketball Replay 4:00 PM - 6:30 PM" [ref=e16167] [cursor=pointer]:
+                - generic [ref=e16168]:
+                  - generic [ref=e16169]: Basketball Replay
+                  - generic [ref=e16170]: 4:00 PM - 6:30 PM
+                  - generic [ref=e16171]: Devin Vassell leads the 'Noles in an OT thriller. From Jan. 18, 2020.
+              - generic "2022 Men's Lacrosse Championship -- Virginia vs. Syracuse 5:29 PM - 7:59 PM" [ref=e16172] [cursor=pointer]:
+                - generic [ref=e16173]:
+                  - generic [ref=e16174]: 2022 Men's Lacrosse Championship -- Virginia vs. Syracuse
+                  - generic [ref=e16175]: 5:29 PM - 7:59 PM
+                  - generic [ref=e16176]: The Cavaliers look to secure the 2022 ACC Championship in a matchup with the Orange in the Carrier Dome.
+              - generic "Basketball Replay 6:30 PM - 8:30 PM" [ref=e16177] [cursor=pointer]:
+                - generic [ref=e16178]:
+                  - generic [ref=e16179]: Basketball Replay
+                  - generic [ref=e16180]: 6:30 PM - 8:30 PM
+                  - generic [ref=e16181]: Matthew Cleveland's buzzer beater caps off a big FSU comeback in a rivalry classic. From Feb. 25, 2023.
+              - generic "2022 Softball Championship -- Clemson vs. Florida State 7:59 PM - 11:00 PM" [ref=e16182] [cursor=pointer]:
+                - generic [ref=e16183]:
+                  - generic [ref=e16184]: 2022 Softball Championship -- Clemson vs. Florida State
+                  - generic [ref=e16185]: 7:59 PM - 11:00 PM
+                  - generic [ref=e16186]: The Tigers and Seminoles go down the wire for the 2022 ACC Softball Championship. From May 14, 2022.
+              - generic "Basketball Replay 8:30 PM - 10:00 PM" [ref=e16187] [cursor=pointer]:
+                - generic [ref=e16188]:
+                  - generic [ref=e16189]: Basketball Replay
+                  - generic [ref=e16190]: 8:30 PM - 10:00 PM
+                  - generic [ref=e16191]: James Worthy and Michael Jordan take on Ralph Sampson and the Cavaliers. From Jan. 9, 1982.
+            - generic [ref=e16192]:
+              - generic "Big 12 Men's College Football Replay 4:30 PM - 7:30 PM" [ref=e16205] [cursor=pointer]:
+                - generic [ref=e16206]:
+                  - generic [ref=e16207]: Big 12 Men's College Football Replay
+                  - generic [ref=e16208]: 4:30 PM - 7:30 PM
+                  - generic [ref=e16209]: This legendary 2003 Big 12 Championship from the Wildcats & Darren Sproles. From Dec. 6, 2003.
+              - generic "Big 12 Men's College Basketball Replay 5:00 PM - 5:00 AM" [ref=e16210] [cursor=pointer]:
+                - generic [ref=e16211]:
+                  - generic [ref=e16212]: Big 12 Men's College Basketball Replay
+                  - generic [ref=e16213]: 5:00 PM - 5:00 AM
+                  - generic [ref=e16214]: Rewind back to Caleb Love & the Wildcats overtime thriller vs. the top ranked Cyclones. From Jan. 27, 2025.
+              - generic "The Cut 7:30 PM - 8:00 PM" [ref=e16215] [cursor=pointer]:
+                - generic [ref=e16217]: The Cut
+              - generic "Across the Conference 8:00 PM - 8:30 PM" [ref=e16218] [cursor=pointer]:
+                - generic [ref=e16220]: Across the Conference
+              - generic "Big 12 Men's College Basketball Replay 8:30 PM - 10:30 PM" [ref=e16221] [cursor=pointer]:
+                - generic [ref=e16222]:
+                  - generic [ref=e16223]: Big 12 Men's College Basketball Replay
+                  - generic [ref=e16224]: 8:30 PM - 10:30 PM
+                  - generic [ref=e16225]: Rewind back to Caleb Love & the Wildcats overtime thriller vs. the top ranked Cyclones. From Jan. 27, 2025.
+            - generic [ref=e16226]:
+              - generic "Slickfish Radio 5:00 PM - 6:00 PM" [ref=e16239] [cursor=pointer]:
+                - generic [ref=e16240]:
+                  - generic [ref=e16241]: Slickfish Radio
+                  - generic [ref=e16242]: 5:00 PM - 6:00 PM
+              - generic "Operation Healing Heroes 2025 6:00 PM - 6:30 PM" [ref=e16243] [cursor=pointer]:
+                - generic [ref=e16245]: Operation Healing Heroes 2025
+              - generic "Fish On! 6:30 PM - 7:00 PM" [ref=e16246] [cursor=pointer]:
+                - generic [ref=e16248]: Fish On!
+              - generic "The Angler's Workshop 7:00 PM - 7:30 PM" [ref=e16249] [cursor=pointer]:
+                - generic [ref=e16251]: The Angler's Workshop
+              - generic "Jim Crowley Outdoors 7:30 PM - 8:00 PM" [ref=e16252] [cursor=pointer]:
+                - generic [ref=e16254]: Jim Crowley Outdoors
+              - generic "Catching Bass With Dustin Wilks 8:00 PM - 8:30 PM" [ref=e16255] [cursor=pointer]:
+                - generic [ref=e16257]: Catching Bass With Dustin Wilks
+              - generic "Sport Fishing TV 8:30 PM - 9:00 PM" [ref=e16258] [cursor=pointer]:
+                - generic [ref=e16260]: Sport Fishing TV
+              - generic "Stoked on Fishing 2025 9:00 PM - 9:30 PM" [ref=e16261] [cursor=pointer]:
+                - generic [ref=e16263]: Stoked on Fishing 2025
+              - generic "Catching Bass With Dustin Wilks 9:30 PM - 10:00 PM" [ref=e16264] [cursor=pointer]:
+                - generic [ref=e16266]: Catching Bass With Dustin Wilks
+            - generic [ref=e16267]:
+              - generic "USOC Adventures TV 5:00 PM - 5:30 PM" [ref=e16280] [cursor=pointer]:
+                - generic [ref=e16282]: USOC Adventures TV
+              - generic "Operation Healing Heroes 5:30 PM - 6:00 PM" [ref=e16283] [cursor=pointer]:
+                - generic [ref=e16285]: Operation Healing Heroes
+              - generic "Americana Outdoors Presented By Garmin 6:00 PM - 6:30 PM" [ref=e16286] [cursor=pointer]:
+                - generic [ref=e16288]: Americana Outdoors Presented By Garmin
+              - generic "Waterfowl Obsession Tv Presented By Sx Decoys 6:30 PM - 7:00 PM" [ref=e16289] [cursor=pointer]:
+                - generic [ref=e16291]: Live
+                - generic [ref=e16293]: Waterfowl Obsession Tv Presented By Sx Decoys
+              - generic "Hard Truths Of Conservation 7:00 PM - 7:30 PM" [ref=e16294] [cursor=pointer]:
+                - generic [ref=e16296]: Hard Truths Of Conservation
+              - generic "Deer & Wildlife Stories 7:30 PM - 8:00 PM" [ref=e16297] [cursor=pointer]:
+                - generic [ref=e16299]: Deer & Wildlife Stories
+              - generic "Red Arrow Tv 8:00 PM - 8:30 PM" [ref=e16300] [cursor=pointer]:
+                - generic [ref=e16302]: Red Arrow Tv
+              - generic "The High Road With Keith Warren 8:30 PM - 9:00 PM" [ref=e16303] [cursor=pointer]:
+                - generic [ref=e16305]: The High Road With Keith Warren
+              - generic "North American Trapper 9:00 PM - 9:30 PM" [ref=e16306] [cursor=pointer]:
+                - generic [ref=e16308]: North American Trapper
+              - generic "Surviving Mann 9:30 PM - 10:00 PM" [ref=e16309] [cursor=pointer]:
+                - generic [ref=e16311]: Surviving Mann
+            - generic [ref=e16312]:
+              - generic "Local Knowledge 5:00 PM - 5:30 PM" [ref=e16325] [cursor=pointer]:
+                - generic [ref=e16327]: Local Knowledge
+              - generic "Local Knowledge 5:30 PM - 6:00 PM" [ref=e16328] [cursor=pointer]:
+                - generic [ref=e16330]: Local Knowledge
+              - generic "Fly Shop Tour 6:00 PM - 6:30 PM" [ref=e16331] [cursor=pointer]:
+                - generic [ref=e16333]: Fly Shop Tour
+              - generic "Destination Dive 6:30 PM - 7:00 PM" [ref=e16334] [cursor=pointer]:
+                - generic [ref=e16336]: Destination Dive
+              - generic "Dirt 7:00 PM - 7:30 PM" [ref=e16337] [cursor=pointer]:
+                - generic [ref=e16339]: Dirt
+              - generic "Hard Truths Of Conservation 7:30 PM - 8:00 PM" [ref=e16340] [cursor=pointer]:
+                - generic [ref=e16342]: Hard Truths Of Conservation
+              - generic "The Green Way Outdoors 8:00 PM - 8:30 PM" [ref=e16343] [cursor=pointer]:
+                - generic [ref=e16345]: The Green Way Outdoors
+              - generic "The Green Way Outdoors 8:30 PM - 9:00 PM" [ref=e16346] [cursor=pointer]:
+                - generic [ref=e16348]: The Green Way Outdoors
+              - generic "Stomping Grounds 9:00 PM - 9:30 PM" [ref=e16349] [cursor=pointer]:
+                - generic [ref=e16351]: Stomping Grounds
+              - generic "Ship Shape TV 9:30 PM - 10:00 PM" [ref=e16352] [cursor=pointer]:
+                - generic [ref=e16354]: Ship Shape TV
+            - generic [ref=e16355]:
+              - generic "Numbers on the Board 5:00 PM - 6:00 PM" [ref=e16368] [cursor=pointer]:
+                - generic [ref=e16369]:
+                  - generic [ref=e16370]: Numbers on the Board
+                  - generic [ref=e16371]: 5:00 PM - 6:00 PM
+              - generic "NBA on NBC Highlights Factory 6:00 PM - 6:30 PM" [ref=e16372] [cursor=pointer]:
+                - generic [ref=e16374]: NBA on NBC Highlights Factory
+              - generic "NBA on NBC Highlights Factory 6:30 PM - 7:00 PM" [ref=e16375] [cursor=pointer]:
+                - generic [ref=e16377]: NBA on NBC Highlights Factory
+              - generic "Fantasy Football Happy Hour With Matthew Berry 7:00 PM - 8:00 PM" [ref=e16378] [cursor=pointer]:
+                - generic [ref=e16379]:
+                  - generic [ref=e16380]: Fantasy Football Happy Hour With Matthew Berry
+                  - generic [ref=e16381]: 7:00 PM - 8:00 PM
+              - generic "The Dan Patrick Show 8:00 PM - 11:00 PM" [ref=e16382] [cursor=pointer]:
+                - generic [ref=e16383]:
+                  - generic [ref=e16384]: The Dan Patrick Show
+                  - generic [ref=e16385]: 8:00 PM - 11:00 PM
+                  - generic [ref=e16386]: Dan Patrick's daily national sports talk program, with interviews and discussions with some of the biggest stars in sports and entertainment.
+            - generic [ref=e16387]:
+              - generic "Jim Rome Show 3:00 PM - 6:00 PM" [ref=e16400] [cursor=pointer]:
+                - generic [ref=e16401]:
+                  - generic [ref=e16402]: Jim Rome Show
+                  - generic [ref=e16403]: 3:00 PM - 6:00 PM
+                  - generic [ref=e16404]: The latest sports news every weekday.
+              - 'generic "Jim Rome Show: The After Hour 6:00 PM - 7:00 PM" [ref=e16405] [cursor=pointer]':
+                - generic [ref=e16407]: Live
+                - generic [ref=e16408]:
+                  - generic [ref=e16409]: "Jim Rome Show: The After Hour"
+                  - generic [ref=e16410]: 6:00 PM - 7:00 PM
+              - generic "Jim Rome Show 7:00 PM - 10:00 PM" [ref=e16411] [cursor=pointer]:
+                - generic [ref=e16412]:
+                  - generic [ref=e16413]: Jim Rome Show
+                  - generic [ref=e16414]: 7:00 PM - 10:00 PM
+                  - generic [ref=e16415]: The latest sports news every weekday.
+            - generic [ref=e16416]:
+              - generic "Sportsperson of the Year 5:00 PM - 6:00 PM" [ref=e16429] [cursor=pointer]:
+                - generic [ref=e16430]:
+                  - generic [ref=e16431]: Sportsperson of the Year
+                  - generic [ref=e16432]: 5:00 PM - 6:00 PM
+              - generic "Sportsperson of the Year 6:00 PM - 6:30 PM" [ref=e16433] [cursor=pointer]:
+                - generic [ref=e16435]: Live
+                - generic [ref=e16437]: Sportsperson of the Year
+              - generic "Stadium Wonders 6:30 PM - 7:00 PM" [ref=e16438] [cursor=pointer]:
+                - generic [ref=e16440]: Stadium Wonders
+              - generic "SI TV 6:45 PM - 7:15 PM" [ref=e16441] [cursor=pointer]:
+                - generic [ref=e16443]: Live
+                - generic [ref=e16445]: SI TV
+              - generic "College Football 7:00 PM - 8:30 PM" [ref=e16446] [cursor=pointer]:
+                - generic [ref=e16447]:
+                  - generic [ref=e16448]: College Football
+                  - generic [ref=e16449]: 7:00 PM - 8:30 PM
+                  - generic [ref=e16450]: Ohio State defeated Utah 48-45 in a high-scoring thriller at the 2022 Rose Bowl, sealing the win with a field goal in the final seconds. Buckeyes wide receiver Jaxon Smith-Njigba had a record-setting performance, with 347 receiving yards and three touchdowns, to lead the second-half comeback.
+              - generic "SI TV 7:15 PM - 8:15 PM" [ref=e16451] [cursor=pointer]:
+                - generic [ref=e16452]:
+                  - generic [ref=e16453]: SI TV
+                  - generic [ref=e16454]: 7:15 PM - 8:15 PM
+              - generic "The Big Interview 8:15 PM - 9:00 PM" [ref=e16455] [cursor=pointer]:
+                - generic [ref=e16456]:
+                  - generic [ref=e16457]: The Big Interview
+                  - generic [ref=e16458]: 8:15 PM - 9:00 PM
+              - generic "SI TV 8:30 PM - 8:45 PM" [ref=e16459] [cursor=pointer]:
+                - generic [ref=e16461]: SI TV
+              - generic "SI TV 8:45 PM - 9:00 PM" [ref=e16462] [cursor=pointer]:
+                - generic [ref=e16464]: SI TV
+              - generic "College Basketball 9:00 PM - 11:00 PM" [ref=e16465] [cursor=pointer]:
+                - generic [ref=e16466]:
+                  - generic [ref=e16467]: College Basketball
+                  - generic [ref=e16468]: 9:00 PM - 11:00 PM
+            - generic [ref=e16469]:
+              - generic "How Good is Golf 6:00 AM - 6:00 PM" [ref=e16482] [cursor=pointer]:
+                - generic [ref=e16483]:
+                  - generic [ref=e16484]: How Good is Golf
+                  - generic [ref=e16485]: 6:00 AM - 6:00 PM
+                  - generic [ref=e16486]: Paul Gow talks everything golf, taking people through the greatest game of all, showing them how to play, where to play and what equipment to use.
+              - generic "Aerial View 5:00 PM - 5:40 PM" [ref=e16487] [cursor=pointer]:
+                - generic [ref=e16489]: Live
+                - generic [ref=e16491]: Aerial View
+              - generic "Breathe Through It 5:40 PM - 6:00 PM" [ref=e16492] [cursor=pointer]:
+                - generic [ref=e16494]: Breathe Through It
+              - 'generic "Silverback: The Trent Williams Story 6:00 PM - 7:45 PM" [ref=e16495] [cursor=pointer]':
+                - generic [ref=e16496]:
+                  - generic [ref=e16497]: "Silverback: The Trent Williams Story"
+                  - generic [ref=e16498]: 6:00 PM - 7:45 PM
+                  - generic [ref=e16499]: The story of Trent "Silverback" Williams, an NFL offensive lineman who overcame a life-threatening cancer, only to become the highest-paid at his position in league history and an accomplished entrepreneur off the field.
+              - 'generic "Dreams Beyond Borders: A Sandro Mamukelashvili Feature 7:50 PM - 8:10 PM" [ref=e16500] [cursor=pointer]':
+                - generic [ref=e16502]: "Dreams Beyond Borders: A Sandro Mamukelashvili Feature"
+              - generic "CloseUp360 Specials 8:10 PM - 8:55 PM" [ref=e16503] [cursor=pointer]:
+                - generic [ref=e16504]:
+                  - generic [ref=e16505]: CloseUp360 Specials
+                  - generic [ref=e16506]: 8:10 PM - 8:55 PM
+              - generic "Jalen Green and Jayson Atienza Feature 8:55 PM - 9:05 PM" [ref=e16507] [cursor=pointer]:
+                - generic [ref=e16509]: Jalen Green and Jayson Atienza Feature
+              - generic "CloseUp360 Specials 9:05 PM - 9:28 PM" [ref=e16510] [cursor=pointer]:
+                - generic [ref=e16512]: CloseUp360 Specials
+              - generic "CloseUp360 Specials 9:28 PM - 9:38 PM" [ref=e16513] [cursor=pointer]:
+                - generic [ref=e16515]: CloseUp360 Specials
+              - generic "Josh Richardson Feature 9:38 PM - 9:45 PM" [ref=e16516] [cursor=pointer]:
+                - generic [ref=e16518]: Josh Richardson Feature
+              - generic "CloseUp360 Specials 9:45 PM - 10:00 PM" [ref=e16519] [cursor=pointer]:
+                - generic [ref=e16521]: CloseUp360 Specials
+            - generic [ref=e16522]:
+              - generic "Music City Trucks 4:55 PM - 5:24 PM" [ref=e16535] [cursor=pointer]:
+                - generic [ref=e16537]: Music City Trucks
+              - generic "Music City Trucks 5:24 PM - 5:53 PM" [ref=e16538] [cursor=pointer]:
+                - generic [ref=e16540]: Music City Trucks
+              - generic "Music City Trucks 5:53 PM - 6:22 PM" [ref=e16541] [cursor=pointer]:
+                - generic [ref=e16543]: Music City Trucks
+              - generic "Music City Trucks 6:22 PM - 6:51 PM" [ref=e16544] [cursor=pointer]:
+                - generic [ref=e16546]: Music City Trucks
+              - generic "Music City Trucks 6:51 PM - 7:20 PM" [ref=e16547] [cursor=pointer]:
+                - generic [ref=e16549]: Music City Trucks
+              - generic "Truck Tech 7:20 PM - 7:47 PM" [ref=e16550] [cursor=pointer]:
+                - generic [ref=e16552]: Truck Tech
+              - generic "Truck Tech 7:47 PM - 8:14 PM" [ref=e16553] [cursor=pointer]:
+                - generic [ref=e16555]: Truck Tech
+              - generic "Truck Tech 8:14 PM - 8:41 PM" [ref=e16556] [cursor=pointer]:
+                - generic [ref=e16558]: Truck Tech
+              - generic "Truck Tech 8:41 PM - 9:09 PM" [ref=e16559] [cursor=pointer]:
+                - generic [ref=e16561]: Truck Tech
+              - generic "Truck Tech 9:09 PM - 9:36 PM" [ref=e16562] [cursor=pointer]:
+                - generic [ref=e16564]: Truck Tech
+              - generic "Truck Tech 9:36 PM - 10:03 PM" [ref=e16565] [cursor=pointer]:
+                - generic [ref=e16567]: Truck Tech
+            - generic [ref=e16568]:
+              - generic "Never Settle Podcast 5:01 PM - 6:01 PM" [ref=e16581] [cursor=pointer]:
+                - generic [ref=e16582]:
+                  - generic [ref=e16583]: Never Settle Podcast
+                  - generic [ref=e16584]: 5:01 PM - 6:01 PM
+              - generic "Never Settle Podcast 5:02 PM - 6:02 PM" [ref=e16585] [cursor=pointer]:
+                - generic [ref=e16586]:
+                  - generic [ref=e16587]: Never Settle Podcast
+                  - generic [ref=e16588]: 5:02 PM - 6:02 PM
+              - generic "Never Settle Podcast 5:03 PM - 6:03 PM" [ref=e16589] [cursor=pointer]:
+                - generic [ref=e16590]:
+                  - generic [ref=e16591]: Never Settle Podcast
+                  - generic [ref=e16592]: 5:03 PM - 6:03 PM
+              - generic "Instant Classic 6:01 PM - 7:01 PM" [ref=e16593] [cursor=pointer]:
+                - generic [ref=e16594]:
+                  - generic [ref=e16595]: Instant Classic
+                  - generic [ref=e16596]: 6:01 PM - 7:01 PM
+              - generic "Instant Classic 6:02 PM - 7:02 PM" [ref=e16597] [cursor=pointer]:
+                - generic [ref=e16598]:
+                  - generic [ref=e16599]: Instant Classic
+                  - generic [ref=e16600]: 6:02 PM - 7:02 PM
+              - generic "Instant Classic 6:03 PM - 7:03 PM" [ref=e16601] [cursor=pointer]:
+                - generic [ref=e16602]:
+                  - generic [ref=e16603]: Instant Classic
+                  - generic [ref=e16604]: 6:03 PM - 7:03 PM
+              - generic "Instant Classic 7:01 PM - 8:01 PM" [ref=e16605] [cursor=pointer]:
+                - generic [ref=e16606]:
+                  - generic [ref=e16607]: Instant Classic
+                  - generic [ref=e16608]: 7:01 PM - 8:01 PM
+              - generic "Instant Classic 7:02 PM - 8:02 PM" [ref=e16609] [cursor=pointer]:
+                - generic [ref=e16610]:
+                  - generic [ref=e16611]: Instant Classic
+                  - generic [ref=e16612]: 7:02 PM - 8:02 PM
+              - generic "Instant Classic 7:03 PM - 8:03 PM" [ref=e16613] [cursor=pointer]:
+                - generic [ref=e16614]:
+                  - generic [ref=e16615]: Instant Classic
+                  - generic [ref=e16616]: 7:03 PM - 8:03 PM
+              - generic "Never Settle Podcast 8:01 PM - 9:01 PM" [ref=e16617] [cursor=pointer]:
+                - generic [ref=e16618]:
+                  - generic [ref=e16619]: Never Settle Podcast
+                  - generic [ref=e16620]: 8:01 PM - 9:01 PM
+              - generic "Never Settle Podcast 8:02 PM - 9:02 PM" [ref=e16621] [cursor=pointer]:
+                - generic [ref=e16622]:
+                  - generic [ref=e16623]: Never Settle Podcast
+                  - generic [ref=e16624]: 8:02 PM - 9:02 PM
+              - generic "Never Settle Podcast 8:03 PM - 9:03 PM" [ref=e16625] [cursor=pointer]:
+                - generic [ref=e16626]:
+                  - generic [ref=e16627]: Never Settle Podcast
+                  - generic [ref=e16628]: 8:03 PM - 9:03 PM
+              - generic "Instant Classic 9:01 PM - 10:01 PM" [ref=e16629] [cursor=pointer]:
+                - generic [ref=e16630]:
+                  - generic [ref=e16631]: Instant Classic
+                  - generic [ref=e16632]: 9:01 PM - 10:01 PM
+              - generic "Instant Classic 9:02 PM - 10:02 PM" [ref=e16633] [cursor=pointer]:
+                - generic [ref=e16634]:
+                  - generic [ref=e16635]: Instant Classic
+                  - generic [ref=e16636]: 9:02 PM - 10:02 PM
+              - generic "Instant Classic 9:03 PM - 10:03 PM" [ref=e16637] [cursor=pointer]:
+                - generic [ref=e16638]:
+                  - generic [ref=e16639]: Instant Classic
+                  - generic [ref=e16640]: 9:03 PM - 10:03 PM
+            - generic [ref=e16641]:
+              - 'generic "Barrett-Jackson: REVVED UP 5:00 PM - 5:51 PM" [ref=e16654] [cursor=pointer]':
+                - generic [ref=e16655]:
+                  - generic [ref=e16656]: "Barrett-Jackson: REVVED UP"
+                  - generic [ref=e16657]: 5:00 PM - 5:51 PM
+              - 'generic "Barrett-Jackson: REVVED UP 5:51 PM - 6:43 PM" [ref=e16658] [cursor=pointer]':
+                - generic [ref=e16659]:
+                  - generic [ref=e16660]: "Barrett-Jackson: REVVED UP"
+                  - generic [ref=e16661]: 5:51 PM - 6:43 PM
+              - 'generic "Barrett-Jackson: REVVED UP 6:43 PM - 7:34 PM" [ref=e16662] [cursor=pointer]':
+                - generic [ref=e16663]:
+                  - generic [ref=e16664]: "Barrett-Jackson: REVVED UP"
+                  - generic [ref=e16665]: 6:43 PM - 7:34 PM
+              - 'generic "Barrett-Jackson: REVVED UP 7:34 PM - 8:25 PM" [ref=e16666] [cursor=pointer]':
+                - generic [ref=e16667]:
+                  - generic [ref=e16668]: "Barrett-Jackson: REVVED UP"
+                  - generic [ref=e16669]: 7:34 PM - 8:25 PM
+              - 'generic "Barrett-Jackson: REVVED UP 8:25 PM - 9:17 PM" [ref=e16670] [cursor=pointer]':
+                - generic [ref=e16671]:
+                  - generic [ref=e16672]: "Barrett-Jackson: REVVED UP"
+                  - generic [ref=e16673]: 8:25 PM - 9:17 PM
+              - 'generic "Barrett-Jackson: REVVED UP 9:17 PM - 10:08 PM" [ref=e16674] [cursor=pointer]':
+                - generic [ref=e16675]:
+                  - generic [ref=e16676]: "Barrett-Jackson: REVVED UP"
+                  - generic [ref=e16677]: 9:17 PM - 10:08 PM
+            - generic [ref=e16678]:
+              - generic "What's in the Barn? 5:00 PM - 5:30 PM" [ref=e16691] [cursor=pointer]:
+                - generic [ref=e16693]: What's in the Barn?
+              - generic "What's in the Barn? 5:30 PM - 6:00 PM" [ref=e16694] [cursor=pointer]:
+                - generic [ref=e16696]: What's in the Barn?
+              - generic "What's in the Barn? 6:00 PM - 6:30 PM" [ref=e16697] [cursor=pointer]:
+                - generic [ref=e16699]: What's in the Barn?
+              - generic "What's in the Barn? 6:30 PM - 7:00 PM" [ref=e16700] [cursor=pointer]:
+                - generic [ref=e16702]: What's in the Barn?
+              - generic "What's in the Barn? 7:00 PM - 7:30 PM" [ref=e16703] [cursor=pointer]:
+                - generic [ref=e16705]: What's in the Barn?
+              - generic "What's in the Barn? 7:30 PM - 8:00 PM" [ref=e16706] [cursor=pointer]:
+                - generic [ref=e16708]: What's in the Barn?
+              - generic "AmeriCarna 8:00 PM - 8:30 PM" [ref=e16709] [cursor=pointer]:
+                - generic [ref=e16711]: AmeriCarna
+              - generic "AmeriCarna 8:30 PM - 9:00 PM" [ref=e16712] [cursor=pointer]:
+                - generic [ref=e16714]: Live
+                - generic [ref=e16716]: AmeriCarna
+              - generic "AmeriCarna 9:00 PM - 10:00 PM" [ref=e16717] [cursor=pointer]:
+                - generic [ref=e16718]:
+                  - generic [ref=e16719]: AmeriCarna
+                  - generic [ref=e16720]: 9:00 PM - 10:00 PM
+            - generic [ref=e16721]:
+              - generic "Nash Bridges 4:27 PM - 5:22 PM" [ref=e16734] [cursor=pointer]:
+                - generic [ref=e16735]:
+                  - generic [ref=e16736]: Nash Bridges
+                  - generic [ref=e16737]: 4:27 PM - 5:22 PM
+              - generic "Nash Bridges 5:22 PM - 6:18 PM" [ref=e16738] [cursor=pointer]:
+                - generic [ref=e16739]:
+                  - generic [ref=e16740]: Nash Bridges
+                  - generic [ref=e16741]: 5:22 PM - 6:18 PM
+              - generic "Nash Bridges 6:18 PM - 7:13 PM" [ref=e16742] [cursor=pointer]:
+                - generic [ref=e16743]:
+                  - generic [ref=e16744]: Nash Bridges
+                  - generic [ref=e16745]: 6:18 PM - 7:13 PM
+              - generic "Andromeda 7:13 PM - 8:06 PM" [ref=e16746] [cursor=pointer]:
+                - generic [ref=e16747]:
+                  - generic [ref=e16748]: Andromeda
+                  - generic [ref=e16749]: 7:13 PM - 8:06 PM
+              - generic "Andromeda 8:06 PM - 9:01 PM" [ref=e16750] [cursor=pointer]:
+                - generic [ref=e16751]:
+                  - generic [ref=e16752]: Andromeda
+                  - generic [ref=e16753]: 8:06 PM - 9:01 PM
+              - generic "Andromeda 9:01 PM - 9:54 PM" [ref=e16754] [cursor=pointer]:
+                - generic [ref=e16755]:
+                  - generic [ref=e16756]: Andromeda
+                  - generic [ref=e16757]: 9:01 PM - 9:54 PM
+            - generic [ref=e16758]:
+              - generic "My Life Is Murder 4:55 PM - 5:47 PM" [ref=e16771] [cursor=pointer]:
+                - generic [ref=e16772]:
+                  - generic [ref=e16773]: My Life Is Murder
+                  - generic [ref=e16774]: 4:55 PM - 5:47 PM
+              - generic "My Life Is Murder 5:47 PM - 6:39 PM" [ref=e16775] [cursor=pointer]:
+                - generic [ref=e16776]:
+                  - generic [ref=e16777]: My Life Is Murder
+                  - generic [ref=e16778]: 5:47 PM - 6:39 PM
+              - generic "My Life Is Murder 6:39 PM - 7:31 PM" [ref=e16779] [cursor=pointer]:
+                - generic [ref=e16780]:
+                  - generic [ref=e16781]: My Life Is Murder
+                  - generic [ref=e16782]: 6:39 PM - 7:31 PM
+              - generic "My Life Is Murder 7:31 PM - 8:22 PM" [ref=e16783] [cursor=pointer]:
+                - generic [ref=e16785]: Live
+                - generic [ref=e16786]:
+                  - generic [ref=e16787]: My Life Is Murder
+                  - generic [ref=e16788]: 7:31 PM - 8:22 PM
+              - generic "My Life Is Murder 8:22 PM - 9:14 PM" [ref=e16789] [cursor=pointer]:
+                - generic [ref=e16790]:
+                  - generic [ref=e16791]: My Life Is Murder
+                  - generic [ref=e16792]: 8:22 PM - 9:14 PM
+              - generic "My Life Is Murder 9:14 PM - 10:06 PM" [ref=e16793] [cursor=pointer]:
+                - generic [ref=e16794]:
+                  - generic [ref=e16795]: My Life Is Murder
+                  - generic [ref=e16796]: 9:14 PM - 10:06 PM
+            - generic [ref=e16797]:
+              - generic "Weeds 4:46 PM - 5:12 PM" [ref=e16810] [cursor=pointer]:
+                - generic [ref=e16812]: Weeds
+              - generic "Weeds 5:12 PM - 5:39 PM" [ref=e16813] [cursor=pointer]:
+                - generic [ref=e16815]: Weeds
+              - generic "Weeds 5:39 PM - 6:06 PM" [ref=e16816] [cursor=pointer]:
+                - generic [ref=e16818]: Weeds
+              - generic "Weeds 6:06 PM - 6:33 PM" [ref=e16819] [cursor=pointer]:
+                - generic [ref=e16821]: Weeds
+              - generic "Weeds 6:33 PM - 7:00 PM" [ref=e16822] [cursor=pointer]:
+                - generic [ref=e16824]: Weeds
+              - generic "Nurse Jackie 7:00 PM - 7:32 PM" [ref=e16825] [cursor=pointer]:
+                - generic [ref=e16827]: Nurse Jackie
+              - generic "Nurse Jackie 7:32 PM - 8:03 PM" [ref=e16828] [cursor=pointer]:
+                - generic [ref=e16830]: Nurse Jackie
+              - generic "Nurse Jackie 8:03 PM - 8:34 PM" [ref=e16831] [cursor=pointer]:
+                - generic [ref=e16833]: Nurse Jackie
+              - generic "Nurse Jackie 8:34 PM - 9:04 PM" [ref=e16834] [cursor=pointer]:
+                - generic [ref=e16836]: Nurse Jackie
+              - generic "Nurse Jackie 9:04 PM - 9:36 PM" [ref=e16837] [cursor=pointer]:
+                - generic [ref=e16839]: Nurse Jackie
+              - generic "Grace and Frankie 9:36 PM - 10:09 PM" [ref=e16840] [cursor=pointer]:
+                - generic [ref=e16842]: Grace and Frankie
+            - generic [ref=e16843]:
+              - generic "To Be Announced 4:00 PM - 7:00 PM" [ref=e16856] [cursor=pointer]:
+                - generic [ref=e16857]:
+                  - generic [ref=e16858]: To Be Announced
+                  - generic [ref=e16859]: 4:00 PM - 7:00 PM
+                  - generic [ref=e16860]: Programming to be announced.
+              - generic "To Be Announced 7:00 PM - 10:00 PM" [ref=e16861] [cursor=pointer]:
+                - generic [ref=e16862]:
+                  - generic [ref=e16863]: To Be Announced
+                  - generic [ref=e16864]: 7:00 PM - 10:00 PM
+                  - generic [ref=e16865]: Programming to be announced.
+            - generic [ref=e16866]:
+              - generic "The Joy of Painting with Bob Ross 5:10 PM - 5:45 PM" [ref=e16879] [cursor=pointer]:
+                - generic [ref=e16881]: The Joy of Painting with Bob Ross
+              - generic "The Joy of Painting with Bob Ross 5:45 PM - 6:20 PM" [ref=e16882] [cursor=pointer]:
+                - generic [ref=e16884]: The Joy of Painting with Bob Ross
+              - generic "The Joy of Painting with Bob Ross 6:20 PM - 6:55 PM" [ref=e16885] [cursor=pointer]:
+                - generic [ref=e16887]: The Joy of Painting with Bob Ross
+              - generic "The Joy of Painting with Bob Ross 6:55 PM - 7:30 PM" [ref=e16888] [cursor=pointer]:
+                - generic [ref=e16890]: The Joy of Painting with Bob Ross
+              - generic "The Joy of Painting with Bob Ross 7:30 PM - 8:06 PM" [ref=e16891] [cursor=pointer]:
+                - generic [ref=e16893]: The Joy of Painting with Bob Ross
+              - generic "The Joy of Painting with Bob Ross 8:06 PM - 8:41 PM" [ref=e16894] [cursor=pointer]:
+                - generic [ref=e16896]: The Joy of Painting with Bob Ross
+              - generic "The Joy of Painting with Bob Ross 8:41 PM - 9:15 PM" [ref=e16897] [cursor=pointer]:
+                - generic [ref=e16899]: The Joy of Painting with Bob Ross
+              - generic "The Joy of Painting with Bob Ross 9:15 PM - 9:51 PM" [ref=e16900] [cursor=pointer]:
+                - generic [ref=e16902]: The Joy of Painting with Bob Ross
+              - generic "The Joy of Painting with Bob Ross 9:51 PM - 10:26 PM" [ref=e16903] [cursor=pointer]:
+                - generic [ref=e16905]: The Joy of Painting with Bob Ross
+            - generic [ref=e16906]:
+              - generic "Dog Soldiers 4:41 PM - 6:43 PM" [ref=e16919] [cursor=pointer]:
+                - generic [ref=e16920]:
+                  - generic [ref=e16921]: Dog Soldiers
+                  - generic [ref=e16922]: 4:41 PM - 6:43 PM
+                  - generic [ref=e16923]: During a routine nighttime training mission in the Scottish Highlands, a small squad of British soldiers expected to rendezvous with a special ops unit instead find a bloody massacre with a sole survivor. The savage attackers of the special ops team return, and the men are rescued by Megan (Emma Cleasby), a zoologist who identifies what hunts them as werewolves. Without transport or communications, the group is forced to retreat to a farmhouse to wait for the full moon to disappear at dawn.
+              - 'generic "Day of the Dead 2: Contagium 6:43 PM - 8:44 PM" [ref=e16924] [cursor=pointer]':
+                - generic [ref=e16925]:
+                  - generic [ref=e16926]: "Day of the Dead 2: Contagium"
+                  - generic [ref=e16927]: 6:43 PM - 8:44 PM
+                  - generic [ref=e16928]: In 1968, the military levels a facility after a lethal bacteria is released. In present day, a patient on an outing from a mental institution finds an old vacuum tube, which -- when it is opened -- releases bacteria turning people into zombies.
+              - generic "Bloodsucking Bastards 8:44 PM - 10:22 PM" [ref=e16929] [cursor=pointer]:
+                - generic [ref=e16930]:
+                  - generic [ref=e16931]: Bloodsucking Bastards
+                  - generic [ref=e16932]: 8:44 PM - 10:22 PM
+                  - generic [ref=e16933]: An office worker (Fran Kranz) springs into action after learning that his colleague (Pedro Pascal) is a scheming vampire.
+            - generic [ref=e16934]:
+              - generic "The Steve Wilkos Show 4:28 PM - 5:13 PM" [ref=e16947] [cursor=pointer]:
+                - generic [ref=e16948]:
+                  - generic [ref=e16949]: The Steve Wilkos Show
+                  - generic [ref=e16950]: 4:28 PM - 5:13 PM
+              - generic "The Steve Wilkos Show 5:13 PM - 5:54 PM" [ref=e16951] [cursor=pointer]:
+                - generic [ref=e16952]:
+                  - generic [ref=e16953]: The Steve Wilkos Show
+                  - generic [ref=e16954]: 5:13 PM - 5:54 PM
+              - generic "The Steve Wilkos Show 5:54 PM - 6:38 PM" [ref=e16955] [cursor=pointer]:
+                - generic [ref=e16957]: Live
+                - generic [ref=e16958]:
+                  - generic [ref=e16959]: The Steve Wilkos Show
+                  - generic [ref=e16960]: 5:54 PM - 6:38 PM
+              - generic "The Steve Wilkos Show 6:38 PM - 7:24 PM" [ref=e16961] [cursor=pointer]:
+                - generic [ref=e16962]:
+                  - generic [ref=e16963]: The Steve Wilkos Show
+                  - generic [ref=e16964]: 6:38 PM - 7:24 PM
+              - generic "The Steve Wilkos Show 7:24 PM - 8:10 PM" [ref=e16965] [cursor=pointer]:
+                - generic [ref=e16966]:
+                  - generic [ref=e16967]: The Steve Wilkos Show
+                  - generic [ref=e16968]: 7:24 PM - 8:10 PM
+              - generic "The Steve Wilkos Show 8:10 PM - 8:56 PM" [ref=e16969] [cursor=pointer]:
+                - generic [ref=e16970]:
+                  - generic [ref=e16971]: The Steve Wilkos Show
+                  - generic [ref=e16972]: 8:10 PM - 8:56 PM
+              - generic "The Steve Wilkos Show 8:56 PM - 9:42 PM" [ref=e16973] [cursor=pointer]:
+                - generic [ref=e16974]:
+                  - generic [ref=e16975]: The Steve Wilkos Show
+                  - generic [ref=e16976]: 8:56 PM - 9:42 PM
+              - generic "The Steve Wilkos Show 9:42 PM - 10:29 PM" [ref=e16977] [cursor=pointer]:
+                - generic [ref=e16979]: The Steve Wilkos Show
+            - generic [ref=e16980]:
+              - generic "The Walking Dead 4:24 PM - 5:14 PM" [ref=e16993] [cursor=pointer]:
+                - generic [ref=e16994]:
+                  - generic [ref=e16995]: The Walking Dead
+                  - generic [ref=e16996]: 4:24 PM - 5:14 PM
+              - generic "The Walking Dead 5:14 PM - 6:05 PM" [ref=e16997] [cursor=pointer]:
+                - generic [ref=e16998]:
+                  - generic [ref=e16999]: The Walking Dead
+                  - generic [ref=e17000]: 5:14 PM - 6:05 PM
+              - generic "The Walking Dead 6:05 PM - 6:55 PM" [ref=e17001] [cursor=pointer]:
+                - generic [ref=e17002]:
+                  - generic [ref=e17003]: The Walking Dead
+                  - generic [ref=e17004]: 6:05 PM - 6:55 PM
+              - generic "The Walking Dead 6:55 PM - 7:45 PM" [ref=e17005] [cursor=pointer]:
+                - generic [ref=e17006]:
+                  - generic [ref=e17007]: The Walking Dead
+                  - generic [ref=e17008]: 6:55 PM - 7:45 PM
+              - generic "The Walking Dead 7:45 PM - 8:35 PM" [ref=e17009] [cursor=pointer]:
+                - generic [ref=e17010]:
+                  - generic [ref=e17011]: The Walking Dead
+                  - generic [ref=e17012]: 7:45 PM - 8:35 PM
+              - generic "The Walking Dead 8:35 PM - 9:25 PM" [ref=e17013] [cursor=pointer]:
+                - generic [ref=e17014]:
+                  - generic [ref=e17015]: The Walking Dead
+                  - generic [ref=e17016]: 8:35 PM - 9:25 PM
+              - generic "The Walking Dead 9:25 PM - 10:15 PM" [ref=e17017] [cursor=pointer]:
+                - generic [ref=e17019]: The Walking Dead
+            - generic [ref=e17020]:
+              - generic "Pandorum 4:25 PM - 6:34 PM" [ref=e17033] [cursor=pointer]:
+                - generic [ref=e17034]:
+                  - generic [ref=e17035]: Pandorum
+                  - generic [ref=e17036]: 4:25 PM - 6:34 PM
+                  - generic [ref=e17037]: Astronauts Payton (Dennis Quaid) and Bower (Ben Foster) awake in a hypersleep chamber with no memory of who they are or what their mission might be. While Payton stays behind to monitor the radio transmitter, Bower ventures out of the chamber into the seemingly abandoned spaceship. The men quickly realize that they are not alone and that the fate of mankind hinges on what they do next.
+              - generic "The Crazies 6:34 PM - 8:33 PM" [ref=e17038] [cursor=pointer]:
+                - generic [ref=e17039]:
+                  - generic [ref=e17040]: The Crazies
+                  - generic [ref=e17041]: 6:34 PM - 8:33 PM
+                  - generic [ref=e17042]: Anarchy reigns when an unknown toxin turns the peaceful citizens of Ogden Marsh into bloodthirsty lunatics. In an effort to contain the spread of the infection, authorities blockade the town and use deadly force to keep anyone from getting in or out. Now trapped among killers, Sheriff Dutten (Timothy Olyphant) and his wife (Radha Mitchell) and two companions must band together to find a way out before madness and death overtake them.
+              - generic "Cell 8:33 PM - 10:27 PM" [ref=e17043] [cursor=pointer]:
+                - generic [ref=e17044]:
+                  - generic [ref=e17045]: Cell
+                  - generic [ref=e17046]: 8:33 PM - 10:27 PM
+                  - generic [ref=e17047]: A graphic novelist (John Cusack) begins a desperate search for his estranged wife (Clark Sarullo) and son (Ethan Andrew Casto) after a mysterious cellphone signal transforms New Englanders into savage killers.
+            - generic [ref=e17048]:
+              - generic "JCVD 4:19 PM - 6:05 PM" [ref=e17061] [cursor=pointer]:
+                - generic [ref=e17062]:
+                  - generic [ref=e17063]: JCVD
+                  - generic [ref=e17064]: 4:19 PM - 6:05 PM
+                  - generic [ref=e17065]: Weary action star Jean-Claude Van Damme (Jean-Claude Van Damme) returns to Belgium to find relief from his troubles but instead stumbles into a bank robbery.
+              - generic "Killer Elite 6:05 PM - 8:13 PM" [ref=e17066] [cursor=pointer]:
+                - generic [ref=e17068]: Live
+                - generic [ref=e17069]:
+                  - generic [ref=e17070]: Killer Elite
+                  - generic [ref=e17071]: 6:05 PM - 8:13 PM
+                  - generic [ref=e17072]: Danny Bryce (Jason Statham), one of the world's deadliest special-ops agents, returns from self-imposed exile after his mentor, Hunter (Robert De Niro) is captured. Danny reassembles his former team of skilled commandos to launch a rescue mission, and also to infiltrate the highly feared military unit, the British Special Air Service. The mission will not be easy, for Danny and his team must cut their way through Spike (Clive Owen) and a team of assassins known as the Feather Men.
+              - generic "Drive Angry 3D 8:13 PM - 10:02 PM" [ref=e17073] [cursor=pointer]:
+                - generic [ref=e17074]:
+                  - generic [ref=e17075]: Drive Angry 3D
+                  - generic [ref=e17076]: 8:13 PM - 10:02 PM
+                  - generic [ref=e17077]: Thrown into hell for his crimes, brutal felon John Milton escapes from the fiery pit after cultists murder his daughter and take her baby. Intent on rescuing the child, Milton joins forces with a waitress, who gives him her ex-lover's fire-red muscle car. In it, the two pursue the cult leader, who plans to sacrifice the infant and unleash hell on Earth. However, the hunters become the hunted when Satan sends his merciless henchman to drag Milton back.
+            - generic [ref=e17078]:
+              - generic "Court TV Live 5:00 PM - 6:00 PM" [ref=e17091] [cursor=pointer]:
+                - generic [ref=e17093]: Live
+                - generic [ref=e17094]:
+                  - generic [ref=e17095]: Court TV Live
+                  - generic [ref=e17096]: 5:00 PM - 6:00 PM
+              - generic "Court of Opinion 6:00 PM - 7:00 PM" [ref=e17097] [cursor=pointer]:
+                - generic [ref=e17098]:
+                  - generic [ref=e17099]: Court of Opinion
+                  - generic [ref=e17100]: 6:00 PM - 7:00 PM
+              - generic "Closing Arguments with Vinnie Politan 7:00 PM - 8:00 PM" [ref=e17101] [cursor=pointer]:
+                - generic [ref=e17102]:
+                  - generic [ref=e17103]: Closing Arguments with Vinnie Politan
+                  - generic [ref=e17104]: 7:00 PM - 8:00 PM
+              - 'generic "VPI: Vinnie Politan Investigates 8:00 PM - 9:00 PM" [ref=e17105] [cursor=pointer]':
+                - generic [ref=e17106]:
+                  - generic [ref=e17107]: "VPI: Vinnie Politan Investigates"
+                  - generic [ref=e17108]: 8:00 PM - 9:00 PM
+              - generic "48 Hours 9:00 PM - 10:00 PM" [ref=e17109] [cursor=pointer]:
+                - generic [ref=e17110]:
+                  - generic [ref=e17111]: 48 Hours
+                  - generic [ref=e17112]: 9:00 PM - 10:00 PM
+            - generic [ref=e17113]:
+              - generic "Summer House 4:43 PM - 5:46 PM" [ref=e17126] [cursor=pointer]:
+                - generic [ref=e17127]:
+                  - generic [ref=e17128]: Summer House
+                  - generic [ref=e17129]: 4:43 PM - 5:46 PM
+              - generic "Summer House 5:46 PM - 6:36 PM" [ref=e17130] [cursor=pointer]:
+                - generic [ref=e17131]:
+                  - generic [ref=e17132]: Summer House
+                  - generic [ref=e17133]: 5:46 PM - 6:36 PM
+              - generic "Summer House 6:36 PM - 7:26 PM" [ref=e17134] [cursor=pointer]:
+                - generic [ref=e17135]:
+                  - generic [ref=e17136]: Summer House
+                  - generic [ref=e17137]: 6:36 PM - 7:26 PM
+              - generic "Summer House 7:26 PM - 8:16 PM" [ref=e17138] [cursor=pointer]:
+                - generic [ref=e17139]:
+                  - generic [ref=e17140]: Summer House
+                  - generic [ref=e17141]: 7:26 PM - 8:16 PM
+              - generic "Summer House 8:16 PM - 9:06 PM" [ref=e17142] [cursor=pointer]:
+                - generic [ref=e17143]:
+                  - generic [ref=e17144]: Summer House
+                  - generic [ref=e17145]: 8:16 PM - 9:06 PM
+              - generic "Summer House 9:06 PM - 9:56 PM" [ref=e17146] [cursor=pointer]:
+                - generic [ref=e17147]:
+                  - generic [ref=e17148]: Summer House
+                  - generic [ref=e17149]: 9:06 PM - 9:56 PM
+            - generic [ref=e17150]:
+              - generic "The Real Housewives of New Jersey 4:37 PM - 5:26 PM" [ref=e17163] [cursor=pointer]:
+                - generic [ref=e17164]:
+                  - generic [ref=e17165]: The Real Housewives of New Jersey
+                  - generic [ref=e17166]: 4:37 PM - 5:26 PM
+              - generic "The Real Housewives of New Jersey 5:26 PM - 6:15 PM" [ref=e17167] [cursor=pointer]:
+                - generic [ref=e17168]:
+                  - generic [ref=e17169]: The Real Housewives of New Jersey
+                  - generic [ref=e17170]: 5:26 PM - 6:15 PM
+              - generic "The Real Housewives of New Jersey 6:15 PM - 7:04 PM" [ref=e17171] [cursor=pointer]:
+                - generic [ref=e17172]:
+                  - generic [ref=e17173]: The Real Housewives of New Jersey
+                  - generic [ref=e17174]: 6:15 PM - 7:04 PM
+              - generic "The Real Housewives of New Jersey 7:04 PM - 7:53 PM" [ref=e17175] [cursor=pointer]:
+                - generic [ref=e17176]:
+                  - generic [ref=e17177]: The Real Housewives of New Jersey
+                  - generic [ref=e17178]: 7:04 PM - 7:53 PM
+              - generic "The Real Housewives of Beverly Hills 7:53 PM - 8:43 PM" [ref=e17179] [cursor=pointer]:
+                - generic [ref=e17180]:
+                  - generic [ref=e17181]: The Real Housewives of Beverly Hills
+                  - generic [ref=e17182]: 7:53 PM - 8:43 PM
+              - generic "The Real Housewives of Beverly Hills 8:43 PM - 9:33 PM" [ref=e17183] [cursor=pointer]:
+                - generic [ref=e17185]: Live
+                - generic [ref=e17186]:
+                  - generic [ref=e17187]: The Real Housewives of Beverly Hills
+                  - generic [ref=e17188]: 8:43 PM - 9:33 PM
+              - generic "The Real Housewives of Beverly Hills 9:33 PM - 10:23 PM" [ref=e17189] [cursor=pointer]:
+                - generic [ref=e17191]: The Real Housewives of Beverly Hills
+            - generic [ref=e17192]:
+              - generic "Kourtney & Khloé Take Miami 5:07 PM - 5:31 PM" [ref=e17205] [cursor=pointer]:
+                - generic [ref=e17207]: Kourtney & Khloé Take Miami
+              - generic "Kourtney & Khloé Take Miami 5:31 PM - 5:55 PM" [ref=e17208] [cursor=pointer]:
+                - generic [ref=e17210]: Kourtney & Khloé Take Miami
+              - generic "Kourtney & Khloé Take Miami 5:55 PM - 6:19 PM" [ref=e17211] [cursor=pointer]:
+                - generic [ref=e17213]: Kourtney & Khloé Take Miami
+              - generic "Kourtney & Khloé Take Miami 6:19 PM - 6:44 PM" [ref=e17214] [cursor=pointer]:
+                - generic [ref=e17216]: Kourtney & Khloé Take Miami
+              - generic "Kourtney & Khloé Take Miami 6:44 PM - 7:08 PM" [ref=e17217] [cursor=pointer]:
+                - generic [ref=e17219]: Kourtney & Khloé Take Miami
+              - generic "Kourtney & Khloé Take Miami 7:08 PM - 7:32 PM" [ref=e17220] [cursor=pointer]:
+                - generic [ref=e17222]: Kourtney & Khloé Take Miami
+              - generic "Kourtney & Khloé Take Miami 7:32 PM - 7:56 PM" [ref=e17223] [cursor=pointer]:
+                - generic [ref=e17225]: Kourtney & Khloé Take Miami
+              - generic "Kourtney & Khloé Take Miami 7:56 PM - 8:20 PM" [ref=e17226] [cursor=pointer]:
+                - generic [ref=e17228]: Kourtney & Khloé Take Miami
+              - generic "Kourtney & Khloé Take Miami 8:20 PM - 8:44 PM" [ref=e17229] [cursor=pointer]:
+                - generic [ref=e17231]: Kourtney & Khloé Take Miami
+              - generic "Kourtney & Khloé Take Miami 8:44 PM - 9:08 PM" [ref=e17232] [cursor=pointer]:
+                - generic [ref=e17234]: Kourtney & Khloé Take Miami
+              - generic "Kourtney & Khloé Take Miami 9:08 PM - 9:32 PM" [ref=e17235] [cursor=pointer]:
+                - generic [ref=e17237]: Kourtney & Khloé Take Miami
+              - generic "Kourtney & Khloé Take Miami 9:32 PM - 9:56 PM" [ref=e17238] [cursor=pointer]:
+                - generic [ref=e17240]: Kourtney & Khloé Take Miami
+            - generic [ref=e17241]:
+              - generic "Mystery Millionaire 4:57 PM - 5:48 PM" [ref=e17254] [cursor=pointer]:
+                - generic [ref=e17255]:
+                  - generic [ref=e17256]: Mystery Millionaire
+                  - generic [ref=e17257]: 4:57 PM - 5:48 PM
+              - generic "Mystery Millionaire 5:48 PM - 6:38 PM" [ref=e17258] [cursor=pointer]:
+                - generic [ref=e17259]:
+                  - generic [ref=e17260]: Mystery Millionaire
+                  - generic [ref=e17261]: 5:48 PM - 6:38 PM
+              - generic "Mystery Millionaire 6:38 PM - 7:28 PM" [ref=e17262] [cursor=pointer]:
+                - generic [ref=e17263]:
+                  - generic [ref=e17264]: Mystery Millionaire
+                  - generic [ref=e17265]: 6:38 PM - 7:28 PM
+              - generic "Mystery Millionaire 7:28 PM - 8:19 PM" [ref=e17266] [cursor=pointer]:
+                - generic [ref=e17267]:
+                  - generic [ref=e17268]: Mystery Millionaire
+                  - generic [ref=e17269]: 7:28 PM - 8:19 PM
+              - generic "Mystery Millionaire 8:19 PM - 9:10 PM" [ref=e17270] [cursor=pointer]:
+                - generic [ref=e17271]:
+                  - generic [ref=e17272]: Mystery Millionaire
+                  - generic [ref=e17273]: 8:19 PM - 9:10 PM
+              - generic "Mystery Millionaire 9:10 PM - 10:00 PM" [ref=e17274] [cursor=pointer]:
+                - generic [ref=e17275]:
+                  - generic [ref=e17276]: Mystery Millionaire
+                  - generic [ref=e17277]: 9:10 PM - 10:00 PM
+            - generic [ref=e17278]:
+              - generic "Maury 5:06 PM - 5:51 PM" [ref=e17291] [cursor=pointer]:
+                - generic [ref=e17292]:
+                  - generic [ref=e17293]: Maury
+                  - generic [ref=e17294]: 5:06 PM - 5:51 PM
+              - generic "Maury 5:51 PM - 6:36 PM" [ref=e17295] [cursor=pointer]:
+                - generic [ref=e17296]:
+                  - generic [ref=e17297]: Maury
+                  - generic [ref=e17298]: 5:51 PM - 6:36 PM
+              - generic "Maury 6:36 PM - 7:21 PM" [ref=e17299] [cursor=pointer]:
+                - generic [ref=e17300]:
+                  - generic [ref=e17301]: Maury
+                  - generic [ref=e17302]: 6:36 PM - 7:21 PM
+              - generic "Maury 7:21 PM - 8:06 PM" [ref=e17303] [cursor=pointer]:
+                - generic [ref=e17304]:
+                  - generic [ref=e17305]: Maury
+                  - generic [ref=e17306]: 7:21 PM - 8:06 PM
+              - generic "Maury 8:06 PM - 8:52 PM" [ref=e17307] [cursor=pointer]:
+                - generic [ref=e17308]:
+                  - generic [ref=e17309]: Maury
+                  - generic [ref=e17310]: 8:06 PM - 8:52 PM
+              - generic "Maury 8:52 PM - 9:37 PM" [ref=e17311] [cursor=pointer]:
+                - generic [ref=e17312]:
+                  - generic [ref=e17313]: Maury
+                  - generic [ref=e17314]: 8:52 PM - 9:37 PM
+              - generic "Maury 9:37 PM - 10:22 PM" [ref=e17315] [cursor=pointer]:
+                - generic [ref=e17317]: Maury
+            - generic [ref=e17318]:
+              - generic "Dance Moms 5:00 PM - 5:51 PM" [ref=e17331] [cursor=pointer]:
+                - generic [ref=e17332]:
+                  - generic [ref=e17333]: Dance Moms
+                  - generic [ref=e17334]: 5:00 PM - 5:51 PM
+              - generic "Dance Moms 5:51 PM - 6:42 PM" [ref=e17335] [cursor=pointer]:
+                - generic [ref=e17336]:
+                  - generic [ref=e17337]: Dance Moms
+                  - generic [ref=e17338]: 5:51 PM - 6:42 PM
+              - generic "Dance Moms 6:42 PM - 7:33 PM" [ref=e17339] [cursor=pointer]:
+                - generic [ref=e17340]:
+                  - generic [ref=e17341]: Dance Moms
+                  - generic [ref=e17342]: 6:42 PM - 7:33 PM
+              - generic "Dance Moms 7:33 PM - 8:25 PM" [ref=e17343] [cursor=pointer]:
+                - generic [ref=e17344]:
+                  - generic [ref=e17345]: Dance Moms
+                  - generic [ref=e17346]: 7:33 PM - 8:25 PM
+              - generic "Dance Moms 8:25 PM - 9:16 PM" [ref=e17347] [cursor=pointer]:
+                - generic [ref=e17348]:
+                  - generic [ref=e17349]: Dance Moms
+                  - generic [ref=e17350]: 8:25 PM - 9:16 PM
+              - generic "Dance Moms 9:16 PM - 10:08 PM" [ref=e17351] [cursor=pointer]:
+                - generic [ref=e17352]:
+                  - generic [ref=e17353]: Dance Moms
+                  - generic [ref=e17354]: 9:16 PM - 10:08 PM
+            - generic [ref=e17355]:
+              - 'generic "Say Yes to the Dress: Atlanta 4:49 PM - 5:14 PM" [ref=e17368] [cursor=pointer]':
+                - generic [ref=e17370]: "Say Yes to the Dress: Atlanta"
+              - 'generic "Say Yes to the Dress: Atlanta 5:14 PM - 5:36 PM" [ref=e17371] [cursor=pointer]':
+                - generic [ref=e17373]: "Say Yes to the Dress: Atlanta"
+              - 'generic "Say Yes to the Dress: Atlanta 5:36 PM - 6:01 PM" [ref=e17374] [cursor=pointer]':
+                - generic [ref=e17376]: "Say Yes to the Dress: Atlanta"
+              - 'generic "Say Yes to the Dress: Atlanta 6:01 PM - 6:25 PM" [ref=e17377] [cursor=pointer]':
+                - generic [ref=e17379]: "Say Yes to the Dress: Atlanta"
+              - 'generic "Say Yes to the Dress: Atlanta 6:25 PM - 6:50 PM" [ref=e17380] [cursor=pointer]':
+                - generic [ref=e17382]: "Say Yes to the Dress: Atlanta"
+              - 'generic "Say Yes to the Dress: Atlanta 6:50 PM - 7:14 PM" [ref=e17383] [cursor=pointer]':
+                - generic [ref=e17385]: "Say Yes to the Dress: Atlanta"
+              - 'generic "Say Yes to the Dress: Atlanta 7:14 PM - 7:39 PM" [ref=e17386] [cursor=pointer]':
+                - generic [ref=e17388]: "Say Yes to the Dress: Atlanta"
+              - 'generic "Say Yes to the Dress: Atlanta 7:39 PM - 8:03 PM" [ref=e17389] [cursor=pointer]':
+                - generic [ref=e17391]: "Say Yes to the Dress: Atlanta"
+              - 'generic "Say Yes to the Dress: Atlanta 8:03 PM - 8:26 PM" [ref=e17392] [cursor=pointer]':
+                - generic [ref=e17394]: "Say Yes to the Dress: Atlanta"
+              - 'generic "Say Yes to the Dress: Atlanta 8:26 PM - 8:51 PM" [ref=e17395] [cursor=pointer]':
+                - generic [ref=e17397]: "Say Yes to the Dress: Atlanta"
+              - 'generic "Say Yes to the Dress: Atlanta 8:51 PM - 9:15 PM" [ref=e17398] [cursor=pointer]':
+                - generic [ref=e17400]: "Say Yes to the Dress: Atlanta"
+              - 'generic "Say Yes to the Dress: Atlanta 9:15 PM - 9:38 PM" [ref=e17401] [cursor=pointer]':
+                - generic [ref=e17403]: "Say Yes to the Dress: Atlanta"
+              - 'generic "Say Yes to the Dress: Atlanta 9:38 PM - 10:02 PM" [ref=e17404] [cursor=pointer]':
+                - generic [ref=e17406]: "Say Yes to the Dress: Atlanta"
+            - generic [ref=e17407]:
+              - generic "Truth or Drink 4:41 PM - 5:11 PM" [ref=e17420] [cursor=pointer]:
+                - generic [ref=e17422]: Truth or Drink
+              - generic "My Teenage Wedding 5:11 PM - 5:37 PM" [ref=e17423] [cursor=pointer]:
+                - generic [ref=e17425]: My Teenage Wedding
+              - generic "Truth or Drink 5:37 PM - 6:04 PM" [ref=e17426] [cursor=pointer]:
+                - generic [ref=e17428]: Truth or Drink
+              - generic "Love in the Dark 6:04 PM - 6:31 PM" [ref=e17429] [cursor=pointer]:
+                - generic [ref=e17431]: Love in the Dark
+              - generic "Instant Cash 6:31 PM - 6:56 PM" [ref=e17432] [cursor=pointer]:
+                - generic [ref=e17434]: Instant Cash
+              - generic "For Better or for Worse 6:56 PM - 7:48 PM" [ref=e17435] [cursor=pointer]:
+                - generic [ref=e17436]:
+                  - generic [ref=e17437]: For Better or for Worse
+                  - generic [ref=e17438]: 6:56 PM - 7:48 PM
+              - generic "Who Wants to Marry My Dad? 7:48 PM - 8:33 PM" [ref=e17439] [cursor=pointer]:
+                - generic [ref=e17440]:
+                  - generic [ref=e17441]: Who Wants to Marry My Dad?
+                  - generic [ref=e17442]: 7:48 PM - 8:33 PM
+              - generic "My Teenage Wedding 8:33 PM - 8:59 PM" [ref=e17443] [cursor=pointer]:
+                - generic [ref=e17445]: My Teenage Wedding
+              - generic "Lineup 8:59 PM - 9:27 PM" [ref=e17446] [cursor=pointer]:
+                - generic [ref=e17448]: Lineup
+              - generic "Lineup 9:27 PM - 9:56 PM" [ref=e17449] [cursor=pointer]:
+                - generic [ref=e17451]: Lineup
+            - generic [ref=e17452]:
+              - generic "The Masked Singer 5:00 PM - 6:00 PM" [ref=e17465] [cursor=pointer]:
+                - generic [ref=e17466]:
+                  - generic [ref=e17467]: The Masked Singer
+                  - generic [ref=e17468]: 5:00 PM - 6:00 PM
+              - generic "The Masked Singer 6:00 PM - 7:00 PM" [ref=e17469] [cursor=pointer]:
+                - generic [ref=e17470]:
+                  - generic [ref=e17471]: The Masked Singer
+                  - generic [ref=e17472]: 6:00 PM - 7:00 PM
+              - generic "The Masked Singer 7:00 PM - 8:00 PM" [ref=e17473] [cursor=pointer]:
+                - generic [ref=e17474]:
+                  - generic [ref=e17475]: The Masked Singer
+                  - generic [ref=e17476]: 7:00 PM - 8:00 PM
+              - generic "The Masked Singer 8:00 PM - 9:00 PM" [ref=e17477] [cursor=pointer]:
+                - generic [ref=e17478]:
+                  - generic [ref=e17479]: The Masked Singer
+                  - generic [ref=e17480]: 8:00 PM - 9:00 PM
+              - generic "The Masked Singer 9:00 PM - 10:00 PM" [ref=e17481] [cursor=pointer]:
+                - generic [ref=e17482]:
+                  - generic [ref=e17483]: The Masked Singer
+                  - generic [ref=e17484]: 9:00 PM - 10:00 PM
+            - generic [ref=e17485]:
+              - generic "America's Got Talent 4:38 PM - 6:27 PM" [ref=e17498] [cursor=pointer]:
+                - generic [ref=e17500]: Live
+                - generic [ref=e17501]:
+                  - generic [ref=e17502]: America's Got Talent
+                  - generic [ref=e17503]: 4:38 PM - 6:27 PM
+                  - generic [ref=e17504]: Eleven acts compete, and a live show golden buzzer will send one act directly to the finals; America can vote for their three favorite acts to advance to the semifinals by using the AGT App or going to NBC.com.
+              - generic "America's Got Talent 4:47 PM - 6:36 PM" [ref=e17505] [cursor=pointer]:
+                - generic [ref=e17507]: Live
+                - generic [ref=e17508]:
+                  - generic [ref=e17509]: America's Got Talent
+                  - generic [ref=e17510]: 4:47 PM - 6:36 PM
+                  - generic [ref=e17511]: Eleven acts compete, and a live show golden buzzer will send one act directly to the finals; America can vote for their three favorite acts to advance to the semifinals by using the AGT App or going to NBC.com.
+              - generic "America's Got Talent 5:02 PM - 6:49 PM" [ref=e17512] [cursor=pointer]:
+                - generic [ref=e17514]: Live
+                - generic [ref=e17515]:
+                  - generic [ref=e17516]: America's Got Talent
+                  - generic [ref=e17517]: 5:02 PM - 6:49 PM
+                  - generic [ref=e17518]: Eleven acts compete, and a live show golden buzzer will send one act directly to the finals; America can vote for their three favorite acts to advance to the semifinals by using the AGT App or going to NBC.com.
+              - generic "America's Got Talent 6:27 PM - 7:19 PM" [ref=e17519] [cursor=pointer]:
+                - generic [ref=e17521]: Live
+                - generic [ref=e17522]:
+                  - generic [ref=e17523]: America's Got Talent
+                  - generic [ref=e17524]: 6:27 PM - 7:19 PM
+              - generic "America's Got Talent 6:36 PM - 7:29 PM" [ref=e17525] [cursor=pointer]:
+                - generic [ref=e17527]: Live
+                - generic [ref=e17528]:
+                  - generic [ref=e17529]: America's Got Talent
+                  - generic [ref=e17530]: 6:36 PM - 7:29 PM
+              - generic "America's Got Talent 6:49 PM - 7:41 PM" [ref=e17531] [cursor=pointer]:
+                - generic [ref=e17533]: Live
+                - generic [ref=e17534]:
+                  - generic [ref=e17535]: America's Got Talent
+                  - generic [ref=e17536]: 6:49 PM - 7:41 PM
+              - generic "Musicians Who Rocked AGT 7:19 PM - 8:12 PM" [ref=e17537] [cursor=pointer]:
+                - generic [ref=e17538]:
+                  - generic [ref=e17539]: Musicians Who Rocked AGT
+                  - generic [ref=e17540]: 7:19 PM - 8:12 PM
+              - generic "Musicians Who Rocked AGT 7:29 PM - 8:23 PM" [ref=e17541] [cursor=pointer]:
+                - generic [ref=e17542]:
+                  - generic [ref=e17543]: Musicians Who Rocked AGT
+                  - generic [ref=e17544]: 7:29 PM - 8:23 PM
+              - generic "Musicians Who Rocked AGT 7:41 PM - 8:36 PM" [ref=e17545] [cursor=pointer]:
+                - generic [ref=e17546]:
+                  - generic [ref=e17547]: Musicians Who Rocked AGT
+                  - generic [ref=e17548]: 7:41 PM - 8:36 PM
+              - generic "Best of the Best on AGT 8:12 PM - 9:31 PM" [ref=e17549] [cursor=pointer]:
+                - generic [ref=e17550]:
+                  - generic [ref=e17551]: Best of the Best on AGT
+                  - generic [ref=e17552]: 8:12 PM - 9:31 PM
+                  - generic [ref=e17553]: A roundup of the best AGT acts ever, unforgettable performances that defined the show's greatest moments.
+              - generic "Best of the Best on AGT 8:23 PM - 9:44 PM" [ref=e17554] [cursor=pointer]:
+                - generic [ref=e17555]:
+                  - generic [ref=e17556]: Best of the Best on AGT
+                  - generic [ref=e17557]: 8:23 PM - 9:44 PM
+                  - generic [ref=e17558]: A roundup of the best AGT acts ever, unforgettable performances that defined the show's greatest moments.
+              - generic "Best of the Best on AGT 8:36 PM - 9:52 PM" [ref=e17559] [cursor=pointer]:
+                - generic [ref=e17560]:
+                  - generic [ref=e17561]: Best of the Best on AGT
+                  - generic [ref=e17562]: 8:36 PM - 9:52 PM
+                  - generic [ref=e17563]: A roundup of the best AGT acts ever, unforgettable performances that defined the show's greatest moments.
+              - generic "Animals on Stage and Kid Stars 9:31 PM - 10:42 PM" [ref=e17564] [cursor=pointer]:
+                - generic [ref=e17566]: Animals on Stage and Kid Stars
+              - generic "Animals on Stage and Kid Stars 9:44 PM - 10:56 PM" [ref=e17567] [cursor=pointer]:
+                - generic [ref=e17569]: Animals on Stage and Kid Stars
+              - generic "Animals on Stage and Kid Stars 9:52 PM - 10:19 PM" [ref=e17570] [cursor=pointer]:
+                - generic [ref=e17572]: Animals on Stage and Kid Stars
+            - generic [ref=e17573]:
+              - generic "Duck Dynasty 5:00 PM - 5:28 PM" [ref=e17586] [cursor=pointer]:
+                - generic [ref=e17588]: Duck Dynasty
+              - generic "Duck Dynasty 5:28 PM - 5:57 PM" [ref=e17589] [cursor=pointer]:
+                - generic [ref=e17591]: Duck Dynasty
+              - generic "Duck Dynasty 5:57 PM - 6:26 PM" [ref=e17592] [cursor=pointer]:
+                - generic [ref=e17594]: Duck Dynasty
+              - generic "Duck Dynasty 6:26 PM - 6:54 PM" [ref=e17595] [cursor=pointer]:
+                - generic [ref=e17597]: Duck Dynasty
+              - generic "Duck Dynasty 6:54 PM - 7:22 PM" [ref=e17598] [cursor=pointer]:
+                - generic [ref=e17600]: Duck Dynasty
+              - generic "Duck Dynasty 7:22 PM - 7:50 PM" [ref=e17601] [cursor=pointer]:
+                - generic [ref=e17603]: Duck Dynasty
+              - generic "Duck Dynasty 7:50 PM - 8:17 PM" [ref=e17604] [cursor=pointer]:
+                - generic [ref=e17606]: Duck Dynasty
+              - generic "Duck Dynasty 8:17 PM - 8:44 PM" [ref=e17607] [cursor=pointer]:
+                - generic [ref=e17609]: Duck Dynasty
+              - generic "Duck Dynasty 8:44 PM - 9:38 PM" [ref=e17610] [cursor=pointer]:
+                - generic [ref=e17611]:
+                  - generic [ref=e17612]: Duck Dynasty
+                  - generic [ref=e17613]: 8:44 PM - 9:38 PM
+              - generic "Duck Dynasty 9:38 PM - 10:32 PM" [ref=e17614] [cursor=pointer]:
+                - generic [ref=e17616]: Duck Dynasty
+            - generic [ref=e17617]:
+              - generic "Ice Road Truckers 5:00 PM - 5:51 PM" [ref=e17630] [cursor=pointer]:
+                - generic [ref=e17631]:
+                  - generic [ref=e17632]: Ice Road Truckers
+                  - generic [ref=e17633]: 5:00 PM - 5:51 PM
+              - generic "Ice Road Truckers 5:51 PM - 6:43 PM" [ref=e17634] [cursor=pointer]:
+                - generic [ref=e17635]:
+                  - generic [ref=e17636]: Ice Road Truckers
+                  - generic [ref=e17637]: 5:51 PM - 6:43 PM
+              - generic "Ice Road Truckers 6:43 PM - 7:35 PM" [ref=e17638] [cursor=pointer]:
+                - generic [ref=e17639]:
+                  - generic [ref=e17640]: Ice Road Truckers
+                  - generic [ref=e17641]: 6:43 PM - 7:35 PM
+              - generic "Ice Road Truckers 7:35 PM - 8:25 PM" [ref=e17642] [cursor=pointer]:
+                - generic [ref=e17643]:
+                  - generic [ref=e17644]: Ice Road Truckers
+                  - generic [ref=e17645]: 7:35 PM - 8:25 PM
+              - generic "Ice Road Truckers 8:25 PM - 9:16 PM" [ref=e17646] [cursor=pointer]:
+                - generic [ref=e17648]: Live
+                - generic [ref=e17649]:
+                  - generic [ref=e17650]: Ice Road Truckers
+                  - generic [ref=e17651]: 8:25 PM - 9:16 PM
+              - generic "Ice Road Truckers 9:16 PM - 10:08 PM" [ref=e17652] [cursor=pointer]:
+                - generic [ref=e17653]:
+                  - generic [ref=e17654]: Ice Road Truckers
+                  - generic [ref=e17655]: 9:16 PM - 10:08 PM
+            - generic [ref=e17656]:
+              - generic "Ax Men 5:00 PM - 5:50 PM" [ref=e17669] [cursor=pointer]:
+                - generic [ref=e17670]:
+                  - generic [ref=e17671]: Ax Men
+                  - generic [ref=e17672]: 5:00 PM - 5:50 PM
+              - generic "Ax Men 5:50 PM - 6:42 PM" [ref=e17673] [cursor=pointer]:
+                - generic [ref=e17674]:
+                  - generic [ref=e17675]: Ax Men
+                  - generic [ref=e17676]: 5:50 PM - 6:42 PM
+              - generic "Ax Men 6:42 PM - 7:34 PM" [ref=e17677] [cursor=pointer]:
+                - generic [ref=e17678]:
+                  - generic [ref=e17679]: Ax Men
+                  - generic [ref=e17680]: 6:42 PM - 7:34 PM
+              - generic "Ax Men 7:34 PM - 8:26 PM" [ref=e17681] [cursor=pointer]:
+                - generic [ref=e17682]:
+                  - generic [ref=e17683]: Ax Men
+                  - generic [ref=e17684]: 7:34 PM - 8:26 PM
+              - generic "Ax Men 8:26 PM - 9:18 PM" [ref=e17685] [cursor=pointer]:
+                - generic [ref=e17686]:
+                  - generic [ref=e17687]: Ax Men
+                  - generic [ref=e17688]: 8:26 PM - 9:18 PM
+              - generic "Ax Men 9:18 PM - 10:09 PM" [ref=e17689] [cursor=pointer]:
+                - generic [ref=e17690]:
+                  - generic [ref=e17691]: Ax Men
+                  - generic [ref=e17692]: 9:18 PM - 10:09 PM
+            - generic [ref=e17693]:
+              - 'generic "Swords: Life on the Line 4:55 PM - 5:46 PM" [ref=e17706] [cursor=pointer]':
+                - generic [ref=e17707]:
+                  - generic [ref=e17708]: "Swords: Life on the Line"
+                  - generic [ref=e17709]: 4:55 PM - 5:46 PM
+              - 'generic "Swords: Life on the Line 5:46 PM - 6:38 PM" [ref=e17710] [cursor=pointer]':
+                - generic [ref=e17711]:
+                  - generic [ref=e17712]: "Swords: Life on the Line"
+                  - generic [ref=e17713]: 5:46 PM - 6:38 PM
+              - generic "Black Gold 6:38 PM - 7:30 PM" [ref=e17714] [cursor=pointer]:
+                - generic [ref=e17715]:
+                  - generic [ref=e17716]: Black Gold
+                  - generic [ref=e17717]: 6:38 PM - 7:30 PM
+              - generic "Black Gold 7:30 PM - 8:22 PM" [ref=e17718] [cursor=pointer]:
+                - generic [ref=e17719]:
+                  - generic [ref=e17720]: Black Gold
+                  - generic [ref=e17721]: 7:30 PM - 8:22 PM
+              - generic "Black Gold 8:22 PM - 9:14 PM" [ref=e17722] [cursor=pointer]:
+                - generic [ref=e17723]:
+                  - generic [ref=e17724]: Black Gold
+                  - generic [ref=e17725]: 8:22 PM - 9:14 PM
+              - generic "Verminators 9:14 PM - 10:06 PM" [ref=e17726] [cursor=pointer]:
+                - generic [ref=e17727]:
+                  - generic [ref=e17728]: Verminators
+                  - generic [ref=e17729]: 9:14 PM - 10:06 PM
+            - generic [ref=e17730]:
+              - 'generic "Paramedics: Emergency Response 4:56 PM - 5:21 PM" [ref=e17743] [cursor=pointer]':
+                - generic [ref=e17745]: "Paramedics: Emergency Response"
+              - 'generic "Paramedics: Emergency Response 5:21 PM - 5:47 PM" [ref=e17746] [cursor=pointer]':
+                - generic [ref=e17748]: "Paramedics: Emergency Response"
+              - generic "Coast Guard Alaska 5:47 PM - 6:39 PM" [ref=e17749] [cursor=pointer]:
+                - generic [ref=e17750]:
+                  - generic [ref=e17751]: Coast Guard Alaska
+                  - generic [ref=e17752]: 5:47 PM - 6:39 PM
+              - generic "Coast Guard Alaska 6:39 PM - 7:30 PM" [ref=e17753] [cursor=pointer]:
+                - generic [ref=e17754]:
+                  - generic [ref=e17755]: Coast Guard Alaska
+                  - generic [ref=e17756]: 6:39 PM - 7:30 PM
+              - generic "Customs 7:30 PM - 8:00 PM" [ref=e17757] [cursor=pointer]:
+                - generic [ref=e17759]: Customs
+              - generic "Customs 8:00 PM - 8:29 PM" [ref=e17760] [cursor=pointer]:
+                - generic [ref=e17762]: Customs
+              - generic "Customs 8:29 PM - 8:58 PM" [ref=e17763] [cursor=pointer]:
+                - generic [ref=e17765]: Customs
+              - generic "Customs 8:58 PM - 9:28 PM" [ref=e17766] [cursor=pointer]:
+                - generic [ref=e17768]: Customs
+              - generic "Trauma Rescue Squad 9:28 PM - 10:24 PM" [ref=e17769] [cursor=pointer]:
+                - generic [ref=e17771]: Trauma Rescue Squad
+            - generic [ref=e17772]:
+              - generic "Love After Lockup 4:56 PM - 5:45 PM" [ref=e17785] [cursor=pointer]:
+                - generic [ref=e17786]:
+                  - generic [ref=e17787]: Love After Lockup
+                  - generic [ref=e17788]: 4:56 PM - 5:45 PM
+              - generic "Love After Lockup 5:45 PM - 6:34 PM" [ref=e17789] [cursor=pointer]:
+                - generic [ref=e17790]:
+                  - generic [ref=e17791]: Love After Lockup
+                  - generic [ref=e17792]: 5:45 PM - 6:34 PM
+              - generic "Love After Lockup 6:34 PM - 7:23 PM" [ref=e17793] [cursor=pointer]:
+                - generic [ref=e17794]:
+                  - generic [ref=e17795]: Love After Lockup
+                  - generic [ref=e17796]: 6:34 PM - 7:23 PM
+              - generic "Love After Lockup 7:23 PM - 8:12 PM" [ref=e17797] [cursor=pointer]:
+                - generic [ref=e17798]:
+                  - generic [ref=e17799]: Love After Lockup
+                  - generic [ref=e17800]: 7:23 PM - 8:12 PM
+              - generic "Love After Lockup 8:12 PM - 9:01 PM" [ref=e17801] [cursor=pointer]:
+                - generic [ref=e17802]:
+                  - generic [ref=e17803]: Love After Lockup
+                  - generic [ref=e17804]: 8:12 PM - 9:01 PM
+              - generic "Love After Lockup 9:01 PM - 9:55 PM" [ref=e17805] [cursor=pointer]:
+                - generic [ref=e17806]:
+                  - generic [ref=e17807]: Love After Lockup
+                  - generic [ref=e17808]: 9:01 PM - 9:55 PM
+            - generic [ref=e17809]:
+              - generic "Cold Case Files 5:00 PM - 5:51 PM" [ref=e17822] [cursor=pointer]:
+                - generic [ref=e17823]:
+                  - generic [ref=e17824]: Cold Case Files
+                  - generic [ref=e17825]: 5:00 PM - 5:51 PM
+              - generic "Cold Case Files 5:51 PM - 6:42 PM" [ref=e17826] [cursor=pointer]:
+                - generic [ref=e17827]:
+                  - generic [ref=e17828]: Cold Case Files
+                  - generic [ref=e17829]: 5:51 PM - 6:42 PM
+              - generic "Cold Case Files 6:42 PM - 7:33 PM" [ref=e17830] [cursor=pointer]:
+                - generic [ref=e17831]:
+                  - generic [ref=e17832]: Cold Case Files
+                  - generic [ref=e17833]: 6:42 PM - 7:33 PM
+              - generic "Cold Case Files 7:33 PM - 8:26 PM" [ref=e17834] [cursor=pointer]:
+                - generic [ref=e17835]:
+                  - generic [ref=e17836]: Cold Case Files
+                  - generic [ref=e17837]: 7:33 PM - 8:26 PM
+              - generic "Cold Case Files 8:26 PM - 9:17 PM" [ref=e17838] [cursor=pointer]:
+                - generic [ref=e17839]:
+                  - generic [ref=e17840]: Cold Case Files
+                  - generic [ref=e17841]: 8:26 PM - 9:17 PM
+              - generic "Cold Case Files 9:17 PM - 10:07 PM" [ref=e17842] [cursor=pointer]:
+                - generic [ref=e17843]:
+                  - generic [ref=e17844]: Cold Case Files
+                  - generic [ref=e17845]: 9:17 PM - 10:07 PM
+            - generic [ref=e17846]:
+              - 'generic "The First 48: Women of Homicide 5:00 PM - 5:50 PM" [ref=e17859] [cursor=pointer]':
+                - generic [ref=e17860]:
+                  - generic [ref=e17861]: "The First 48: Women of Homicide"
+                  - generic [ref=e17862]: 5:00 PM - 5:50 PM
+              - generic "The First 48 5:50 PM - 6:40 PM" [ref=e17863] [cursor=pointer]:
+                - generic [ref=e17864]:
+                  - generic [ref=e17865]: The First 48
+                  - generic [ref=e17866]: 5:50 PM - 6:40 PM
+              - generic "The First 48 6:40 PM - 7:32 PM" [ref=e17867] [cursor=pointer]:
+                - generic [ref=e17868]:
+                  - generic [ref=e17869]: The First 48
+                  - generic [ref=e17870]: 6:40 PM - 7:32 PM
+              - generic "The First 48 7:32 PM - 8:23 PM" [ref=e17871] [cursor=pointer]:
+                - generic [ref=e17872]:
+                  - generic [ref=e17873]: The First 48
+                  - generic [ref=e17874]: 7:32 PM - 8:23 PM
+              - generic "The First 48 8:23 PM - 9:16 PM" [ref=e17875] [cursor=pointer]:
+                - generic [ref=e17876]:
+                  - generic [ref=e17877]: The First 48
+                  - generic [ref=e17878]: 8:23 PM - 9:16 PM
+              - generic "The First 48 9:16 PM - 10:07 PM" [ref=e17879] [cursor=pointer]:
+                - generic [ref=e17880]:
+                  - generic [ref=e17881]: The First 48
+                  - generic [ref=e17882]: 9:16 PM - 10:07 PM
+            - generic [ref=e17883]:
+              - generic "A Murder in the Family 4:49 PM - 5:47 PM" [ref=e17896] [cursor=pointer]:
+                - generic [ref=e17897]:
+                  - generic [ref=e17898]: A Murder in the Family
+                  - generic [ref=e17899]: 4:49 PM - 5:47 PM
+              - 'generic "Exposed: The Case of Keli Lane 5:47 PM - 6:54 PM" [ref=e17900] [cursor=pointer]':
+                - generic [ref=e17901]:
+                  - generic [ref=e17902]: "Exposed: The Case of Keli Lane"
+                  - generic [ref=e17903]: 5:47 PM - 6:54 PM
+                  - generic [ref=e17904]: Caro Meldrum-Hanna investigates one of Australia's most notorious crimes, the disappearance of baby Tegan Lane and the conviction of her mother Keli Lane of her murder.
+              - 'generic "Exposed: The Case of Keli Lane 6:54 PM - 8:03 PM" [ref=e17905] [cursor=pointer]':
+                - generic [ref=e17906]:
+                  - generic [ref=e17907]: "Exposed: The Case of Keli Lane"
+                  - generic [ref=e17908]: 6:54 PM - 8:03 PM
+                  - generic [ref=e17909]: Four years after baby Tegan vanished, Manly police begin their investigation; but they have lost crucial time, and Caro discovers how the investigation was marred from the very start.
+              - 'generic "Exposed: The Case of Keli Lane 8:03 PM - 9:14 PM" [ref=e17910] [cursor=pointer]':
+                - generic [ref=e17911]:
+                  - generic [ref=e17912]: "Exposed: The Case of Keli Lane"
+                  - generic [ref=e17913]: 8:03 PM - 9:14 PM
+                  - generic [ref=e17914]: After a two-year homicide investigation fails to obtain an admission of murder from Keli Lane, she is sensationally charged by the NSW DPP with killing her baby Tegan.
+              - 'generic "Murder in the Village: Who Killed the Doctor''s Wife? 9:14 PM - 10:07 PM" [ref=e17915] [cursor=pointer]':
+                - generic [ref=e17916]:
+                  - generic [ref=e17917]: "Murder in the Village: Who Killed the Doctor's Wife?"
+                  - generic [ref=e17918]: 9:14 PM - 10:07 PM
+            - generic [ref=e17919]:
+              - generic "How I Caught the Killer 4:29 PM - 5:28 PM" [ref=e17932] [cursor=pointer]:
+                - generic [ref=e17933]:
+                  - generic [ref=e17934]: How I Caught the Killer
+                  - generic [ref=e17935]: 4:29 PM - 5:28 PM
+              - generic "Becoming Ian Brady 5:28 PM - 6:28 PM" [ref=e17936] [cursor=pointer]:
+                - generic [ref=e17937]:
+                  - generic [ref=e17938]: Becoming Ian Brady
+                  - generic [ref=e17939]: 5:28 PM - 6:28 PM
+              - generic "Becoming Ian Brady 6:28 PM - 7:28 PM" [ref=e17940] [cursor=pointer]:
+                - generic [ref=e17941]:
+                  - generic [ref=e17942]: Becoming Ian Brady
+                  - generic [ref=e17943]: 6:28 PM - 7:28 PM
+              - generic "Becoming Ian Brady 7:28 PM - 8:28 PM" [ref=e17944] [cursor=pointer]:
+                - generic [ref=e17945]:
+                  - generic [ref=e17946]: Becoming Ian Brady
+                  - generic [ref=e17947]: 7:28 PM - 8:28 PM
+              - generic "Nurses Who Kill 8:28 PM - 9:25 PM" [ref=e17948] [cursor=pointer]:
+                - generic [ref=e17949]:
+                  - generic [ref=e17950]: Nurses Who Kill
+                  - generic [ref=e17951]: 8:28 PM - 9:25 PM
+              - generic "Nurses Who Kill 9:25 PM - 10:22 PM" [ref=e17952] [cursor=pointer]:
+                - generic [ref=e17954]: Nurses Who Kill
+            - generic [ref=e17955]:
+              - generic "Extreme Car Chase 5:00 PM - 5:30 PM" [ref=e17968] [cursor=pointer]:
+                - generic [ref=e17970]: Extreme Car Chase
+              - generic "Extreme Car Chase 5:30 PM - 6:30 PM" [ref=e17971] [cursor=pointer]:
+                - generic [ref=e17972]:
+                  - generic [ref=e17973]: Extreme Car Chase
+                  - generic [ref=e17974]: 5:30 PM - 6:30 PM
+              - generic "Extreme Car Chase 6:30 PM - 7:30 PM" [ref=e17975] [cursor=pointer]:
+                - generic [ref=e17976]:
+                  - generic [ref=e17977]: Extreme Car Chase
+                  - generic [ref=e17978]: 6:30 PM - 7:30 PM
+              - generic "Extreme Car Chase 7:30 PM - 8:00 PM" [ref=e17979] [cursor=pointer]:
+                - generic [ref=e17981]: Extreme Car Chase
+              - generic "Extreme Car Chase 8:00 PM - 9:00 PM" [ref=e17982] [cursor=pointer]:
+                - generic [ref=e17983]:
+                  - generic [ref=e17984]: Extreme Car Chase
+                  - generic [ref=e17985]: 8:00 PM - 9:00 PM
+              - generic "Extreme Car Chase 9:00 PM - 10:00 PM" [ref=e17986] [cursor=pointer]:
+                - generic [ref=e17987]:
+                  - generic [ref=e17988]: Extreme Car Chase
+                  - generic [ref=e17989]: 9:00 PM - 10:00 PM
+            - generic [ref=e17990]:
+              - 'generic "Dark Waters: Murder in the Deep 4:25 PM - 5:13 PM" [ref=e18003] [cursor=pointer]':
+                - generic [ref=e18004]:
+                  - generic [ref=e18005]: "Dark Waters: Murder in the Deep"
+                  - generic [ref=e18006]: 4:25 PM - 5:13 PM
+              - 'generic "Dark Waters: Murder in the Deep 5:13 PM - 6:02 PM" [ref=e18007] [cursor=pointer]':
+                - generic [ref=e18008]:
+                  - generic [ref=e18009]: "Dark Waters: Murder in the Deep"
+                  - generic [ref=e18010]: 5:13 PM - 6:02 PM
+              - 'generic "Dark Waters: Murder in the Deep 6:02 PM - 6:51 PM" [ref=e18011] [cursor=pointer]':
+                - generic [ref=e18012]:
+                  - generic [ref=e18013]: "Dark Waters: Murder in the Deep"
+                  - generic [ref=e18014]: 6:02 PM - 6:51 PM
+              - 'generic "Dark Waters: Murder in the Deep 6:51 PM - 7:41 PM" [ref=e18015] [cursor=pointer]':
+                - generic [ref=e18016]:
+                  - generic [ref=e18017]: "Dark Waters: Murder in the Deep"
+                  - generic [ref=e18018]: 6:51 PM - 7:41 PM
+              - generic "Murder Chose Me 7:41 PM - 8:30 PM" [ref=e18019] [cursor=pointer]:
+                - generic [ref=e18020]:
+                  - generic [ref=e18021]: Murder Chose Me
+                  - generic [ref=e18022]: 7:41 PM - 8:30 PM
+              - generic "Murder Chose Me 8:30 PM - 9:20 PM" [ref=e18023] [cursor=pointer]:
+                - generic [ref=e18024]:
+                  - generic [ref=e18025]: Murder Chose Me
+                  - generic [ref=e18026]: 8:30 PM - 9:20 PM
+              - generic "Murder Chose Me 9:20 PM - 10:11 PM" [ref=e18027] [cursor=pointer]:
+                - generic [ref=e18029]: Murder Chose Me
+            - generic [ref=e18030]:
+              - generic "I (Almost) Got Away With It 4:45 PM - 5:35 PM" [ref=e18043] [cursor=pointer]:
+                - generic [ref=e18044]:
+                  - generic [ref=e18045]: I (Almost) Got Away With It
+                  - generic [ref=e18046]: 4:45 PM - 5:35 PM
+              - generic "I (Almost) Got Away With It 5:35 PM - 6:26 PM" [ref=e18047] [cursor=pointer]:
+                - generic [ref=e18048]:
+                  - generic [ref=e18049]: I (Almost) Got Away With It
+                  - generic [ref=e18050]: 5:35 PM - 6:26 PM
+              - generic "I (Almost) Got Away With It 6:26 PM - 7:17 PM" [ref=e18051] [cursor=pointer]:
+                - generic [ref=e18052]:
+                  - generic [ref=e18053]: I (Almost) Got Away With It
+                  - generic [ref=e18054]: 6:26 PM - 7:17 PM
+              - generic "I (Almost) Got Away With It 7:17 PM - 8:09 PM" [ref=e18055] [cursor=pointer]:
+                - generic [ref=e18056]:
+                  - generic [ref=e18057]: I (Almost) Got Away With It
+                  - generic [ref=e18058]: 7:17 PM - 8:09 PM
+              - generic "I (Almost) Got Away With It 8:09 PM - 8:59 PM" [ref=e18059] [cursor=pointer]:
+                - generic [ref=e18060]:
+                  - generic [ref=e18061]: I (Almost) Got Away With It
+                  - generic [ref=e18062]: 8:09 PM - 8:59 PM
+              - generic "I (Almost) Got Away With It 8:59 PM - 9:50 PM" [ref=e18063] [cursor=pointer]:
+                - generic [ref=e18064]:
+                  - generic [ref=e18065]: I (Almost) Got Away With It
+                  - generic [ref=e18066]: 8:59 PM - 9:50 PM
+              - generic "I (Almost) Got Away With It 9:50 PM - 10:40 PM" [ref=e18067] [cursor=pointer]:
+                - generic [ref=e18069]: I (Almost) Got Away With It
+            - generic [ref=e18070]:
+              - generic "Deadly Sins 4:58 PM - 5:46 PM" [ref=e18083] [cursor=pointer]:
+                - generic [ref=e18084]:
+                  - generic [ref=e18085]: Deadly Sins
+                  - generic [ref=e18086]: 4:58 PM - 5:46 PM
+              - generic "Deadly Sins 5:46 PM - 6:35 PM" [ref=e18087] [cursor=pointer]:
+                - generic [ref=e18088]:
+                  - generic [ref=e18089]: Deadly Sins
+                  - generic [ref=e18090]: 5:46 PM - 6:35 PM
+              - generic "Deadly Sins 6:35 PM - 7:23 PM" [ref=e18091] [cursor=pointer]:
+                - generic [ref=e18092]:
+                  - generic [ref=e18093]: Deadly Sins
+                  - generic [ref=e18094]: 6:35 PM - 7:23 PM
+              - generic "Deadly Sins 7:23 PM - 8:12 PM" [ref=e18095] [cursor=pointer]:
+                - generic [ref=e18096]:
+                  - generic [ref=e18097]: Deadly Sins
+                  - generic [ref=e18098]: 7:23 PM - 8:12 PM
+              - generic "Deadly Sins 8:12 PM - 9:00 PM" [ref=e18099] [cursor=pointer]:
+                - generic [ref=e18100]:
+                  - generic [ref=e18101]: Deadly Sins
+                  - generic [ref=e18102]: 8:12 PM - 9:00 PM
+              - generic "Deadly Sins 9:00 PM - 9:51 PM" [ref=e18103] [cursor=pointer]:
+                - generic [ref=e18105]: Live
+                - generic [ref=e18106]:
+                  - generic [ref=e18107]: Deadly Sins
+                  - generic [ref=e18108]: 9:00 PM - 9:51 PM
+              - generic "Deadly Sins 9:51 PM - 10:39 PM" [ref=e18109] [cursor=pointer]:
+                - generic [ref=e18111]: Deadly Sins
+            - generic [ref=e18112]:
+              - generic "Deadly Affairs 4:46 PM - 5:34 PM" [ref=e18125] [cursor=pointer]:
+                - generic [ref=e18126]:
+                  - generic [ref=e18127]: Deadly Affairs
+                  - generic [ref=e18128]: 4:46 PM - 5:34 PM
+              - generic "Deadly Affairs 5:34 PM - 6:24 PM" [ref=e18129] [cursor=pointer]:
+                - generic [ref=e18130]:
+                  - generic [ref=e18131]: Deadly Affairs
+                  - generic [ref=e18132]: 5:34 PM - 6:24 PM
+              - 'generic "Scorned: Love Kills 6:24 PM - 7:15 PM" [ref=e18133] [cursor=pointer]':
+                - generic [ref=e18134]:
+                  - generic [ref=e18135]: "Scorned: Love Kills"
+                  - generic [ref=e18136]: 6:24 PM - 7:15 PM
+              - 'generic "Scorned: Love Kills 7:15 PM - 8:05 PM" [ref=e18137] [cursor=pointer]':
+                - generic [ref=e18138]:
+                  - generic [ref=e18139]: "Scorned: Love Kills"
+                  - generic [ref=e18140]: 7:15 PM - 8:05 PM
+              - 'generic "Scorned: Love Kills 8:05 PM - 8:54 PM" [ref=e18141] [cursor=pointer]':
+                - generic [ref=e18142]:
+                  - generic [ref=e18143]: "Scorned: Love Kills"
+                  - generic [ref=e18144]: 8:05 PM - 8:54 PM
+              - 'generic "Scorned: Love Kills 8:54 PM - 9:44 PM" [ref=e18145] [cursor=pointer]':
+                - generic [ref=e18146]:
+                  - generic [ref=e18147]: "Scorned: Love Kills"
+                  - generic [ref=e18148]: 8:54 PM - 9:44 PM
+              - 'generic "Scorned: Love Kills 9:44 PM - 10:35 PM" [ref=e18149] [cursor=pointer]':
+                - generic [ref=e18151]: "Scorned: Love Kills"
+            - generic [ref=e18152]:
+              - generic "Criminal Confessions 4:49 PM - 5:38 PM" [ref=e18165] [cursor=pointer]:
+                - generic [ref=e18166]:
+                  - generic [ref=e18167]: Criminal Confessions
+                  - generic [ref=e18168]: 4:49 PM - 5:38 PM
+              - generic "Criminal Confessions 5:38 PM - 6:28 PM" [ref=e18169] [cursor=pointer]:
+                - generic [ref=e18170]:
+                  - generic [ref=e18171]: Criminal Confessions
+                  - generic [ref=e18172]: 5:38 PM - 6:28 PM
+              - generic "Criminal Confessions 6:28 PM - 7:17 PM" [ref=e18173] [cursor=pointer]:
+                - generic [ref=e18174]:
+                  - generic [ref=e18175]: Criminal Confessions
+                  - generic [ref=e18176]: 6:28 PM - 7:17 PM
+              - generic "Criminal Confessions 7:17 PM - 8:07 PM" [ref=e18177] [cursor=pointer]:
+                - generic [ref=e18178]:
+                  - generic [ref=e18179]: Criminal Confessions
+                  - generic [ref=e18180]: 7:17 PM - 8:07 PM
+              - generic "Criminal Confessions 8:07 PM - 8:56 PM" [ref=e18181] [cursor=pointer]:
+                - generic [ref=e18182]:
+                  - generic [ref=e18183]: Criminal Confessions
+                  - generic [ref=e18184]: 8:07 PM - 8:56 PM
+              - generic "Criminal Confessions 8:56 PM - 9:46 PM" [ref=e18185] [cursor=pointer]:
+                - generic [ref=e18186]:
+                  - generic [ref=e18187]: Criminal Confessions
+                  - generic [ref=e18188]: 8:56 PM - 9:46 PM
+              - generic "Criminal Confessions 9:46 PM - 10:35 PM" [ref=e18189] [cursor=pointer]:
+                - generic [ref=e18191]: Criminal Confessions
+            - generic [ref=e18192]:
+              - generic "Dateline NBC 4:00 PM - 5:36 PM" [ref=e18205] [cursor=pointer]:
+                - generic [ref=e18206]:
+                  - generic [ref=e18207]: Dateline NBC
+                  - generic [ref=e18208]: 4:00 PM - 5:36 PM
+                  - generic [ref=e18209]: A bombshell more than a decade after the crime reignites the investigation into the death of Sarah Pagel's mother, who was killed when Sarah was seven.
+              - generic "Dateline NBC 5:36 PM - 7:13 PM" [ref=e18210] [cursor=pointer]:
+                - generic [ref=e18211]:
+                  - generic [ref=e18212]: Dateline NBC
+                  - generic [ref=e18213]: 5:36 PM - 7:13 PM
+                  - generic [ref=e18214]: When hikers find a 21-year-old UCLA student's body in a Los Angeles-area train tunnel, detectives wonder if Ron's interest in an alternative religion is connected to his murder.
+              - generic "Dateline NBC 7:13 PM - 8:00 PM" [ref=e18215] [cursor=pointer]:
+                - generic [ref=e18216]:
+                  - generic [ref=e18217]: Dateline NBC
+                  - generic [ref=e18218]: 7:13 PM - 8:00 PM
+              - generic "Dateline NBC 8:00 PM - 8:49 PM" [ref=e18219] [cursor=pointer]:
+                - generic [ref=e18220]:
+                  - generic [ref=e18221]: Dateline NBC
+                  - generic [ref=e18222]: 8:00 PM - 8:49 PM
+              - generic "Dateline NBC 8:49 PM - 9:37 PM" [ref=e18223] [cursor=pointer]:
+                - generic [ref=e18224]:
+                  - generic [ref=e18225]: Dateline NBC
+                  - generic [ref=e18226]: 8:49 PM - 9:37 PM
+              - generic "Dateline NBC 9:37 PM - 10:23 PM" [ref=e18227] [cursor=pointer]:
+                - generic [ref=e18229]: Dateline NBC
+            - generic [ref=e18230]:
+              - generic "Best Fails of the Month 4:55 PM - 5:26 PM" [ref=e18243] [cursor=pointer]:
+                - generic [ref=e18245]: Best Fails of the Month
+              - generic "Best Fails of the Month 5:26 PM - 5:57 PM" [ref=e18246] [cursor=pointer]:
+                - generic [ref=e18248]: Best Fails of the Month
+              - generic "Best Fails of the Month 5:57 PM - 6:28 PM" [ref=e18249] [cursor=pointer]:
+                - generic [ref=e18251]: Best Fails of the Month
+              - generic "Best Fails of the Month 6:28 PM - 6:59 PM" [ref=e18252] [cursor=pointer]:
+                - generic [ref=e18254]: Best Fails of the Month
+              - generic "Best Fails of the Month 6:59 PM - 7:30 PM" [ref=e18255] [cursor=pointer]:
+                - generic [ref=e18257]: Best Fails of the Month
+              - generic "Fail Army 7:30 PM - 8:01 PM" [ref=e18258] [cursor=pointer]:
+                - generic [ref=e18260]: Fail Army
+              - generic "Fall of Fame 8:01 PM - 8:32 PM" [ref=e18261] [cursor=pointer]:
+                - generic [ref=e18263]: Fall of Fame
+              - generic "Fall of Fame 8:32 PM - 9:03 PM" [ref=e18264] [cursor=pointer]:
+                - generic [ref=e18266]: Fall of Fame
+              - generic "FailArmy Now 9:03 PM - 9:34 PM" [ref=e18267] [cursor=pointer]:
+                - generic [ref=e18269]: FailArmy Now
+              - generic "FailArmy Now 9:34 PM - 10:05 PM" [ref=e18270] [cursor=pointer]:
+                - generic [ref=e18272]: FailArmy Now
+            - generic [ref=e18273]:
+              - generic "World's Funniest Videos Top 10 Countdown 5:00 PM - 5:30 PM" [ref=e18286] [cursor=pointer]:
+                - generic [ref=e18288]: World's Funniest Videos Top 10 Countdown
+              - generic "World's Funniest Videos Top 10 Countdown 5:30 PM - 6:00 PM" [ref=e18289] [cursor=pointer]:
+                - generic [ref=e18291]: World's Funniest Videos Top 10 Countdown
+              - generic "World's Funniest Videos Top 10 Countdown 6:00 PM - 6:30 PM" [ref=e18292] [cursor=pointer]:
+                - generic [ref=e18294]: World's Funniest Videos Top 10 Countdown
+              - generic "Home Disaster Zone 6:30 PM - 7:00 PM" [ref=e18295] [cursor=pointer]:
+                - generic [ref=e18297]: Home Disaster Zone
+              - generic "Home Disaster Zone 7:00 PM - 7:30 PM" [ref=e18298] [cursor=pointer]:
+                - generic [ref=e18300]: Home Disaster Zone
+              - generic "Epic Funny Video Countdown 7:30 PM - 8:00 PM" [ref=e18301] [cursor=pointer]:
+                - generic [ref=e18303]: Epic Funny Video Countdown
+              - generic "Fail 101 8:00 PM - 8:30 PM" [ref=e18304] [cursor=pointer]:
+                - generic [ref=e18306]: Fail 101
+              - generic "Fail 101 8:30 PM - 9:00 PM" [ref=e18307] [cursor=pointer]:
+                - generic [ref=e18309]: Fail 101
+              - generic "Fail 101 9:00 PM - 9:30 PM" [ref=e18310] [cursor=pointer]:
+                - generic [ref=e18312]: Fail 101
+              - generic "Fail 101 9:30 PM - 10:00 PM" [ref=e18313] [cursor=pointer]:
+                - generic [ref=e18315]: Fail 101
+            - generic [ref=e18316]:
+              - generic "America's Funniest Home Videos 4:37 PM - 6:11 PM" [ref=e18329] [cursor=pointer]:
+                - generic [ref=e18330]:
+                  - generic [ref=e18331]: America's Funniest Home Videos
+                  - generic [ref=e18332]: 4:37 PM - 6:11 PM
+                  - generic [ref=e18333]: Performance clips from school plays, concerts and other public venues; people with amazing, unique or funny talents.
+              - generic "America's Funniest Home Videos 6:11 PM - 7:03 PM" [ref=e18334] [cursor=pointer]:
+                - generic [ref=e18335]:
+                  - generic [ref=e18336]: America's Funniest Home Videos
+                  - generic [ref=e18337]: 6:11 PM - 7:03 PM
+              - generic "America's Funniest Home Videos 7:03 PM - 7:31 PM" [ref=e18338] [cursor=pointer]:
+                - generic [ref=e18340]: America's Funniest Home Videos
+              - generic "America's Funniest Home Videos 7:31 PM - 7:59 PM" [ref=e18341] [cursor=pointer]:
+                - generic [ref=e18343]: America's Funniest Home Videos
+              - generic "America's Funniest Home Videos 7:59 PM - 8:26 PM" [ref=e18344] [cursor=pointer]:
+                - generic [ref=e18346]: America's Funniest Home Videos
+              - generic "America's Funniest Home Videos 8:26 PM - 8:54 PM" [ref=e18347] [cursor=pointer]:
+                - generic [ref=e18349]: America's Funniest Home Videos
+              - generic "America's Funniest Home Videos 8:54 PM - 9:22 PM" [ref=e18350] [cursor=pointer]:
+                - generic [ref=e18352]: America's Funniest Home Videos
+              - generic "America's Funniest Home Videos 9:22 PM - 10:13 PM" [ref=e18353] [cursor=pointer]:
+                - generic [ref=e18355]: America's Funniest Home Videos
+            - generic [ref=e18356]:
+              - 'generic "Bob Smiley: You''re Just Hungry 4:41 PM - 5:14 PM" [ref=e18369] [cursor=pointer]':
+                - generic [ref=e18371]: "Bob Smiley: You're Just Hungry"
+              - 'generic "Craig Ferguson: I''m Here to Help 5:14 PM - 6:45 PM" [ref=e18372] [cursor=pointer]':
+                - generic [ref=e18373]:
+                  - generic [ref=e18374]: "Craig Ferguson: I'm Here to Help"
+                  - generic [ref=e18375]: 5:14 PM - 6:45 PM
+                  - generic [ref=e18376]: Comic Craig Ferguson riffs on fatherhood, Helen of Troy and shark penises before a sold-out crowd.
+              - 'generic "Larry the Cable Guy: Remain Seated 6:45 PM - 7:59 PM" [ref=e18377] [cursor=pointer]':
+                - generic [ref=e18378]:
+                  - generic [ref=e18379]: "Larry the Cable Guy: Remain Seated"
+                  - generic [ref=e18380]: 6:45 PM - 7:59 PM
+                  - generic [ref=e18381]: Larry the Cable Guy is back to "Git R Done" in his latest solo special from the Rialto Square Theater in Joliet, IL.
+              - 'generic "Henry Rollins: Keep Talking, Pal. 7:59 PM - 9:03 PM" [ref=e18382] [cursor=pointer]':
+                - generic [ref=e18384]: Live
+                - generic [ref=e18385]:
+                  - generic [ref=e18386]: "Henry Rollins: Keep Talking, Pal."
+                  - generic [ref=e18387]: 7:59 PM - 9:03 PM
+              - 'generic "Adam Ferrara: Funny as Hell 9:03 PM - 10:11 PM" [ref=e18388] [cursor=pointer]':
+                - generic [ref=e18389]:
+                  - generic [ref=e18390]: "Adam Ferrara: Funny as Hell"
+                  - generic [ref=e18391]: 9:03 PM - 10:11 PM
+            - generic [ref=e18392]:
+              - generic "Saturday Night Live 4:32 PM - 5:28 PM" [ref=e18405] [cursor=pointer]:
+                - generic [ref=e18407]: Live
+                - generic [ref=e18408]:
+                  - generic [ref=e18409]: Saturday Night Live
+                  - generic [ref=e18410]: 4:32 PM - 5:28 PM
+              - generic "Saturday Night Live 5:28 PM - 6:22 PM" [ref=e18411] [cursor=pointer]:
+                - generic [ref=e18413]: Live
+                - generic [ref=e18414]:
+                  - generic [ref=e18415]: Saturday Night Live
+                  - generic [ref=e18416]: 5:28 PM - 6:22 PM
+              - generic "Saturday Night Live 6:22 PM - 7:18 PM" [ref=e18417] [cursor=pointer]:
+                - generic [ref=e18419]: Live
+                - generic [ref=e18420]:
+                  - generic [ref=e18421]: Saturday Night Live
+                  - generic [ref=e18422]: 6:22 PM - 7:18 PM
+              - generic "Saturday Night Live 7:18 PM - 8:18 PM" [ref=e18423] [cursor=pointer]:
+                - generic [ref=e18425]: Live
+                - generic [ref=e18426]:
+                  - generic [ref=e18427]: Saturday Night Live
+                  - generic [ref=e18428]: 7:18 PM - 8:18 PM
+              - generic "Saturday Night Live 8:18 PM - 9:11 PM" [ref=e18429] [cursor=pointer]:
+                - generic [ref=e18431]: Live
+                - generic [ref=e18432]:
+                  - generic [ref=e18433]: Saturday Night Live
+                  - generic [ref=e18434]: 8:18 PM - 9:11 PM
+              - generic "Saturday Night Live 9:11 PM - 10:10 PM" [ref=e18435] [cursor=pointer]:
+                - generic [ref=e18437]: Live
+                - generic [ref=e18438]:
+                  - generic [ref=e18439]: Saturday Night Live
+                  - generic [ref=e18440]: 9:11 PM - 10:10 PM
+            - generic [ref=e18441]:
+              - generic "Anger Management 4:48 PM - 5:14 PM" [ref=e18454] [cursor=pointer]:
+                - generic [ref=e18456]: Anger Management
+              - generic "Anger Management 5:14 PM - 5:39 PM" [ref=e18457] [cursor=pointer]:
+                - generic [ref=e18459]: Anger Management
+              - generic "Anger Management 5:39 PM - 6:05 PM" [ref=e18460] [cursor=pointer]:
+                - generic [ref=e18462]: Anger Management
+              - generic "Anger Management 6:05 PM - 6:30 PM" [ref=e18463] [cursor=pointer]:
+                - generic [ref=e18465]: Anger Management
+              - generic "Anger Management 6:30 PM - 6:55 PM" [ref=e18466] [cursor=pointer]:
+                - generic [ref=e18468]: Anger Management
+              - generic "Anger Management 6:55 PM - 7:21 PM" [ref=e18469] [cursor=pointer]:
+                - generic [ref=e18471]: Live
+                - generic [ref=e18473]: Anger Management
+              - generic "Anger Management 7:21 PM - 7:46 PM" [ref=e18474] [cursor=pointer]:
+                - generic [ref=e18476]: Anger Management
+              - generic "Anger Management 7:46 PM - 8:12 PM" [ref=e18477] [cursor=pointer]:
+                - generic [ref=e18479]: Anger Management
+              - generic "Anger Management 8:12 PM - 8:37 PM" [ref=e18480] [cursor=pointer]:
+                - generic [ref=e18482]: Anger Management
+              - generic "Anger Management 8:37 PM - 9:03 PM" [ref=e18483] [cursor=pointer]:
+                - generic [ref=e18485]: Anger Management
+              - generic "Anger Management 9:03 PM - 9:28 PM" [ref=e18486] [cursor=pointer]:
+                - generic [ref=e18488]: Anger Management
+              - generic "Anger Management 9:28 PM - 9:54 PM" [ref=e18489] [cursor=pointer]:
+                - generic [ref=e18491]: Anger Management
+            - generic [ref=e18492]:
+              - generic "Are We There Yet? 4:52 PM - 5:17 PM" [ref=e18505] [cursor=pointer]:
+                - generic [ref=e18507]: Are We There Yet?
+              - generic "Are We There Yet? 5:17 PM - 5:43 PM" [ref=e18508] [cursor=pointer]:
+                - generic [ref=e18510]: Are We There Yet?
+              - generic "Are We There Yet? 5:43 PM - 6:08 PM" [ref=e18511] [cursor=pointer]:
+                - generic [ref=e18513]: Are We There Yet?
+              - generic "Are We There Yet? 6:08 PM - 6:33 PM" [ref=e18514] [cursor=pointer]:
+                - generic [ref=e18516]: Are We There Yet?
+              - generic "Are We There Yet? 6:33 PM - 6:58 PM" [ref=e18517] [cursor=pointer]:
+                - generic [ref=e18519]: Are We There Yet?
+              - generic "Are We There Yet? 6:58 PM - 7:23 PM" [ref=e18520] [cursor=pointer]:
+                - generic [ref=e18522]: Are We There Yet?
+              - generic "Are We There Yet? 7:23 PM - 7:46 PM" [ref=e18523] [cursor=pointer]:
+                - generic [ref=e18525]: Are We There Yet?
+              - generic "Are We There Yet? 7:46 PM - 8:09 PM" [ref=e18526] [cursor=pointer]:
+                - generic [ref=e18528]: Are We There Yet?
+              - generic "Are We There Yet? 8:09 PM - 8:33 PM" [ref=e18529] [cursor=pointer]:
+                - generic [ref=e18531]: Are We There Yet?
+              - generic "Are We There Yet? 8:33 PM - 8:58 PM" [ref=e18532] [cursor=pointer]:
+                - generic [ref=e18534]: Are We There Yet?
+              - generic "Are We There Yet? 8:58 PM - 9:21 PM" [ref=e18535] [cursor=pointer]:
+                - generic [ref=e18537]: Are We There Yet?
+              - generic "Are We There Yet? 9:21 PM - 9:46 PM" [ref=e18538] [cursor=pointer]:
+                - generic [ref=e18540]: Are We There Yet?
+              - generic "Are We There Yet? 9:46 PM - 10:09 PM" [ref=e18541] [cursor=pointer]:
+                - generic [ref=e18543]: Are We There Yet?
+            - generic [ref=e18544]:
+              - generic "Portlandia 5:10 PM - 5:35 PM" [ref=e18557] [cursor=pointer]:
+                - generic [ref=e18559]: Portlandia
+              - generic "Portlandia 5:35 PM - 6:01 PM" [ref=e18560] [cursor=pointer]:
+                - generic [ref=e18562]: Portlandia
+              - generic "Portlandia 6:01 PM - 6:27 PM" [ref=e18563] [cursor=pointer]:
+                - generic [ref=e18565]: Portlandia
+              - generic "Portlandia 6:27 PM - 6:53 PM" [ref=e18566] [cursor=pointer]:
+                - generic [ref=e18568]: Portlandia
+              - generic "Portlandia 6:53 PM - 7:19 PM" [ref=e18569] [cursor=pointer]:
+                - generic [ref=e18571]: Portlandia
+              - generic "Portlandia 7:19 PM - 7:45 PM" [ref=e18572] [cursor=pointer]:
+                - generic [ref=e18574]: Portlandia
+              - generic "Portlandia 7:45 PM - 8:10 PM" [ref=e18575] [cursor=pointer]:
+                - generic [ref=e18577]: Portlandia
+              - generic "Portlandia 8:10 PM - 8:36 PM" [ref=e18578] [cursor=pointer]:
+                - generic [ref=e18580]: Portlandia
+              - generic "Portlandia 8:36 PM - 9:02 PM" [ref=e18581] [cursor=pointer]:
+                - generic [ref=e18583]: Portlandia
+              - generic "Portlandia 9:02 PM - 9:28 PM" [ref=e18584] [cursor=pointer]:
+                - generic [ref=e18586]: Portlandia
+              - generic "Portlandia 9:28 PM - 9:54 PM" [ref=e18587] [cursor=pointer]:
+                - generic [ref=e18589]: Portlandia
+            - generic [ref=e18590]:
+              - generic "Gangs of London 4:52 PM - 5:58 PM" [ref=e18603] [cursor=pointer]:
+                - generic [ref=e18604]:
+                  - generic [ref=e18605]: Gangs of London
+                  - generic [ref=e18606]: 4:52 PM - 5:58 PM
+              - generic "Breaking Bad 5:58 PM - 6:54 PM" [ref=e18607] [cursor=pointer]:
+                - generic [ref=e18609]: Live
+                - generic [ref=e18610]:
+                  - generic [ref=e18611]: Breaking Bad
+                  - generic [ref=e18612]: 5:58 PM - 6:54 PM
+              - generic "Breaking Bad 6:54 PM - 7:50 PM" [ref=e18613] [cursor=pointer]:
+                - generic [ref=e18615]: Live
+                - generic [ref=e18616]:
+                  - generic [ref=e18617]: Breaking Bad
+                  - generic [ref=e18618]: 6:54 PM - 7:50 PM
+              - generic "Breaking Bad 7:50 PM - 8:46 PM" [ref=e18619] [cursor=pointer]:
+                - generic [ref=e18621]: Live
+                - generic [ref=e18622]:
+                  - generic [ref=e18623]: Breaking Bad
+                  - generic [ref=e18624]: 7:50 PM - 8:46 PM
+              - generic "Breaking Bad 8:46 PM - 9:42 PM" [ref=e18625] [cursor=pointer]:
+                - generic [ref=e18627]: Live
+                - generic [ref=e18628]:
+                  - generic [ref=e18629]: Breaking Bad
+                  - generic [ref=e18630]: 8:46 PM - 9:42 PM
+              - generic "Breaking Bad 9:42 PM - 10:38 PM" [ref=e18631] [cursor=pointer]:
+                - generic [ref=e18633]: Live
+                - generic [ref=e18635]: Breaking Bad
+            - generic [ref=e18636]:
+              - generic "Commandos 5:00 PM - 5:55 PM" [ref=e18649] [cursor=pointer]:
+                - generic [ref=e18650]:
+                  - generic [ref=e18651]: Commandos
+                  - generic [ref=e18652]: 5:00 PM - 5:55 PM
+              - generic "Commandos 5:55 PM - 6:50 PM" [ref=e18653] [cursor=pointer]:
+                - generic [ref=e18654]:
+                  - generic [ref=e18655]: Commandos
+                  - generic [ref=e18656]: 5:55 PM - 6:50 PM
+              - generic "High Alert 6:50 PM - 7:45 PM" [ref=e18657] [cursor=pointer]:
+                - generic [ref=e18658]:
+                  - generic [ref=e18659]: High Alert
+                  - generic [ref=e18660]: 6:50 PM - 7:45 PM
+              - generic "High Alert 7:45 PM - 8:35 PM" [ref=e18661] [cursor=pointer]:
+                - generic [ref=e18662]:
+                  - generic [ref=e18663]: High Alert
+                  - generic [ref=e18664]: 7:45 PM - 8:35 PM
+              - 'generic "Dropped: Land of the Living Skies 8:35 PM - 9:00 PM" [ref=e18665] [cursor=pointer]':
+                - generic [ref=e18667]: "Dropped: Land of the Living Skies"
+              - 'generic "Dropped: Land of the Living Skies 9:00 PM - 9:25 PM" [ref=e18668] [cursor=pointer]':
+                - generic [ref=e18670]: "Dropped: Land of the Living Skies"
+              - 'generic "Dropped: Land of the Living Skies 9:25 PM - 9:50 PM" [ref=e18671] [cursor=pointer]':
+                - generic [ref=e18673]: "Dropped: Land of the Living Skies"
+              - 'generic "Dropped: Land of the Living Skies 9:50 PM - 10:15 PM" [ref=e18674] [cursor=pointer]':
+                - generic [ref=e18676]: "Dropped: Land of the Living Skies"
+            - generic [ref=e18677]:
+              - generic "Destruction Decoded 4:45 PM - 5:48 PM" [ref=e18690] [cursor=pointer]:
+                - generic [ref=e18691]:
+                  - generic [ref=e18692]: Destruction Decoded
+                  - generic [ref=e18693]: 4:45 PM - 5:48 PM
+              - generic "Destruction Decoded 5:48 PM - 6:51 PM" [ref=e18694] [cursor=pointer]:
+                - generic [ref=e18695]:
+                  - generic [ref=e18696]: Destruction Decoded
+                  - generic [ref=e18697]: 5:48 PM - 6:51 PM
+              - generic "Past, Present, Future 6:51 PM - 7:09 PM" [ref=e18698] [cursor=pointer]:
+                - generic [ref=e18700]: Past, Present, Future
+              - 'generic "Skuld: A Look into the Future 7:09 PM - 7:38 PM" [ref=e18701] [cursor=pointer]':
+                - generic [ref=e18703]: "Skuld: A Look into the Future"
+              - 'generic "Skuld: A Look into the Future 7:38 PM - 8:06 PM" [ref=e18704] [cursor=pointer]':
+                - generic [ref=e18706]: "Skuld: A Look into the Future"
+              - 'generic "Skuld: A Look into the Future 8:06 PM - 8:33 PM" [ref=e18707] [cursor=pointer]':
+                - generic [ref=e18709]: "Skuld: A Look into the Future"
+              - 'generic "Skuld: A Look into the Future 8:33 PM - 9:07 PM" [ref=e18710] [cursor=pointer]':
+                - generic [ref=e18712]: "Skuld: A Look into the Future"
+              - generic "Secret Wars Uncovered 9:07 PM - 10:03 PM" [ref=e18713] [cursor=pointer]:
+                - generic [ref=e18714]:
+                  - generic [ref=e18715]: Secret Wars Uncovered
+                  - generic [ref=e18716]: 9:07 PM - 10:03 PM
+            - generic [ref=e18717]:
+              - generic "The Price Is Right 5:00 PM - 5:31 PM" [ref=e18730] [cursor=pointer]:
+                - generic [ref=e18732]: The Price Is Right
+              - generic "The Price Is Right 5:01 PM - 5:31 PM" [ref=e18733] [cursor=pointer]:
+                - generic [ref=e18735]: The Price Is Right
+              - generic "The Price Is Right 5:31 PM - 6:00 PM" [ref=e18736] [cursor=pointer]:
+                - generic [ref=e18738]: The Price Is Right
+              - generic "The Price Is Right 6:00 PM - 6:31 PM" [ref=e18739] [cursor=pointer]:
+                - generic [ref=e18741]: The Price Is Right
+              - generic "The Price Is Right 6:01 PM - 6:31 PM" [ref=e18742] [cursor=pointer]:
+                - generic [ref=e18744]: The Price Is Right
+              - generic "The Price Is Right 6:31 PM - 7:01 PM" [ref=e18745] [cursor=pointer]:
+                - generic [ref=e18747]: The Price Is Right
+              - generic "Tattletales 7:01 PM - 7:30 PM" [ref=e18748] [cursor=pointer]:
+                - generic [ref=e18750]: Tattletales
+              - generic "Tattletales 7:30 PM - 8:00 PM" [ref=e18751] [cursor=pointer]:
+                - generic [ref=e18753]: Tattletales
+              - generic "Tattletales 8:00 PM - 8:30 PM" [ref=e18754] [cursor=pointer]:
+                - generic [ref=e18756]: Tattletales
+              - generic "Card Sharks 8:30 PM - 9:00 PM" [ref=e18757] [cursor=pointer]:
+                - generic [ref=e18759]: Card Sharks
+              - generic "Card Sharks 9:00 PM - 9:30 PM" [ref=e18760] [cursor=pointer]:
+                - generic [ref=e18762]: Card Sharks
+              - generic "Card Sharks 9:30 PM - 10:02 PM" [ref=e18763] [cursor=pointer]:
+                - generic [ref=e18765]: Card Sharks
+            - generic [ref=e18766]:
+              - generic "Family Feud 4:56 PM - 5:20 PM" [ref=e18779] [cursor=pointer]:
+                - generic [ref=e18781]: Family Feud
+              - generic "Family Feud 5:02 PM - 5:26 PM" [ref=e18782] [cursor=pointer]:
+                - generic [ref=e18784]: Family Feud
+              - generic "Best of Family Feud 5:20 PM - 5:50 PM" [ref=e18785] [cursor=pointer]:
+                - generic [ref=e18787]: Best of Family Feud
+              - generic "Best of Family Feud 5:26 PM - 5:55 PM" [ref=e18788] [cursor=pointer]:
+                - generic [ref=e18790]: Best of Family Feud
+              - generic "Best of Family Feud 5:50 PM - 6:26 PM" [ref=e18791] [cursor=pointer]:
+                - generic [ref=e18793]: Best of Family Feud
+              - generic "Best of Family Feud 5:55 PM - 6:31 PM" [ref=e18794] [cursor=pointer]:
+                - generic [ref=e18796]: Best of Family Feud
+              - generic "Funniest Contestants 6:26 PM - 6:59 PM" [ref=e18797] [cursor=pointer]:
+                - generic [ref=e18799]: Funniest Contestants
+              - generic "Compilations 6:31 PM - 7:07 PM" [ref=e18800] [cursor=pointer]:
+                - generic [ref=e18802]: Compilations
+              - generic "Compilations 6:59 PM - 7:35 PM" [ref=e18803] [cursor=pointer]:
+                - generic [ref=e18805]: Compilations
+              - generic "Fast Money 7:07 PM - 7:39 PM" [ref=e18806] [cursor=pointer]:
+                - generic [ref=e18808]: Fast Money
+              - generic "Best of Steve Harvey 7:35 PM - 8:10 PM" [ref=e18809] [cursor=pointer]:
+                - generic [ref=e18811]: Best of Steve Harvey
+              - generic "Best of Steve Harvey 7:39 PM - 8:15 PM" [ref=e18812] [cursor=pointer]:
+                - generic [ref=e18814]: Best of Steve Harvey
+              - generic "Best of Family Feud 8:10 PM - 11:50 PM" [ref=e18815] [cursor=pointer]:
+                - generic [ref=e18816]:
+                  - generic [ref=e18817]: Best of Family Feud
+                  - generic [ref=e18818]: 8:10 PM - 11:50 PM
+                  - generic [ref=e18819]: Some of the best clips from "Family Feud."
+              - generic "Best of Family Feud 8:15 PM - 11:53 PM" [ref=e18820] [cursor=pointer]:
+                - generic [ref=e18821]:
+                  - generic [ref=e18822]: Best of Family Feud
+                  - generic [ref=e18823]: 8:15 PM - 11:53 PM
+                  - generic [ref=e18824]: Some of the best clips from "Family Feud."
+            - generic [ref=e18825]:
+              - generic "Let's Make a Deal 4:45 PM - 5:33 PM" [ref=e18838] [cursor=pointer]:
+                - generic [ref=e18839]:
+                  - generic [ref=e18840]: Let's Make a Deal
+                  - generic [ref=e18841]: 4:45 PM - 5:33 PM
+              - generic "Let's Make a Deal 5:33 PM - 6:21 PM" [ref=e18842] [cursor=pointer]:
+                - generic [ref=e18843]:
+                  - generic [ref=e18844]: Let's Make a Deal
+                  - generic [ref=e18845]: 5:33 PM - 6:21 PM
+              - generic "Let's Make a Deal 6:21 PM - 7:09 PM" [ref=e18846] [cursor=pointer]:
+                - generic [ref=e18847]:
+                  - generic [ref=e18848]: Let's Make a Deal
+                  - generic [ref=e18849]: 6:21 PM - 7:09 PM
+              - generic "Let's Make a Deal 7:09 PM - 7:56 PM" [ref=e18850] [cursor=pointer]:
+                - generic [ref=e18851]:
+                  - generic [ref=e18852]: Let's Make a Deal
+                  - generic [ref=e18853]: 7:09 PM - 7:56 PM
+              - generic "Let's Make a Deal 7:56 PM - 8:44 PM" [ref=e18854] [cursor=pointer]:
+                - generic [ref=e18855]:
+                  - generic [ref=e18856]: Let's Make a Deal
+                  - generic [ref=e18857]: 7:56 PM - 8:44 PM
+              - generic "Let's Make a Deal 8:44 PM - 9:32 PM" [ref=e18858] [cursor=pointer]:
+                - generic [ref=e18859]:
+                  - generic [ref=e18860]: Let's Make a Deal
+                  - generic [ref=e18861]: 8:44 PM - 9:32 PM
+              - generic "Let's Make a Deal 9:32 PM - 10:19 PM" [ref=e18862] [cursor=pointer]:
+                - generic [ref=e18864]: Let's Make a Deal
+            - generic [ref=e18865]:
+              - generic "The Price Is Right 4:44 PM - 5:33 PM" [ref=e18878] [cursor=pointer]:
+                - generic [ref=e18879]:
+                  - generic [ref=e18880]: The Price Is Right
+                  - generic [ref=e18881]: 4:44 PM - 5:33 PM
+              - generic "The Price Is Right 5:33 PM - 6:22 PM" [ref=e18882] [cursor=pointer]:
+                - generic [ref=e18883]:
+                  - generic [ref=e18884]: The Price Is Right
+                  - generic [ref=e18885]: 5:33 PM - 6:22 PM
+              - generic "The Price Is Right 6:22 PM - 7:11 PM" [ref=e18886] [cursor=pointer]:
+                - generic [ref=e18887]:
+                  - generic [ref=e18888]: The Price Is Right
+                  - generic [ref=e18889]: 6:22 PM - 7:11 PM
+              - generic "The Price Is Right 7:11 PM - 8:00 PM" [ref=e18890] [cursor=pointer]:
+                - generic [ref=e18891]:
+                  - generic [ref=e18892]: The Price Is Right
+                  - generic [ref=e18893]: 7:11 PM - 8:00 PM
+              - generic "The Price Is Right 8:00 PM - 8:48 PM" [ref=e18894] [cursor=pointer]:
+                - generic [ref=e18895]:
+                  - generic [ref=e18896]: The Price Is Right
+                  - generic [ref=e18897]: 8:00 PM - 8:48 PM
+              - generic "The Price Is Right 8:48 PM - 9:37 PM" [ref=e18898] [cursor=pointer]:
+                - generic [ref=e18899]:
+                  - generic [ref=e18900]: The Price Is Right
+                  - generic [ref=e18901]: 8:48 PM - 9:37 PM
+              - generic "The Price Is Right 9:37 PM - 10:25 PM" [ref=e18902] [cursor=pointer]:
+                - generic [ref=e18904]: The Price Is Right
+            - generic [ref=e18905]:
+              - generic "To Be Announced 5:00 PM - 8:00 PM" [ref=e18918] [cursor=pointer]:
+                - generic [ref=e18919]:
+                  - generic [ref=e18920]: To Be Announced
+                  - generic [ref=e18921]: 5:00 PM - 8:00 PM
+                  - generic [ref=e18922]: Programming to be announced.
+              - generic "The Price Is Right 5:06 PM - 5:59 PM" [ref=e18923] [cursor=pointer]:
+                - generic [ref=e18924]:
+                  - generic [ref=e18925]: The Price Is Right
+                  - generic [ref=e18926]: 5:06 PM - 5:59 PM
+              - generic "The Price Is Right 5:59 PM - 6:52 PM" [ref=e18927] [cursor=pointer]:
+                - generic [ref=e18928]:
+                  - generic [ref=e18929]: The Price Is Right
+                  - generic [ref=e18930]: 5:59 PM - 6:52 PM
+              - generic "The Price Is Right 6:51 PM - 7:44 PM" [ref=e18931] [cursor=pointer]:
+                - generic [ref=e18932]:
+                  - generic [ref=e18933]: The Price Is Right
+                  - generic [ref=e18934]: 6:51 PM - 7:44 PM
+              - generic "The Price Is Right 6:52 PM - 7:45 PM" [ref=e18935] [cursor=pointer]:
+                - generic [ref=e18936]:
+                  - generic [ref=e18937]: The Price Is Right
+                  - generic [ref=e18938]: 6:52 PM - 7:45 PM
+              - generic "The Price Is Right 7:44 PM - 8:38 PM" [ref=e18939] [cursor=pointer]:
+                - generic [ref=e18940]:
+                  - generic [ref=e18941]: The Price Is Right
+                  - generic [ref=e18942]: 7:44 PM - 8:38 PM
+              - generic "The Price Is Right 7:45 PM - 8:37 PM" [ref=e18943] [cursor=pointer]:
+                - generic [ref=e18944]:
+                  - generic [ref=e18945]: The Price Is Right
+                  - generic [ref=e18946]: 7:45 PM - 8:37 PM
+              - generic "To Be Announced 8:00 PM - 11:00 PM" [ref=e18947] [cursor=pointer]:
+                - generic [ref=e18948]:
+                  - generic [ref=e18949]: To Be Announced
+                  - generic [ref=e18950]: 8:00 PM - 11:00 PM
+                  - generic [ref=e18951]: Programming to be announced.
+              - generic "The Price Is Right 8:37 PM - 9:31 PM" [ref=e18952] [cursor=pointer]:
+                - generic [ref=e18953]:
+                  - generic [ref=e18954]: The Price Is Right
+                  - generic [ref=e18955]: 8:37 PM - 9:31 PM
+              - generic "The Price Is Right 8:38 PM - 9:31 PM" [ref=e18956] [cursor=pointer]:
+                - generic [ref=e18957]:
+                  - generic [ref=e18958]: The Price Is Right
+                  - generic [ref=e18959]: 8:38 PM - 9:31 PM
+              - generic "The Price Is Right 9:31 PM - 10:23 PM" [ref=e18960] [cursor=pointer]:
+                - generic [ref=e18962]: The Price Is Right
+            - generic [ref=e18963]:
+              - generic "Storage Wars 5:00 PM - 5:27 PM" [ref=e18976] [cursor=pointer]:
+                - generic [ref=e18978]: Storage Wars
+              - generic "Storage Wars 5:27 PM - 5:55 PM" [ref=e18979] [cursor=pointer]:
+                - generic [ref=e18981]: Storage Wars
+              - generic "Storage Wars 5:55 PM - 6:49 PM" [ref=e18982] [cursor=pointer]:
+                - generic [ref=e18983]:
+                  - generic [ref=e18984]: Storage Wars
+                  - generic [ref=e18985]: 5:55 PM - 6:49 PM
+              - generic "Storage Wars 6:49 PM - 7:17 PM" [ref=e18986] [cursor=pointer]:
+                - generic [ref=e18988]: Storage Wars
+              - generic "Storage Wars 7:17 PM - 7:44 PM" [ref=e18989] [cursor=pointer]:
+                - generic [ref=e18991]: Storage Wars
+              - generic "Storage Wars 7:44 PM - 8:13 PM" [ref=e18992] [cursor=pointer]:
+                - generic [ref=e18994]: Storage Wars
+              - generic "Storage Wars 8:13 PM - 8:40 PM" [ref=e18995] [cursor=pointer]:
+                - generic [ref=e18997]: Storage Wars
+              - generic "Storage Wars 8:40 PM - 9:08 PM" [ref=e18998] [cursor=pointer]:
+                - generic [ref=e19000]: Storage Wars
+              - generic "Storage Wars 9:08 PM - 9:36 PM" [ref=e19001] [cursor=pointer]:
+                - generic [ref=e19003]: Storage Wars
+              - generic "Storage Wars 9:36 PM - 10:04 PM" [ref=e19004] [cursor=pointer]:
+                - generic [ref=e19006]: Storage Wars
+            - generic [ref=e19007]:
+              - generic "Supermarket Sweep 5:08 PM - 5:34 PM" [ref=e19020] [cursor=pointer]:
+                - generic [ref=e19022]: Supermarket Sweep
+              - generic "Supermarket Sweep 5:34 PM - 6:01 PM" [ref=e19023] [cursor=pointer]:
+                - generic [ref=e19025]: Supermarket Sweep
+              - generic "Supermarket Sweep 6:01 PM - 6:26 PM" [ref=e19026] [cursor=pointer]:
+                - generic [ref=e19028]: Supermarket Sweep
+              - generic "Supermarket Sweep 6:26 PM - 6:53 PM" [ref=e19029] [cursor=pointer]:
+                - generic [ref=e19031]: Supermarket Sweep
+              - generic "Supermarket Sweep 6:53 PM - 7:20 PM" [ref=e19032] [cursor=pointer]:
+                - generic [ref=e19034]: Supermarket Sweep
+              - generic "Supermarket Sweep 7:20 PM - 7:46 PM" [ref=e19035] [cursor=pointer]:
+                - generic [ref=e19037]: Supermarket Sweep
+              - generic "Supermarket Sweep 7:46 PM - 8:13 PM" [ref=e19038] [cursor=pointer]:
+                - generic [ref=e19040]: Supermarket Sweep
+              - generic "Supermarket Sweep 8:13 PM - 8:39 PM" [ref=e19041] [cursor=pointer]:
+                - generic [ref=e19043]: Supermarket Sweep
+              - generic "Supermarket Sweep 8:39 PM - 9:06 PM" [ref=e19044] [cursor=pointer]:
+                - generic [ref=e19046]: Supermarket Sweep
+              - generic "Supermarket Sweep 9:06 PM - 9:32 PM" [ref=e19047] [cursor=pointer]:
+                - generic [ref=e19049]: Supermarket Sweep
+              - generic "Supermarket Sweep 9:32 PM - 9:59 PM" [ref=e19050] [cursor=pointer]:
+                - generic [ref=e19052]: Supermarket Sweep
+            - generic [ref=e19053]:
+              - generic "Dog Whisperer 5:00 PM - 6:00 PM" [ref=e19066] [cursor=pointer]:
+                - generic [ref=e19067]:
+                  - generic [ref=e19068]: Dog Whisperer
+                  - generic [ref=e19069]: 5:00 PM - 6:00 PM
+              - generic "Dog Whisperer 6:00 PM - 7:00 PM" [ref=e19070] [cursor=pointer]:
+                - generic [ref=e19071]:
+                  - generic [ref=e19072]: Dog Whisperer
+                  - generic [ref=e19073]: 6:00 PM - 7:00 PM
+              - generic "Dog Whisperer 7:00 PM - 8:00 PM" [ref=e19074] [cursor=pointer]:
+                - generic [ref=e19075]:
+                  - generic [ref=e19076]: Dog Whisperer
+                  - generic [ref=e19077]: 7:00 PM - 8:00 PM
+              - generic "Dog Whisperer 8:00 PM - 9:00 PM" [ref=e19078] [cursor=pointer]:
+                - generic [ref=e19079]:
+                  - generic [ref=e19080]: Dog Whisperer
+                  - generic [ref=e19081]: 8:00 PM - 9:00 PM
+              - generic "Dog Whisperer 9:00 PM - 10:00 PM" [ref=e19082] [cursor=pointer]:
+                - generic [ref=e19083]:
+                  - generic [ref=e19084]: Dog Whisperer
+                  - generic [ref=e19085]: 9:00 PM - 10:00 PM
+            - generic [ref=e19086]:
+              - generic "Million Dollar Listing New York 4:46 PM - 5:36 PM" [ref=e19099] [cursor=pointer]:
+                - generic [ref=e19100]:
+                  - generic [ref=e19101]: Million Dollar Listing New York
+                  - generic [ref=e19102]: 4:46 PM - 5:36 PM
+              - generic "Million Dollar Listing New York 5:36 PM - 6:26 PM" [ref=e19103] [cursor=pointer]:
+                - generic [ref=e19104]:
+                  - generic [ref=e19105]: Million Dollar Listing New York
+                  - generic [ref=e19106]: 5:36 PM - 6:26 PM
+              - generic "Million Dollar Listing New York 6:26 PM - 7:16 PM" [ref=e19107] [cursor=pointer]:
+                - generic [ref=e19108]:
+                  - generic [ref=e19109]: Million Dollar Listing New York
+                  - generic [ref=e19110]: 6:26 PM - 7:16 PM
+              - generic "Million Dollar Listing New York 7:16 PM - 8:06 PM" [ref=e19111] [cursor=pointer]:
+                - generic [ref=e19112]:
+                  - generic [ref=e19113]: Million Dollar Listing New York
+                  - generic [ref=e19114]: 7:16 PM - 8:06 PM
+              - generic "Million Dollar Listing New York 8:06 PM - 8:56 PM" [ref=e19115] [cursor=pointer]:
+                - generic [ref=e19116]:
+                  - generic [ref=e19117]: Million Dollar Listing New York
+                  - generic [ref=e19118]: 8:06 PM - 8:56 PM
+              - generic "Million Dollar Listing New York 8:56 PM - 9:46 PM" [ref=e19119] [cursor=pointer]:
+                - generic [ref=e19120]:
+                  - generic [ref=e19121]: Million Dollar Listing New York
+                  - generic [ref=e19122]: 8:56 PM - 9:46 PM
+              - generic "Million Dollar Listing New York 9:46 PM - 10:36 PM" [ref=e19123] [cursor=pointer]:
+                - generic [ref=e19125]: Million Dollar Listing New York
+            - generic [ref=e19126]:
+              - generic "Home Style Cookery 5:00 PM - 5:30 PM" [ref=e19139] [cursor=pointer]:
+                - generic [ref=e19141]: Home Style Cookery
+              - generic "Home Style Cookery 5:30 PM - 6:00 PM" [ref=e19142] [cursor=pointer]:
+                - generic [ref=e19144]: Home Style Cookery
+              - generic "Carla's Cooking Show 6:00 PM - 6:30 PM" [ref=e19145] [cursor=pointer]:
+                - generic [ref=e19147]: Carla's Cooking Show
+              - generic "Carla's Cooking Show 6:30 PM - 7:00 PM" [ref=e19148] [cursor=pointer]:
+                - generic [ref=e19150]: Carla's Cooking Show
+              - generic "Best Ever Food Review Show 7:00 PM - 8:00 PM" [ref=e19151] [cursor=pointer]:
+                - generic [ref=e19153]: Live
+                - generic [ref=e19154]:
+                  - generic [ref=e19155]: Best Ever Food Review Show
+                  - generic [ref=e19156]: 7:00 PM - 8:00 PM
+              - generic "Carla's Cooking Show 8:00 PM - 8:30 PM" [ref=e19157] [cursor=pointer]:
+                - generic [ref=e19159]: Carla's Cooking Show
+              - generic "Carla's Cooking Show 8:30 PM - 9:00 PM" [ref=e19160] [cursor=pointer]:
+                - generic [ref=e19162]: Carla's Cooking Show
+              - generic "Anime With Alvin 9:00 PM - 9:30 PM" [ref=e19163] [cursor=pointer]:
+                - generic [ref=e19165]: Anime With Alvin
+              - generic "Anime With Alvin 9:30 PM - 10:00 PM" [ref=e19166] [cursor=pointer]:
+                - generic [ref=e19168]: Anime With Alvin
+            - generic [ref=e19169]:
+              - generic "America's Test Kitchen 5:00 PM - 5:30 PM" [ref=e19182] [cursor=pointer]:
+                - generic [ref=e19184]: America's Test Kitchen
+              - generic "America's Test Kitchen 5:30 PM - 6:00 PM" [ref=e19185] [cursor=pointer]:
+                - generic [ref=e19187]: America's Test Kitchen
+              - generic "America's Test Kitchen 6:00 PM - 6:30 PM" [ref=e19188] [cursor=pointer]:
+                - generic [ref=e19190]: America's Test Kitchen
+              - generic "America's Test Kitchen From Cook's Illustrated 6:30 PM - 7:00 PM" [ref=e19191] [cursor=pointer]:
+                - generic [ref=e19193]: America's Test Kitchen From Cook's Illustrated
+              - generic "America's Test Kitchen 7:00 PM - 7:30 PM" [ref=e19194] [cursor=pointer]:
+                - generic [ref=e19196]: America's Test Kitchen
+              - generic "America's Test Kitchen 7:30 PM - 8:00 PM" [ref=e19197] [cursor=pointer]:
+                - generic [ref=e19199]: America's Test Kitchen
+              - generic "America's Test Kitchen 8:00 PM - 8:30 PM" [ref=e19200] [cursor=pointer]:
+                - generic [ref=e19202]: America's Test Kitchen
+              - generic "Cook's Country 8:30 PM - 9:00 PM" [ref=e19203] [cursor=pointer]:
+                - generic [ref=e19205]: Cook's Country
+              - generic "America's Test Kitchen 9:00 PM - 9:30 PM" [ref=e19206] [cursor=pointer]:
+                - generic [ref=e19208]: America's Test Kitchen
+              - generic "America's Test Kitchen 9:30 PM - 10:00 PM" [ref=e19209] [cursor=pointer]:
+                - generic [ref=e19211]: America's Test Kitchen
+            - generic [ref=e19212]:
+              - generic "Gordon Ramsay's Road Trip 5:00 PM - 6:00 PM" [ref=e19225] [cursor=pointer]:
+                - generic [ref=e19226]:
+                  - generic [ref=e19227]: Gordon Ramsay's Road Trip
+                  - generic [ref=e19228]: 5:00 PM - 6:00 PM
+              - generic "Gordon Ramsay's Road Trip 6:00 PM - 7:00 PM" [ref=e19229] [cursor=pointer]:
+                - generic [ref=e19230]:
+                  - generic [ref=e19231]: Gordon Ramsay's Road Trip
+                  - generic [ref=e19232]: 6:00 PM - 7:00 PM
+              - generic "Gordon Ramsay's Road Trip 7:00 PM - 8:00 PM" [ref=e19233] [cursor=pointer]:
+                - generic [ref=e19234]:
+                  - generic [ref=e19235]: Gordon Ramsay's Road Trip
+                  - generic [ref=e19236]: 7:00 PM - 8:00 PM
+              - generic "Gordon Ramsay's Road Trip 8:00 PM - 9:00 PM" [ref=e19237] [cursor=pointer]:
+                - generic [ref=e19238]:
+                  - generic [ref=e19239]: Gordon Ramsay's Road Trip
+                  - generic [ref=e19240]: 8:00 PM - 9:00 PM
+              - generic "Gordon Ramsay's Road Trip 9:00 PM - 10:00 PM" [ref=e19241] [cursor=pointer]:
+                - generic [ref=e19242]:
+                  - generic [ref=e19243]: Gordon Ramsay's Road Trip
+                  - generic [ref=e19244]: 9:00 PM - 10:00 PM
+            - generic [ref=e19245]:
+              - generic "World's Most Secret Homes 5:00 PM - 6:00 PM" [ref=e19258] [cursor=pointer]:
+                - generic [ref=e19259]:
+                  - generic [ref=e19260]: World's Most Secret Homes
+                  - generic [ref=e19261]: 5:00 PM - 6:00 PM
+              - generic "World's Most Secret Homes 6:00 PM - 7:00 PM" [ref=e19262] [cursor=pointer]:
+                - generic [ref=e19263]:
+                  - generic [ref=e19264]: World's Most Secret Homes
+                  - generic [ref=e19265]: 6:00 PM - 7:00 PM
+              - generic "World's Most Secret Homes 7:00 PM - 8:00 PM" [ref=e19266] [cursor=pointer]:
+                - generic [ref=e19267]:
+                  - generic [ref=e19268]: World's Most Secret Homes
+                  - generic [ref=e19269]: 7:00 PM - 8:00 PM
+              - generic "World's Most Secret Homes 8:00 PM - 9:00 PM" [ref=e19270] [cursor=pointer]:
+                - generic [ref=e19271]:
+                  - generic [ref=e19272]: World's Most Secret Homes
+                  - generic [ref=e19273]: 8:00 PM - 9:00 PM
+              - generic "World's Most Secret Homes 9:00 PM - 10:00 PM" [ref=e19274] [cursor=pointer]:
+                - generic [ref=e19275]:
+                  - generic [ref=e19276]: World's Most Secret Homes
+                  - generic [ref=e19277]: 9:00 PM - 10:00 PM
+            - generic [ref=e19278]:
+              - 'generic "Jamie: Eat Yourself Healthy 4:37 PM - 5:33 PM" [ref=e19291] [cursor=pointer]':
+                - generic [ref=e19292]:
+                  - generic [ref=e19293]: "Jamie: Eat Yourself Healthy"
+                  - generic [ref=e19294]: 4:37 PM - 5:33 PM
+              - 'generic "Jamie: Eat Yourself Healthy 5:33 PM - 5:57 PM" [ref=e19295] [cursor=pointer]':
+                - generic [ref=e19297]: "Jamie: Eat Yourself Healthy"
+              - 'generic "Jamie: Eat Yourself Healthy 5:57 PM - 6:29 PM" [ref=e19298] [cursor=pointer]':
+                - generic [ref=e19300]: "Jamie: Eat Yourself Healthy"
+              - generic "Jamie's 15 Minute Meals 6:29 PM - 6:59 PM" [ref=e19301] [cursor=pointer]:
+                - generic [ref=e19303]: Jamie's 15 Minute Meals
+              - generic "Jamie's 15 Minute Meals 6:59 PM - 7:29 PM" [ref=e19304] [cursor=pointer]:
+                - generic [ref=e19306]: Jamie's 15 Minute Meals
+              - generic "Jamie's Super Food Family Classics 7:29 PM - 8:23 PM" [ref=e19307] [cursor=pointer]:
+                - generic [ref=e19308]:
+                  - generic [ref=e19309]: Jamie's Super Food Family Classics
+                  - generic [ref=e19310]: 7:29 PM - 8:23 PM
+              - generic "Jamie's Super Food Family Classics 8:23 PM - 9:16 PM" [ref=e19311] [cursor=pointer]:
+                - generic [ref=e19312]:
+                  - generic [ref=e19313]: Jamie's Super Food Family Classics
+                  - generic [ref=e19314]: 8:23 PM - 9:16 PM
+              - 'generic "Jamie: Eat Yourself Healthy 9:16 PM - 10:12 PM" [ref=e19315] [cursor=pointer]':
+                - generic [ref=e19317]: Live
+                - generic [ref=e19318]:
+                  - generic [ref=e19319]: "Jamie: Eat Yourself Healthy"
+                  - generic [ref=e19320]: 9:16 PM - 10:12 PM
+            - generic [ref=e19321]:
+              - generic "Tiny House Nation 5:00 PM - 5:51 PM" [ref=e19334] [cursor=pointer]:
+                - generic [ref=e19335]:
+                  - generic [ref=e19336]: Tiny House Nation
+                  - generic [ref=e19337]: 5:00 PM - 5:51 PM
+              - generic "Tiny House Nation 5:51 PM - 6:44 PM" [ref=e19338] [cursor=pointer]:
+                - generic [ref=e19339]:
+                  - generic [ref=e19340]: Tiny House Nation
+                  - generic [ref=e19341]: 5:51 PM - 6:44 PM
+              - generic "Tiny House Nation 6:44 PM - 7:37 PM" [ref=e19342] [cursor=pointer]:
+                - generic [ref=e19343]:
+                  - generic [ref=e19344]: Tiny House Nation
+                  - generic [ref=e19345]: 6:44 PM - 7:37 PM
+              - generic "Tiny House Nation 7:37 PM - 8:30 PM" [ref=e19346] [cursor=pointer]:
+                - generic [ref=e19347]:
+                  - generic [ref=e19348]: Tiny House Nation
+                  - generic [ref=e19349]: 7:37 PM - 8:30 PM
+              - generic "Tiny House Nation 8:30 PM - 9:21 PM" [ref=e19350] [cursor=pointer]:
+                - generic [ref=e19351]:
+                  - generic [ref=e19352]: Tiny House Nation
+                  - generic [ref=e19353]: 8:30 PM - 9:21 PM
+              - generic "Tiny House Nation 9:21 PM - 10:11 PM" [ref=e19354] [cursor=pointer]:
+                - generic [ref=e19356]: Tiny House Nation
+            - generic [ref=e19357]:
+              - generic "Fame to Table 5:00 PM - 5:30 PM" [ref=e19370] [cursor=pointer]:
+                - generic [ref=e19372]: Fame to Table
+              - generic "Fame to Table 5:30 PM - 6:00 PM" [ref=e19373] [cursor=pointer]:
+                - generic [ref=e19375]: Fame to Table
+              - generic "The Vision Maker 6:00 PM - 6:30 PM" [ref=e19376] [cursor=pointer]:
+                - generic [ref=e19378]: The Vision Maker
+              - generic "The Vision Maker 6:30 PM - 7:00 PM" [ref=e19379] [cursor=pointer]:
+                - generic [ref=e19381]: The Vision Maker
+              - generic "The Vision Maker 7:00 PM - 7:30 PM" [ref=e19382] [cursor=pointer]:
+                - generic [ref=e19384]: The Vision Maker
+              - generic "Celebrity House Sitting 7:30 PM - 8:00 PM" [ref=e19385] [cursor=pointer]:
+                - generic [ref=e19387]: Celebrity House Sitting
+              - generic "Celebrity House Sitting 8:00 PM - 8:30 PM" [ref=e19388] [cursor=pointer]:
+                - generic [ref=e19390]: Celebrity House Sitting
+              - generic "Celebrity House Sitting 8:30 PM - 9:00 PM" [ref=e19391] [cursor=pointer]:
+                - generic [ref=e19393]: Celebrity House Sitting
+              - generic "The Reveal 9:00 PM - 9:30 PM" [ref=e19394] [cursor=pointer]:
+                - generic [ref=e19396]: The Reveal
+              - generic "Alt Home 9:30 PM - 10:00 PM" [ref=e19397] [cursor=pointer]:
+                - generic [ref=e19399]: Alt Home
+            - generic [ref=e19400]:
+              - generic "5 Must Haves by ETJ 5:00 PM - 5:30 PM" [ref=e19413] [cursor=pointer]:
+                - generic [ref=e19415]: 5 Must Haves by ETJ
+              - generic "Inspired Travels with Patti Hunt 5:30 PM - 6:00 PM" [ref=e19416] [cursor=pointer]:
+                - generic [ref=e19418]: Inspired Travels with Patti Hunt
+              - generic "Let's Talk Suspensions 6:00 PM - 6:30 PM" [ref=e19419] [cursor=pointer]:
+                - generic [ref=e19421]: Let's Talk Suspensions
+              - generic "Big Truck Big Travels 6:30 PM - 7:00 PM" [ref=e19422] [cursor=pointer]:
+                - generic [ref=e19424]: Big Truck Big Travels
+              - generic "Building Sandy Vans 7:00 PM - 8:00 PM" [ref=e19425] [cursor=pointer]:
+                - generic [ref=e19426]:
+                  - generic [ref=e19427]: Building Sandy Vans
+                  - generic [ref=e19428]: 7:00 PM - 8:00 PM
+              - generic "Paid Programming 7:30 PM - 8:00 PM" [ref=e19429] [cursor=pointer]:
+                - generic [ref=e19431]: Paid Programming
+              - generic "Adventure Bandits Show 8:00 PM - 9:00 PM" [ref=e19432] [cursor=pointer]:
+                - generic [ref=e19433]:
+                  - generic [ref=e19434]: Adventure Bandits Show
+                  - generic [ref=e19435]: 8:00 PM - 9:00 PM
+              - generic "Paid Programming 8:30 PM - 9:00 PM" [ref=e19436] [cursor=pointer]:
+                - generic [ref=e19438]: Paid Programming
+              - generic "Our Everyday Getaway 9:00 PM - 9:30 PM" [ref=e19439] [cursor=pointer]:
+                - generic [ref=e19441]: Our Everyday Getaway
+              - generic "Switch It Up 9:30 PM - 10:00 PM" [ref=e19442] [cursor=pointer]:
+                - generic [ref=e19444]: Switch It Up
+            - generic [ref=e19445]:
+              - generic "Leave It to Bryan 4:57 PM - 5:27 PM" [ref=e19458] [cursor=pointer]:
+                - generic [ref=e19460]: Leave It to Bryan
+              - generic "Leave It to Bryan 5:27 PM - 5:57 PM" [ref=e19461] [cursor=pointer]:
+                - generic [ref=e19463]: Leave It to Bryan
+              - generic "Income Property 5:57 PM - 6:26 PM" [ref=e19464] [cursor=pointer]:
+                - generic [ref=e19466]: Income Property
+              - generic "Income Property 6:26 PM - 6:56 PM" [ref=e19467] [cursor=pointer]:
+                - generic [ref=e19469]: Income Property
+              - generic "Buyers Bootcamp 6:56 PM - 7:52 PM" [ref=e19470] [cursor=pointer]:
+                - generic [ref=e19471]:
+                  - generic [ref=e19472]: Buyers Bootcamp
+                  - generic [ref=e19473]: 6:56 PM - 7:52 PM
+              - generic "Leave It to Bryan 7:52 PM - 8:22 PM" [ref=e19474] [cursor=pointer]:
+                - generic [ref=e19476]: Leave It to Bryan
+              - generic "Leave It to Bryan 8:22 PM - 8:52 PM" [ref=e19477] [cursor=pointer]:
+                - generic [ref=e19479]: Leave It to Bryan
+              - generic "Leave It to Bryan 8:52 PM - 9:22 PM" [ref=e19480] [cursor=pointer]:
+                - generic [ref=e19482]: Leave It to Bryan
+              - generic "Leave It to Bryan 9:22 PM - 9:52 PM" [ref=e19483] [cursor=pointer]:
+                - generic [ref=e19485]: Leave It to Bryan
+              - generic "Leave It to Bryan 9:52 PM - 10:22 PM" [ref=e19486] [cursor=pointer]:
+                - generic [ref=e19488]: Leave It to Bryan
+            - generic [ref=e19489]:
+              - generic "Passport to Love 4:31 PM - 6:11 PM" [ref=e19502] [cursor=pointer]:
+                - generic [ref=e19503]:
+                  - generic [ref=e19504]: Passport to Love
+                  - generic [ref=e19505]: 4:31 PM - 6:11 PM
+                  - generic [ref=e19506]: Travel blogger Nicole meets Kade, a competing magazine rep while travelling abroad. When Kade's boss tasks him with buying her out, he struggles between doing his job and his growing feelings for Nicole.
+              - generic "Fall Into Winter 6:11 PM - 7:49 PM" [ref=e19507] [cursor=pointer]:
+                - generic [ref=e19508]:
+                  - generic [ref=e19509]: Fall Into Winter
+                  - generic [ref=e19510]: 6:11 PM - 7:49 PM
+                  - generic [ref=e19511]: Life quickly changes for Kerry as she has to work alongside her high school nemesis, Brooks, an old friend of her brother's who unexpectedly buys into Kerry's family-owned candy shop.
+              - generic "A Prince in Paradise 7:49 PM - 9:29 PM" [ref=e19512] [cursor=pointer]:
+                - generic [ref=e19513]:
+                  - generic [ref=e19514]: A Prince in Paradise
+                  - generic [ref=e19515]: 7:49 PM - 9:29 PM
+                  - generic [ref=e19516]: Struggling with writer's block after a breakup, Olivia takes a tropical holiday in hopes of some inspiration and meets Prince Alexander, who needs some distance from his upcoming duty to marry royalty.
+              - generic "From Chicago With Love 9:29 PM - 11:08 PM" [ref=e19517] [cursor=pointer]:
+                - generic [ref=e19519]: From Chicago With Love
+            - generic [ref=e19520]:
+              - generic "MeatEater 4:59 PM - 5:27 PM" [ref=e19533] [cursor=pointer]:
+                - generic [ref=e19535]: MeatEater
+              - generic "MeatEater 5:27 PM - 5:56 PM" [ref=e19536] [cursor=pointer]:
+                - generic [ref=e19538]: MeatEater
+              - generic "MeatEater 5:56 PM - 6:24 PM" [ref=e19539] [cursor=pointer]:
+                - generic [ref=e19541]: MeatEater
+              - generic "MeatEater 6:24 PM - 6:54 PM" [ref=e19542] [cursor=pointer]:
+                - generic [ref=e19544]: MeatEater
+              - generic "MeatEater 6:54 PM - 7:24 PM" [ref=e19545] [cursor=pointer]:
+                - generic [ref=e19547]: MeatEater
+              - generic "MeatEater 7:24 PM - 7:54 PM" [ref=e19548] [cursor=pointer]:
+                - generic [ref=e19550]: MeatEater
+              - generic "MeatEater 7:54 PM - 8:24 PM" [ref=e19551] [cursor=pointer]:
+                - generic [ref=e19553]: MeatEater
+              - generic "MeatEater 8:24 PM - 8:53 PM" [ref=e19554] [cursor=pointer]:
+                - generic [ref=e19556]: MeatEater
+              - generic "MeatEater Hunts 8:53 PM - 9:25 PM" [ref=e19557] [cursor=pointer]:
+                - generic [ref=e19559]: MeatEater Hunts
+              - generic "MeatEater Hunts 9:25 PM - 9:50 PM" [ref=e19560] [cursor=pointer]:
+                - generic [ref=e19562]: MeatEater Hunts
+              - generic "MeatEater Hunts 9:50 PM - 10:36 PM" [ref=e19563] [cursor=pointer]:
+                - generic [ref=e19565]: MeatEater Hunts
+            - generic [ref=e19566]:
+              - generic "Gusto's QR Countdown 5:00 PM - 6:00 PM" [ref=e19579] [cursor=pointer]:
+                - generic [ref=e19580]:
+                  - generic [ref=e19581]: Gusto's QR Countdown
+                  - generic [ref=e19582]: 5:00 PM - 6:00 PM
+              - generic "Global Street Eats 6:00 PM - 6:30 PM" [ref=e19583] [cursor=pointer]:
+                - generic [ref=e19585]: Global Street Eats
+              - generic "Global Street Eats 6:30 PM - 7:00 PM" [ref=e19586] [cursor=pointer]:
+                - generic [ref=e19588]: Global Street Eats
+              - generic "Everyday Excellent 7:00 PM - 7:30 PM" [ref=e19589] [cursor=pointer]:
+                - generic [ref=e19591]: Everyday Excellent
+              - generic "Cook Like a Chef 7:30 PM - 8:00 PM" [ref=e19592] [cursor=pointer]:
+                - generic [ref=e19594]: Cook Like a Chef
+              - generic "Cook the Books 8:00 PM - 9:00 PM" [ref=e19595] [cursor=pointer]:
+                - generic [ref=e19596]:
+                  - generic [ref=e19597]: Cook the Books
+                  - generic [ref=e19598]: 8:00 PM - 9:00 PM
+              - generic "Gusto's QR Countdown 9:00 PM - 10:00 PM" [ref=e19599] [cursor=pointer]:
+                - generic [ref=e19600]:
+                  - generic [ref=e19601]: Gusto's QR Countdown
+                  - generic [ref=e19602]: 9:00 PM - 10:00 PM
+            - generic [ref=e19603]:
+              - generic "Crazy Cakes 5:05 PM - 5:29 PM" [ref=e19616] [cursor=pointer]:
+                - generic [ref=e19618]: Crazy Cakes
+              - generic "Crazy Cakes 5:29 PM - 5:53 PM" [ref=e19619] [cursor=pointer]:
+                - generic [ref=e19621]: Crazy Cakes
+              - generic "Crazy Cakes 5:53 PM - 6:17 PM" [ref=e19622] [cursor=pointer]:
+                - generic [ref=e19624]: Crazy Cakes
+              - generic "Crazy Cakes 6:17 PM - 6:41 PM" [ref=e19625] [cursor=pointer]:
+                - generic [ref=e19627]: Crazy Cakes
+              - generic "Cake Wars 6:41 PM - 7:29 PM" [ref=e19628] [cursor=pointer]:
+                - generic [ref=e19629]:
+                  - generic [ref=e19630]: Cake Wars
+                  - generic [ref=e19631]: 6:41 PM - 7:29 PM
+              - generic "Cake Wars 7:29 PM - 8:17 PM" [ref=e19632] [cursor=pointer]:
+                - generic [ref=e19633]:
+                  - generic [ref=e19634]: Cake Wars
+                  - generic [ref=e19635]: 7:29 PM - 8:17 PM
+              - generic "Cake Wars 8:17 PM - 9:05 PM" [ref=e19636] [cursor=pointer]:
+                - generic [ref=e19637]:
+                  - generic [ref=e19638]: Cake Wars
+                  - generic [ref=e19639]: 8:17 PM - 9:05 PM
+              - generic "Cake Wars 9:05 PM - 9:53 PM" [ref=e19640] [cursor=pointer]:
+                - generic [ref=e19641]:
+                  - generic [ref=e19642]: Cake Wars
+                  - generic [ref=e19643]: 9:05 PM - 9:53 PM
+              - generic "Cake Wars 9:53 PM - 10:41 PM" [ref=e19644] [cursor=pointer]:
+                - generic [ref=e19646]: Cake Wars
+            - generic [ref=e19647]:
+              - generic "Bizarre Foods America 4:36 PM - 5:24 PM" [ref=e19660] [cursor=pointer]:
+                - generic [ref=e19661]:
+                  - generic [ref=e19662]: Bizarre Foods America
+                  - generic [ref=e19663]: 4:36 PM - 5:24 PM
+              - generic "Bizarre Foods America 5:24 PM - 6:13 PM" [ref=e19664] [cursor=pointer]:
+                - generic [ref=e19665]:
+                  - generic [ref=e19666]: Bizarre Foods America
+                  - generic [ref=e19667]: 5:24 PM - 6:13 PM
+              - generic "Bizarre Foods America 6:13 PM - 7:02 PM" [ref=e19668] [cursor=pointer]:
+                - generic [ref=e19669]:
+                  - generic [ref=e19670]: Bizarre Foods America
+                  - generic [ref=e19671]: 6:13 PM - 7:02 PM
+              - generic "Bizarre Foods America 7:02 PM - 7:50 PM" [ref=e19672] [cursor=pointer]:
+                - generic [ref=e19673]:
+                  - generic [ref=e19674]: Bizarre Foods America
+                  - generic [ref=e19675]: 7:02 PM - 7:50 PM
+              - generic "Bizarre Foods America 7:50 PM - 8:39 PM" [ref=e19676] [cursor=pointer]:
+                - generic [ref=e19677]:
+                  - generic [ref=e19678]: Bizarre Foods America
+                  - generic [ref=e19679]: 7:50 PM - 8:39 PM
+              - generic "Bizarre Foods America 8:39 PM - 9:27 PM" [ref=e19680] [cursor=pointer]:
+                - generic [ref=e19681]:
+                  - generic [ref=e19682]: Bizarre Foods America
+                  - generic [ref=e19683]: 8:39 PM - 9:27 PM
+              - generic "Bizarre Foods America 9:27 PM - 10:16 PM" [ref=e19684] [cursor=pointer]:
+                - generic [ref=e19686]: Bizarre Foods America
+            - generic [ref=e19687]:
+              - generic "Island Life 4:46 PM - 5:11 PM" [ref=e19700] [cursor=pointer]:
+                - generic [ref=e19702]: Island Life
+              - generic "Island Life 5:11 PM - 5:36 PM" [ref=e19703] [cursor=pointer]:
+                - generic [ref=e19705]: Island Life
+              - generic "Island Life 5:36 PM - 6:02 PM" [ref=e19706] [cursor=pointer]:
+                - generic [ref=e19708]: Live
+                - generic [ref=e19710]: Island Life
+              - generic "Island Life 6:02 PM - 6:27 PM" [ref=e19711] [cursor=pointer]:
+                - generic [ref=e19713]: Island Life
+              - generic "Island Life 6:27 PM - 6:53 PM" [ref=e19714] [cursor=pointer]:
+                - generic [ref=e19716]: Island Life
+              - generic "Island Life 6:53 PM - 7:19 PM" [ref=e19717] [cursor=pointer]:
+                - generic [ref=e19719]: Island Life
+              - generic "Island Life 7:19 PM - 7:44 PM" [ref=e19720] [cursor=pointer]:
+                - generic [ref=e19722]: Island Life
+              - generic "Island Life 7:44 PM - 8:08 PM" [ref=e19723] [cursor=pointer]:
+                - generic [ref=e19725]: Island Life
+              - generic "Island Life 8:08 PM - 8:33 PM" [ref=e19726] [cursor=pointer]:
+                - generic [ref=e19728]: Island Life
+              - generic "Island Life 8:33 PM - 8:59 PM" [ref=e19729] [cursor=pointer]:
+                - generic [ref=e19731]: Island Life
+              - generic "Island Life 8:59 PM - 9:24 PM" [ref=e19732] [cursor=pointer]:
+                - generic [ref=e19734]: Island Life
+              - generic "Island Life 9:24 PM - 9:50 PM" [ref=e19735] [cursor=pointer]:
+                - generic [ref=e19737]: Island Life
+              - generic "Island Life 9:50 PM - 10:15 PM" [ref=e19738] [cursor=pointer]:
+                - generic [ref=e19740]: Island Life
+            - generic [ref=e19741]:
+              - 'generic "Anthony Bourdain: A Cook''s Tour 5:00 PM - 5:30 PM" [ref=e19754] [cursor=pointer]':
+                - generic [ref=e19756]: "Anthony Bourdain: A Cook's Tour"
+              - 'generic "Anthony Bourdain: A Cook''s Tour 5:30 PM - 6:00 PM" [ref=e19757] [cursor=pointer]':
+                - generic [ref=e19759]: "Anthony Bourdain: A Cook's Tour"
+              - 'generic "Anthony Bourdain: A Cook''s Tour 6:00 PM - 6:30 PM" [ref=e19760] [cursor=pointer]':
+                - generic [ref=e19762]: Live
+                - generic [ref=e19764]: "Anthony Bourdain: A Cook's Tour"
+              - 'generic "Anthony Bourdain: A Cook''s Tour 6:30 PM - 7:00 PM" [ref=e19765] [cursor=pointer]':
+                - generic [ref=e19767]: "Anthony Bourdain: A Cook's Tour"
+              - 'generic "Anthony Bourdain: A Cook''s Tour 7:00 PM - 7:30 PM" [ref=e19768] [cursor=pointer]':
+                - generic [ref=e19770]: "Anthony Bourdain: A Cook's Tour"
+              - 'generic "Anthony Bourdain: A Cook''s Tour 7:30 PM - 8:00 PM" [ref=e19771] [cursor=pointer]':
+                - generic [ref=e19773]: "Anthony Bourdain: A Cook's Tour"
+              - generic "Food Relay 8:00 PM - 8:30 PM" [ref=e19774] [cursor=pointer]:
+                - generic [ref=e19776]: Food Relay
+              - generic "Food Relay 8:30 PM - 9:00 PM" [ref=e19777] [cursor=pointer]:
+                - generic [ref=e19779]: Food Relay
+              - generic "Me, Myself, and the World 9:00 PM - 9:30 PM" [ref=e19780] [cursor=pointer]:
+                - generic [ref=e19782]: Me, Myself, and the World
+              - generic "Me, Myself, and the World 9:30 PM - 10:00 PM" [ref=e19783] [cursor=pointer]:
+                - generic [ref=e19785]: Me, Myself, and the World
+            - generic [ref=e19786]:
+              - generic "Side Dish 5:00 PM - 6:00 PM" [ref=e19799] [cursor=pointer]:
+                - generic [ref=e19801]: Live
+                - generic [ref=e19802]:
+                  - generic [ref=e19803]: Side Dish
+                  - generic [ref=e19804]: 5:00 PM - 6:00 PM
+              - generic "Side Dish 6:00 PM - 7:00 PM" [ref=e19805] [cursor=pointer]:
+                - generic [ref=e19807]: Live
+                - generic [ref=e19808]:
+                  - generic [ref=e19809]: Side Dish
+                  - generic [ref=e19810]: 6:00 PM - 7:00 PM
+              - generic "Side Dish 7:00 PM - 8:00 PM" [ref=e19811] [cursor=pointer]:
+                - generic [ref=e19813]: Live
+                - generic [ref=e19814]:
+                  - generic [ref=e19815]: Side Dish
+                  - generic [ref=e19816]: 7:00 PM - 8:00 PM
+              - generic "Scrollin' With Jen & Vee 8:00 PM - 8:30 PM" [ref=e19817] [cursor=pointer]:
+                - generic [ref=e19819]: Scrollin' With Jen & Vee
+              - generic "Scrollin' With Jen & Vee 8:30 PM - 9:00 PM" [ref=e19820] [cursor=pointer]:
+                - generic [ref=e19822]: Scrollin' With Jen & Vee
+              - generic "Scrollin' With Jen & Vee 9:00 PM - 9:30 PM" [ref=e19823] [cursor=pointer]:
+                - generic [ref=e19825]: Scrollin' With Jen & Vee
+              - generic "The Nightcap 9:30 PM - 10:00 PM" [ref=e19826] [cursor=pointer]:
+                - generic [ref=e19828]: The Nightcap
+            - generic [ref=e19829]:
+              - generic "Love Thy Neighbor 4:55 PM - 5:19 PM" [ref=e19842] [cursor=pointer]:
+                - generic [ref=e19844]: Love Thy Neighbor
+              - generic "Ambitions 5:19 PM - 6:10 PM" [ref=e19845] [cursor=pointer]:
+                - generic [ref=e19846]:
+                  - generic [ref=e19847]: Ambitions
+                  - generic [ref=e19848]: 5:19 PM - 6:10 PM
+              - generic "Ambitions 6:10 PM - 7:00 PM" [ref=e19849] [cursor=pointer]:
+                - generic [ref=e19850]:
+                  - generic [ref=e19851]: Ambitions
+                  - generic [ref=e19852]: 6:10 PM - 7:00 PM
+              - generic "Power 7:00 PM - 8:08 PM" [ref=e19853] [cursor=pointer]:
+                - generic [ref=e19854]:
+                  - generic [ref=e19855]: Power
+                  - generic [ref=e19856]: 7:00 PM - 8:08 PM
+                  - generic [ref=e19857]: After being framed by Ghost for the murder of Jason Micic, Dre plans on leaving New York, but first he needs to take care of unfinished business.
+              - generic "Power 8:08 PM - 9:17 PM" [ref=e19858] [cursor=pointer]:
+                - generic [ref=e19859]:
+                  - generic [ref=e19860]: Power
+                  - generic [ref=e19861]: 8:08 PM - 9:17 PM
+                  - generic [ref=e19862]: Paz, still grieving Angela's death, seeks allies in the pursuit of justice or vengeance so she forms an alliance with Warner; they hatch a plan to arrest Ghost for the murder of Angela but things don't go as planned.
+              - generic "Rogue 9:17 PM - 10:14 PM" [ref=e19863] [cursor=pointer]:
+                - generic [ref=e19864]:
+                  - generic [ref=e19865]: Rogue
+                  - generic [ref=e19866]: 9:17 PM - 10:14 PM
+            - generic [ref=e19867]:
+              - generic "Sue Thomas F.B.Eye 5:00 PM - 6:00 PM" [ref=e19880] [cursor=pointer]:
+                - generic [ref=e19881]:
+                  - generic [ref=e19882]: Sue Thomas F.B.Eye
+                  - generic [ref=e19883]: 5:00 PM - 6:00 PM
+              - generic "Sue Thomas F.B.Eye 6:00 PM - 7:00 PM" [ref=e19884] [cursor=pointer]:
+                - generic [ref=e19885]:
+                  - generic [ref=e19886]: Sue Thomas F.B.Eye
+                  - generic [ref=e19887]: 6:00 PM - 7:00 PM
+              - generic "Sue Thomas F.B.Eye 7:00 PM - 8:00 PM" [ref=e19888] [cursor=pointer]:
+                - generic [ref=e19889]:
+                  - generic [ref=e19890]: Sue Thomas F.B.Eye
+                  - generic [ref=e19891]: 7:00 PM - 8:00 PM
+              - generic "Sue Thomas F.B.Eye 8:00 PM - 9:00 PM" [ref=e19892] [cursor=pointer]:
+                - generic [ref=e19893]:
+                  - generic [ref=e19894]: Sue Thomas F.B.Eye
+                  - generic [ref=e19895]: 8:00 PM - 9:00 PM
+              - generic "Sue Thomas F.B.Eye 9:00 PM - 10:00 PM" [ref=e19896] [cursor=pointer]:
+                - generic [ref=e19898]: Live
+                - generic [ref=e19899]:
+                  - generic [ref=e19900]: Sue Thomas F.B.Eye
+                  - generic [ref=e19901]: 9:00 PM - 10:00 PM
+            - generic [ref=e19902]:
+              - generic "Joel Osteen Weekly 5:05 PM - 5:38 PM" [ref=e19915] [cursor=pointer]:
+                - generic [ref=e19917]: Joel Osteen Weekly
+              - generic "Joel Osteen Weekly 5:38 PM - 6:11 PM" [ref=e19918] [cursor=pointer]:
+                - generic [ref=e19920]: Joel Osteen Weekly
+              - generic "Joel Osteen Weekly 6:11 PM - 6:45 PM" [ref=e19921] [cursor=pointer]:
+                - generic [ref=e19923]: Joel Osteen Weekly
+              - generic "Joel Osteen Weekly 6:12 PM - 6:45 PM" [ref=e19924] [cursor=pointer]:
+                - generic [ref=e19926]: Joel Osteen Weekly
+              - generic "Joel Osteen Weekly 6:45 PM - 7:18 PM" [ref=e19927] [cursor=pointer]:
+                - generic [ref=e19929]: Joel Osteen Weekly
+              - generic "Joel Osteen Weekly 7:18 PM - 7:51 PM" [ref=e19930] [cursor=pointer]:
+                - generic [ref=e19932]: Joel Osteen Weekly
+              - generic "Joel Osteen Weekly 7:51 PM - 8:24 PM" [ref=e19933] [cursor=pointer]:
+                - generic [ref=e19935]: Joel Osteen Weekly
+              - generic "Joel Osteen Weekly 8:24 PM - 8:57 PM" [ref=e19936] [cursor=pointer]:
+                - generic [ref=e19938]: Joel Osteen Weekly
+              - generic "Joel Osteen Weekly 8:57 PM - 9:31 PM" [ref=e19939] [cursor=pointer]:
+                - generic [ref=e19941]: Joel Osteen Weekly
+              - generic "Joel Osteen Weekly 8:58 PM - 9:31 PM" [ref=e19942] [cursor=pointer]:
+                - generic [ref=e19944]: Joel Osteen Weekly
+              - generic "Joel Osteen Weekly 9:31 PM - 10:05 PM" [ref=e19945] [cursor=pointer]:
+                - generic [ref=e19947]: Joel Osteen Weekly
+            - generic [ref=e19948]:
+              - generic "Scents and Sensibility 3:44 PM - 5:24 PM" [ref=e19961] [cursor=pointer]:
+                - generic [ref=e19962]:
+                  - generic [ref=e19963]: Scents and Sensibility
+                  - generic [ref=e19964]: 3:44 PM - 5:24 PM
+                  - generic [ref=e19965]: When their father loses his fortune, two sisters (Ashley Williams, Marla Sokoloff) must fend for themselves.
+              - generic "Movie 5:00 PM - 7:00 PM" [ref=e19966] [cursor=pointer]:
+                - generic [ref=e19967]:
+                  - generic [ref=e19968]: Movie
+                  - generic [ref=e19969]: 5:00 PM - 7:00 PM
+                  - generic [ref=e19970]: Movie to be announced.
+              - generic "Amazing Racer 5:24 PM - 7:19 PM" [ref=e19971] [cursor=pointer]:
+                - generic [ref=e19972]:
+                  - generic [ref=e19973]: Amazing Racer
+                  - generic [ref=e19974]: 5:24 PM - 7:19 PM
+                  - generic [ref=e19975]: A teenager (Julianne Michelle) overcomes a tragic loss by working with a talented racehorse and establishing a relationship with the mother (Claire Forlani) she never knew.
+              - generic "Movie 7:00 PM - 9:00 PM" [ref=e19976] [cursor=pointer]:
+                - generic [ref=e19977]:
+                  - generic [ref=e19978]: Movie
+                  - generic [ref=e19979]: 7:00 PM - 9:00 PM
+                  - generic [ref=e19980]: Movie to be announced.
+              - generic "The Ultimate Legacy 7:19 PM - 9:23 PM" [ref=e19981] [cursor=pointer]:
+                - generic [ref=e19982]:
+                  - generic [ref=e19983]: The Ultimate Legacy
+                  - generic [ref=e19984]: 7:19 PM - 9:23 PM
+                  - generic [ref=e19985]: Jason Stevens continues his journey while helping a friend walk a similar path.
+              - generic "Movie 9:00 PM - 11:00 PM" [ref=e19986] [cursor=pointer]:
+                - generic [ref=e19987]:
+                  - generic [ref=e19988]: Movie
+                  - generic [ref=e19989]: 9:00 PM - 11:00 PM
+              - generic "Not Your Romeo & Juliet 9:23 PM - 10:57 PM" [ref=e19990] [cursor=pointer]:
+                - generic [ref=e19992]: Not Your Romeo & Juliet
+            - generic [ref=e19993]:
+              - generic "Yu-Gi-Oh! 5:00 PM - 5:30 PM" [ref=e20006] [cursor=pointer]:
+                - generic [ref=e20008]: Yu-Gi-Oh!
+              - generic "Yu-Gi-Oh! 5:30 PM - 6:00 PM" [ref=e20009] [cursor=pointer]:
+                - generic [ref=e20011]: Yu-Gi-Oh!
+              - generic "Yu-Gi-Oh! 6:00 PM - 6:30 PM" [ref=e20012] [cursor=pointer]:
+                - generic [ref=e20014]: Live
+                - generic [ref=e20016]: Yu-Gi-Oh!
+              - generic "Yu-Gi-Oh! 6:30 PM - 7:00 PM" [ref=e20017] [cursor=pointer]:
+                - generic [ref=e20019]: Yu-Gi-Oh!
+              - generic "Yu-Gi-Oh! 7:00 PM - 7:30 PM" [ref=e20020] [cursor=pointer]:
+                - generic [ref=e20022]: Yu-Gi-Oh!
+              - generic "Yu-Gi-Oh! 7:30 PM - 8:00 PM" [ref=e20023] [cursor=pointer]:
+                - generic [ref=e20025]: Yu-Gi-Oh!
+              - generic "Yu-Gi-Oh! 8:00 PM - 8:30 PM" [ref=e20026] [cursor=pointer]:
+                - generic [ref=e20028]: Yu-Gi-Oh!
+              - generic "Yu-Gi-Oh! 8:30 PM - 9:00 PM" [ref=e20029] [cursor=pointer]:
+                - generic [ref=e20031]: Yu-Gi-Oh!
+              - generic "Yu-Gi-Oh! 9:00 PM - 9:30 PM" [ref=e20032] [cursor=pointer]:
+                - generic [ref=e20034]: Yu-Gi-Oh!
+              - generic "Yu-Gi-Oh! 9:30 PM - 10:00 PM" [ref=e20035] [cursor=pointer]:
+                - generic [ref=e20037]: Yu-Gi-Oh!
+            - generic [ref=e20038]:
+              - generic "Animals Like Us 5:01 PM - 6:01 PM" [ref=e20051] [cursor=pointer]:
+                - generic [ref=e20052]:
+                  - generic [ref=e20053]: Animals Like Us
+                  - generic [ref=e20054]: 5:01 PM - 6:01 PM
+              - generic "Under the Sea 6:01 PM - 7:06 PM" [ref=e20055] [cursor=pointer]:
+                - generic [ref=e20056]:
+                  - generic [ref=e20057]: Under the Sea
+                  - generic [ref=e20058]: 6:01 PM - 7:06 PM
+              - generic "Baby Animals 7:06 PM - 7:34 PM" [ref=e20059] [cursor=pointer]:
+                - generic [ref=e20061]: Baby Animals
+              - generic "New Kids in the Wild 7:34 PM - 8:34 PM" [ref=e20062] [cursor=pointer]:
+                - generic [ref=e20063]:
+                  - generic [ref=e20064]: New Kids in the Wild
+                  - generic [ref=e20065]: 7:34 PM - 8:34 PM
+              - generic "New Kids in the Wild 8:34 PM - 9:35 PM" [ref=e20066] [cursor=pointer]:
+                - generic [ref=e20067]:
+                  - generic [ref=e20068]: New Kids in the Wild
+                  - generic [ref=e20069]: 8:34 PM - 9:35 PM
+              - generic "Orangutan Jungle School 9:35 PM - 10:33 PM" [ref=e20070] [cursor=pointer]:
+                - generic [ref=e20072]: Orangutan Jungle School
+            - generic [ref=e20073]:
+              - generic "Creative Killers 5:01 PM - 6:00 PM" [ref=e20086] [cursor=pointer]:
+                - generic [ref=e20087]:
+                  - generic [ref=e20088]: Creative Killers
+                  - generic [ref=e20089]: 5:01 PM - 6:00 PM
+              - generic "Crocodiles Revealed 6:00 PM - 7:00 PM" [ref=e20090] [cursor=pointer]:
+                - generic [ref=e20091]:
+                  - generic [ref=e20092]: Crocodiles Revealed
+                  - generic [ref=e20093]: 6:00 PM - 7:00 PM
+              - generic "Living With Big Cats 7:00 PM - 8:00 PM" [ref=e20094] [cursor=pointer]:
+                - generic [ref=e20095]:
+                  - generic [ref=e20096]: Living With Big Cats
+                  - generic [ref=e20097]: 7:00 PM - 8:00 PM
+              - generic "Queen of Taru 8:00 PM - 9:00 PM" [ref=e20098] [cursor=pointer]:
+                - generic [ref=e20099]:
+                  - generic [ref=e20100]: Queen of Taru
+                  - generic [ref=e20101]: 8:00 PM - 9:00 PM
+              - generic "Search for the King Cobra 9:00 PM - 10:00 PM" [ref=e20102] [cursor=pointer]:
+                - generic [ref=e20103]:
+                  - generic [ref=e20104]: Search for the King Cobra
+                  - generic [ref=e20105]: 9:00 PM - 10:00 PM
+            - generic [ref=e20106]:
+              - generic "Destruction Decoded 4:59 PM - 6:03 PM" [ref=e20119] [cursor=pointer]:
+                - generic [ref=e20120]:
+                  - generic [ref=e20121]: Destruction Decoded
+                  - generic [ref=e20122]: 4:59 PM - 6:03 PM
+              - generic "Destruction Decoded 6:03 PM - 7:09 PM" [ref=e20123] [cursor=pointer]:
+                - generic [ref=e20125]: Live
+                - generic [ref=e20126]:
+                  - generic [ref=e20127]: Destruction Decoded
+                  - generic [ref=e20128]: 6:03 PM - 7:09 PM
+              - 'generic "Faster Than Light: The Dream of Interstellar Flight 7:09 PM - 8:11 PM" [ref=e20129] [cursor=pointer]':
+                - generic [ref=e20130]:
+                  - generic [ref=e20131]: "Faster Than Light: The Dream of Interstellar Flight"
+                  - generic [ref=e20132]: 7:09 PM - 8:11 PM
+              - generic "Cosmic Journeys 8:11 PM - 8:43 PM" [ref=e20133] [cursor=pointer]:
+                - generic [ref=e20135]: Cosmic Journeys
+              - generic "Cosmic Journeys 8:43 PM - 9:15 PM" [ref=e20136] [cursor=pointer]:
+                - generic [ref=e20138]: Cosmic Journeys
+              - generic "Cosmic Journeys 9:15 PM - 9:47 PM" [ref=e20139] [cursor=pointer]:
+                - generic [ref=e20141]: Cosmic Journeys
+              - generic "Cosmic Journeys 9:47 PM - 10:20 PM" [ref=e20142] [cursor=pointer]:
+                - generic [ref=e20144]: Cosmic Journeys
+            - generic [ref=e20145]:
+              - generic "MythBusters 4:35 PM - 5:26 PM" [ref=e20158] [cursor=pointer]:
+                - generic [ref=e20159]:
+                  - generic [ref=e20160]: MythBusters
+                  - generic [ref=e20161]: 4:35 PM - 5:26 PM
+              - generic "MythBusters 5:26 PM - 6:17 PM" [ref=e20162] [cursor=pointer]:
+                - generic [ref=e20163]:
+                  - generic [ref=e20164]: MythBusters
+                  - generic [ref=e20165]: 5:26 PM - 6:17 PM
+              - generic "MythBusters 6:17 PM - 7:05 PM" [ref=e20166] [cursor=pointer]:
+                - generic [ref=e20167]:
+                  - generic [ref=e20168]: MythBusters
+                  - generic [ref=e20169]: 6:17 PM - 7:05 PM
+              - generic "MythBusters 7:05 PM - 7:54 PM" [ref=e20170] [cursor=pointer]:
+                - generic [ref=e20171]:
+                  - generic [ref=e20172]: MythBusters
+                  - generic [ref=e20173]: 7:05 PM - 7:54 PM
+              - generic "MythBusters 7:54 PM - 8:45 PM" [ref=e20174] [cursor=pointer]:
+                - generic [ref=e20175]:
+                  - generic [ref=e20176]: MythBusters
+                  - generic [ref=e20177]: 7:54 PM - 8:45 PM
+              - generic "MythBusters 8:45 PM - 9:34 PM" [ref=e20178] [cursor=pointer]:
+                - generic [ref=e20179]:
+                  - generic [ref=e20180]: MythBusters
+                  - generic [ref=e20181]: 8:45 PM - 9:34 PM
+              - generic "MythBusters 9:34 PM - 10:22 PM" [ref=e20182] [cursor=pointer]:
+                - generic [ref=e20184]: MythBusters
+            - generic [ref=e20185]:
+              - generic "Modern Marvels 5:03 PM - 5:53 PM" [ref=e20198] [cursor=pointer]:
+                - generic [ref=e20199]:
+                  - generic [ref=e20200]: Modern Marvels
+                  - generic [ref=e20201]: 5:03 PM - 5:53 PM
+              - generic "Modern Marvels 5:53 PM - 6:46 PM" [ref=e20202] [cursor=pointer]:
+                - generic [ref=e20203]:
+                  - generic [ref=e20204]: Modern Marvels
+                  - generic [ref=e20205]: 5:53 PM - 6:46 PM
+              - generic "Modern Marvels 6:46 PM - 7:37 PM" [ref=e20206] [cursor=pointer]:
+                - generic [ref=e20207]:
+                  - generic [ref=e20208]: Modern Marvels
+                  - generic [ref=e20209]: 6:46 PM - 7:37 PM
+              - generic "Modern Marvels 7:37 PM - 8:29 PM" [ref=e20210] [cursor=pointer]:
+                - generic [ref=e20211]:
+                  - generic [ref=e20212]: Modern Marvels
+                  - generic [ref=e20213]: 7:37 PM - 8:29 PM
+              - generic "Modern Marvels 8:29 PM - 9:19 PM" [ref=e20214] [cursor=pointer]:
+                - generic [ref=e20215]:
+                  - generic [ref=e20216]: Modern Marvels
+                  - generic [ref=e20217]: 8:29 PM - 9:19 PM
+              - generic "Modern Marvels 9:19 PM - 10:08 PM" [ref=e20218] [cursor=pointer]:
+                - generic [ref=e20219]:
+                  - generic [ref=e20220]: Modern Marvels
+                  - generic [ref=e20221]: 9:19 PM - 10:08 PM
+            - generic [ref=e20222]:
+              - generic "The Amazing World of Automobiles 4:37 PM - 5:36 PM" [ref=e20235] [cursor=pointer]:
+                - generic [ref=e20236]:
+                  - generic [ref=e20237]: The Amazing World of Automobiles
+                  - generic [ref=e20238]: 4:37 PM - 5:36 PM
+              - generic "To Be Announced 5:00 PM - 8:00 PM" [ref=e20239] [cursor=pointer]:
+                - generic [ref=e20240]:
+                  - generic [ref=e20241]: To Be Announced
+                  - generic [ref=e20242]: 5:00 PM - 8:00 PM
+                  - generic [ref=e20243]: Programming to be announced.
+              - generic "The Amazing World of Automobiles 5:36 PM - 6:35 PM" [ref=e20244] [cursor=pointer]:
+                - generic [ref=e20245]:
+                  - generic [ref=e20246]: The Amazing World of Automobiles
+                  - generic [ref=e20247]: 5:36 PM - 6:35 PM
+              - generic "The Amazing World of Automobiles 6:35 PM - 7:34 PM" [ref=e20248] [cursor=pointer]:
+                - generic [ref=e20249]:
+                  - generic [ref=e20250]: The Amazing World of Automobiles
+                  - generic [ref=e20251]: 6:35 PM - 7:34 PM
+              - generic "The Amazing World of Automobiles 7:34 PM - 8:28 PM" [ref=e20252] [cursor=pointer]:
+                - generic [ref=e20253]:
+                  - generic [ref=e20254]: The Amazing World of Automobiles
+                  - generic [ref=e20255]: 7:34 PM - 8:28 PM
+              - generic "To Be Announced 8:00 PM - 11:00 PM" [ref=e20256] [cursor=pointer]:
+                - generic [ref=e20257]:
+                  - generic [ref=e20258]: To Be Announced
+                  - generic [ref=e20259]: 8:00 PM - 11:00 PM
+                  - generic [ref=e20260]: Programming to be announced.
+              - generic "The Amazing World of Automobiles 8:28 PM - 9:22 PM" [ref=e20261] [cursor=pointer]:
+                - generic [ref=e20262]:
+                  - generic [ref=e20263]: The Amazing World of Automobiles
+                  - generic [ref=e20264]: 8:28 PM - 9:22 PM
+              - generic "The Amazing World of Automobiles 9:22 PM - 10:13 PM" [ref=e20265] [cursor=pointer]:
+                - generic [ref=e20267]: The Amazing World of Automobiles
+            - generic [ref=e20268]:
+              - generic "Last Chance to See 4:57 PM - 6:10 PM" [ref=e20281] [cursor=pointer]:
+                - generic [ref=e20282]:
+                  - generic [ref=e20283]: Last Chance to See
+                  - generic [ref=e20284]: 4:57 PM - 6:10 PM
+                  - generic [ref=e20285]: This wildlife documentary, produced for and aired on the BBC in 2009, is a follow-up to a book and radio series that chronicled the expeditions of writer Douglas Adams and zoologist Mark Carwardine, whose mission was to find and report on some of the most endangered species around the world. The six-episode TV version features Carwardine -- joined by actor Stephen Fry; Adams died in 2001 -- retracing the steps that he and Adams first took 20 years ago to see how vulnerable species -- manatees in the Amazon, white rhinos in Kenya, Komodo dragons in Malaysia and Indonesia, and others -- are faring.
+              - generic "Jimmy's Big Bee Rescue 6:10 PM - 7:11 PM" [ref=e20286] [cursor=pointer]:
+                - generic [ref=e20287]:
+                  - generic [ref=e20288]: Jimmy's Big Bee Rescue
+                  - generic [ref=e20289]: 6:10 PM - 7:11 PM
+              - generic "Jimmy's Big Bee Rescue 7:11 PM - 8:12 PM" [ref=e20290] [cursor=pointer]:
+                - generic [ref=e20291]:
+                  - generic [ref=e20292]: Jimmy's Big Bee Rescue
+                  - generic [ref=e20293]: 7:11 PM - 8:12 PM
+              - generic "Superfish 8:12 PM - 9:18 PM" [ref=e20294] [cursor=pointer]:
+                - generic [ref=e20295]:
+                  - generic [ref=e20296]: Superfish
+                  - generic [ref=e20297]: 8:12 PM - 9:18 PM
+              - generic "Coral, Heart of The Ocean 9:18 PM - 9:51 PM" [ref=e20298] [cursor=pointer]:
+                - generic [ref=e20300]: Coral, Heart of The Ocean
+              - generic "The Lost Island of Madre de Dios 9:51 PM - 10:57 PM" [ref=e20301] [cursor=pointer]:
+                - generic [ref=e20303]: The Lost Island of Madre de Dios
+            - generic [ref=e20304]:
+              - generic "Forged in Fire 5:00 PM - 5:51 PM" [ref=e20317] [cursor=pointer]:
+                - generic [ref=e20318]:
+                  - generic [ref=e20319]: Forged in Fire
+                  - generic [ref=e20320]: 5:00 PM - 5:51 PM
+              - generic "Forged in Fire 5:51 PM - 6:42 PM" [ref=e20321] [cursor=pointer]:
+                - generic [ref=e20322]:
+                  - generic [ref=e20323]: Forged in Fire
+                  - generic [ref=e20324]: 5:51 PM - 6:42 PM
+              - generic "Forged in Fire 6:42 PM - 7:34 PM" [ref=e20325] [cursor=pointer]:
+                - generic [ref=e20326]:
+                  - generic [ref=e20327]: Forged in Fire
+                  - generic [ref=e20328]: 6:42 PM - 7:34 PM
+              - generic "Forged in Fire 7:34 PM - 8:25 PM" [ref=e20329] [cursor=pointer]:
+                - generic [ref=e20330]:
+                  - generic [ref=e20331]: Forged in Fire
+                  - generic [ref=e20332]: 7:34 PM - 8:25 PM
+              - generic "Forged in Fire 8:25 PM - 9:16 PM" [ref=e20333] [cursor=pointer]:
+                - generic [ref=e20334]:
+                  - generic [ref=e20335]: Forged in Fire
+                  - generic [ref=e20336]: 8:25 PM - 9:16 PM
+              - generic "Forged in Fire 9:16 PM - 10:08 PM" [ref=e20337] [cursor=pointer]:
+                - generic [ref=e20338]:
+                  - generic [ref=e20339]: Forged in Fire
+                  - generic [ref=e20340]: 9:16 PM - 10:08 PM
+            - generic [ref=e20341]:
+              - generic "Spycraft 4:34 PM - 5:24 PM" [ref=e20354] [cursor=pointer]:
+                - generic [ref=e20355]:
+                  - generic [ref=e20356]: Spycraft
+                  - generic [ref=e20357]: 4:34 PM - 5:24 PM
+              - generic "Spycraft 5:24 PM - 6:14 PM" [ref=e20358] [cursor=pointer]:
+                - generic [ref=e20359]:
+                  - generic [ref=e20360]: Spycraft
+                  - generic [ref=e20361]: 5:24 PM - 6:14 PM
+              - generic "Spycraft 6:14 PM - 7:03 PM" [ref=e20362] [cursor=pointer]:
+                - generic [ref=e20363]:
+                  - generic [ref=e20364]: Spycraft
+                  - generic [ref=e20365]: 6:14 PM - 7:03 PM
+              - generic "Spycraft 7:03 PM - 7:53 PM" [ref=e20366] [cursor=pointer]:
+                - generic [ref=e20367]:
+                  - generic [ref=e20368]: Spycraft
+                  - generic [ref=e20369]: 7:03 PM - 7:53 PM
+              - generic "Spycraft 7:53 PM - 8:42 PM" [ref=e20370] [cursor=pointer]:
+                - generic [ref=e20371]:
+                  - generic [ref=e20372]: Spycraft
+                  - generic [ref=e20373]: 7:53 PM - 8:42 PM
+              - generic "Spycraft 8:42 PM - 9:32 PM" [ref=e20374] [cursor=pointer]:
+                - generic [ref=e20375]:
+                  - generic [ref=e20376]: Spycraft
+                  - generic [ref=e20377]: 8:42 PM - 9:32 PM
+              - generic "Spycraft 9:32 PM - 10:23 PM" [ref=e20378] [cursor=pointer]:
+                - generic [ref=e20380]: Spycraft
+            - generic [ref=e20381]:
+              - generic "Weeks of War 5:10 PM - 6:12 PM" [ref=e20394] [cursor=pointer]:
+                - generic [ref=e20395]:
+                  - generic [ref=e20396]: Weeks of War
+                  - generic [ref=e20397]: 5:10 PM - 6:12 PM
+              - generic "Weeks of War 6:12 PM - 7:14 PM" [ref=e20398] [cursor=pointer]:
+                - generic [ref=e20399]:
+                  - generic [ref=e20400]: Weeks of War
+                  - generic [ref=e20401]: 6:12 PM - 7:14 PM
+              - generic "Weeks of War 7:14 PM - 8:16 PM" [ref=e20402] [cursor=pointer]:
+                - generic [ref=e20403]:
+                  - generic [ref=e20404]: Weeks of War
+                  - generic [ref=e20405]: 7:14 PM - 8:16 PM
+              - generic "Weeks of War 8:16 PM - 9:18 PM" [ref=e20406] [cursor=pointer]:
+                - generic [ref=e20407]:
+                  - generic [ref=e20408]: Weeks of War
+                  - generic [ref=e20409]: 8:16 PM - 9:18 PM
+              - generic "Weeks of War 9:18 PM - 10:20 PM" [ref=e20410] [cursor=pointer]:
+                - generic [ref=e20411]:
+                  - generic [ref=e20412]: Weeks of War
+                  - generic [ref=e20413]: 9:18 PM - 10:20 PM
+            - generic [ref=e20414]:
+              - generic "How It's Made 4:52 PM - 5:17 PM" [ref=e20427] [cursor=pointer]:
+                - generic [ref=e20429]: How It's Made
+              - generic "How It's Made 5:17 PM - 5:42 PM" [ref=e20430] [cursor=pointer]:
+                - generic [ref=e20432]: How It's Made
+              - generic "How It's Made 5:42 PM - 6:07 PM" [ref=e20433] [cursor=pointer]:
+                - generic [ref=e20435]: How It's Made
+              - generic "How It's Made 6:07 PM - 6:32 PM" [ref=e20436] [cursor=pointer]:
+                - generic [ref=e20438]: How It's Made
+              - generic "How It's Made 6:32 PM - 6:57 PM" [ref=e20439] [cursor=pointer]:
+                - generic [ref=e20441]: How It's Made
+              - generic "How It's Made 6:57 PM - 7:22 PM" [ref=e20442] [cursor=pointer]:
+                - generic [ref=e20444]: How It's Made
+              - generic "How It's Made 7:22 PM - 7:47 PM" [ref=e20445] [cursor=pointer]:
+                - generic [ref=e20447]: How It's Made
+              - generic "How It's Made 7:47 PM - 8:12 PM" [ref=e20448] [cursor=pointer]:
+                - generic [ref=e20450]: How It's Made
+              - generic "How It's Made 8:12 PM - 8:38 PM" [ref=e20451] [cursor=pointer]:
+                - generic [ref=e20453]: How It's Made
+              - generic "How It's Made 8:38 PM - 9:03 PM" [ref=e20454] [cursor=pointer]:
+                - generic [ref=e20456]: How It's Made
+              - generic "How It's Made 9:03 PM - 9:28 PM" [ref=e20457] [cursor=pointer]:
+                - generic [ref=e20459]: How It's Made
+              - generic "How It's Made 9:28 PM - 9:53 PM" [ref=e20460] [cursor=pointer]:
+                - generic [ref=e20462]: How It's Made
+              - generic "How It's Made 9:53 PM - 10:18 PM" [ref=e20463] [cursor=pointer]:
+                - generic [ref=e20465]: How It's Made
+            - generic [ref=e20466]:
+              - 'generic "Sasquatch Unearthed: Mountain State Monsters 4:01 PM - 5:13 PM" [ref=e20479] [cursor=pointer]':
+                - generic [ref=e20480]:
+                  - generic [ref=e20481]: "Sasquatch Unearthed: Mountain State Monsters"
+                  - generic [ref=e20482]: 4:01 PM - 5:13 PM
+                  - generic [ref=e20483]: Deep in the darkened forests of West Virginia, a legend roams; tracked by investigators like Russ Jones, Bigfoot has long been primarily thought to roam the Pacific Northwest.
+              - 'generic "Sasquatch Unearthed: Mountain State Monsters 5:13 PM - 6:27 PM" [ref=e20484] [cursor=pointer]':
+                - generic [ref=e20485]:
+                  - generic [ref=e20486]: "Sasquatch Unearthed: Mountain State Monsters"
+                  - generic [ref=e20487]: 5:13 PM - 6:27 PM
+                  - generic [ref=e20488]: Beth Duncan experiences something strange on her property outside Wineberry, W.Va.; amongst the hills and hollers of the mountain state, a mystery unfolds that stretches the limits of what is known about Bigfoot.
+              - generic "On the Trail of UFOs 6:27 PM - 8:04 PM" [ref=e20489] [cursor=pointer]:
+                - generic [ref=e20490]:
+                  - generic [ref=e20491]: On the Trail of UFOs
+                  - generic [ref=e20492]: 6:27 PM - 8:04 PM
+                  - generic [ref=e20493]: The team investigates UFO phenomena like Mothman, Flatwoods Monster, and eyewitness accounts..
+              - generic "On the Trail of UFOs 8:04 PM - 8:43 PM" [ref=e20494] [cursor=pointer]:
+                - generic [ref=e20496]: On the Trail of UFOs
+              - generic "On the Trail of UFOs 8:43 PM - 9:21 PM" [ref=e20497] [cursor=pointer]:
+                - generic [ref=e20499]: On the Trail of UFOs
+              - generic "Mysteries & Monsters 9:21 PM - 10:42 PM" [ref=e20500] [cursor=pointer]:
+                - generic [ref=e20502]: Mysteries & Monsters
+            - generic [ref=e20503]:
+              - generic "The Proof Is Out There 5:00 PM - 5:28 PM" [ref=e20516] [cursor=pointer]:
+                - generic [ref=e20518]: The Proof Is Out There
+              - generic "The Proof Is Out There 5:28 PM - 5:59 PM" [ref=e20519] [cursor=pointer]:
+                - generic [ref=e20521]: The Proof Is Out There
+              - generic "The Proof Is Out There 5:59 PM - 6:27 PM" [ref=e20522] [cursor=pointer]:
+                - generic [ref=e20524]: The Proof Is Out There
+              - generic "The Proof Is Out There 6:27 PM - 6:55 PM" [ref=e20525] [cursor=pointer]:
+                - generic [ref=e20527]: The Proof Is Out There
+              - generic "The Proof Is Out There 6:55 PM - 7:23 PM" [ref=e20528] [cursor=pointer]:
+                - generic [ref=e20530]: The Proof Is Out There
+              - generic "The Proof Is Out There 7:23 PM - 7:51 PM" [ref=e20531] [cursor=pointer]:
+                - generic [ref=e20533]: The Proof Is Out There
+              - generic "The Proof Is Out There 7:51 PM - 8:44 PM" [ref=e20534] [cursor=pointer]:
+                - generic [ref=e20535]:
+                  - generic [ref=e20536]: The Proof Is Out There
+                  - generic [ref=e20537]: 7:51 PM - 8:44 PM
+              - generic "The Proof Is Out There 8:44 PM - 9:38 PM" [ref=e20538] [cursor=pointer]:
+                - generic [ref=e20539]:
+                  - generic [ref=e20540]: The Proof Is Out There
+                  - generic [ref=e20541]: 8:44 PM - 9:38 PM
+              - generic "The Proof Is Out There 9:38 PM - 10:32 PM" [ref=e20542] [cursor=pointer]:
+                - generic [ref=e20544]: The Proof Is Out There
+            - generic [ref=e20545]:
+              - generic "Paranormal Lockdown UK 4:47 PM - 5:39 PM" [ref=e20558] [cursor=pointer]:
+                - generic [ref=e20559]:
+                  - generic [ref=e20560]: Paranormal Lockdown UK
+                  - generic [ref=e20561]: 4:47 PM - 5:39 PM
+              - generic "Paranormal Lockdown UK 5:39 PM - 6:29 PM" [ref=e20562] [cursor=pointer]:
+                - generic [ref=e20563]:
+                  - generic [ref=e20564]: Paranormal Lockdown UK
+                  - generic [ref=e20565]: 5:39 PM - 6:29 PM
+              - generic "Paranormal Lockdown UK 6:29 PM - 7:20 PM" [ref=e20566] [cursor=pointer]:
+                - generic [ref=e20567]:
+                  - generic [ref=e20568]: Paranormal Lockdown UK
+                  - generic [ref=e20569]: 6:29 PM - 7:20 PM
+              - generic "Paranormal Lockdown UK 7:20 PM - 8:12 PM" [ref=e20570] [cursor=pointer]:
+                - generic [ref=e20571]:
+                  - generic [ref=e20572]: Paranormal Lockdown UK
+                  - generic [ref=e20573]: 7:20 PM - 8:12 PM
+              - generic "Paranormal Lockdown UK 8:12 PM - 9:04 PM" [ref=e20574] [cursor=pointer]:
+                - generic [ref=e20575]:
+                  - generic [ref=e20576]: Paranormal Lockdown UK
+                  - generic [ref=e20577]: 8:12 PM - 9:04 PM
+              - generic "Paranormal Lockdown UK 9:04 PM - 9:55 PM" [ref=e20578] [cursor=pointer]:
+                - generic [ref=e20579]:
+                  - generic [ref=e20580]: Paranormal Lockdown UK
+                  - generic [ref=e20581]: 9:04 PM - 9:55 PM
+            - generic [ref=e20582]:
+              - generic "Mysteries at the Museum 4:32 PM - 5:20 PM" [ref=e20595] [cursor=pointer]:
+                - generic [ref=e20596]:
+                  - generic [ref=e20597]: Mysteries at the Museum
+                  - generic [ref=e20598]: 4:32 PM - 5:20 PM
+              - generic "Mysteries at the Museum 5:20 PM - 6:09 PM" [ref=e20599] [cursor=pointer]:
+                - generic [ref=e20600]:
+                  - generic [ref=e20601]: Mysteries at the Museum
+                  - generic [ref=e20602]: 5:20 PM - 6:09 PM
+              - generic "Mysteries at the Museum 6:09 PM - 6:57 PM" [ref=e20603] [cursor=pointer]:
+                - generic [ref=e20604]:
+                  - generic [ref=e20605]: Mysteries at the Museum
+                  - generic [ref=e20606]: 6:09 PM - 6:57 PM
+              - generic "Mysteries at the Museum 6:57 PM - 7:45 PM" [ref=e20607] [cursor=pointer]:
+                - generic [ref=e20608]:
+                  - generic [ref=e20609]: Mysteries at the Museum
+                  - generic [ref=e20610]: 6:57 PM - 7:45 PM
+              - generic "Mysteries at the Museum 7:45 PM - 8:33 PM" [ref=e20611] [cursor=pointer]:
+                - generic [ref=e20612]:
+                  - generic [ref=e20613]: Mysteries at the Museum
+                  - generic [ref=e20614]: 7:45 PM - 8:33 PM
+              - 'generic "Manhattan Project: Mysteries at the Museum 8:33 PM - 9:21 PM" [ref=e20615] [cursor=pointer]':
+                - generic [ref=e20616]:
+                  - generic [ref=e20617]: "Manhattan Project: Mysteries at the Museum"
+                  - generic [ref=e20618]: 8:33 PM - 9:21 PM
+              - generic "Mysteries at the Museum 9:21 PM - 10:11 PM" [ref=e20619] [cursor=pointer]:
+                - generic [ref=e20621]: Mysteries at the Museum
+            - generic [ref=e20622]:
+              - 'generic "Detective Knight: Rogue 3:40 PM - 5:35 PM" [ref=e20635] [cursor=pointer]':
+                - generic [ref=e20636]:
+                  - generic [ref=e20637]: "Detective Knight: Rogue"
+                  - generic [ref=e20638]: 3:40 PM - 5:35 PM
+                  - generic [ref=e20639]: Mask-wearing robbers critically wound Detective James Knight's partner during a shootout. As Knight pursues the bandits from Los Angeles to New York, his dark past collides with his present case, threatening to tear his world apart.
+              - 'generic "Detective Knight: Redemption 5:35 PM - 7:25 PM" [ref=e20640] [cursor=pointer]':
+                - generic [ref=e20641]:
+                  - generic [ref=e20642]: "Detective Knight: Redemption"
+                  - generic [ref=e20643]: 5:35 PM - 7:25 PM
+                  - generic [ref=e20644]: In custody in New York, Detective James Knight finds himself in the middle of a jailbreak led by The Christmas Bomber, a brutal fanatic whose Santa Claus disciples are terrorizing the city.
+              - 'generic "Detective Knight: Independence 7:25 PM - 9:09 PM" [ref=e20645] [cursor=pointer]':
+                - generic [ref=e20646]:
+                  - generic [ref=e20647]: "Detective Knight: Independence"
+                  - generic [ref=e20648]: 7:25 PM - 9:09 PM
+                  - generic [ref=e20649]: Detective James Knight's last-minute assignment to the Independence Day shift turns into a race against time to stop an unbalanced EMT worker who's posing as a cop.
+              - generic "The Last Stand 9:09 PM - 11:12 PM" [ref=e20650] [cursor=pointer]:
+                - generic [ref=e20651]:
+                  - generic [ref=e20652]: The Last Stand
+                  - generic [ref=e20653]: 9:09 PM - 11:12 PM
+            - generic [ref=e20654]:
+              - generic "Deadly House Call 5:00 PM - 6:44 PM" [ref=e20667] [cursor=pointer]:
+                - generic [ref=e20668]:
+                  - generic [ref=e20669]: Deadly House Call
+                  - generic [ref=e20670]: 5:00 PM - 6:44 PM
+                  - generic [ref=e20671]: A busy working mother hires a nurse to care for her wealthy father, who has early onset dementia, but soon a bizarre deception creeps into play when the seductive nurse makes a play for the family fortune.
+              - generic "Devil On My Doorstep 6:44 PM - 8:27 PM" [ref=e20672] [cursor=pointer]:
+                - generic [ref=e20674]: Live
+                - generic [ref=e20675]:
+                  - generic [ref=e20676]: Devil On My Doorstep
+                  - generic [ref=e20677]: 6:44 PM - 8:27 PM
+                  - generic [ref=e20678]: Chloe is a delivery dispatcher who develops a full-blown obsession with Natasha, a social media influencer. She assumes a new identity to befriend Natasha, but her best friend and manager begins to grow increasingly suspicious of Chloe's actions.
+              - generic "Designed for Death 8:27 PM - 10:11 PM" [ref=e20679] [cursor=pointer]:
+                - generic [ref=e20681]: Live
+                - generic [ref=e20682]:
+                  - generic [ref=e20683]: Designed for Death
+                  - generic [ref=e20684]: 8:27 PM - 10:11 PM
+                  - generic [ref=e20685]: Obsessed with a handsome homeowner, a deranged interior decorator sets out to eliminate his family and live in the house she created for them.
+            - generic [ref=e20686]:
+              - generic "The Britto Doc 5:06 PM - 6:37 PM" [ref=e20699] [cursor=pointer]:
+                - generic [ref=e20700]:
+                  - generic [ref=e20701]: The Britto Doc
+                  - generic [ref=e20702]: 5:06 PM - 6:37 PM
+                  - generic [ref=e20703]: Meet Romero Britto, the painter who rose from Brazil's favelas to become a global sensation. Alongside a star-studded cast, discover the extraordinary story of a man who transformed pain into a colorful empire that today brings happiness to millions.
+              - generic "Tribeca Festival 6:37 PM - 6:56 PM" [ref=e20704] [cursor=pointer]:
+                - generic [ref=e20706]: Tribeca Festival
+              - generic "Toto 6:56 PM - 7:13 PM" [ref=e20707] [cursor=pointer]:
+                - generic [ref=e20709]: Toto
+              - generic "Carmentis 7:13 PM - 7:32 PM" [ref=e20710] [cursor=pointer]:
+                - generic [ref=e20712]: Carmentis
+              - generic "Laboratory Conditions 7:32 PM - 7:53 PM" [ref=e20713] [cursor=pointer]:
+                - generic [ref=e20715]: Laboratory Conditions
+              - generic "Abducted 7:53 PM - 8:07 PM" [ref=e20716] [cursor=pointer]:
+                - generic [ref=e20718]: Abducted
+              - generic "Jack and Jo Don't Want to Die 8:07 PM - 8:30 PM" [ref=e20719] [cursor=pointer]:
+                - generic [ref=e20721]: Live
+                - generic [ref=e20723]: Jack and Jo Don't Want to Die
+              - generic "Tribeca Festival 8:30 PM - 8:49 PM" [ref=e20724] [cursor=pointer]:
+                - generic [ref=e20726]: Tribeca Festival
+              - generic "Tribeca Festival 8:49 PM - 9:38 PM" [ref=e20727] [cursor=pointer]:
+                - generic [ref=e20728]:
+                  - generic [ref=e20729]: Tribeca Festival
+                  - generic [ref=e20730]: 8:49 PM - 9:38 PM
+              - generic "An Awkward Sexual Adventure 9:38 PM - 11:42 PM" [ref=e20731] [cursor=pointer]:
+                - generic [ref=e20733]: An Awkward Sexual Adventure
+            - generic [ref=e20734]:
+              - 'generic "White Wolf: Hayden Pack 4:44 PM - 5:47 PM" [ref=e20747] [cursor=pointer]':
+                - generic [ref=e20748]:
+                  - generic [ref=e20749]: "White Wolf: Hayden Pack"
+                  - generic [ref=e20750]: 4:44 PM - 5:47 PM
+              - generic "Grizzly Country 5:47 PM - 6:49 PM" [ref=e20751] [cursor=pointer]:
+                - generic [ref=e20753]: Live
+                - generic [ref=e20754]:
+                  - generic [ref=e20755]: Grizzly Country
+                  - generic [ref=e20756]: 5:47 PM - 6:49 PM
+              - generic "Ghost Nets 6:49 PM - 7:41 PM" [ref=e20757] [cursor=pointer]:
+                - generic [ref=e20758]:
+                  - generic [ref=e20759]: Ghost Nets
+                  - generic [ref=e20760]: 6:49 PM - 7:41 PM
+              - generic "Trees of Life 7:41 PM - 8:41 PM" [ref=e20761] [cursor=pointer]:
+                - generic [ref=e20762]:
+                  - generic [ref=e20763]: Trees of Life
+                  - generic [ref=e20764]: 7:41 PM - 8:41 PM
+              - generic "Black Bear at the Edge of the World 8:41 PM - 9:35 PM" [ref=e20765] [cursor=pointer]:
+                - generic [ref=e20766]:
+                  - generic [ref=e20767]: Black Bear at the Edge of the World
+                  - generic [ref=e20768]: 8:41 PM - 9:35 PM
+              - generic "Pig Show 9:35 PM - 9:47 PM" [ref=e20769] [cursor=pointer]:
+                - generic [ref=e20771]: Pig Show
+              - 'generic "Mushers: Conquering the Yukon Quest 9:47 PM - 10:13 PM" [ref=e20772] [cursor=pointer]':
+                - generic [ref=e20774]: "Mushers: Conquering the Yukon Quest"
+            - generic [ref=e20775]:
+              - generic "The Young Riders 5:00 PM - 6:00 PM" [ref=e20788] [cursor=pointer]:
+                - generic [ref=e20790]: Live
+                - generic [ref=e20791]:
+                  - generic [ref=e20792]: The Young Riders
+                  - generic [ref=e20793]: 5:00 PM - 6:00 PM
+              - generic "Cheyenne 6:00 PM - 7:00 PM" [ref=e20794] [cursor=pointer]:
+                - generic [ref=e20795]:
+                  - generic [ref=e20796]: Cheyenne
+                  - generic [ref=e20797]: 6:00 PM - 7:00 PM
+              - generic "Cheyenne 7:00 PM - 8:00 PM" [ref=e20798] [cursor=pointer]:
+                - generic [ref=e20799]:
+                  - generic [ref=e20800]: Cheyenne
+                  - generic [ref=e20801]: 7:00 PM - 8:00 PM
+              - generic "Bonanza 8:00 PM - 9:00 PM" [ref=e20802] [cursor=pointer]:
+                - generic [ref=e20803]:
+                  - generic [ref=e20804]: Bonanza
+                  - generic [ref=e20805]: 8:00 PM - 9:00 PM
+              - generic "The Rifleman 9:00 PM - 9:30 PM" [ref=e20806] [cursor=pointer]:
+                - generic [ref=e20808]: The Rifleman
+              - generic "The Rifleman 9:30 PM - 10:00 PM" [ref=e20809] [cursor=pointer]:
+                - generic [ref=e20811]: The Rifleman
+            - generic [ref=e20812]:
+              - generic "María de los Ángeles 4:37 PM - 5:27 PM" [ref=e20825] [cursor=pointer]:
+                - generic [ref=e20826]:
+                  - generic [ref=e20827]: María de los Ángeles
+                  - generic [ref=e20828]: 4:37 PM - 5:27 PM
+              - generic "María de los Ángeles 5:27 PM - 6:18 PM" [ref=e20829] [cursor=pointer]:
+                - generic [ref=e20830]:
+                  - generic [ref=e20831]: María de los Ángeles
+                  - generic [ref=e20832]: 5:27 PM - 6:18 PM
+              - generic "Mi gorda bella 6:18 PM - 7:11 PM" [ref=e20833] [cursor=pointer]:
+                - generic [ref=e20834]:
+                  - generic [ref=e20835]: Mi gorda bella
+                  - generic [ref=e20836]: 6:18 PM - 7:11 PM
+              - generic "Mi gorda bella 7:11 PM - 8:03 PM" [ref=e20837] [cursor=pointer]:
+                - generic [ref=e20838]:
+                  - generic [ref=e20839]: Mi gorda bella
+                  - generic [ref=e20840]: 7:11 PM - 8:03 PM
+              - generic "Juana, la virgen 8:03 PM - 8:57 PM" [ref=e20841] [cursor=pointer]:
+                - generic [ref=e20842]:
+                  - generic [ref=e20843]: Juana, la virgen
+                  - generic [ref=e20844]: 8:03 PM - 8:57 PM
+              - generic "Juana, la virgen 8:57 PM - 9:51 PM" [ref=e20845] [cursor=pointer]:
+                - generic [ref=e20846]:
+                  - generic [ref=e20847]: Juana, la virgen
+                  - generic [ref=e20848]: 8:57 PM - 9:51 PM
+              - generic "Piel salvaje 9:51 PM - 10:43 PM" [ref=e20849] [cursor=pointer]:
+                - generic [ref=e20851]: Piel salvaje
+            - generic [ref=e20852]:
+              - generic "Animals Unscripted 4:34 PM - 5:37 PM" [ref=e20865] [cursor=pointer]:
+                - generic [ref=e20866]:
+                  - generic [ref=e20867]: Animals Unscripted
+                  - generic [ref=e20868]: 4:34 PM - 5:37 PM
+              - generic "Best Pets of the Month 5:37 PM - 6:09 PM" [ref=e20869] [cursor=pointer]:
+                - generic [ref=e20871]: Best Pets of the Month
+              - generic "Best Pets of the Month 6:09 PM - 6:41 PM" [ref=e20872] [cursor=pointer]:
+                - generic [ref=e20874]: Best Pets of the Month
+              - generic "Best Pets of the Month 6:41 PM - 7:13 PM" [ref=e20875] [cursor=pointer]:
+                - generic [ref=e20877]: Best Pets of the Month
+              - generic "TPC That's My Pet 7:13 PM - 7:44 PM" [ref=e20878] [cursor=pointer]:
+                - generic [ref=e20880]: Live
+                - generic [ref=e20882]: TPC That's My Pet
+              - generic "TPC That's My Pet 7:44 PM - 8:16 PM" [ref=e20883] [cursor=pointer]:
+                - generic [ref=e20885]: TPC That's My Pet
+              - generic "TPC That's My Pet 8:16 PM - 8:48 PM" [ref=e20886] [cursor=pointer]:
+                - generic [ref=e20888]: TPC That's My Pet
+              - generic "TPC That's My Pet 8:48 PM - 9:20 PM" [ref=e20889] [cursor=pointer]:
+                - generic [ref=e20891]: TPC That's My Pet
+              - generic "World's Most Talented Pets 9:20 PM - 9:51 PM" [ref=e20892] [cursor=pointer]:
+                - generic [ref=e20894]: World's Most Talented Pets
+              - generic "World's Most Talented Pets 9:51 PM - 10:22 PM" [ref=e20895] [cursor=pointer]:
+                - generic [ref=e20897]: World's Most Talented Pets
+            - generic [ref=e20912]: No program info
+            - generic [ref=e20913]:
+              - generic "BBC News America 5:00 PM - 5:30 PM" [ref=e20926] [cursor=pointer]:
+                - generic [ref=e20928]: Live
+                - generic [ref=e20930]: BBC News America
+              - generic "Chicago Tonight 5:30 PM - 6:00 PM" [ref=e20931] [cursor=pointer]:
+                - generic [ref=e20933]: Live
+                - generic [ref=e20935]: Chicago Tonight
+              - generic "PBS News Hour 6:00 PM - 7:00 PM" [ref=e20936] [cursor=pointer]:
+                - generic [ref=e20937]:
+                  - generic [ref=e20938]: PBS News Hour
+                  - generic [ref=e20939]: 6:00 PM - 7:00 PM
+              - generic "Finding Your Roots With Henry Louis Gates, Jr. 7:00 PM - 8:00 PM" [ref=e20940] [cursor=pointer]:
+                - generic [ref=e20941]:
+                  - generic [ref=e20942]: Finding Your Roots With Henry Louis Gates, Jr.
+                  - generic [ref=e20943]: 7:00 PM - 8:00 PM
+              - generic "Breaking the Deadlock 8:00 PM - 9:00 PM" [ref=e20944] [cursor=pointer]:
+                - generic [ref=e20946]: Live
+                - generic [ref=e20947]:
+                  - generic [ref=e20948]: Breaking the Deadlock
+                  - generic [ref=e20949]: 8:00 PM - 9:00 PM
+              - generic "Frontline 9:00 PM - 11:00 PM" [ref=e20950] [cursor=pointer]:
+                - generic [ref=e20951]:
+                  - generic [ref=e20952]: Frontline
+                  - generic [ref=e20953]: 9:00 PM - 11:00 PM
+            - generic [ref=e20954]:
+              - generic "Fox 32 News at 5 5:00 PM - 6:00 PM" [ref=e20967] [cursor=pointer]:
+                - generic [ref=e20969]: Live
+                - generic [ref=e20970]:
+                  - generic [ref=e20971]: Fox 32 News at 5
+                  - generic [ref=e20972]: 5:00 PM - 6:00 PM
+              - generic "Family Feud 6:00 PM - 6:30 PM" [ref=e20973] [cursor=pointer]:
+                - generic [ref=e20975]: Family Feud
+              - generic "Family Feud 6:30 PM - 7:00 PM" [ref=e20976] [cursor=pointer]:
+                - generic [ref=e20978]: Family Feud
+              - generic "Best Medicine 7:00 PM - 8:00 PM" [ref=e20979] [cursor=pointer]:
+                - generic [ref=e20980]:
+                  - generic [ref=e20981]: Best Medicine
+                  - generic [ref=e20982]: 7:00 PM - 8:00 PM
+              - generic "Doc 8:00 PM - 9:00 PM" [ref=e20983] [cursor=pointer]:
+                - generic [ref=e20984]:
+                  - generic [ref=e20985]: Doc
+                  - generic [ref=e20986]: 8:00 PM - 9:00 PM
+              - generic "Fox 32 News at Nine 9:00 PM - 9:30 PM" [ref=e20987] [cursor=pointer]:
+                - generic [ref=e20989]: Fox 32 News at Nine
+              - generic "1st & North 9:30 PM - 10:00 PM" [ref=e20990] [cursor=pointer]:
+                - generic [ref=e20992]: 1st & North
+            - generic [ref=e20993]:
+              - generic "DW News 5:00 PM - 5:30 PM" [ref=e21006] [cursor=pointer]:
+                - generic [ref=e21008]: DW News
+              - generic "BBC News America 5:30 PM - 6:00 PM" [ref=e21009] [cursor=pointer]:
+                - generic [ref=e21011]: Live
+                - generic [ref=e21013]: BBC News America
+              - generic "Wild Rivers With Tillie 6:00 PM - 6:30 PM" [ref=e21014] [cursor=pointer]:
+                - generic [ref=e21016]: Wild Rivers With Tillie
+              - generic "MotorWeek 6:30 PM - 7:00 PM" [ref=e21017] [cursor=pointer]:
+                - generic [ref=e21019]: MotorWeek
+              - generic "This Old House 7:00 PM - 7:30 PM" [ref=e21020] [cursor=pointer]:
+                - generic [ref=e21022]: This Old House
+              - generic "Ask This Old House 7:30 PM - 8:00 PM" [ref=e21023] [cursor=pointer]:
+                - generic [ref=e21025]: Ask This Old House
+              - generic "All Creatures Great and Small on Masterpiece 8:00 PM - 9:00 PM" [ref=e21026] [cursor=pointer]:
+                - generic [ref=e21027]:
+                  - generic [ref=e21028]: All Creatures Great and Small on Masterpiece
+                  - generic [ref=e21029]: 8:00 PM - 9:00 PM
+              - generic "Miss Scarlet on Masterpiece 9:00 PM - 10:00 PM" [ref=e21030] [cursor=pointer]:
+                - generic [ref=e21031]:
+                  - generic [ref=e21032]: Miss Scarlet on Masterpiece
+                  - generic [ref=e21033]: 9:00 PM - 10:00 PM
+```

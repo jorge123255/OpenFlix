@@ -3113,7 +3113,11 @@ func (s *Server) getEPGChannels(c *gin.Context) {
 	channels := make([]EPGChannel, 0, len(channelIDs))
 	for _, channelID := range channelIDs {
 		var program models.Program
-		s.db.Where("channel_id = ?", channelID).Order("start DESC").First(&program)
+		// First try to get a program with call_sign populated
+		if err := s.db.Where("channel_id = ? AND call_sign != ''", channelID).Order("start DESC").First(&program).Error; err != nil {
+			// Fallback to any program for this channel
+			s.db.Where("channel_id = ?", channelID).Order("start DESC").First(&program)
+		}
 
 		// Get call sign from program or fallback to Fubo channel names
 		callSign := program.CallSign

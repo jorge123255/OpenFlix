@@ -60,6 +60,7 @@ fun MainScreen(
     onNavigateToMultiview: () -> Unit = {},
     onNavigateToChannelSurfing: () -> Unit = {},
     onNavigateToCatchup: () -> Unit = {},
+    onNavigateToChannelGroups: () -> Unit = {},
     onNavigateToArchivePlayer: (channelId: String, startTime: Long) -> Unit = { _, _ -> },
     onNavigateToBrowseAll: (libraryId: String, mediaType: String) -> Unit = { _, _ -> },
     mpvPlayer: MpvPlayer,
@@ -131,7 +132,8 @@ fun MainScreen(
                     onFullscreenChanged = { isLiveTVFullscreen = it },
                     onNavigateToMultiview = onNavigateToMultiview,
                     onNavigateToChannelSurfing = onNavigateToChannelSurfing,
-                    onNavigateToCatchup = onNavigateToCatchup
+                    onNavigateToCatchup = onNavigateToCatchup,
+                    onNavigateToChannelGroups = onNavigateToChannelGroups
                 )
                 MainTab.CATCHUP -> CatchupScreen(
                     onBack = { selectedTab = MainTab.LIVE_TV },

@@ -25,6 +25,7 @@ fun LiveTVScreen(
     onChannelClick: (String) -> Unit,
     onGuideClick: () -> Unit,
     onCatchupClick: () -> Unit = {},
+    onChannelGroupsClick: () -> Unit = {},
     viewModel: LiveTVViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -51,6 +52,9 @@ fun LiveTVScreen(
             )
 
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Button(onClick = onChannelGroupsClick) {
+                    Text("Groups")
+                }
                 Button(onClick = onCatchupClick) {
                     Text("Catch Up")
                 }

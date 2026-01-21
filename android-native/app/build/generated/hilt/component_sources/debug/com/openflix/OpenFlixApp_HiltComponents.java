@@ -11,6 +11,7 @@ import com.openflix.presentation.screens.dvr.DVRViewModel_HiltModules;
 import com.openflix.presentation.screens.epg.EPGGuideViewModel_HiltModules;
 import com.openflix.presentation.screens.home.DiscoverViewModel_HiltModules;
 import com.openflix.presentation.screens.livetv.ArchivePlayerViewModel_HiltModules;
+import com.openflix.presentation.screens.livetv.ChannelGroupsViewModel_HiltModules;
 import com.openflix.presentation.screens.livetv.ChannelLogoEditorViewModel_HiltModules;
 import com.openflix.presentation.screens.livetv.ChannelSurfingViewModel_HiltModules;
 import com.openflix.presentation.screens.livetv.LiveTVGuideViewModel_HiltModules;
@@ -184,6 +185,7 @@ public final class OpenFlixApp_HiltComponents {
           ArchivePlayerViewModel_HiltModules.KeyModule.class,
           AuthViewModel_HiltModules.KeyModule.class,
           CatchupViewModel_HiltModules.KeyModule.class,
+          ChannelGroupsViewModel_HiltModules.KeyModule.class,
           ChannelLogoEditorViewModel_HiltModules.KeyModule.class,
           ChannelSurfingViewModel_HiltModules.KeyModule.class,
           DVRPlayerViewModel_HiltModules.KeyModule.class,
@@ -247,6 +249,7 @@ public final class OpenFlixApp_HiltComponents {
           ArchivePlayerViewModel_HiltModules.BindsModule.class,
           AuthViewModel_HiltModules.BindsModule.class,
           CatchupViewModel_HiltModules.BindsModule.class,
+          ChannelGroupsViewModel_HiltModules.BindsModule.class,
           ChannelLogoEditorViewModel_HiltModules.BindsModule.class,
           ChannelSurfingViewModel_HiltModules.BindsModule.class,
           DVRPlayerViewModel_HiltModules.BindsModule.class,

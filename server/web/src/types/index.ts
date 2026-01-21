@@ -215,6 +215,9 @@ export interface DuplicateGroup {
 
 export interface EPGChannel {
   channelId: string
+  callSign?: string
+  channelNo?: string
+  affiliateName?: string
   sampleTitle: string
 }
 

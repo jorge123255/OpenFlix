@@ -50,6 +50,10 @@ sealed class NavRoutes(val route: String) {
     data object EPGGuide : NavRoutes("epg")
     data object ChannelSurfing : NavRoutes("livetv/surfing")
     data object Multiview : NavRoutes("livetv/multiview")
+    data object ChannelGroups : NavRoutes("livetv/groups")
+    data object ChannelGroupPlayer : NavRoutes("livetv/groups/{groupId}/player") {
+        fun createRoute(groupId: Int) = "livetv/groups/$groupId/player"
+    }
 
     // === On Later ===
     data object OnLater : NavRoutes("onlater")

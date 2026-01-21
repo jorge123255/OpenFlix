@@ -61,7 +61,18 @@ data class ChannelGroup(
 
     val displayName: String
         get() = if (displayNumber > 0) "$displayNumber - $name" else name
+
+    val sortedMembers: List<ChannelGroupMember>
+        get() = members.sortedBy { it.priority }
 }
+
+/**
+ * Represents a detected duplicate channel group from auto-detection.
+ */
+data class DuplicateGroup(
+    val name: String,
+    val channels: List<Channel>
+)
 
 /**
  * Represents a channel member within a channel group, with priority for failover ordering.

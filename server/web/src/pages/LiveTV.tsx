@@ -566,7 +566,7 @@ function EditChannelModal({
                   <option value="">Select EPG Channel...</option>
                   {epgChannels?.map((ch) => (
                     <option key={ch.channelId} value={ch.channelId}>
-                      {ch.channelId} - {ch.sampleTitle}
+                      {ch.callSign || ch.channelId}{ch.channelNo ? ` (${ch.channelNo})` : ''} - {ch.sampleTitle}
                     </option>
                   ))}
                 </select>

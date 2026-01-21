@@ -20,6 +20,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text as M3Text
 import androidx.compose.runtime.*
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
@@ -137,6 +138,7 @@ fun LiveTVGuideScreen(
     onNavigateToMultiview: () -> Unit = {},
     onNavigateToChannelSurfing: () -> Unit = {},
     onNavigateToCatchup: () -> Unit = {},
+    onNavigateToChannelGroups: () -> Unit = {},
     viewModel: LiveTVGuideViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -153,6 +155,9 @@ fun LiveTVGuideScreen(
     var programToRecord by remember { mutableStateOf<Program?>(null) }
     var channelToRecord by remember { mutableStateOf<Channel?>(null) }
 
+    // Coroutine scope for launching async operations
+    val scope = rememberCoroutineScope()
+
     // Use the shared LiveTVPlayer (ExoPlayer) - same player for preview and fullscreen
     val isPlaying by liveTVPlayer.isPlaying.collectAsState()
     val isBuffering by liveTVPlayer.isBuffering.collectAsState()
@@ -160,6 +165,16 @@ fun LiveTVGuideScreen(
     val isPaused by liveTVPlayer.isPaused.collectAsState()
     val currentUrl by liveTVPlayer.currentUrl.collectAsState()
     var currentChannelId by remember { mutableStateOf<String?>(null) }
+
+    // Helper to play a channel with group failover support
+    val playChannel: (Channel) -> Unit = { channel ->
+        scope.launch {
+            viewModel.getStreamUrlForChannel(channel).fold(
+                onSuccess = { streamUrl -> liveTVPlayer.play(streamUrl) },
+                onFailure = { /* No stream available */ }
+            )
+        }
+    }
 
     // Fullscreen mode state - same player, just expanded
     var isFullscreen by remember { mutableStateOf(false) }
@@ -173,15 +188,19 @@ fun LiveTVGuideScreen(
 
     // Debounce channel selection for preview (wait 1.5s before playing, unless fullscreen)
     LaunchedEffect(selectedChannel?.channel?.id, isFullscreen) {
-        val channelId = selectedChannel?.channel?.id
-        val streamUrl = selectedChannel?.channel?.streamUrl
+        val channel = selectedChannel?.channel
+        val channelId = channel?.id
 
-        if (channelId != null && streamUrl != null && channelId != currentChannelId) {
+        if (channelId != null && channelId != currentChannelId) {
             // In fullscreen, play immediately. In guide preview, wait 1.5s
             if (!isFullscreen) delay(1500)
             if (selectedChannel?.channel?.id == channelId) {
                 currentChannelId = channelId
-                liveTVPlayer.play(streamUrl)
+                // Use group stream URL if channel is in a failover group
+                viewModel.getStreamUrlForChannel(channel).fold(
+                    onSuccess = { streamUrl -> liveTVPlayer.play(streamUrl) },
+                    onFailure = { /* No stream available */ }
+                )
             }
         }
     }
@@ -308,9 +327,7 @@ fun LiveTVGuideScreen(
         } else {
             // Start playing this channel and go fullscreen
             currentChannelId = cwp.channel.id
-            cwp.channel.streamUrl?.let { url ->
-                liveTVPlayer.play(url)
-            }
+            playChannel(cwp.channel)
             isFullscreen = true
             showFullscreenControls = true
         }
@@ -347,7 +364,7 @@ fun LiveTVGuideScreen(
                                     selectedChannel = newChannel
                                     selectedProgram = newChannel.programs.find { it.isAiring }
                                     currentChannelId = newChannel.channel.id
-                                    newChannel.channel.streamUrl?.let { liveTVPlayer.play(it) }
+                                    playChannel(newChannel.channel)
                                     showFullscreenControls = true
                                 }
                                 true
@@ -362,7 +379,7 @@ fun LiveTVGuideScreen(
                                     selectedChannel = newChannel
                                     selectedProgram = newChannel.programs.find { it.isAiring }
                                     currentChannelId = newChannel.channel.id
-                                    newChannel.channel.streamUrl?.let { liveTVPlayer.play(it) }
+                                    playChannel(newChannel.channel)
                                     showFullscreenControls = true
                                 }
                                 true
@@ -404,6 +421,11 @@ fun LiveTVGuideScreen(
                         // C key - Catch Up TV
                         Key.C -> {
                             onNavigateToCatchup()
+                            true
+                        }
+                        // G key - Channel Groups
+                        Key.G -> {
+                            onNavigateToChannelGroups()
                             true
                         }
                         else -> false
@@ -459,7 +481,7 @@ fun LiveTVGuideScreen(
                             selectedProgram = cwp.programs.find { it.isAiring }
                             currentChannelId = cwp.channel.id
                             viewModel.trackChannelWatch(cwp.channel)
-                            cwp.channel.streamUrl?.let { liveTVPlayer.play(it) }
+                            playChannel(cwp.channel)
                             isFullscreen = true
                         },
                         onLongClick = { cwp ->
@@ -484,7 +506,7 @@ fun LiveTVGuideScreen(
                             selectedProgram = cwp.programs.find { it.isAiring }
                             currentChannelId = cwp.channel.id
                             viewModel.trackChannelWatch(cwp.channel)
-                            cwp.channel.streamUrl?.let { liveTVPlayer.play(it) }
+                            playChannel(cwp.channel)
                             isFullscreen = true
                         }
                     )
@@ -502,7 +524,8 @@ fun LiveTVGuideScreen(
                     categoryFocusRequester = categoryTabsFocusRequester,
                     onDownPressed = { guideFocusRequester.requestFocus() },
                     onRefresh = { viewModel.loadGuide(startTime, endTime) },
-                    isLoading = uiState.isLoading
+                    isLoading = uiState.isLoading,
+                    onNavigateToChannelGroups = onNavigateToChannelGroups
                 )
 
                 // Guide content area
@@ -648,7 +671,7 @@ fun LiveTVGuideScreen(
                             selectedChannel = cwp
                             selectedProgram = cwp.programs.find { it.isAiring }
                             currentChannelId = cwp.channel.id
-                            cwp.channel.streamUrl?.let { liveTVPlayer.play(it) }
+                            playChannel(cwp.channel)
                         }
                     },
                     onTogglePause = { liveTVPlayer.togglePlayPause() },
@@ -1573,7 +1596,8 @@ private fun GuideFilterBar(
     categoryFocusRequester: FocusRequester,
     onDownPressed: () -> Unit,
     onRefresh: () -> Unit = {},
-    isLoading: Boolean = false
+    isLoading: Boolean = false,
+    onNavigateToChannelGroups: () -> Unit = {}
 ) {
     var showTimeRangeDropdown by remember { mutableStateOf(false) }
     var showProviderDropdown by remember { mutableStateOf(false) }
@@ -1825,6 +1849,41 @@ private fun GuideFilterBar(
                     )
                 }
             }
+
+        // Channel Groups button
+        Surface(
+            onClick = onNavigateToChannelGroups,
+            shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(8.dp)),
+            colors = ClickableSurfaceDefaults.colors(
+                containerColor = Theme.SurfaceElevated,
+                focusedContainerColor = Theme.SurfaceHighlight
+            ),
+            border = ClickableSurfaceDefaults.border(
+                focusedBorder = Border(
+                    border = BorderStroke(2.dp, Theme.Accent),
+                    shape = RoundedCornerShape(8.dp)
+                )
+            ),
+            scale = ClickableSurfaceDefaults.scale(focusedScale = 1.05f)
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    Icons.Default.Layers,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp),
+                    tint = Theme.TextSecondary
+                )
+                Spacer(Modifier.width(6.dp))
+                Text(
+                    text = "Groups",
+                    color = Theme.TextPrimary,
+                    fontSize = 12.sp
+                )
+            }
+        }
     }
 }
 

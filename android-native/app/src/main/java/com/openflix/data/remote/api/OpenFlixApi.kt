@@ -171,6 +171,48 @@ interface OpenFlixApi {
     @GET("livetv/archive/status")
     suspend fun getArchiveStatus(): Response<ArchiveStatusResponse>
 
+    // === Channel Groups (Failover) ===
+
+    @GET("livetv/channel-groups")
+    suspend fun getChannelGroups(): Response<ChannelGroupsResponse>
+
+    @POST("livetv/channel-groups")
+    suspend fun createChannelGroup(@Body request: CreateChannelGroupRequest): Response<ChannelGroupDto>
+
+    @PUT("livetv/channel-groups/{id}")
+    suspend fun updateChannelGroup(
+        @Path("id") groupId: Int,
+        @Body request: UpdateChannelGroupRequest
+    ): Response<ChannelGroupDto>
+
+    @DELETE("livetv/channel-groups/{id}")
+    suspend fun deleteChannelGroup(@Path("id") groupId: Int): Response<Unit>
+
+    @POST("livetv/channel-groups/{id}/members")
+    suspend fun addChannelToGroup(
+        @Path("id") groupId: Int,
+        @Body request: AddGroupMemberRequest
+    ): Response<ChannelGroupMemberDto>
+
+    @PUT("livetv/channel-groups/{id}/members/{channelId}")
+    suspend fun updateGroupMemberPriority(
+        @Path("id") groupId: Int,
+        @Path("channelId") channelId: Int,
+        @Body request: UpdateGroupMemberPriorityRequest
+    ): Response<ChannelGroupMemberDto>
+
+    @DELETE("livetv/channel-groups/{id}/members/{channelId}")
+    suspend fun removeChannelFromGroup(
+        @Path("id") groupId: Int,
+        @Path("channelId") channelId: Int
+    ): Response<Unit>
+
+    @POST("livetv/channel-groups/auto-detect")
+    suspend fun autoDetectDuplicates(): Response<AutoDetectDuplicatesResponse>
+
+    @GET("livetv/channel-groups/{id}/stream")
+    suspend fun getChannelGroupStreamUrl(@Path("id") groupId: Int): Response<StreamResponse>
+
     // === DVR ===
 
     @GET("dvr/recordings")

@@ -75,6 +75,31 @@ func (e *EPGEnricher) EnrichPrograms(start, end time.Time, limit int) (int, erro
 	return enriched, nil
 }
 
+// skipTitles are generic titles that shouldn't be enriched (would match wrong content)
+var skipTitles = map[string]bool{
+	"to be announced":       true,
+	"tba":                   true,
+	"paid programming":      true,
+	"paid program":          true,
+	"infomercial":           true,
+	"off air":               true,
+	"programming":           true,
+	"local programming":     true,
+	"news":                  true,
+	"local news":            true,
+	"morning news":          true,
+	"evening news":          true,
+	"special report":        true,
+	"breaking news":         true,
+	"news special":          true,
+	"weather":               true,
+	"local weather":         true,
+	"traffic":               true,
+	"commercial":            true,
+	"sign off":              true,
+	"test pattern":          true,
+}
+
 // enrichProgram enriches a single program with TMDB artwork
 func (e *EPGEnricher) enrichProgram(p *models.Program) error {
 	// Skip sports, news, and content that won't be in TMDB
@@ -84,6 +109,16 @@ func (e *EPGEnricher) enrichProgram(p *models.Program) error {
 
 	// Generate cache key from title (normalized)
 	cacheKey := e.normalizeTitle(p.Title)
+
+	// Skip generic/vague titles that would match wrong content
+	if skipTitles[cacheKey] {
+		return nil
+	}
+
+	// Skip very short titles (likely generic)
+	if len(cacheKey) < 3 {
+		return nil
+	}
 
 	// Check cache first
 	e.cacheMu.RLock()
@@ -101,6 +136,7 @@ func (e *EPGEnricher) enrichProgram(p *models.Program) error {
 	defer func() { <-e.rateLimit }()
 
 	var posterURL, backdropURL string
+	var matchedTitle string
 
 	if p.IsMovie {
 		// Search for movie
@@ -110,6 +146,17 @@ func (e *EPGEnricher) enrichProgram(p *models.Program) error {
 			return err
 		}
 
+		// Verify title similarity before accepting
+		if result.Title != "" && !e.titlesMatch(p.Title, result.Title) {
+			log.WithFields(log.Fields{
+				"epg_title":  p.Title,
+				"tmdb_title": result.Title,
+			}).Debug("TMDB movie title mismatch, skipping")
+			e.cacheResult(cacheKey, "")
+			return nil
+		}
+
+		matchedTitle = result.Title
 		if result.PosterPath != "" {
 			posterURL = fmt.Sprintf("%s/w300%s", tmdbImageURL, result.PosterPath)
 		}
@@ -124,6 +171,17 @@ func (e *EPGEnricher) enrichProgram(p *models.Program) error {
 			return err
 		}
 
+		// Verify title similarity before accepting
+		if result.Name != "" && !e.titlesMatch(p.Title, result.Name) {
+			log.WithFields(log.Fields{
+				"epg_title":  p.Title,
+				"tmdb_title": result.Name,
+			}).Debug("TMDB TV title mismatch, skipping")
+			e.cacheResult(cacheKey, "")
+			return nil
+		}
+
+		matchedTitle = result.Name
 		if result.PosterPath != "" {
 			posterURL = fmt.Sprintf("%s/w300%s", tmdbImageURL, result.PosterPath)
 		}
@@ -139,7 +197,53 @@ func (e *EPGEnricher) enrichProgram(p *models.Program) error {
 		return nil
 	}
 
+	log.WithFields(log.Fields{
+		"epg_title":     p.Title,
+		"matched_title": matchedTitle,
+	}).Debug("TMDB match found")
+
 	return e.updateProgramArtwork(p, posterURL, backdropURL)
+}
+
+// titlesMatch checks if two titles are similar enough to be a valid match
+func (e *EPGEnricher) titlesMatch(epgTitle, tmdbTitle string) bool {
+	// Normalize both titles for comparison
+	epg := e.normalizeTitle(epgTitle)
+	tmdb := e.normalizeTitle(tmdbTitle)
+
+	// Exact match
+	if epg == tmdb {
+		return true
+	}
+
+	// One contains the other (handles "The Show" vs "Show")
+	if strings.Contains(epg, tmdb) || strings.Contains(tmdb, epg) {
+		return true
+	}
+
+	// Check if first significant words match (handles slight variations)
+	epgWords := strings.Fields(epg)
+	tmdbWords := strings.Fields(tmdb)
+
+	if len(epgWords) > 0 && len(tmdbWords) > 0 {
+		// If titles are very short, require exact match
+		if len(epgWords) == 1 || len(tmdbWords) == 1 {
+			return epg == tmdb
+		}
+
+		// Check first 2 words match
+		matchCount := 0
+		for i := 0; i < len(epgWords) && i < len(tmdbWords) && i < 2; i++ {
+			if epgWords[i] == tmdbWords[i] {
+				matchCount++
+			}
+		}
+		if matchCount >= 2 {
+			return true
+		}
+	}
+
+	return false
 }
 
 // updateProgramArtwork updates all programs with the same title

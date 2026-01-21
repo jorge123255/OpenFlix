@@ -6,6 +6,7 @@ import com.openflix.data.local.LastWatchedService
 import com.openflix.data.repository.DVRRepository
 import com.openflix.data.repository.LiveTVRepository
 import com.openflix.domain.model.Channel
+import com.openflix.domain.model.ChannelGroup
 import com.openflix.domain.model.ChannelWithPrograms
 import com.openflix.domain.model.Program
 import com.openflix.domain.model.Recording
@@ -63,12 +64,30 @@ class LiveTVGuideViewModel @Inject constructor(
                 visibleEndTime = endTime
             )}
 
-            repository.getGuide(startTime, endTime).fold(
+            // Load guide and channel groups in parallel
+            val guideResult = repository.getGuide(startTime, endTime)
+            val groupsResult = repository.getChannelGroups()
+
+            guideResult.fold(
                 onSuccess = { guide ->
                     Timber.d("Loaded ${guide.size} channels with programs")
+
+                    // Build channel to group mapping
+                    val channelToGroup = mutableMapOf<String, Int>()
+                    groupsResult.getOrNull()?.filter { it.enabled }?.forEach { group ->
+                        group.members.forEach { member ->
+                            // Map each channel in the group to the group's ID
+                            channelToGroup[member.channelId.toString()] = group.id
+                        }
+                    }
+
+                    Timber.d("Loaded ${groupsResult.getOrNull()?.size ?: 0} channel groups, mapped ${channelToGroup.size} channels")
+
                     _uiState.update { it.copy(
                         guide = guide,
-                        isLoading = false
+                        isLoading = false,
+                        channelGroups = groupsResult.getOrNull() ?: emptyList(),
+                        channelToGroupMap = channelToGroup
                     )}
                 },
                 onFailure = { e ->
@@ -80,6 +99,31 @@ class LiveTVGuideViewModel @Inject constructor(
                 }
             )
         }
+    }
+
+    /**
+     * Get the stream URL for a channel, using channel group failover if available.
+     * Returns Result with the stream URL to use.
+     */
+    suspend fun getStreamUrlForChannel(channel: Channel): Result<String> {
+        val groupId = _uiState.value.channelToGroupMap[channel.id]
+
+        return if (groupId != null) {
+            // Channel is in a group - use group stream endpoint for failover
+            Timber.d("Channel ${channel.name} is in group $groupId, using group stream")
+            repository.getChannelGroupStreamUrl(groupId)
+        } else {
+            // No group - use direct channel stream
+            channel.streamUrl?.let { Result.success(it) }
+                ?: Result.failure(Exception("No stream URL available for channel"))
+        }
+    }
+
+    /**
+     * Check if a channel is part of a failover group
+     */
+    fun isChannelInGroup(channelId: String): Boolean {
+        return _uiState.value.channelToGroupMap.containsKey(channelId)
     }
 
     /**
@@ -171,5 +215,7 @@ data class LiveTVGuideUiState(
     val displayedCount: Int = 50,  // Only show first N channels initially
     val isSchedulingRecording: Boolean = false,
     val recordingSuccess: String? = null,
-    val recordingError: String? = null
+    val recordingError: String? = null,
+    val channelGroups: List<ChannelGroup> = emptyList(),
+    val channelToGroupMap: Map<String, Int> = emptyMap()  // channelId -> groupId
 )
