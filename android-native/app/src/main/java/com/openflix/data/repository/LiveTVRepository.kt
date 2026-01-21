@@ -10,7 +10,10 @@ import com.openflix.domain.model.ArchivedProgramsInfo
 import com.openflix.domain.model.CatchUpInfo
 import com.openflix.domain.model.CatchUpProgram
 import com.openflix.domain.model.Channel
+import com.openflix.domain.model.ChannelGroup
+import com.openflix.domain.model.ChannelGroupMember
 import com.openflix.domain.model.ChannelWithPrograms
+import com.openflix.domain.model.DuplicateGroup
 import com.openflix.domain.model.EPGChannel
 import com.openflix.domain.model.EPGData
 import com.openflix.domain.model.OnLaterChannel
@@ -880,5 +883,212 @@ class LiveTVRepository @Inject constructor(
         league = league,
         aliases = aliases ?: emptyList(),
         logoUrl = logoUrl
+    )
+
+    // ============ Channel Groups (Failover) ============
+
+    suspend fun getChannelGroups(): Result<List<ChannelGroup>> {
+        return try {
+            val response = api.getChannelGroups()
+            if (response.isSuccessful && response.body() != null) {
+                val groups = response.body()!!.groups.map { it.toDomain() }
+                Result.success(groups)
+            } else {
+                Result.failure(Exception("Failed to get channel groups"))
+            }
+        } catch (e: Exception) {
+            Timber.e(e, "Error getting channel groups")
+            Result.failure(e)
+        }
+    }
+
+    suspend fun createChannelGroup(
+        name: String,
+        displayNumber: Int,
+        logo: String? = null,
+        channelId: String? = null
+    ): Result<ChannelGroup> {
+        return try {
+            val request = CreateChannelGroupRequest(
+                name = name,
+                displayNumber = displayNumber,
+                logo = logo,
+                channelId = channelId
+            )
+            val response = api.createChannelGroup(request)
+            if (response.isSuccessful && response.body() != null) {
+                Result.success(response.body()!!.toDomain())
+            } else {
+                Result.failure(Exception("Failed to create channel group"))
+            }
+        } catch (e: Exception) {
+            Timber.e(e, "Error creating channel group")
+            Result.failure(e)
+        }
+    }
+
+    suspend fun updateChannelGroup(
+        groupId: Int,
+        name: String? = null,
+        displayNumber: Int? = null,
+        logo: String? = null,
+        channelId: String? = null,
+        enabled: Boolean? = null
+    ): Result<ChannelGroup> {
+        return try {
+            val request = UpdateChannelGroupRequest(
+                name = name,
+                displayNumber = displayNumber,
+                logo = logo,
+                channelId = channelId,
+                enabled = enabled
+            )
+            val response = api.updateChannelGroup(groupId, request)
+            if (response.isSuccessful && response.body() != null) {
+                Result.success(response.body()!!.toDomain())
+            } else {
+                Result.failure(Exception("Failed to update channel group"))
+            }
+        } catch (e: Exception) {
+            Timber.e(e, "Error updating channel group: $groupId")
+            Result.failure(e)
+        }
+    }
+
+    suspend fun deleteChannelGroup(groupId: Int): Result<Unit> {
+        return try {
+            val response = api.deleteChannelGroup(groupId)
+            if (response.isSuccessful) {
+                Result.success(Unit)
+            } else {
+                Result.failure(Exception("Failed to delete channel group"))
+            }
+        } catch (e: Exception) {
+            Timber.e(e, "Error deleting channel group: $groupId")
+            Result.failure(e)
+        }
+    }
+
+    suspend fun addChannelToGroup(groupId: Int, channelId: Int, priority: Int = 0): Result<ChannelGroupMember> {
+        return try {
+            val request = AddGroupMemberRequest(channelId = channelId, priority = priority)
+            val response = api.addChannelToGroup(groupId, request)
+            if (response.isSuccessful && response.body() != null) {
+                Result.success(response.body()!!.toDomain())
+            } else {
+                Result.failure(Exception("Failed to add channel to group"))
+            }
+        } catch (e: Exception) {
+            Timber.e(e, "Error adding channel $channelId to group $groupId")
+            Result.failure(e)
+        }
+    }
+
+    suspend fun updateGroupMemberPriority(groupId: Int, channelId: Int, priority: Int): Result<ChannelGroupMember> {
+        return try {
+            val request = UpdateGroupMemberPriorityRequest(priority = priority)
+            val response = api.updateGroupMemberPriority(groupId, channelId, request)
+            if (response.isSuccessful && response.body() != null) {
+                Result.success(response.body()!!.toDomain())
+            } else {
+                Result.failure(Exception("Failed to update member priority"))
+            }
+        } catch (e: Exception) {
+            Timber.e(e, "Error updating priority for channel $channelId in group $groupId")
+            Result.failure(e)
+        }
+    }
+
+    suspend fun removeChannelFromGroup(groupId: Int, channelId: Int): Result<Unit> {
+        return try {
+            val response = api.removeChannelFromGroup(groupId, channelId)
+            if (response.isSuccessful) {
+                Result.success(Unit)
+            } else {
+                Result.failure(Exception("Failed to remove channel from group"))
+            }
+        } catch (e: Exception) {
+            Timber.e(e, "Error removing channel $channelId from group $groupId")
+            Result.failure(e)
+        }
+    }
+
+    suspend fun autoDetectDuplicates(): Result<List<DuplicateGroup>> {
+        return try {
+            val response = api.autoDetectDuplicates()
+            if (response.isSuccessful && response.body() != null) {
+                val duplicates = response.body()!!.groups.map { dto ->
+                    DuplicateGroup(
+                        name = dto.name,
+                        channels = dto.channels.map { it.toDomain() }
+                    )
+                }
+                Result.success(duplicates)
+            } else {
+                Result.failure(Exception("Failed to auto-detect duplicates"))
+            }
+        } catch (e: Exception) {
+            Timber.e(e, "Error auto-detecting duplicates")
+            Result.failure(e)
+        }
+    }
+
+    suspend fun getChannelGroupStreamUrl(groupId: Int): Result<String> {
+        return try {
+            val response = api.getChannelGroupStreamUrl(groupId)
+            if (response.isSuccessful && response.body() != null) {
+                Result.success(response.body()!!.url)
+            } else {
+                Result.failure(Exception("Failed to get channel group stream URL"))
+            }
+        } catch (e: Exception) {
+            Timber.e(e, "Error getting channel group stream URL: $groupId")
+            Result.failure(e)
+        }
+    }
+
+    private fun ChannelGroupDto.toDomain() = ChannelGroup(
+        id = id,
+        name = name,
+        displayNumber = displayNumber,
+        logo = logo,
+        channelId = channelId,
+        enabled = enabled,
+        members = members?.map { it.toDomain() } ?: emptyList(),
+        createdAt = parseIsoToUnix(createdAt),
+        updatedAt = parseIsoToUnix(updatedAt)
+    )
+
+    private fun ChannelGroupMemberDto.toDomain() = ChannelGroupMember(
+        id = id,
+        channelGroupId = channelGroupId,
+        channelId = channelId,
+        priority = priority,
+        createdAt = parseIsoToUnix(createdAt),
+        channel = channel?.toDomain()
+    )
+
+    private fun ChannelGroupChannelDto.toDomain() = Channel(
+        id = id.toString(),
+        uuid = null,
+        number = null,
+        name = name,
+        title = null,
+        callsign = null,
+        logo = logo,
+        thumb = null,
+        art = null,
+        source = null,
+        sourceName = sourceName,
+        hd = false,
+        favorite = false,
+        hidden = false,
+        group = null,
+        category = null,
+        streamUrl = streamUrl,
+        nowPlaying = null,
+        upNext = null,
+        archiveEnabled = false,
+        archiveDays = 7
     )
 }

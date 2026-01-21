@@ -27,6 +27,7 @@ import com.openflix.presentation.screens.home.DiscoverScreen
 import com.openflix.presentation.screens.home.MainScreen
 import com.openflix.presentation.screens.epg.EPGGuideScreen
 import com.openflix.presentation.screens.livetv.ArchivePlayerScreen
+import com.openflix.presentation.screens.livetv.ChannelGroupsScreen
 import com.openflix.presentation.screens.livetv.ChannelLogoEditorScreen
 import com.openflix.presentation.screens.livetv.LiveTVGuideScreen
 import com.openflix.presentation.screens.livetv.ChannelSurfingScreen
@@ -129,6 +130,9 @@ fun OpenFlixNavHost(
                 },
                 onNavigateToCatchup = {
                     navController.navigate(NavRoutes.Catchup.route)
+                },
+                onNavigateToChannelGroups = {
+                    navController.navigate(NavRoutes.ChannelGroups.route)
                 },
                 onNavigateToArchivePlayer = { channelId, startTime ->
                     navController.navigate(NavRoutes.ArchivePlayer.createRoute(channelId, startTime))
@@ -492,6 +496,17 @@ fun OpenFlixNavHost(
                 onBack = { navController.popBackStack() },
                 onFullScreen = { channel ->
                     navController.navigate(NavRoutes.LiveTVPlayer.createRoute(channel.id))
+                }
+            )
+        }
+
+        // === Channel Groups ===
+        composable(NavRoutes.ChannelGroups.route) {
+            ChannelGroupsScreen(
+                onBack = { navController.popBackStack() },
+                onPlayGroup = { groupId ->
+                    // For now, navigate back - TODO: implement group playback
+                    navController.popBackStack()
                 }
             )
         }

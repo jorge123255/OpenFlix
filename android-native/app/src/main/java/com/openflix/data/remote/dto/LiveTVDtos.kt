@@ -46,7 +46,7 @@ data class ProgramDto(
     @SerializedName("start") val startIso: String?,  // ISO timestamp from server
     @SerializedName("end") val endIso: String?,  // ISO timestamp from server
     @SerializedName("duration") val duration: Long?,  // minutes
-    @SerializedName("thumb") val thumb: String?,
+    @SerializedName("icon") val thumb: String?,  // Server uses "icon" for poster
     @SerializedName("art") val art: String?,
     @SerializedName("rating") val rating: String?,
     @SerializedName("genres") val genres: List<String>?,
