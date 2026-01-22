@@ -43,6 +43,7 @@ import com.openflix.presentation.screens.onlater.OnLaterScreen
 import com.openflix.presentation.screens.settings.SettingsScreen
 import com.openflix.presentation.screens.teampass.TeamPassScreen
 import com.openflix.presentation.screens.tvshows.TVShowsScreen
+import com.openflix.presentation.screens.watchlist.WatchlistScreen
 import com.openflix.presentation.theme.OpenFlixColors
 
 /**
@@ -154,6 +155,11 @@ fun MainScreen(
                     onRecordingClick = { recordingId, mode ->
                         onNavigateToDVRPlayer(recordingId, mode)
                     }
+                )
+                MainTab.WATCHLIST -> WatchlistScreen(
+                    onBack = { selectedTab = MainTab.HOME },
+                    onMediaClick = onNavigateToMediaDetail,
+                    onPlayClick = onNavigateToPlayer
                 )
                 MainTab.WATCH_STATS -> WatchStatsScreen(
                     onBack = { selectedTab = MainTab.HOME }
@@ -376,6 +382,7 @@ enum class MainTab(
     ON_LATER("On Later", Icons.Outlined.Schedule, Icons.Filled.Schedule),
     TEAM_PASS("Team Pass", Icons.Outlined.SportsFootball, Icons.Filled.SportsFootball),
     DVR("DVR", Icons.Outlined.FiberManualRecord, Icons.Filled.FiberManualRecord),
+    WATCHLIST("Watchlist", Icons.Outlined.Bookmarks, Icons.Filled.Bookmarks),
     WATCH_STATS("Stats", Icons.Outlined.Analytics, Icons.Filled.Analytics),
     SETTINGS("Settings", Icons.Outlined.Settings, Icons.Filled.Settings)
 }

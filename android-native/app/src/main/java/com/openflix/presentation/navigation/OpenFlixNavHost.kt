@@ -43,6 +43,7 @@ import com.openflix.presentation.screens.settings.RemoteMappingScreen
 import com.openflix.presentation.screens.settings.SettingsScreen
 import com.openflix.presentation.screens.teampass.TeamPassScreen
 import com.openflix.presentation.screens.catchup.CatchupScreen
+import com.openflix.presentation.screens.watchlist.WatchlistScreen
 
 /**
  * Main navigation host for OpenFlix.
@@ -412,7 +413,15 @@ fun OpenFlixNavHost(
 
         // === Watchlist ===
         composable(NavRoutes.Watchlist.route) {
-            // TODO: WatchlistScreen
+            WatchlistScreen(
+                onBack = { navController.popBackStack() },
+                onMediaClick = { mediaId ->
+                    navController.navigate(NavRoutes.MediaDetail.createRoute(mediaId))
+                },
+                onPlayClick = { mediaId ->
+                    navController.navigate(NavRoutes.VideoPlayer.createRoute(mediaId))
+                }
+            )
         }
 
         // === Downloads ===
