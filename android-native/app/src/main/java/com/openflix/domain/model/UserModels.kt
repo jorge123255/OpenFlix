@@ -14,11 +14,15 @@ data class User(
 )
 
 data class Profile(
-    val id: String,
+    val id: Int,
+    val uuid: String,
     val name: String,
-    val avatar: String?,
-    val isKid: Boolean,
-    val hasPin: Boolean
+    val thumb: String?,
+    val isAdmin: Boolean = false,
+    val hasPassword: Boolean = false,
+    val isRestricted: Boolean = false,
+    val isGuest: Boolean = false,
+    val isKid: Boolean = false
 )
 
 data class ServerInfo(

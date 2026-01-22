@@ -44,3 +44,29 @@ data class ChangePasswordRequest(
     @SerializedName("current_password") val currentPassword: String,
     @SerializedName("new_password") val newPassword: String
 )
+
+/**
+ * Home users response - list of profiles/users available
+ */
+data class HomeUsersResponse(
+    @SerializedName("id") val id: Int,
+    @SerializedName("name") val name: String,
+    @SerializedName("users") val users: List<HomeUserDto>
+)
+
+data class HomeUserDto(
+    @SerializedName("id") val id: Int,
+    @SerializedName("uuid") val uuid: String,
+    @SerializedName("title") val title: String,
+    @SerializedName("username") val username: String?,
+    @SerializedName("thumb") val thumb: String?,
+    @SerializedName("hasPassword") val hasPassword: Boolean,
+    @SerializedName("restricted") val restricted: Boolean,
+    @SerializedName("admin") val admin: Boolean,
+    @SerializedName("guest") val guest: Boolean,
+    @SerializedName("protected") val protected: Boolean
+)
+
+data class SwitchUserResponse(
+    @SerializedName("authToken") val authToken: String
+)
