@@ -2,7 +2,12 @@ package com.openflix.data.local
 
 import android.content.Context
 import android.content.SharedPreferences
+import com.openflix.data.remote.api.OpenFlixApi
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -15,11 +20,14 @@ import javax.inject.Singleton
 /**
  * Service for tracking and storing watch statistics.
  * Tracks viewing time, content watched, and viewing habits.
+ * Now syncs watch history to server.
  */
 @Singleton
 class WatchStatsService @Inject constructor(
-    @ApplicationContext private val context: Context
+    @ApplicationContext private val context: Context,
+    private val api: OpenFlixApi
 ) {
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val prefs: SharedPreferences by lazy {
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
     }
@@ -53,8 +61,10 @@ class WatchStatsService @Inject constructor(
 
     /**
      * End the current watch session and record stats
+     * @param positionMs Current playback position in milliseconds
+     * @param totalDurationMs Total content duration in milliseconds
      */
-    fun endWatchSession() {
+    fun endWatchSession(positionMs: Long = 0, totalDurationMs: Long = 0) {
         val contentId = currentContentId ?: return
         val contentType = currentContentType ?: return
         val title = currentContentTitle ?: return
@@ -68,6 +78,9 @@ class WatchStatsService @Inject constructor(
         if (durationMinutes >= 1) {
             recordWatchTime(contentId, contentType, title, durationMinutes)
             Timber.d("Ended watch session: $title, duration: $durationMinutes min")
+
+            // Sync to server
+            syncToServer(contentId, positionMs, totalDurationMs)
         }
 
         // Reset session
@@ -75,6 +88,122 @@ class WatchStatsService @Inject constructor(
         currentContentId = null
         currentContentType = null
         currentContentTitle = null
+    }
+
+    /**
+     * Sync watch progress to server
+     */
+    private fun syncToServer(contentId: String, positionMs: Long, totalDurationMs: Long) {
+        scope.launch {
+            try {
+                // Determine if content is complete (watched 90%+)
+                val isComplete = totalDurationMs > 0 && positionMs > 0 &&
+                    (positionMs.toFloat() / totalDurationMs.toFloat()) >= 0.9f
+
+                if (isComplete) {
+                    // Mark as watched (scrobble)
+                    val response = api.scrobble(contentId)
+                    if (response.isSuccessful) {
+                        Timber.d("Synced to server: marked $contentId as watched")
+                    } else {
+                        Timber.w("Failed to sync scrobble to server: ${response.code()}")
+                        // Queue for retry later
+                        queueForSync(contentId, positionMs, totalDurationMs, isComplete = true)
+                    }
+                } else if (positionMs > 0) {
+                    // Update progress
+                    val response = api.updateTimeline(
+                        ratingKey = contentId,
+                        time = positionMs,
+                        duration = totalDurationMs,
+                        state = "stopped"
+                    )
+                    if (response.isSuccessful) {
+                        Timber.d("Synced progress to server: $contentId at ${positionMs}ms")
+                    } else {
+                        Timber.w("Failed to sync progress to server: ${response.code()}")
+                        // Queue for retry later
+                        queueForSync(contentId, positionMs, totalDurationMs, isComplete = false)
+                    }
+                }
+            } catch (e: Exception) {
+                Timber.e(e, "Error syncing to server")
+                // Queue for retry later
+                queueForSync(contentId, positionMs, totalDurationMs, isComplete = false)
+            }
+        }
+    }
+
+    /**
+     * Queue a sync operation for later retry
+     */
+    private fun queueForSync(contentId: String, positionMs: Long, durationMs: Long, isComplete: Boolean) {
+        val pendingSync = getPendingSyncs().toMutableList()
+        pendingSync.removeAll { it.contentId == contentId }
+        pendingSync.add(PendingSyncItem(
+            contentId = contentId,
+            positionMs = positionMs,
+            durationMs = durationMs,
+            isComplete = isComplete,
+            timestamp = System.currentTimeMillis()
+        ))
+        // Keep only last 50 pending syncs
+        val trimmed = pendingSync.takeLast(50)
+        prefs.edit().putString(KEY_PENDING_SYNCS, json.encodeToString(trimmed)).apply()
+    }
+
+    /**
+     * Get pending sync items
+     */
+    private fun getPendingSyncs(): List<PendingSyncItem> {
+        return try {
+            val syncsJson = prefs.getString(KEY_PENDING_SYNCS, null) ?: return emptyList()
+            json.decodeFromString(syncsJson)
+        } catch (e: Exception) {
+            Timber.e(e, "Failed to get pending syncs")
+            emptyList()
+        }
+    }
+
+    /**
+     * Retry pending sync operations
+     */
+    fun retryPendingSyncs() {
+        scope.launch {
+            val pending = getPendingSyncs()
+            if (pending.isEmpty()) return@launch
+
+            Timber.d("Retrying ${pending.size} pending sync operations")
+            val stillPending = mutableListOf<PendingSyncItem>()
+
+            for (item in pending) {
+                try {
+                    val success = if (item.isComplete) {
+                        api.scrobble(item.contentId).isSuccessful
+                    } else {
+                        api.updateTimeline(
+                            ratingKey = item.contentId,
+                            time = item.positionMs,
+                            duration = item.durationMs,
+                            state = "stopped"
+                        ).isSuccessful
+                    }
+
+                    if (!success) {
+                        stillPending.add(item)
+                    } else {
+                        Timber.d("Successfully synced pending item: ${item.contentId}")
+                    }
+                } catch (e: Exception) {
+                    Timber.w(e, "Failed to sync pending item: ${item.contentId}")
+                    stillPending.add(item)
+                }
+            }
+
+            // Update pending list
+            prefs.edit().putString(KEY_PENDING_SYNCS, json.encodeToString(stillPending)).apply()
+            Timber.d("Pending syncs remaining: ${stillPending.size}")
+        }
     }
 
     /**
@@ -328,8 +457,21 @@ class WatchStatsService @Inject constructor(
         private const val KEY_CONTENT_TYPE_STATS = "content_type_stats"
         private const val KEY_WATCH_HISTORY = "watch_history"
         private const val KEY_MOST_WATCHED = "most_watched"
+        private const val KEY_PENDING_SYNCS = "pending_syncs"
     }
 }
+
+/**
+ * Pending sync item for retry
+ */
+@Serializable
+data class PendingSyncItem(
+    val contentId: String,
+    val positionMs: Long,
+    val durationMs: Long,
+    val isComplete: Boolean,
+    val timestamp: Long
+)
 
 /**
  * Types of content that can be watched
