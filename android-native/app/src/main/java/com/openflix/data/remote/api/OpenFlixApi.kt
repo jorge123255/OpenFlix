@@ -30,6 +30,17 @@ interface OpenFlixApi {
     @PUT("auth/user/password")
     suspend fun changePassword(@Body request: ChangePasswordRequest): Response<Unit>
 
+    // === Profiles / Home Users ===
+
+    @GET("api/v2/home/users")
+    suspend fun getHomeUsers(): Response<HomeUsersResponse>
+
+    @POST("api/v2/home/users/{uuid}/switch")
+    suspend fun switchUser(
+        @Path("uuid") userUuid: String,
+        @Query("pin") pin: String? = null
+    ): Response<SwitchUserResponse>
+
     // === Libraries (Plex-compatible) ===
 
     @GET("library/sections")

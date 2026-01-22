@@ -44,6 +44,7 @@ import com.openflix.presentation.screens.settings.SettingsScreen
 import com.openflix.presentation.screens.teampass.TeamPassScreen
 import com.openflix.presentation.screens.catchup.CatchupScreen
 import com.openflix.presentation.screens.watchlist.WatchlistScreen
+import com.openflix.presentation.screens.profile.ProfileSelectionScreen
 
 /**
  * Main navigation host for OpenFlix.
@@ -469,7 +470,13 @@ fun OpenFlixNavHost(
 
         // === Profile Selection ===
         composable(NavRoutes.ProfileSelection.route) {
-            // TODO: ProfileSelectionScreen
+            ProfileSelectionScreen(
+                onProfileSelected = {
+                    navController.navigate(NavRoutes.Main.route) {
+                        popUpTo(NavRoutes.ProfileSelection.route) { inclusive = true }
+                    }
+                }
+            )
         }
 
         // === Add Profile ===
