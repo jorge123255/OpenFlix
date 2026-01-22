@@ -44,6 +44,7 @@ import com.openflix.presentation.screens.settings.SettingsScreen
 import com.openflix.presentation.screens.teampass.TeamPassScreen
 import com.openflix.presentation.screens.tvshows.TVShowsScreen
 import com.openflix.presentation.screens.watchlist.WatchlistScreen
+import com.openflix.presentation.screens.playlist.PlaylistsScreen
 import com.openflix.presentation.theme.OpenFlixColors
 
 /**
@@ -157,6 +158,11 @@ fun MainScreen(
                     }
                 )
                 MainTab.WATCHLIST -> WatchlistScreen(
+                    onBack = { selectedTab = MainTab.HOME },
+                    onMediaClick = onNavigateToMediaDetail,
+                    onPlayClick = onNavigateToPlayer
+                )
+                MainTab.PLAYLISTS -> PlaylistsScreen(
                     onBack = { selectedTab = MainTab.HOME },
                     onMediaClick = onNavigateToMediaDetail,
                     onPlayClick = onNavigateToPlayer
@@ -383,6 +389,7 @@ enum class MainTab(
     TEAM_PASS("Team Pass", Icons.Outlined.SportsFootball, Icons.Filled.SportsFootball),
     DVR("DVR", Icons.Outlined.FiberManualRecord, Icons.Filled.FiberManualRecord),
     WATCHLIST("Watchlist", Icons.Outlined.Bookmarks, Icons.Filled.Bookmarks),
+    PLAYLISTS("Playlists", Icons.Outlined.PlaylistPlay, Icons.Filled.PlaylistPlay),
     WATCH_STATS("Stats", Icons.Outlined.Analytics, Icons.Filled.Analytics),
     SETTINGS("Settings", Icons.Outlined.Settings, Icons.Filled.Settings)
 }
