@@ -358,21 +358,89 @@ class MediaRepository @Inject constructor(
         }
     }
 
-    suspend fun updateProgress(mediaId: String, timeMs: Long, durationMs: Long? = null): Result<Unit> {
-        return try {
-            api.updateProgress(
-                ProgressUpdateRequest(
-                    key = mediaId,
-                    time = timeMs,
-                    duration = durationMs,
-                    state = "playing"
-                )
+    /**
+     * Update playback progress using timeline API with retry support
+     */
+    suspend fun updateProgress(mediaId: String, timeMs: Long, durationMs: Long? = null, state: String = "playing"): Result<Unit> {
+        return retryWithBackoff(maxRetries = 3) {
+            val response = api.updateTimeline(
+                ratingKey = mediaId,
+                time = timeMs,
+                duration = durationMs,
+                state = state
             )
-            Result.success(Unit)
-        } catch (e: Exception) {
-            Timber.e(e, "Error updating progress: $mediaId")
-            Result.failure(e)
+            if (response.isSuccessful) {
+                Timber.d("Progress updated: mediaId=$mediaId, time=$timeMs, state=$state")
+                Result.success(Unit)
+            } else {
+                Timber.w("Failed to update progress: ${response.code()}")
+                Result.failure(Exception("Failed to update progress: ${response.code()}"))
+            }
         }
+    }
+
+    /**
+     * Mark content as watched (scrobble)
+     */
+    suspend fun markAsWatched(mediaId: String): Result<Unit> {
+        return retryWithBackoff(maxRetries = 3) {
+            val response = api.scrobble(mediaId)
+            if (response.isSuccessful) {
+                Timber.d("Marked as watched: $mediaId")
+                Result.success(Unit)
+            } else {
+                Timber.w("Failed to mark as watched: ${response.code()}")
+                Result.failure(Exception("Failed to mark as watched: ${response.code()}"))
+            }
+        }
+    }
+
+    /**
+     * Mark content as unwatched (unscrobble)
+     */
+    suspend fun markAsUnwatched(mediaId: String): Result<Unit> {
+        return retryWithBackoff(maxRetries = 3) {
+            val response = api.unscrobble(mediaId)
+            if (response.isSuccessful) {
+                Timber.d("Marked as unwatched: $mediaId")
+                Result.success(Unit)
+            } else {
+                Timber.w("Failed to mark as unwatched: ${response.code()}")
+                Result.failure(Exception("Failed to mark as unwatched: ${response.code()}"))
+            }
+        }
+    }
+
+    /**
+     * Retry helper with exponential backoff
+     */
+    private suspend fun <T> retryWithBackoff(
+        maxRetries: Int = 3,
+        initialDelayMs: Long = 1000,
+        maxDelayMs: Long = 10000,
+        factor: Double = 2.0,
+        block: suspend () -> Result<T>
+    ): Result<T> {
+        var currentDelay = initialDelayMs
+        repeat(maxRetries) { attempt ->
+            val result = try {
+                block()
+            } catch (e: Exception) {
+                Timber.w(e, "Attempt ${attempt + 1}/$maxRetries failed")
+                Result.failure(e)
+            }
+
+            if (result.isSuccess) {
+                return result
+            }
+
+            if (attempt < maxRetries - 1) {
+                Timber.d("Retrying in ${currentDelay}ms (attempt ${attempt + 2}/$maxRetries)")
+                kotlinx.coroutines.delay(currentDelay)
+                currentDelay = (currentDelay * factor).toLong().coerceAtMost(maxDelayMs)
+            }
+        }
+        return Result.failure(Exception("Failed after $maxRetries attempts"))
     }
 
     suspend fun getPlaybackUrl(mediaId: String): Result<String> {

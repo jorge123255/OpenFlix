@@ -101,8 +101,22 @@ interface OpenFlixApi {
     @PUT(":/progress")
     suspend fun updateProgress(@Body request: ProgressUpdateRequest): Response<Unit>
 
-    @DELETE(":/unscrobble")
+    // Mark content as watched (scrobble)
+    @GET("scrobble")
+    suspend fun scrobble(@Query("key") mediaId: String): Response<Unit>
+
+    // Mark content as unwatched (unscrobble)
+    @GET("unscrobble")
     suspend fun unscrobble(@Query("key") mediaId: String): Response<Unit>
+
+    // Update playback timeline (progress with state)
+    @POST("timeline")
+    suspend fun updateTimeline(
+        @Query("ratingKey") ratingKey: String,
+        @Query("time") time: Long,
+        @Query("duration") duration: Long? = null,
+        @Query("state") state: String = "playing"
+    ): Response<Unit>
 
     // === Live TV ===
 
