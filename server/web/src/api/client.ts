@@ -178,7 +178,14 @@ class ApiClient {
     return response.data
   }
 
-  async updateM3USource(id: number, data: { name?: string; url?: string }): Promise<M3USource> {
+  async updateM3USource(id: number, data: {
+    name?: string
+    url?: string
+    importVod?: boolean
+    importSeries?: boolean
+    vodLibraryId?: number
+    seriesLibraryId?: number
+  }): Promise<M3USource> {
     const response = await this.client.put<M3USource>(`/livetv/sources/${id}`, data)
     return response.data
   }
@@ -189,6 +196,16 @@ class ApiClient {
 
   async refreshM3USource(id: number): Promise<void> {
     await this.client.post(`/livetv/sources/${id}/refresh`)
+  }
+
+  async importM3UVOD(id: number): Promise<{ added: number; updated: number; errors: number; duration: string }> {
+    const response = await this.client.post(`/livetv/sources/${id}/import-vod`)
+    return response.data
+  }
+
+  async importM3USeries(id: number): Promise<{ status: string; message: string }> {
+    const response = await this.client.post(`/livetv/sources/${id}/import-series`)
+    return response.data
   }
 
   async mapChannelNumbers(data: {

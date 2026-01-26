@@ -101,6 +101,12 @@ type MediaItem struct {
 	XtreamParentCategoryID string `gorm:"size:50;index" json:"xtreamParentCategoryId,omitempty"`      // Parent category ID (e.g., "p8" for Netflix)
 	XtreamParentCategory   string `gorm:"size:255;index" json:"xtreamParentCategory,omitempty"`       // Parent category name (e.g., "Netflix")
 
+	// M3U VOD tracking
+	M3USourceID  *uint  `gorm:"index" json:"m3uSourceId,omitempty"`         // M3U source ID for VOD
+	M3UVODID     string `gorm:"size:50;index" json:"m3uVodId,omitempty"`    // Hash of stream URL for movies
+	M3USeriesID  string `gorm:"size:50;index" json:"m3uSeriesId,omitempty"` // Hash of series name for shows
+	M3UEpisodeID string `gorm:"size:50;index" json:"m3uEpisodeId,omitempty"` // Hash of stream URL for episodes
+
 	// Hierarchy (for episodes/seasons)
 	ParentID            *uint  `gorm:"index" json:"parentRatingKey,omitempty"`
 	GrandparentID       *uint  `gorm:"index" json:"grandparentRatingKey,omitempty"`
@@ -269,6 +275,14 @@ type CollectionItem struct {
 	ID           uint `gorm:"primaryKey" json:"id"`
 	CollectionID uint `gorm:"index" json:"collectionId"`
 	MediaItemID  uint `gorm:"index" json:"ratingKey"`
+}
+
+// WatchlistItem represents an item in a user's watchlist
+type WatchlistItem struct {
+	ID          uint      `gorm:"primaryKey" json:"id"`
+	UserID      uint      `gorm:"uniqueIndex:idx_watchlist_user_item" json:"userId"`
+	MediaItemID uint      `gorm:"uniqueIndex:idx_watchlist_user_item" json:"ratingKey"`
+	AddedAt     time.Time `json:"addedAt"`
 }
 
 // ========== Live TV Models ==========

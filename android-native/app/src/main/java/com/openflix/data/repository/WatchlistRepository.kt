@@ -39,7 +39,8 @@ class WatchlistRepository @Inject constructor(
             val baseUrl = getServerBaseUrl()
             val response = api.getWatchlist()
             if (response.isSuccessful && response.body() != null) {
-                val items = response.body()!!.items.map { it.toDomain(baseUrl) }
+                val mediaItems = response.body()!!.mediaContainer?.metadata ?: emptyList()
+                val items = mediaItems.map { it.toDomain(baseUrl) }
                 Timber.d("Loaded ${items.size} watchlist items")
                 Result.success(items)
             } else {

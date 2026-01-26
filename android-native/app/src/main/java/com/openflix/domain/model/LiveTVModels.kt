@@ -588,3 +588,81 @@ enum class SportsLeague(val displayName: String) {
     NHL("NHL"),
     MLS("MLS")
 }
+
+// ============ Source Management Models ============
+
+/**
+ * Represents an M3U playlist source for Live TV channels.
+ */
+data class M3USource(
+    val id: Int,
+    val name: String,
+    val url: String,
+    val epgUrl: String?,
+    val enabled: Boolean,
+    val lastFetched: String?,
+    val importVod: Boolean,
+    val importSeries: Boolean,
+    val vodLibraryId: Int?,
+    val seriesLibraryId: Int?,
+    val channelCount: Int,
+    val vodCount: Int,
+    val seriesCount: Int
+)
+
+/**
+ * Represents an Xtream Codes API source.
+ */
+data class XtreamSource(
+    val id: Int,
+    val name: String,
+    val serverUrl: String,
+    val username: String,
+    val enabled: Boolean,
+    val importLive: Boolean,
+    val importVod: Boolean,
+    val importSeries: Boolean,
+    val vodLibraryId: Int?,
+    val seriesLibraryId: Int?,
+    val channelCount: Int,
+    val vodCount: Int,
+    val seriesCount: Int,
+    val lastFetched: String?,
+    val expirationDate: String?
+) {
+    val isExpiringSoon: Boolean
+        get() {
+            if (expirationDate.isNullOrBlank()) return false
+            return try {
+                val expiry = java.time.Instant.parse(expirationDate).epochSecond
+                val now = System.currentTimeMillis() / 1000
+                val daysUntilExpiry = (expiry - now) / 86400
+                daysUntilExpiry < 7
+            } catch (e: Exception) {
+                false
+            }
+        }
+}
+
+/**
+ * Result of an import operation (VOD or series).
+ */
+data class ImportResult(
+    val added: Int,
+    val updated: Int,
+    val skipped: Int,
+    val errors: Int,
+    val total: Int,
+    val duration: String?
+)
+
+/**
+ * Result of testing an Xtream source connection.
+ */
+data class XtreamTestResult(
+    val success: Boolean,
+    val message: String,
+    val expirationDate: String?,
+    val maxConnections: String?,
+    val activeConnections: String?
+)

@@ -37,19 +37,31 @@ data class HubDto(
     @SerializedName("items") val items: List<MediaItemDto>?
 )
 
+// Playlist response wrapper for Plex-compatible MediaContainer
+data class PlaylistsResponse(
+    @SerializedName("MediaContainer") val mediaContainer: PlaylistsContainer?
+)
+
+data class PlaylistsContainer(
+    @SerializedName("size") val size: Int?,
+    @SerializedName("Metadata") val metadata: List<PlaylistDto>?
+)
+
 data class PlaylistDto(
-    @SerializedName("id") val id: String,
+    @SerializedName("ratingKey") val id: String,
     @SerializedName("key") val key: String?,
+    @SerializedName("guid") val guid: String?,
+    @SerializedName("type") val type: String?,
     @SerializedName("title") val title: String,
     @SerializedName("summary") val summary: String?,
     @SerializedName("thumb") val thumb: String?,
     @SerializedName("composite") val composite: String?,
     @SerializedName("duration") val duration: Long?,
-    @SerializedName("leaf_count") val leafCount: Int?,
-    @SerializedName("playlist_type") val playlistType: String?,
+    @SerializedName("leafCount") val leafCount: Int?,
+    @SerializedName("playlistType") val playlistType: String?,
     @SerializedName("smart") val smart: Boolean?,
-    @SerializedName("added_at") val addedAt: Long?,
-    @SerializedName("updated_at") val updatedAt: Long?
+    @SerializedName("addedAt") val addedAt: Long?,
+    @SerializedName("updatedAt") val updatedAt: Long?
 )
 
 data class ServerInfoDto(

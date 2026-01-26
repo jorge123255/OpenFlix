@@ -2823,6 +2823,117 @@ func (s *Server) deleteCollection(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"status": "ok"})
 }
 
+// ============ Watchlist Handlers ============
+
+func (s *Server) getWatchlist(c *gin.Context) {
+	userID := c.GetUint("userID")
+
+	var items []models.WatchlistItem
+	s.db.Where("user_id = ?", userID).Order("added_at DESC").Find(&items)
+
+	if len(items) == 0 {
+		s.respondWithMediaContainer(c, []gin.H{}, 0, 0, 0)
+		return
+	}
+
+	// Get media item IDs
+	itemIDs := make([]uint, len(items))
+	for i, item := range items {
+		itemIDs[i] = item.MediaItemID
+	}
+
+	// Fetch media items
+	var mediaItems []models.MediaItem
+	s.db.Where("id IN ?", itemIDs).Find(&mediaItems)
+
+	// Create a map for quick lookup
+	mediaMap := make(map[uint]models.MediaItem)
+	for _, m := range mediaItems {
+		mediaMap[m.ID] = m
+	}
+
+	// Build response in watchlist order
+	metadata := make([]gin.H, 0, len(items))
+	for _, item := range items {
+		if m, ok := mediaMap[item.MediaItemID]; ok {
+			metadata = append(metadata, gin.H{
+				"ratingKey":     m.ID,
+				"key":           fmt.Sprintf("/library/metadata/%d", m.ID),
+				"guid":          m.UUID,
+				"type":          m.Type,
+				"title":         m.Title,
+				"summary":       m.Summary,
+				"thumb":         m.Thumb,
+				"art":           m.Art,
+				"year":          m.Year,
+				"duration":      m.Duration,
+				"addedAt":       item.AddedAt.Unix(),
+				"contentRating": m.ContentRating,
+			})
+		}
+	}
+
+	s.respondWithMediaContainer(c, metadata, len(metadata), len(metadata), 0)
+}
+
+func (s *Server) addToWatchlist(c *gin.Context) {
+	userID := c.GetUint("userID")
+
+	mediaIDStr := c.Param("mediaId")
+	mediaID, err := strconv.Atoi(mediaIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid media ID"})
+		return
+	}
+
+	// Check if media item exists
+	var mediaItem models.MediaItem
+	if err := s.db.First(&mediaItem, mediaID).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Media item not found"})
+		return
+	}
+
+	// Check if already in watchlist
+	var existing models.WatchlistItem
+	if err := s.db.Where("user_id = ? AND media_item_id = ?", userID, mediaID).First(&existing).Error; err == nil {
+		c.JSON(http.StatusOK, gin.H{"status": "already in watchlist"})
+		return
+	}
+
+	// Add to watchlist
+	item := models.WatchlistItem{
+		UserID:      userID,
+		MediaItemID: uint(mediaID),
+		AddedAt:     time.Now(),
+	}
+
+	if err := s.db.Create(&item).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusCreated, gin.H{"status": "ok"})
+}
+
+func (s *Server) removeFromWatchlist(c *gin.Context) {
+	userID := c.GetUint("userID")
+
+	mediaIDStr := c.Param("mediaId")
+	mediaID, err := strconv.Atoi(mediaIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid media ID"})
+		return
+	}
+
+	result := s.db.Where("user_id = ? AND media_item_id = ?", userID, mediaID).Delete(&models.WatchlistItem{})
+	if result.Error != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": result.Error.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"status": "ok"})
+}
+
 // ============ Play Queue Handlers ============
 
 func (s *Server) createPlayQueue(c *gin.Context) {

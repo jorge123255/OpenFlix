@@ -109,6 +109,13 @@ export interface M3USource {
   channelCount: number
   lastRefresh?: string
   createdAt: string
+  // VOD import options
+  importVod?: boolean
+  importSeries?: boolean
+  vodLibraryId?: number
+  seriesLibraryId?: number
+  vodCount?: number
+  seriesCount?: number
 }
 
 export interface EPGSource {

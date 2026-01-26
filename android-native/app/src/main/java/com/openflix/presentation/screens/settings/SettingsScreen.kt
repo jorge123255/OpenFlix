@@ -27,6 +27,7 @@ fun SettingsScreen(
     onNavigateToRemoteMapping: () -> Unit,
     onNavigateToAbout: () -> Unit,
     onNavigateToLogs: () -> Unit,
+    onNavigateToSources: () -> Unit,
     onSignOut: () -> Unit,
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
@@ -110,6 +111,14 @@ fun SettingsScreen(
             item {
                 Spacer(modifier = Modifier.height(16.dp))
                 SettingsSectionHeader("Live TV")
+            }
+
+            item {
+                SettingsItem(
+                    title = "Manage Sources",
+                    subtitle = "Add and configure Xtream and M3U sources",
+                    onClick = onNavigateToSources
+                )
             }
 
             item {

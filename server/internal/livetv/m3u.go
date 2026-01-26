@@ -28,13 +28,28 @@ func NewM3UParser(db *gorm.DB) *M3UParser {
 
 // ParsedChannel represents a channel parsed from M3U
 type ParsedChannel struct {
-	Name     string
-	Number   int
-	Logo     string
-	Group    string
+	Name      string
+	Number    int
+	Logo      string
+	Group     string
 	StreamURL string
-	TVGId    string
-	TVGName  string
+	TVGId     string
+	TVGName   string
+}
+
+// ParsedVODEntry represents a VOD entry parsed from M3U
+type ParsedVODEntry struct {
+	Name          string
+	Logo          string
+	Group         string
+	StreamURL     string
+	Duration      int    // Duration in seconds (from EXTINF)
+	TVGId         string
+	Year          int    // Extracted from name if present
+	ContentType   string // "movie" or "series"
+	SeriesName    string // For series episodes
+	SeasonNumber  int
+	EpisodeNumber int
 }
 
 // ParseM3U parses an M3U playlist from a URL or content
@@ -490,4 +505,195 @@ func (p *M3UParser) MapChannelNumbers(content string, preview bool) (*MapNumbers
 	}
 
 	return result, nil
+}
+
+// VOD group indicators - groups that contain these keywords are likely VOD content
+var vodGroupKeywords = []string{
+	"vod", "movies", "movie", "films", "film", "series", "tv show", "tv series",
+	"4k movies", "4k series", "hd movies", "hd series", "documentary", "documentaries",
+	"kids", "children", "animation", "anime", "adult", "xxx", "18+",
+}
+
+// IsVODGroup checks if a group title indicates VOD content
+func IsVODGroup(group string) bool {
+	groupLower := strings.ToLower(group)
+	for _, keyword := range vodGroupKeywords {
+		if strings.Contains(groupLower, keyword) {
+			return true
+		}
+	}
+	return false
+}
+
+// IsSeriesGroup checks if a group title indicates series content
+func IsSeriesGroup(group string) bool {
+	groupLower := strings.ToLower(group)
+	seriesKeywords := []string{"series", "tv show", "tv series", "shows", "episodes"}
+	for _, keyword := range seriesKeywords {
+		if strings.Contains(groupLower, keyword) {
+			return true
+		}
+	}
+	return false
+}
+
+// ParseM3UVOD parses VOD entries from M3U content
+// It distinguishes VOD from live TV by:
+// 1. Duration > 0 in EXTINF line
+// 2. Group title containing VOD-related keywords
+func (p *M3UParser) ParseM3UVOD(content string) ([]ParsedVODEntry, error) {
+	var vodEntries []ParsedVODEntry
+
+	scanner := bufio.NewScanner(strings.NewReader(content))
+	var currentEntry *ParsedVODEntry
+	currentHeaders := make(map[string]string)
+
+	// Regex patterns for parsing EXTINF line
+	tvgIdPattern := regexp.MustCompile(`tvg-id="([^"]*)"`)
+	tvgLogoPattern := regexp.MustCompile(`tvg-logo="([^"]*)"`)
+	groupTitlePattern := regexp.MustCompile(`group-title="([^"]*)"`)
+	durationPattern := regexp.MustCompile(`#EXTINF:(-?\d+)`)
+
+	// Patterns for extracting series info from name
+	// Matches patterns like "Show Name S01E05", "Show Name - S01 E05", "Show Name 1x05"
+	seriesPattern := regexp.MustCompile(`(?i)^(.+?)\s*[-\s]*[Ss](\d+)\s*[Ee](\d+)`)
+	altSeriesPattern := regexp.MustCompile(`(?i)^(.+?)\s*[-\s]*(\d+)[xX](\d+)`)
+
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+
+		if strings.HasPrefix(line, "#EXTINF:") {
+			currentEntry = &ParsedVODEntry{}
+			currentHeaders = make(map[string]string)
+
+			// Extract duration (first number after #EXTINF:)
+			if matches := durationPattern.FindStringSubmatch(line); len(matches) > 1 {
+				currentEntry.Duration, _ = strconv.Atoi(matches[1])
+			}
+
+			// Extract TVG-ID
+			if matches := tvgIdPattern.FindStringSubmatch(line); len(matches) > 1 {
+				currentEntry.TVGId = matches[1]
+			}
+
+			// Extract logo
+			if matches := tvgLogoPattern.FindStringSubmatch(line); len(matches) > 1 {
+				currentEntry.Logo = matches[1]
+			}
+
+			// Extract group
+			if matches := groupTitlePattern.FindStringSubmatch(line); len(matches) > 1 {
+				currentEntry.Group = matches[1]
+			}
+
+			// Extract name (last part after the comma)
+			if idx := strings.LastIndex(line, ","); idx != -1 {
+				currentEntry.Name = strings.TrimSpace(line[idx+1:])
+			}
+
+		} else if currentEntry != nil && strings.HasPrefix(line, "#EXTVLCOPT:") {
+			// Handle VLC-specific headers
+			opt := strings.TrimPrefix(line, "#EXTVLCOPT:")
+			eq := strings.Index(opt, "=")
+			if eq > 0 {
+				key := strings.TrimSpace(opt[:eq])
+				value := strings.TrimSpace(opt[eq+1:])
+				switch strings.ToLower(key) {
+				case "http-user-agent":
+					if value != "" {
+						currentHeaders["User-Agent"] = value
+					}
+				case "http-referrer":
+					if value != "" {
+						currentHeaders["Referer"] = value
+					}
+				}
+			}
+		} else if currentEntry != nil && !strings.HasPrefix(line, "#") && line != "" {
+			// This is the stream URL
+			streamURL := line
+			if len(currentHeaders) > 0 {
+				keys := make([]string, 0, len(currentHeaders))
+				for k := range currentHeaders {
+					keys = append(keys, k)
+				}
+				sort.Strings(keys)
+				pairs := make([]string, 0, len(currentHeaders))
+				for _, k := range keys {
+					pairs = append(pairs, url.QueryEscape(k)+"="+url.QueryEscape(currentHeaders[k]))
+				}
+				if strings.Contains(streamURL, "|") {
+					streamURL = streamURL + "&" + strings.Join(pairs, "&")
+				} else {
+					streamURL = streamURL + "|" + strings.Join(pairs, "&")
+				}
+			}
+			currentEntry.StreamURL = normalizeStreamURL(streamURL)
+
+			// Determine if this is VOD content
+			isVOD := currentEntry.Duration > 0 || IsVODGroup(currentEntry.Group)
+
+			if isVOD {
+				// Extract year from name
+				currentEntry.Name, currentEntry.Year = extractYearFromName(currentEntry.Name)
+
+				// Check if this is a series episode
+				if IsSeriesGroup(currentEntry.Group) {
+					currentEntry.ContentType = "series"
+					// Try to extract series info from name
+					if matches := seriesPattern.FindStringSubmatch(currentEntry.Name); len(matches) > 3 {
+						currentEntry.SeriesName = strings.TrimSpace(matches[1])
+						currentEntry.SeasonNumber, _ = strconv.Atoi(matches[2])
+						currentEntry.EpisodeNumber, _ = strconv.Atoi(matches[3])
+					} else if matches := altSeriesPattern.FindStringSubmatch(currentEntry.Name); len(matches) > 3 {
+						currentEntry.SeriesName = strings.TrimSpace(matches[1])
+						currentEntry.SeasonNumber, _ = strconv.Atoi(matches[2])
+						currentEntry.EpisodeNumber, _ = strconv.Atoi(matches[3])
+					}
+				} else {
+					currentEntry.ContentType = "movie"
+				}
+
+				vodEntries = append(vodEntries, *currentEntry)
+			}
+
+			currentEntry = nil
+		}
+	}
+
+	return vodEntries, scanner.Err()
+}
+
+// FetchAndParseM3UVOD fetches an M3U from URL and parses VOD entries
+func (p *M3UParser) FetchAndParseM3UVOD(url string) ([]ParsedVODEntry, error) {
+	client := &http.Client{Timeout: 60 * time.Second} // Longer timeout for large VOD lists
+	resp, err := client.Get(url)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch M3U: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("failed to fetch M3U: status %d", resp.StatusCode)
+	}
+
+	content, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read M3U: %w", err)
+	}
+
+	return p.ParseM3UVOD(string(content))
+}
+
+// extractYearFromName extracts year from name like "Movie Name (2023)" and returns the clean name
+func extractYearFromName(name string) (string, int) {
+	yearPattern := regexp.MustCompile(`\s*\((\d{4})\)\s*$`)
+	if matches := yearPattern.FindStringSubmatch(name); len(matches) > 1 {
+		year, _ := strconv.Atoi(matches[1])
+		if year >= 1900 && year <= 2100 {
+			cleanName := yearPattern.ReplaceAllString(name, "")
+			return strings.TrimSpace(cleanName), year
+		}
+	}
+	return name, 0
 }
