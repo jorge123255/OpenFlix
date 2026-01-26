@@ -196,6 +196,64 @@ interface OpenFlixApi {
     @GET("livetv/archive/status")
     suspend fun getArchiveStatus(): Response<ArchiveStatusResponse>
 
+    // === M3U Sources ===
+
+    @GET("livetv/sources")
+    suspend fun getM3USources(): Response<M3USourcesResponse>
+
+    @POST("livetv/sources")
+    suspend fun createM3USource(@Body request: CreateM3USourceRequest): Response<M3USourceDto>
+
+    @PUT("livetv/sources/{id}")
+    suspend fun updateM3USource(
+        @Path("id") id: Int,
+        @Body request: UpdateM3USourceRequest
+    ): Response<M3USourceDto>
+
+    @DELETE("livetv/sources/{id}")
+    suspend fun deleteM3USource(@Path("id") id: Int): Response<Unit>
+
+    @POST("livetv/sources/{id}/refresh")
+    suspend fun refreshM3USource(@Path("id") id: Int): Response<Unit>
+
+    @POST("livetv/sources/{id}/import-vod")
+    suspend fun importM3UVOD(@Path("id") id: Int): Response<ImportResultDto>
+
+    @POST("livetv/sources/{id}/import-series")
+    suspend fun importM3USeries(@Path("id") id: Int): Response<ImportStatusDto>
+
+    // === Xtream Sources ===
+
+    @GET("livetv/xtream/sources")
+    suspend fun getXtreamSources(): Response<XtreamSourcesResponse>
+
+    @GET("livetv/xtream/sources/{id}")
+    suspend fun getXtreamSource(@Path("id") id: Int): Response<XtreamSourceDto>
+
+    @POST("livetv/xtream/sources")
+    suspend fun createXtreamSource(@Body request: CreateXtreamSourceRequest): Response<XtreamSourceDto>
+
+    @PUT("livetv/xtream/sources/{id}")
+    suspend fun updateXtreamSource(
+        @Path("id") id: Int,
+        @Body request: UpdateXtreamSourceRequest
+    ): Response<XtreamSourceDto>
+
+    @DELETE("livetv/xtream/sources/{id}")
+    suspend fun deleteXtreamSource(@Path("id") id: Int): Response<Unit>
+
+    @POST("livetv/xtream/sources/{id}/test")
+    suspend fun testXtreamSource(@Path("id") id: Int): Response<TestSourceResponse>
+
+    @POST("livetv/xtream/sources/{id}/refresh")
+    suspend fun refreshXtreamSource(@Path("id") id: Int): Response<Unit>
+
+    @POST("livetv/xtream/sources/{id}/import-vod")
+    suspend fun importXtreamVOD(@Path("id") id: Int): Response<ImportResultDto>
+
+    @POST("livetv/xtream/sources/{id}/import-series")
+    suspend fun importXtreamSeries(@Path("id") id: Int): Response<ImportResultDto>
+
     // === Channel Groups (Failover) ===
 
     @GET("livetv/channel-groups")
@@ -275,18 +333,18 @@ interface OpenFlixApi {
     // === Playlists ===
 
     @GET("playlists")
-    suspend fun getPlaylists(): Response<List<PlaylistDto>>
+    suspend fun getPlaylists(): Response<PlaylistsResponse>
 
     @GET("playlists/{id}")
-    suspend fun getPlaylist(@Path("id") playlistId: String): Response<PlaylistDto>
+    suspend fun getPlaylist(@Path("id") playlistId: String): Response<PlaylistsResponse>
 
     @GET("playlists/{id}/items")
-    suspend fun getPlaylistItems(@Path("id") playlistId: String): Response<MediaListResponse>
+    suspend fun getPlaylistItems(@Path("id") playlistId: String): Response<MediaContainerResponse>
 
     // === Watchlist ===
 
     @GET("watchlist")
-    suspend fun getWatchlist(): Response<MediaListResponse>
+    suspend fun getWatchlist(): Response<MediaContainerResponse>
 
     @POST("watchlist/{mediaId}")
     suspend fun addToWatchlist(@Path("mediaId") mediaId: String): Response<Unit>

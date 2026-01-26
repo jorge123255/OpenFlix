@@ -17,6 +17,7 @@ import (
 	"github.com/openflix/openflix-server/internal/epg/gracenote"
 	"github.com/openflix/openflix-server/internal/livetv"
 	"github.com/openflix/openflix-server/internal/models"
+	"gorm.io/gorm"
 )
 
 // ============ Live TV Sources ============
@@ -90,10 +91,14 @@ func (s *Server) updateLiveTVSource(c *gin.Context) {
 	}
 
 	var req struct {
-		Name    string `json:"name"`
-		URL     string `json:"url"`
-		EPGUrl  string `json:"epgUrl"`
-		Enabled *bool  `json:"enabled"`
+		Name            string `json:"name"`
+		URL             string `json:"url"`
+		EPGUrl          string `json:"epgUrl"`
+		Enabled         *bool  `json:"enabled"`
+		ImportVOD       *bool  `json:"importVod"`
+		ImportSeries    *bool  `json:"importSeries"`
+		VODLibraryID    *uint  `json:"vodLibraryId"`
+		SeriesLibraryID *uint  `json:"seriesLibraryId"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -111,6 +116,18 @@ func (s *Server) updateLiveTVSource(c *gin.Context) {
 	}
 	if req.Enabled != nil {
 		source.Enabled = *req.Enabled
+	}
+	if req.ImportVOD != nil {
+		source.ImportVOD = *req.ImportVOD
+	}
+	if req.ImportSeries != nil {
+		source.ImportSeries = *req.ImportSeries
+	}
+	if req.VODLibraryID != nil {
+		source.VODLibraryID = req.VODLibraryID
+	}
+	if req.SeriesLibraryID != nil {
+		source.SeriesLibraryID = req.SeriesLibraryID
 	}
 
 	if err := s.db.Save(&source).Error; err != nil {
@@ -171,6 +188,52 @@ func (s *Server) refreshLiveTVSource(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Source refreshed"})
+}
+
+// importM3UVOD imports VOD movies from an M3U source
+// POST /api/livetv/sources/:id/import-vod
+func (s *Server) importM3UVOD(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid source ID"})
+		return
+	}
+
+	importer := livetv.NewVODImporter(s.db)
+	result, err := importer.ImportM3UVOD(uint(id))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, result)
+}
+
+// importM3USeries imports TV series from an M3U source
+// POST /api/livetv/sources/:id/import-series
+func (s *Server) importM3USeries(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid source ID"})
+		return
+	}
+
+	// Run import in background to avoid HTTP timeout
+	go func(sourceID uint, db *gorm.DB) {
+		importer := livetv.NewVODImporter(db)
+		result, err := importer.ImportM3USeries(sourceID)
+		if err != nil {
+			log.Printf("M3U Series import failed for source %d: %v", sourceID, err)
+		} else {
+			log.Printf("M3U Series import completed for source %d: %d added, %d updated, %d errors",
+				sourceID, result.Added, result.Updated, result.Errors)
+		}
+	}(uint(id), s.db)
+
+	c.JSON(http.StatusOK, gin.H{
+		"status":  "started",
+		"message": "Series import started in background. Check source stats for progress.",
+	})
 }
 
 // ============ Channels ============

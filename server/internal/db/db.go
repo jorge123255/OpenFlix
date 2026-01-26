@@ -71,6 +71,7 @@ func Migrate(db *gorm.DB) error {
 		&models.PlaylistItem{},
 		&models.Collection{},
 		&models.CollectionItem{},
+		&models.WatchlistItem{},
 
 		// Live TV
 		&models.M3USource{},

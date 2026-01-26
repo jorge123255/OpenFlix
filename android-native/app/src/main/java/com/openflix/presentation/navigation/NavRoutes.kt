@@ -86,6 +86,17 @@ sealed class NavRoutes(val route: String) {
     data object About : NavRoutes("settings/about")
     data object Licenses : NavRoutes("settings/licenses")
     data object Logs : NavRoutes("settings/logs")
+
+    // === Source Management ===
+    data object Sources : NavRoutes("sources")
+    data object AddXtreamSource : NavRoutes("sources/add-xtream")
+    data object AddM3USource : NavRoutes("sources/add-m3u")
+    data object EditXtreamSource : NavRoutes("sources/edit-xtream/{sourceId}") {
+        fun createRoute(sourceId: Int) = "sources/edit-xtream/$sourceId"
+    }
+    data object EditM3USource : NavRoutes("sources/edit-m3u/{sourceId}") {
+        fun createRoute(sourceId: Int) = "sources/edit-m3u/$sourceId"
+    }
     data object WatchStats : NavRoutes("stats")
     data object Watchlist : NavRoutes("watchlist")
     data object Downloads : NavRoutes("downloads")
@@ -107,5 +118,6 @@ sealed class NavRoutes(val route: String) {
         const val ARG_PROFILE_ID = "profileId"
         const val ARG_LIBRARY_ID = "libraryId"
         const val ARG_MEDIA_TYPE = "mediaType"
+        const val ARG_SOURCE_ID = "sourceId"
     }
 }

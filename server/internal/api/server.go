@@ -404,6 +404,15 @@ func (s *Server) setupRouter() {
 		playlists.DELETE("/:id", s.deletePlaylist)
 	}
 
+	// ============ Watchlist API ============
+	watchlist := r.Group("/watchlist")
+	watchlist.Use(s.authRequired())
+	{
+		watchlist.GET("", s.getWatchlist)
+		watchlist.POST("/:mediaId", s.addToWatchlist)
+		watchlist.DELETE("/:mediaId", s.removeFromWatchlist)
+	}
+
 	// ============ Play Queues API ============
 	playQueues := r.Group("/playQueues")
 	playQueues.Use(s.authRequired())
@@ -424,6 +433,9 @@ func (s *Server) setupRouter() {
 		livetv.PUT("/sources/:id", s.updateLiveTVSource)
 		livetv.DELETE("/sources/:id", s.deleteLiveTVSource)
 		livetv.POST("/sources/:id/refresh", s.refreshLiveTVSource)
+		// M3U VOD/Series import
+		livetv.POST("/sources/:id/import-vod", s.importM3UVOD)
+		livetv.POST("/sources/:id/import-series", s.importM3USeries)
 
 		// Channels
 		livetv.GET("/channels", s.getChannels)

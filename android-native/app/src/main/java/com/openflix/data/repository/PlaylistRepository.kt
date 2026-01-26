@@ -39,7 +39,8 @@ class PlaylistRepository @Inject constructor(
             val baseUrl = getServerBaseUrl()
             val response = api.getPlaylists()
             if (response.isSuccessful && response.body() != null) {
-                val playlists = response.body()!!.map { it.toDomain(baseUrl) }
+                val playlistDtos = response.body()!!.mediaContainer?.metadata ?: emptyList()
+                val playlists = playlistDtos.map { it.toDomain(baseUrl) }
                 Timber.d("Loaded ${playlists.size} playlists")
                 Result.success(playlists)
             } else {
@@ -60,9 +61,14 @@ class PlaylistRepository @Inject constructor(
             val baseUrl = getServerBaseUrl()
             val response = api.getPlaylist(playlistId)
             if (response.isSuccessful && response.body() != null) {
-                val playlist = response.body()!!.toDomain(baseUrl)
-                Timber.d("Loaded playlist: ${playlist.title}")
-                Result.success(playlist)
+                val playlistDto = response.body()!!.mediaContainer?.metadata?.firstOrNull()
+                if (playlistDto != null) {
+                    val playlist = playlistDto.toDomain(baseUrl)
+                    Timber.d("Loaded playlist: ${playlist.title}")
+                    Result.success(playlist)
+                } else {
+                    Result.failure(Exception("Playlist not found"))
+                }
             } else {
                 Timber.w("Failed to get playlist: ${response.code()}")
                 Result.failure(Exception("Failed to get playlist: ${response.code()}"))
@@ -81,7 +87,8 @@ class PlaylistRepository @Inject constructor(
             val baseUrl = getServerBaseUrl()
             val response = api.getPlaylistItems(playlistId)
             if (response.isSuccessful && response.body() != null) {
-                val items = response.body()!!.items.map { it.toDomain(baseUrl) }
+                val mediaItems = response.body()!!.mediaContainer?.metadata ?: emptyList()
+                val items = mediaItems.map { it.toDomain(baseUrl) }
                 Timber.d("Loaded ${items.size} items from playlist $playlistId")
                 Result.success(items)
             } else {

@@ -45,6 +45,9 @@ import com.openflix.presentation.screens.teampass.TeamPassScreen
 import com.openflix.presentation.screens.catchup.CatchupScreen
 import com.openflix.presentation.screens.watchlist.WatchlistScreen
 import com.openflix.presentation.screens.profile.ProfileSelectionScreen
+import com.openflix.presentation.screens.sources.AddM3USourceScreen
+import com.openflix.presentation.screens.sources.AddXtreamSourceScreen
+import com.openflix.presentation.screens.sources.SourcesScreen
 
 /**
  * Main navigation host for OpenFlix.
@@ -370,11 +373,75 @@ fun OpenFlixNavHost(
                 onNavigateToLogs = {
                     navController.navigate(NavRoutes.Logs.route)
                 },
+                onNavigateToSources = {
+                    navController.navigate(NavRoutes.Sources.route)
+                },
                 onSignOut = {
                     navController.navigate(NavRoutes.Auth.route) {
                         popUpTo(0) { inclusive = true }
                     }
                 }
+            )
+        }
+
+        // === Source Management ===
+        composable(NavRoutes.Sources.route) {
+            SourcesScreen(
+                onBack = { navController.popBackStack() },
+                onAddXtreamSource = {
+                    navController.navigate(NavRoutes.AddXtreamSource.route)
+                },
+                onAddM3USource = {
+                    navController.navigate(NavRoutes.AddM3USource.route)
+                },
+                onEditXtreamSource = { sourceId ->
+                    navController.navigate(NavRoutes.EditXtreamSource.createRoute(sourceId))
+                },
+                onEditM3USource = { sourceId ->
+                    navController.navigate(NavRoutes.EditM3USource.createRoute(sourceId))
+                }
+            )
+        }
+
+        composable(NavRoutes.AddXtreamSource.route) {
+            AddXtreamSourceScreen(
+                onBack = { navController.popBackStack() },
+                onSuccess = { navController.popBackStack() }
+            )
+        }
+
+        composable(NavRoutes.AddM3USource.route) {
+            AddM3USourceScreen(
+                onBack = { navController.popBackStack() },
+                onSuccess = { navController.popBackStack() }
+            )
+        }
+
+        composable(
+            route = NavRoutes.EditXtreamSource.route,
+            arguments = listOf(
+                navArgument(NavRoutes.ARG_SOURCE_ID) { type = NavType.IntType }
+            )
+        ) { backStackEntry ->
+            val sourceId = backStackEntry.arguments?.getInt(NavRoutes.ARG_SOURCE_ID) ?: return@composable
+            AddXtreamSourceScreen(
+                onBack = { navController.popBackStack() },
+                onSuccess = { navController.popBackStack() },
+                editSourceId = sourceId
+            )
+        }
+
+        composable(
+            route = NavRoutes.EditM3USource.route,
+            arguments = listOf(
+                navArgument(NavRoutes.ARG_SOURCE_ID) { type = NavType.IntType }
+            )
+        ) { backStackEntry ->
+            val sourceId = backStackEntry.arguments?.getInt(NavRoutes.ARG_SOURCE_ID) ?: return@composable
+            AddM3USourceScreen(
+                onBack = { navController.popBackStack() },
+                onSuccess = { navController.popBackStack() },
+                editSourceId = sourceId
             )
         }
 

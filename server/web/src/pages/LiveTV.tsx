@@ -1009,16 +1009,37 @@ function EditM3USourceModal({
   source,
   onClose,
 }: {
-  source: { id: number; name: string; url: string }
+  source: {
+    id: number
+    name: string
+    url: string
+    importVod?: boolean
+    importSeries?: boolean
+    vodLibraryId?: number
+    seriesLibraryId?: number
+  }
   onClose: () => void
 }) {
   const queryClient = useQueryClient()
   const [name, setName] = useState(source.name)
   const [url, setUrl] = useState(source.url)
+  const [importVod, setImportVod] = useState(source.importVod || false)
+  const [importSeries, setImportSeries] = useState(source.importSeries || false)
+  const [vodLibraryId, setVodLibraryId] = useState<number | null>(source.vodLibraryId || null)
+  const [seriesLibraryId, setSeriesLibraryId] = useState<number | null>(source.seriesLibraryId || null)
   const [error, setError] = useState('')
+  const [importStatus, setImportStatus] = useState<string | null>(null)
+
+  const { data: libraries } = useQuery({
+    queryKey: ['libraries'],
+    queryFn: () => api.getLibraries(),
+  })
+
+  const movieLibraries = libraries?.filter(l => l.type === 'movie') || []
+  const showLibraries = libraries?.filter(l => l.type === 'show') || []
 
   const updateSource = useMutation({
-    mutationFn: async (data: { name: string; url: string }) => {
+    mutationFn: async (data: any) => {
       return api.updateM3USource(source.id, data)
     },
     onSuccess: () => {
@@ -1031,15 +1052,48 @@ function EditM3USourceModal({
     },
   })
 
+  const importVodMutation = useMutation({
+    mutationFn: async () => {
+      return api.importM3UVOD(source.id)
+    },
+    onSuccess: (result) => {
+      setImportStatus(`VOD import complete: ${result.added} added, ${result.updated} updated`)
+      queryClient.invalidateQueries({ queryKey: ['m3uSources'] })
+    },
+    onError: (error: any) => {
+      setError(error.response?.data?.error || error.message || 'Failed to import VOD')
+    },
+  })
+
+  const importSeriesMutation = useMutation({
+    mutationFn: async () => {
+      return api.importM3USeries(source.id)
+    },
+    onSuccess: (result) => {
+      setImportStatus(result.message)
+      queryClient.invalidateQueries({ queryKey: ['m3uSources'] })
+    },
+    onError: (error: any) => {
+      setError(error.response?.data?.error || error.message || 'Failed to import series')
+    },
+  })
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
-    updateSource.mutate({ name, url })
+    updateSource.mutate({
+      name,
+      url,
+      importVod,
+      importSeries,
+      vodLibraryId: vodLibraryId ?? undefined,
+      seriesLibraryId: seriesLibraryId ?? undefined,
+    })
   }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="bg-gray-800 rounded-xl p-6 w-full max-w-md">
+      <div className="bg-gray-800 rounded-xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold text-white">Edit M3U Source</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-white">
@@ -1071,6 +1125,114 @@ function EditM3USourceModal({
               Update the URL if your provider's IP address changed
             </p>
           </div>
+
+          {/* VOD Import Section */}
+          <div className="mb-4 pt-4 border-t border-gray-700">
+            <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
+              <Film className="h-4 w-4 text-purple-400" />
+              VOD Import Settings
+            </h3>
+            <p className="text-xs text-gray-500 mb-3">
+              Import movies and series from VOD entries in the M3U playlist
+            </p>
+
+            <div className="mb-4">
+              <label className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  checked={importVod}
+                  onChange={(e) => setImportVod(e.target.checked)}
+                  className="w-4 h-4 rounded bg-gray-700 border-gray-600 text-indigo-500"
+                />
+                <span className="text-sm text-gray-300">Import Movies (VOD)</span>
+              </label>
+              {importVod && (
+                <div className="mt-2 ml-7">
+                  <select
+                    value={vodLibraryId || ''}
+                    onChange={(e) => setVodLibraryId(e.target.value ? parseInt(e.target.value) : null)}
+                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-sm text-white"
+                  >
+                    <option value="">Select Movie Library...</option>
+                    {movieLibraries.map((lib) => (
+                      <option key={lib.id} value={lib.id}>{lib.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+
+            <div className="mb-4">
+              <label className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  checked={importSeries}
+                  onChange={(e) => setImportSeries(e.target.checked)}
+                  className="w-4 h-4 rounded bg-gray-700 border-gray-600 text-indigo-500"
+                />
+                <span className="text-sm text-gray-300">Import TV Series</span>
+              </label>
+              {importSeries && (
+                <div className="mt-2 ml-7">
+                  <select
+                    value={seriesLibraryId || ''}
+                    onChange={(e) => setSeriesLibraryId(e.target.value ? parseInt(e.target.value) : null)}
+                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-sm text-white"
+                  >
+                    <option value="">Select TV Library...</option>
+                    {showLibraries.map((lib) => (
+                      <option key={lib.id} value={lib.id}>{lib.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+
+            {/* Import Buttons */}
+            {(importVod || importSeries) && (
+              <div className="flex gap-2 mt-3">
+                {importVod && vodLibraryId && (
+                  <button
+                    type="button"
+                    onClick={() => importVodMutation.mutate()}
+                    disabled={importVodMutation.isPending}
+                    className="flex-1 py-2 px-3 bg-purple-600 hover:bg-purple-700 text-white text-sm rounded-lg flex items-center justify-center gap-2"
+                  >
+                    {importVodMutation.isPending ? (
+                      <RefreshCw className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Download className="h-4 w-4" />
+                    )}
+                    Import Movies
+                  </button>
+                )}
+                {importSeries && seriesLibraryId && (
+                  <button
+                    type="button"
+                    onClick={() => importSeriesMutation.mutate()}
+                    disabled={importSeriesMutation.isPending}
+                    className="flex-1 py-2 px-3 bg-purple-600 hover:bg-purple-700 text-white text-sm rounded-lg flex items-center justify-center gap-2"
+                  >
+                    {importSeriesMutation.isPending ? (
+                      <RefreshCw className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Download className="h-4 w-4" />
+                    )}
+                    Import Series
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+
+          {importStatus && (
+            <div className="mb-4 p-3 bg-green-500/20 border border-green-500/50 rounded-lg">
+              <p className="text-sm text-green-300 flex items-center gap-2">
+                <Check className="h-4 w-4" />
+                {importStatus}
+              </p>
+            </div>
+          )}
           {error && (
             <div className="mb-4 p-3 bg-red-500/20 border border-red-500/50 rounded-lg">
               <p className="text-sm text-red-300 flex items-center gap-2">
