@@ -1,0 +1,805 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		07AB81159CD5912039978815 /* StreamingHubRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = A8A5BA42FB79F1A2FB371971 /* StreamingHubRow.swift */; };
+		228B7CB9B7D1A82365DFA9FB /* EPGProgramCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 420A255D329E1617486936E9 /* EPGProgramCell.swift */; };
+		23063362B00BF16AD645A520 /* PlaylistsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F95BBADA637A9FD02EB88E96 /* PlaylistsView.swift */; };
+		259C91565DAEBF8C83CFBD25 /* FilterBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 479A82B45979DFBA68927EFD /* FilterBar.swift */; };
+		26D96108C837682DDA20B362 /* EPGChannelCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = F320CA143D4F275AFCF41847 /* EPGChannelCell.swift */; };
+		37B56C6654A245C1CED061E6 /* HeroBannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8D7406A1DC850E402A4EADD /* HeroBannerView.swift */; };
+		626FEDDFC1AE59C80D829614 /* DVRPlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8589B86D9B86D244B246D7F0 /* DVRPlayerView.swift */; };
+		752E69285B494198A0AE0960 /* AuthenticatedImage.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDAC0E157FDB4CB6B2E0D0FE /* AuthenticatedImage.swift */; };
+		7C75190D395290A11D8ADA0D /* EPGTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C6DE8C75F3A9E43CFA40640 /* EPGTheme.swift */; };
+		9D62EFFEEC57A93CB386ECFE /* SeasonView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1F02715AFF7983496C923F7 /* SeasonView.swift */; };
+		A3054FAB773930985A59A421 /* EPGTimeHeader.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9EF07620D9D548C5EF29EB7 /* EPGTimeHeader.swift */; };
+		B1EDB1242A9582BEF810E8CC /* CategoryTabs.swift in Sources */ = {isa = PBXBuildFile; fileRef = 62362FF3C7A381A8FBBB1A4C /* CategoryTabs.swift */; };
+		B591E0C77D3E0DC56ED644E5 /* EPGGridView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F06418578FD320559B8F4E7 /* EPGGridView.swift */; };
+		CCFA415A7D3E91C7A098BA11 /* InstantSwitchManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 021C5A5ADB9634BCCF40F46D /* InstantSwitchManager.swift */; };
+		DCB220F9AC4AD81784D8A2A6 /* DesignComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3321EE2941CB5208E131040E /* DesignComponents.swift */; };
+		F10000010000000000000001 /* OpenFlixApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000010000000000000001 /* OpenFlixApp.swift */; };
+		F10000010000000000000002 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000010000000000000002 /* ContentView.swift */; };
+		F10000010000000000000003 /* APIEndpoint.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000010000000000000003 /* APIEndpoint.swift */; };
+		F10000010000000000000004 /* NetworkError.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000010000000000000004 /* NetworkError.swift */; };
+		F10000010000000000000005 /* OpenFlixAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000010000000000000005 /* OpenFlixAPI.swift */; };
+		F10000010000000000000006 /* KeychainHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000010000000000000006 /* KeychainHelper.swift */; };
+		F10000010000000000000007 /* UserDefaults+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000010000000000000007 /* UserDefaults+Extensions.swift */; };
+		F10000010000000000000008 /* String+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000010000000000000008 /* String+Extensions.swift */; };
+		F10000010000000000000009 /* URL+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000010000000000000009 /* URL+Extensions.swift */; };
+		F10000010000000000000010 /* AuthDTOs.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000010000000000000010 /* AuthDTOs.swift */; };
+		F10000010000000000000011 /* MediaDTOs.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000010000000000000011 /* MediaDTOs.swift */; };
+		F10000010000000000000012 /* LiveTVDTOs.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000010000000000000012 /* LiveTVDTOs.swift */; };
+		F10000010000000000000013 /* MiscDTOs.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000010000000000000013 /* MiscDTOs.swift */; };
+		F10000010000000000000014 /* MediaItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000010000000000000014 /* MediaItem.swift */; };
+		F10000010000000000000015 /* Channel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000010000000000000015 /* Channel.swift */; };
+		F10000010000000000000016 /* Program.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000010000000000000016 /* Program.swift */; };
+		F10000010000000000000017 /* Profile.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000010000000000000017 /* Profile.swift */; };
+		F10000010000000000000018 /* Recording.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000010000000000000018 /* Recording.swift */; };
+		F10000010000000000000019 /* LibrarySection.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000010000000000000019 /* LibrarySection.swift */; };
+		F10000010000000000000020 /* Source.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000010000000000000020 /* Source.swift */; };
+		F10000010000000000000021 /* TeamPass.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000010000000000000021 /* TeamPass.swift */; };
+		F10000010000000000000022 /* AuthRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000010000000000000022 /* AuthRepository.swift */; };
+		F10000010000000000000023 /* MediaRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000010000000000000023 /* MediaRepository.swift */; };
+		F10000010000000000000024 /* LiveTVRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000010000000000000024 /* LiveTVRepository.swift */; };
+		F10000010000000000000025 /* DVRRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000010000000000000025 /* DVRRepository.swift */; };
+		F10000010000000000000026 /* ProfileRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000010000000000000026 /* ProfileRepository.swift */; };
+		F10000010000000000000027 /* PlaylistRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000010000000000000027 /* PlaylistRepository.swift */; };
+		F10000010000000000000028 /* WatchlistRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000010000000000000028 /* WatchlistRepository.swift */; };
+		F10000010000000000000029 /* SourceRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000010000000000000029 /* SourceRepository.swift */; };
+		F10000010000000000000030 /* AuthViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000010000000000000030 /* AuthViewModel.swift */; };
+		F10000010000000000000031 /* DiscoverViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000010000000000000031 /* DiscoverViewModel.swift */; };
+		F10000010000000000000032 /* MediaDetailViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000010000000000000032 /* MediaDetailViewModel.swift */; };
+		F10000010000000000000033 /* PlayerViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000010000000000000033 /* PlayerViewModel.swift */; };
+		F10000010000000000000034 /* LiveTVViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000010000000000000034 /* LiveTVViewModel.swift */; };
+		F10000010000000000000035 /* DVRViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000010000000000000035 /* DVRViewModel.swift */; };
+		F10000010000000000000036 /* SearchViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000010000000000000036 /* SearchViewModel.swift */; };
+		F10000010000000000000037 /* ProfileViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000010000000000000037 /* ProfileViewModel.swift */; };
+		F10000010000000000000038 /* WatchlistViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000010000000000000038 /* WatchlistViewModel.swift */; };
+		F10000010000000000000039 /* SettingsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000010000000000000039 /* SettingsViewModel.swift */; };
+		F10000010000000000000040 /* MediaCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000010000000000000040 /* MediaCard.swift */; };
+		F10000010000000000000041 /* ChannelRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000010000000000000041 /* ChannelRow.swift */; };
+		F10000010000000000000042 /* ProgramCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000010000000000000042 /* ProgramCell.swift */; };
+		F10000010000000000000043 /* HubSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000010000000000000043 /* HubSection.swift */; };
+		F10000010000000000000044 /* LoadingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000010000000000000044 /* LoadingView.swift */; };
+		F10000010000000000000045 /* ErrorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000010000000000000045 /* ErrorView.swift */; };
+		F10000010000000000000046 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000010000000000000046 /* LoginView.swift */; };
+		F10000010000000000000047 /* ProfileSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000010000000000000047 /* ProfileSelectionView.swift */; };
+		F10000010000000000000048 /* DiscoverView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000010000000000000048 /* DiscoverView.swift */; };
+		F10000010000000000000049 /* MoviesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000010000000000000049 /* MoviesView.swift */; };
+		F10000010000000000000050 /* MediaDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000010000000000000050 /* MediaDetailView.swift */; };
+		F10000010000000000000051 /* LiveTVView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000010000000000000051 /* LiveTVView.swift */; };
+		F10000010000000000000052 /* EPGGuideView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000010000000000000052 /* EPGGuideView.swift */; };
+		F10000010000000000000053 /* VideoPlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000010000000000000053 /* VideoPlayerView.swift */; };
+		F10000010000000000000054 /* DVRView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000010000000000000054 /* DVRView.swift */; };
+		F10000010000000000000055 /* SearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000010000000000000055 /* SearchView.swift */; };
+		F10000010000000000000056 /* WatchlistView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000010000000000000056 /* WatchlistView.swift */; };
+		F10000010000000000000057 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000010000000000000057 /* SettingsView.swift */; };
+		F10000010000000000000058 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F20000010000000000000058 /* Assets.xcassets */; };
+		F10000010000000000000060 /* OpenFlixColors.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000010000000000000060 /* OpenFlixColors.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		021C5A5ADB9634BCCF40F46D /* InstantSwitchManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = InstantSwitchManager.swift; sourceTree = "<group>"; };
+		2F06418578FD320559B8F4E7 /* EPGGridView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EPGGridView.swift; sourceTree = "<group>"; };
+		3321EE2941CB5208E131040E /* DesignComponents.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = DesignComponents.swift; path = DesignComponents.swift; sourceTree = "<group>"; };
+		420A255D329E1617486936E9 /* EPGProgramCell.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Components/EPGProgramCell.swift; sourceTree = "<group>"; };
+		479A82B45979DFBA68927EFD /* FilterBar.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FilterBar.swift; sourceTree = "<group>"; };
+		62362FF3C7A381A8FBBB1A4C /* CategoryTabs.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Components/CategoryTabs.swift; sourceTree = "<group>"; };
+		6C6DE8C75F3A9E43CFA40640 /* EPGTheme.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Theme/EPGTheme.swift; sourceTree = "<group>"; };
+		8589B86D9B86D244B246D7F0 /* DVRPlayerView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DVRPlayerView.swift; sourceTree = "<group>"; };
+		A8A5BA42FB79F1A2FB371971 /* StreamingHubRow.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = StreamingHubRow.swift; sourceTree = "<group>"; };
+		BDAC0E157FDB4CB6B2E0D0FE /* AuthenticatedImage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthenticatedImage.swift; sourceTree = "<group>"; };
+		D9EF07620D9D548C5EF29EB7 /* EPGTimeHeader.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Components/EPGTimeHeader.swift; sourceTree = "<group>"; };
+		E8D7406A1DC850E402A4EADD /* HeroBannerView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = HeroBannerView.swift; sourceTree = "<group>"; };
+		F1F02715AFF7983496C923F7 /* SeasonView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SeasonView.swift; sourceTree = "<group>"; };
+		F20000010000000000000000 /* OpenFlix-tvOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "OpenFlix-tvOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		F20000010000000000000001 /* OpenFlixApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenFlixApp.swift; sourceTree = "<group>"; };
+		F20000010000000000000002 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		F20000010000000000000003 /* APIEndpoint.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIEndpoint.swift; sourceTree = "<group>"; };
+		F20000010000000000000004 /* NetworkError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkError.swift; sourceTree = "<group>"; };
+		F20000010000000000000005 /* OpenFlixAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenFlixAPI.swift; sourceTree = "<group>"; };
+		F20000010000000000000006 /* KeychainHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainHelper.swift; sourceTree = "<group>"; };
+		F20000010000000000000007 /* UserDefaults+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "UserDefaults+Extensions.swift"; sourceTree = "<group>"; };
+		F20000010000000000000008 /* String+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "String+Extensions.swift"; sourceTree = "<group>"; };
+		F20000010000000000000009 /* URL+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "URL+Extensions.swift"; sourceTree = "<group>"; };
+		F20000010000000000000010 /* AuthDTOs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthDTOs.swift; sourceTree = "<group>"; };
+		F20000010000000000000011 /* MediaDTOs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaDTOs.swift; sourceTree = "<group>"; };
+		F20000010000000000000012 /* LiveTVDTOs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveTVDTOs.swift; sourceTree = "<group>"; };
+		F20000010000000000000013 /* MiscDTOs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MiscDTOs.swift; sourceTree = "<group>"; };
+		F20000010000000000000014 /* MediaItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaItem.swift; sourceTree = "<group>"; };
+		F20000010000000000000015 /* Channel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Channel.swift; sourceTree = "<group>"; };
+		F20000010000000000000016 /* Program.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Program.swift; sourceTree = "<group>"; };
+		F20000010000000000000017 /* Profile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Profile.swift; sourceTree = "<group>"; };
+		F20000010000000000000018 /* Recording.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Recording.swift; sourceTree = "<group>"; };
+		F20000010000000000000019 /* LibrarySection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibrarySection.swift; sourceTree = "<group>"; };
+		F20000010000000000000020 /* Source.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Source.swift; sourceTree = "<group>"; };
+		F20000010000000000000021 /* TeamPass.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeamPass.swift; sourceTree = "<group>"; };
+		F20000010000000000000022 /* AuthRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthRepository.swift; sourceTree = "<group>"; };
+		F20000010000000000000023 /* MediaRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaRepository.swift; sourceTree = "<group>"; };
+		F20000010000000000000024 /* LiveTVRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveTVRepository.swift; sourceTree = "<group>"; };
+		F20000010000000000000025 /* DVRRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DVRRepository.swift; sourceTree = "<group>"; };
+		F20000010000000000000026 /* ProfileRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileRepository.swift; sourceTree = "<group>"; };
+		F20000010000000000000027 /* PlaylistRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistRepository.swift; sourceTree = "<group>"; };
+		F20000010000000000000028 /* WatchlistRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchlistRepository.swift; sourceTree = "<group>"; };
+		F20000010000000000000029 /* SourceRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SourceRepository.swift; sourceTree = "<group>"; };
+		F20000010000000000000030 /* AuthViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthViewModel.swift; sourceTree = "<group>"; };
+		F20000010000000000000031 /* DiscoverViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiscoverViewModel.swift; sourceTree = "<group>"; };
+		F20000010000000000000032 /* MediaDetailViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaDetailViewModel.swift; sourceTree = "<group>"; };
+		F20000010000000000000033 /* PlayerViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerViewModel.swift; sourceTree = "<group>"; };
+		F20000010000000000000034 /* LiveTVViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveTVViewModel.swift; sourceTree = "<group>"; };
+		F20000010000000000000035 /* DVRViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DVRViewModel.swift; sourceTree = "<group>"; };
+		F20000010000000000000036 /* SearchViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchViewModel.swift; sourceTree = "<group>"; };
+		F20000010000000000000037 /* ProfileViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileViewModel.swift; sourceTree = "<group>"; };
+		F20000010000000000000038 /* WatchlistViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchlistViewModel.swift; sourceTree = "<group>"; };
+		F20000010000000000000039 /* SettingsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsViewModel.swift; sourceTree = "<group>"; };
+		F20000010000000000000040 /* MediaCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaCard.swift; sourceTree = "<group>"; };
+		F20000010000000000000041 /* ChannelRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChannelRow.swift; sourceTree = "<group>"; };
+		F20000010000000000000042 /* ProgramCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgramCell.swift; sourceTree = "<group>"; };
+		F20000010000000000000043 /* HubSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HubSection.swift; sourceTree = "<group>"; };
+		F20000010000000000000044 /* LoadingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoadingView.swift; sourceTree = "<group>"; };
+		F20000010000000000000045 /* ErrorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ErrorView.swift; sourceTree = "<group>"; };
+		F20000010000000000000046 /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
+		F20000010000000000000047 /* ProfileSelectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileSelectionView.swift; sourceTree = "<group>"; };
+		F20000010000000000000048 /* DiscoverView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiscoverView.swift; sourceTree = "<group>"; };
+		F20000010000000000000049 /* MoviesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MoviesView.swift; sourceTree = "<group>"; };
+		F20000010000000000000050 /* MediaDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaDetailView.swift; sourceTree = "<group>"; };
+		F20000010000000000000051 /* LiveTVView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveTVView.swift; sourceTree = "<group>"; };
+		F20000010000000000000052 /* EPGGuideView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EPGGuideView.swift; sourceTree = "<group>"; };
+		F20000010000000000000053 /* VideoPlayerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoPlayerView.swift; sourceTree = "<group>"; };
+		F20000010000000000000054 /* DVRView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DVRView.swift; sourceTree = "<group>"; };
+		F20000010000000000000055 /* SearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchView.swift; sourceTree = "<group>"; };
+		F20000010000000000000056 /* WatchlistView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchlistView.swift; sourceTree = "<group>"; };
+		F20000010000000000000057 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		F20000010000000000000058 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		F20000010000000000000059 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		F20000010000000000000060 /* OpenFlixColors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenFlixColors.swift; sourceTree = "<group>"; };
+		F320CA143D4F275AFCF41847 /* EPGChannelCell.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Components/EPGChannelCell.swift; sourceTree = "<group>"; };
+		F95BBADA637A9FD02EB88E96 /* PlaylistsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Playlists/PlaylistsView.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		F30000010000000000000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		5B238D720EEADBEF2C5845C6 /* Playlists */ = {
+			isa = PBXGroup;
+			children = (
+				F95BBADA637A9FD02EB88E96 /* PlaylistsView.swift */,
+			);
+			name = Playlists;
+			sourceTree = "<group>";
+		};
+		5F41041B07B08D2D1955266D /* Theme */ = {
+			isa = PBXGroup;
+			children = (
+				6C6DE8C75F3A9E43CFA40640 /* EPGTheme.swift */,
+			);
+			name = Theme;
+			sourceTree = "<group>";
+		};
+		6EA791837A6438C64CA5C8B4 /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				F320CA143D4F275AFCF41847 /* EPGChannelCell.swift */,
+				62362FF3C7A381A8FBBB1A4C /* CategoryTabs.swift */,
+				D9EF07620D9D548C5EF29EB7 /* EPGTimeHeader.swift */,
+				420A255D329E1617486936E9 /* EPGProgramCell.swift */,
+			);
+			name = Components;
+			sourceTree = "<group>";
+		};
+		F40000010000000000000001 = {
+			isa = PBXGroup;
+			children = (
+				F40000010000000000000002 /* OpenFlix-tvOS */,
+				F40000010000000000000003 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		F40000010000000000000002 /* OpenFlix-tvOS */ = {
+			isa = PBXGroup;
+			children = (
+				F20000010000000000000001 /* OpenFlixApp.swift */,
+				F20000010000000000000002 /* ContentView.swift */,
+				F20000010000000000000059 /* Info.plist */,
+				F40000010000000000000004 /* Core */,
+				F40000010000000000000008 /* Models */,
+				F40000010000000000000011 /* Repositories */,
+				F40000010000000000000012 /* ViewModels */,
+				F40000010000000000000013 /* Views */,
+				F40000010000000000000020 /* Resources */,
+			);
+			path = "OpenFlix-tvOS";
+			sourceTree = "<group>";
+		};
+		F40000010000000000000003 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				F20000010000000000000000 /* OpenFlix-tvOS.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		F40000010000000000000004 /* Core */ = {
+			isa = PBXGroup;
+			children = (
+				F40000010000000000000005 /* Network */,
+				F40000010000000000000006 /* Storage */,
+				F40000010000000000000007 /* Extensions */,
+				5F41041B07B08D2D1955266D /* Theme */,
+			);
+			path = Core;
+			sourceTree = "<group>";
+		};
+		F40000010000000000000005 /* Network */ = {
+			isa = PBXGroup;
+			children = (
+				F20000010000000000000003 /* APIEndpoint.swift */,
+				F20000010000000000000004 /* NetworkError.swift */,
+				F20000010000000000000005 /* OpenFlixAPI.swift */,
+			);
+			path = Network;
+			sourceTree = "<group>";
+		};
+		F40000010000000000000006 /* Storage */ = {
+			isa = PBXGroup;
+			children = (
+				F20000010000000000000006 /* KeychainHelper.swift */,
+				F20000010000000000000007 /* UserDefaults+Extensions.swift */,
+			);
+			path = Storage;
+			sourceTree = "<group>";
+		};
+		F40000010000000000000007 /* Extensions */ = {
+			isa = PBXGroup;
+			children = (
+				F20000010000000000000008 /* String+Extensions.swift */,
+				F20000010000000000000009 /* URL+Extensions.swift */,
+				F20000010000000000000060 /* OpenFlixColors.swift */,
+			);
+			path = Extensions;
+			sourceTree = "<group>";
+		};
+		F40000010000000000000008 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				F40000010000000000000009 /* DTOs */,
+				F40000010000000000000010 /* Domain */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		F40000010000000000000009 /* DTOs */ = {
+			isa = PBXGroup;
+			children = (
+				F20000010000000000000010 /* AuthDTOs.swift */,
+				F20000010000000000000011 /* MediaDTOs.swift */,
+				F20000010000000000000012 /* LiveTVDTOs.swift */,
+				F20000010000000000000013 /* MiscDTOs.swift */,
+			);
+			path = DTOs;
+			sourceTree = "<group>";
+		};
+		F40000010000000000000010 /* Domain */ = {
+			isa = PBXGroup;
+			children = (
+				F20000010000000000000014 /* MediaItem.swift */,
+				F20000010000000000000015 /* Channel.swift */,
+				F20000010000000000000016 /* Program.swift */,
+				F20000010000000000000017 /* Profile.swift */,
+				F20000010000000000000018 /* Recording.swift */,
+				F20000010000000000000019 /* LibrarySection.swift */,
+				F20000010000000000000020 /* Source.swift */,
+				F20000010000000000000021 /* TeamPass.swift */,
+			);
+			path = Domain;
+			sourceTree = "<group>";
+		};
+		F40000010000000000000011 /* Repositories */ = {
+			isa = PBXGroup;
+			children = (
+				F20000010000000000000022 /* AuthRepository.swift */,
+				F20000010000000000000023 /* MediaRepository.swift */,
+				F20000010000000000000024 /* LiveTVRepository.swift */,
+				F20000010000000000000025 /* DVRRepository.swift */,
+				F20000010000000000000026 /* ProfileRepository.swift */,
+				F20000010000000000000027 /* PlaylistRepository.swift */,
+				F20000010000000000000028 /* WatchlistRepository.swift */,
+				F20000010000000000000029 /* SourceRepository.swift */,
+			);
+			path = Repositories;
+			sourceTree = "<group>";
+		};
+		F40000010000000000000012 /* ViewModels */ = {
+			isa = PBXGroup;
+			children = (
+				F20000010000000000000030 /* AuthViewModel.swift */,
+				F20000010000000000000031 /* DiscoverViewModel.swift */,
+				F20000010000000000000032 /* MediaDetailViewModel.swift */,
+				F20000010000000000000033 /* PlayerViewModel.swift */,
+				F20000010000000000000034 /* LiveTVViewModel.swift */,
+				F20000010000000000000035 /* DVRViewModel.swift */,
+				F20000010000000000000036 /* SearchViewModel.swift */,
+				F20000010000000000000037 /* ProfileViewModel.swift */,
+				F20000010000000000000038 /* WatchlistViewModel.swift */,
+				F20000010000000000000039 /* SettingsViewModel.swift */,
+				021C5A5ADB9634BCCF40F46D /* InstantSwitchManager.swift */,
+			);
+			path = ViewModels;
+			sourceTree = "<group>";
+		};
+		F40000010000000000000013 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				F40000010000000000000014 /* Components */,
+				F40000010000000000000015 /* Auth */,
+				F40000010000000000000016 /* Home */,
+				F40000010000000000000017 /* Media */,
+				F40000010000000000000018 /* LiveTV */,
+				F40000010000000000000019 /* Player */,
+				F40000010000000000000021 /* DVR */,
+				F40000010000000000000022 /* Search */,
+				F40000010000000000000023 /* Watchlist */,
+				F40000010000000000000024 /* Settings */,
+				5B238D720EEADBEF2C5845C6 /* Playlists */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		F40000010000000000000014 /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				F20000010000000000000040 /* MediaCard.swift */,
+				BDAC0E157FDB4CB6B2E0D0FE /* AuthenticatedImage.swift */,
+				F20000010000000000000041 /* ChannelRow.swift */,
+				F20000010000000000000042 /* ProgramCell.swift */,
+				F20000010000000000000043 /* HubSection.swift */,
+				F20000010000000000000044 /* LoadingView.swift */,
+				F20000010000000000000045 /* ErrorView.swift */,
+				E8D7406A1DC850E402A4EADD /* HeroBannerView.swift */,
+				A8A5BA42FB79F1A2FB371971 /* StreamingHubRow.swift */,
+				479A82B45979DFBA68927EFD /* FilterBar.swift */,
+				3321EE2941CB5208E131040E /* DesignComponents.swift */,
+			);
+			path = Components;
+			sourceTree = "<group>";
+		};
+		F40000010000000000000015 /* Auth */ = {
+			isa = PBXGroup;
+			children = (
+				F20000010000000000000046 /* LoginView.swift */,
+				F20000010000000000000047 /* ProfileSelectionView.swift */,
+			);
+			path = Auth;
+			sourceTree = "<group>";
+		};
+		F40000010000000000000016 /* Home */ = {
+			isa = PBXGroup;
+			children = (
+				F20000010000000000000048 /* DiscoverView.swift */,
+			);
+			path = Home;
+			sourceTree = "<group>";
+		};
+		F40000010000000000000017 /* Media */ = {
+			isa = PBXGroup;
+			children = (
+				F20000010000000000000049 /* MoviesView.swift */,
+				F20000010000000000000050 /* MediaDetailView.swift */,
+				F1F02715AFF7983496C923F7 /* SeasonView.swift */,
+			);
+			path = Media;
+			sourceTree = "<group>";
+		};
+		F40000010000000000000018 /* LiveTV */ = {
+			isa = PBXGroup;
+			children = (
+				F20000010000000000000051 /* LiveTVView.swift */,
+				F20000010000000000000052 /* EPGGuideView.swift */,
+				6EA791837A6438C64CA5C8B4 /* Components */,
+				2F06418578FD320559B8F4E7 /* EPGGridView.swift */,
+			);
+			path = LiveTV;
+			sourceTree = "<group>";
+		};
+		F40000010000000000000019 /* Player */ = {
+			isa = PBXGroup;
+			children = (
+				F20000010000000000000053 /* VideoPlayerView.swift */,
+			);
+			path = Player;
+			sourceTree = "<group>";
+		};
+		F40000010000000000000020 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				F20000010000000000000058 /* Assets.xcassets */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		F40000010000000000000021 /* DVR */ = {
+			isa = PBXGroup;
+			children = (
+				F20000010000000000000054 /* DVRView.swift */,
+				8589B86D9B86D244B246D7F0 /* DVRPlayerView.swift */,
+			);
+			path = DVR;
+			sourceTree = "<group>";
+		};
+		F40000010000000000000022 /* Search */ = {
+			isa = PBXGroup;
+			children = (
+				F20000010000000000000055 /* SearchView.swift */,
+			);
+			path = Search;
+			sourceTree = "<group>";
+		};
+		F40000010000000000000023 /* Watchlist */ = {
+			isa = PBXGroup;
+			children = (
+				F20000010000000000000056 /* WatchlistView.swift */,
+			);
+			path = Watchlist;
+			sourceTree = "<group>";
+		};
+		F40000010000000000000024 /* Settings */ = {
+			isa = PBXGroup;
+			children = (
+				F20000010000000000000057 /* SettingsView.swift */,
+			);
+			path = Settings;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		F50000010000000000000001 /* OpenFlix-tvOS */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F60000010000000000000001 /* Build configuration list for PBXNativeTarget "OpenFlix-tvOS" */;
+			buildPhases = (
+				F50000010000000000000002 /* Sources */,
+				F30000010000000000000001 /* Frameworks */,
+				F50000010000000000000003 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "OpenFlix-tvOS";
+			productName = "OpenFlix-tvOS";
+			productReference = F20000010000000000000000 /* OpenFlix-tvOS.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		F70000010000000000000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1500;
+				LastUpgradeCheck = 1500;
+				TargetAttributes = {
+					F50000010000000000000001 = {
+						CreatedOnToolsVersion = 15.0;
+					};
+				};
+			};
+			buildConfigurationList = F60000010000000000000002 /* Build configuration list for PBXProject "OpenFlix-tvOS" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = F40000010000000000000001;
+			productRefGroup = F40000010000000000000003 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				F50000010000000000000001 /* OpenFlix-tvOS */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		F50000010000000000000003 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				F10000010000000000000058 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		F50000010000000000000002 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				F10000010000000000000001 /* OpenFlixApp.swift in Sources */,
+				F10000010000000000000002 /* ContentView.swift in Sources */,
+				F10000010000000000000003 /* APIEndpoint.swift in Sources */,
+				F10000010000000000000004 /* NetworkError.swift in Sources */,
+				F10000010000000000000005 /* OpenFlixAPI.swift in Sources */,
+				F10000010000000000000006 /* KeychainHelper.swift in Sources */,
+				F10000010000000000000007 /* UserDefaults+Extensions.swift in Sources */,
+				F10000010000000000000008 /* String+Extensions.swift in Sources */,
+				F10000010000000000000009 /* URL+Extensions.swift in Sources */,
+				F10000010000000000000060 /* OpenFlixColors.swift in Sources */,
+				F10000010000000000000010 /* AuthDTOs.swift in Sources */,
+				F10000010000000000000011 /* MediaDTOs.swift in Sources */,
+				F10000010000000000000012 /* LiveTVDTOs.swift in Sources */,
+				F10000010000000000000013 /* MiscDTOs.swift in Sources */,
+				F10000010000000000000014 /* MediaItem.swift in Sources */,
+				F10000010000000000000015 /* Channel.swift in Sources */,
+				F10000010000000000000016 /* Program.swift in Sources */,
+				F10000010000000000000017 /* Profile.swift in Sources */,
+				F10000010000000000000018 /* Recording.swift in Sources */,
+				F10000010000000000000019 /* LibrarySection.swift in Sources */,
+				F10000010000000000000020 /* Source.swift in Sources */,
+				F10000010000000000000021 /* TeamPass.swift in Sources */,
+				F10000010000000000000022 /* AuthRepository.swift in Sources */,
+				F10000010000000000000023 /* MediaRepository.swift in Sources */,
+				F10000010000000000000024 /* LiveTVRepository.swift in Sources */,
+				F10000010000000000000025 /* DVRRepository.swift in Sources */,
+				F10000010000000000000026 /* ProfileRepository.swift in Sources */,
+				F10000010000000000000027 /* PlaylistRepository.swift in Sources */,
+				F10000010000000000000028 /* WatchlistRepository.swift in Sources */,
+				F10000010000000000000029 /* SourceRepository.swift in Sources */,
+				F10000010000000000000030 /* AuthViewModel.swift in Sources */,
+				F10000010000000000000031 /* DiscoverViewModel.swift in Sources */,
+				F10000010000000000000032 /* MediaDetailViewModel.swift in Sources */,
+				F10000010000000000000033 /* PlayerViewModel.swift in Sources */,
+				F10000010000000000000034 /* LiveTVViewModel.swift in Sources */,
+				F10000010000000000000035 /* DVRViewModel.swift in Sources */,
+				F10000010000000000000036 /* SearchViewModel.swift in Sources */,
+				F10000010000000000000037 /* ProfileViewModel.swift in Sources */,
+				F10000010000000000000038 /* WatchlistViewModel.swift in Sources */,
+				F10000010000000000000039 /* SettingsViewModel.swift in Sources */,
+				F10000010000000000000040 /* MediaCard.swift in Sources */,
+				752E69285B494198A0AE0960 /* AuthenticatedImage.swift in Sources */,
+				F10000010000000000000041 /* ChannelRow.swift in Sources */,
+				F10000010000000000000042 /* ProgramCell.swift in Sources */,
+				F10000010000000000000043 /* HubSection.swift in Sources */,
+				F10000010000000000000044 /* LoadingView.swift in Sources */,
+				F10000010000000000000045 /* ErrorView.swift in Sources */,
+				F10000010000000000000046 /* LoginView.swift in Sources */,
+				F10000010000000000000047 /* ProfileSelectionView.swift in Sources */,
+				F10000010000000000000048 /* DiscoverView.swift in Sources */,
+				F10000010000000000000049 /* MoviesView.swift in Sources */,
+				F10000010000000000000050 /* MediaDetailView.swift in Sources */,
+				F10000010000000000000051 /* LiveTVView.swift in Sources */,
+				F10000010000000000000052 /* EPGGuideView.swift in Sources */,
+				F10000010000000000000053 /* VideoPlayerView.swift in Sources */,
+				F10000010000000000000054 /* DVRView.swift in Sources */,
+				F10000010000000000000055 /* SearchView.swift in Sources */,
+				F10000010000000000000056 /* WatchlistView.swift in Sources */,
+				F10000010000000000000057 /* SettingsView.swift in Sources */,
+				7C75190D395290A11D8ADA0D /* EPGTheme.swift in Sources */,
+				26D96108C837682DDA20B362 /* EPGChannelCell.swift in Sources */,
+				B1EDB1242A9582BEF810E8CC /* CategoryTabs.swift in Sources */,
+				A3054FAB773930985A59A421 /* EPGTimeHeader.swift in Sources */,
+				228B7CB9B7D1A82365DFA9FB /* EPGProgramCell.swift in Sources */,
+				B591E0C77D3E0DC56ED644E5 /* EPGGridView.swift in Sources */,
+				23063362B00BF16AD645A520 /* PlaylistsView.swift in Sources */,
+				9D62EFFEEC57A93CB386ECFE /* SeasonView.swift in Sources */,
+				626FEDDFC1AE59C80D829614 /* DVRPlayerView.swift in Sources */,
+				37B56C6654A245C1CED061E6 /* HeroBannerView.swift in Sources */,
+				07AB81159CD5912039978815 /* StreamingHubRow.swift in Sources */,
+				259C91565DAEBF8C83CFBD25 /* FilterBar.swift in Sources */,
+				DCB220F9AC4AD81784D8A2A6 /* DesignComponents.swift in Sources */,
+				CCFA415A7D3E91C7A098BA11 /* InstantSwitchManager.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		F80000010000000000000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = appletvos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				TVOS_DEPLOYMENT_TARGET = 17.0;
+			};
+			name = Debug;
+		};
+		F80000010000000000000002 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = appletvos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				TVOS_DEPLOYMENT_TARGET = 17.0;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		F80000010000000000000003 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = "App Icon & Top Shelf Image";
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "OpenFlix-tvOS/Info.plist";
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UIUserInterfaceStyle = Dark;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.openflix.tvos;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 3;
+			};
+			name = Debug;
+		};
+		F80000010000000000000004 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = "App Icon & Top Shelf Image";
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "OpenFlix-tvOS/Info.plist";
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UIUserInterfaceStyle = Dark;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.openflix.tvos;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 3;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		F60000010000000000000001 /* Build configuration list for PBXNativeTarget "OpenFlix-tvOS" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F80000010000000000000003 /* Debug */,
+				F80000010000000000000004 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		F60000010000000000000002 /* Build configuration list for PBXProject "OpenFlix-tvOS" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F80000010000000000000001 /* Debug */,
+				F80000010000000000000002 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = F70000010000000000000001 /* Project object */;
+}
