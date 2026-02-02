@@ -1,0 +1,136 @@
+{
+  "source": "/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/OpenFlix-tvOS/OpenFlix-tvOS/Views/LiveTV/LiveTVView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Loading %@...",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 197
+        }
+      },
+      {
+        "comment": "",
+        "key": "Try Again",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 215
+        }
+      },
+      {
+        "comment": "",
+        "key": "Close",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 222
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 275
+        }
+      },
+      {
+        "comment": "",
+        "key": "CH",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 324
+        }
+      },
+      {
+        "comment": "",
+        "key": "Menu",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 329
+        }
+      },
+      {
+        "comment": "",
+        "key": "Guide",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 332
+        }
+      },
+      {
+        "comment": "",
+        "key": "• %@",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 515
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 573
+        }
+      },
+      {
+        "comment": "",
+        "key": "Select to switch now",
+        "location": {
+          "startingColumn": 23,
+          "startingLine": 587
+        }
+      },
+      {
+        "comment": "",
+        "key": "Back to cancel",
+        "location": {
+          "startingColumn": 23,
+          "startingLine": 588
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 615
+        }
+      },
+      {
+        "comment": "",
+        "key": "Quick Guide",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 660
+        }
+      },
+      {
+        "comment": "",
+        "key": "Press Back to close",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 663
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 715
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lldm",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 746
+        }
+      }
+    ]
+  },
+  "version": 1
+}

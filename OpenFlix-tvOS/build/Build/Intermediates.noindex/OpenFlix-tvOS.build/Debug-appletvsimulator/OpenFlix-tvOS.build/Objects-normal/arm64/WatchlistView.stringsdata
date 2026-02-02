@@ -1,0 +1,24 @@
+{
+  "source": "/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/OpenFlix-tvOS/OpenFlix-tvOS/Views/Watchlist/WatchlistView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Watchlist",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 27
+        }
+      },
+      {
+        "comment": "",
+        "key": "Remove from Watchlist",
+        "location": {
+          "startingColumn": 39,
+          "startingLine": 54
+        }
+      }
+    ]
+  },
+  "version": 1
+}

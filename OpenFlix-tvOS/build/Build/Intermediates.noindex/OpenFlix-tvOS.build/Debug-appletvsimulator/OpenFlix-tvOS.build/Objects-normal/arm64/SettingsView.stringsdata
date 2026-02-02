@@ -1,0 +1,632 @@
+{
+  "source": "/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/OpenFlix-tvOS/OpenFlix-tvOS/Views/Settings/SettingsView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Sign Out",
+        "location": {
+          "startingColumn": 29,
+          "startingLine": 180
+        }
+      },
+      {
+        "comment": "",
+        "key": "Settings",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 174
+        }
+      },
+      {
+        "comment": "",
+        "key": "Server",
+        "location": {
+          "startingColumn": 25,
+          "startingLine": 14
+        }
+      },
+      {
+        "comment": "",
+        "key": "Profile",
+        "location": {
+          "startingColumn": 25,
+          "startingLine": 42
+        }
+      },
+      {
+        "comment": "",
+        "key": "Library",
+        "location": {
+          "startingColumn": 25,
+          "startingLine": 58
+        }
+      },
+      {
+        "comment": "",
+        "key": "Sources",
+        "location": {
+          "startingColumn": 25,
+          "startingLine": 75
+        }
+      },
+      {
+        "comment": "",
+        "key": "Playback",
+        "location": {
+          "startingColumn": 25,
+          "startingLine": 88
+        }
+      },
+      {
+        "comment": "",
+        "key": "DVR",
+        "location": {
+          "startingColumn": 29,
+          "startingLine": 100
+        }
+      },
+      {
+        "comment": "",
+        "key": "Live TV",
+        "location": {
+          "startingColumn": 29,
+          "startingLine": 107
+        }
+      },
+      {
+        "comment": "",
+        "key": "Display",
+        "location": {
+          "startingColumn": 25,
+          "startingLine": 120
+        }
+      },
+      {
+        "comment": "",
+        "key": "About",
+        "location": {
+          "startingColumn": 25,
+          "startingLine": 134
+        }
+      },
+      {
+        "comment": "",
+        "key": "Server Name",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 17
+        }
+      },
+      {
+        "comment": "",
+        "key": "Version",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 24
+        }
+      },
+      {
+        "comment": "",
+        "key": "Server URL",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 33
+        }
+      },
+      {
+        "comment": "",
+        "key": "Switch Profile",
+        "location": {
+          "startingColumn": 32,
+          "startingLine": 51
+        }
+      },
+      {
+        "comment": "",
+        "key": "Current Profile",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 45
+        }
+      },
+      {
+        "comment": "",
+        "key": "Watchlist",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 62
+        }
+      },
+      {
+        "comment": "",
+        "key": "Playlists",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 69
+        }
+      },
+      {
+        "comment": "",
+        "key": "Manage Sources",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 79
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld channels",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 81
+        }
+      },
+      {
+        "comment": "",
+        "key": "Auto-Play Next Episode",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 89
+        }
+      },
+      {
+        "comment": "",
+        "key": "Skip Intros",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 91
+        }
+      },
+      {
+        "comment": "",
+        "key": "Skip Credits",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 93
+        }
+      },
+      {
+        "comment": "",
+        "key": "Show Subtitles",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 95
+        }
+      },
+      {
+        "comment": "",
+        "key": "Commercial Skip",
+        "location": {
+          "startingColumn": 32,
+          "startingLine": 101
+        }
+      },
+      {
+        "comment": "",
+        "key": "Channel Surfing",
+        "location": {
+          "startingColumn": 32,
+          "startingLine": 108
+        }
+      },
+      {
+        "comment": "",
+        "key": "EPG Days to Load",
+        "location": {
+          "startingColumn": 32,
+          "startingLine": 110
+        }
+      },
+      {
+        "comment": "",
+        "key": "1 Day",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 111
+        }
+      },
+      {
+        "comment": "",
+        "key": "3 Days",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 112
+        }
+      },
+      {
+        "comment": "",
+        "key": "7 Days",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 113
+        }
+      },
+      {
+        "comment": "",
+        "key": "14 Days",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 114
+        }
+      },
+      {
+        "comment": "",
+        "key": "Screensaver",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 121
+        }
+      },
+      {
+        "comment": "",
+        "key": "Screensaver Delay",
+        "location": {
+          "startingColumn": 32,
+          "startingLine": 124
+        }
+      },
+      {
+        "comment": "",
+        "key": "2 Minutes",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 125
+        }
+      },
+      {
+        "comment": "",
+        "key": "5 Minutes",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 126
+        }
+      },
+      {
+        "comment": "",
+        "key": "10 Minutes",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 127
+        }
+      },
+      {
+        "comment": "",
+        "key": "15 Minutes",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 128
+        }
+      },
+      {
+        "comment": "",
+        "key": "App Version",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 136
+        }
+      },
+      {
+        "comment": "",
+        "key": "%@ (%@)",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 138
+        }
+      },
+      {
+        "comment": "",
+        "key": "Capabilities",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 144
+        }
+      },
+      {
+        "comment": "",
+        "key": "Sign Out",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 168
+        }
+      },
+      {
+        "comment": "",
+        "key": "Sign Out",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 181
+        }
+      },
+      {
+        "comment": "",
+        "key": "Cancel",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 184
+        }
+      },
+      {
+        "comment": "",
+        "key": "Are you sure you want to sign out?",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 186
+        }
+      },
+      {
+        "comment": "",
+        "key": "Sources",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 234
+        }
+      },
+      {
+        "comment": "",
+        "key": "Source Type",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 216
+        }
+      },
+      {
+        "comment": "",
+        "key": "Add M3U Source",
+        "location": {
+          "startingColumn": 31,
+          "startingLine": 239
+        }
+      },
+      {
+        "comment": "",
+        "key": "Add Xtream Source",
+        "location": {
+          "startingColumn": 31,
+          "startingLine": 242
+        }
+      },
+      {
+        "comment": "",
+        "key": "Disabled",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 321
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld channels",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 307
+        }
+      },
+      {
+        "comment": "",
+        "key": "Updated %@",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 312
+        }
+      },
+      {
+        "comment": "",
+        "key": "Refresh",
+        "location": {
+          "startingColumn": 23,
+          "startingLine": 333
+        }
+      },
+      {
+        "comment": "",
+        "key": "Delete",
+        "location": {
+          "startingColumn": 23,
+          "startingLine": 336
+        }
+      },
+      {
+        "comment": "",
+        "key": "Disabled",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 374
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld channels",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 354
+        }
+      },
+      {
+        "comment": "",
+        "key": "Expired",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 360
+        }
+      },
+      {
+        "comment": "",
+        "key": "Expires in %lld days",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 364
+        }
+      },
+      {
+        "comment": "",
+        "key": "Test Connection",
+        "location": {
+          "startingColumn": 23,
+          "startingLine": 386
+        }
+      },
+      {
+        "comment": "",
+        "key": "Refresh",
+        "location": {
+          "startingColumn": 23,
+          "startingLine": 389
+        }
+      },
+      {
+        "comment": "",
+        "key": "Delete",
+        "location": {
+          "startingColumn": 23,
+          "startingLine": 392
+        }
+      },
+      {
+        "comment": "",
+        "key": "Disabled",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 421
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld channels",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 411
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld programs",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 412
+        }
+      },
+      {
+        "comment": "",
+        "key": "Refresh",
+        "location": {
+          "startingColumn": 23,
+          "startingLine": 433
+        }
+      },
+      {
+        "comment": "",
+        "key": "Delete",
+        "location": {
+          "startingColumn": 23,
+          "startingLine": 436
+        }
+      },
+      {
+        "comment": "",
+        "key": "Add M3U Source",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 468
+        }
+      },
+      {
+        "comment": "",
+        "key": "Name",
+        "location": {
+          "startingColumn": 27,
+          "startingLine": 455
+        }
+      },
+      {
+        "comment": "",
+        "key": "M3U URL",
+        "location": {
+          "startingColumn": 27,
+          "startingLine": 456
+        }
+      },
+      {
+        "comment": "",
+        "key": "EPG URL (optional)",
+        "location": {
+          "startingColumn": 27,
+          "startingLine": 459
+        }
+      },
+      {
+        "comment": "",
+        "key": "Cancel",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 471
+        }
+      },
+      {
+        "comment": "",
+        "key": "Add",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 474
+        }
+      },
+      {
+        "comment": "",
+        "key": "Add Xtream Source",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 528
+        }
+      },
+      {
+        "comment": "",
+        "key": "Name",
+        "location": {
+          "startingColumn": 27,
+          "startingLine": 515
+        }
+      },
+      {
+        "comment": "",
+        "key": "Server URL",
+        "location": {
+          "startingColumn": 27,
+          "startingLine": 516
+        }
+      },
+      {
+        "comment": "",
+        "key": "Username",
+        "location": {
+          "startingColumn": 27,
+          "startingLine": 519
+        }
+      },
+      {
+        "comment": "",
+        "key": "Password",
+        "location": {
+          "startingColumn": 29,
+          "startingLine": 521
+        }
+      },
+      {
+        "comment": "",
+        "key": "Cancel",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 531
+        }
+      },
+      {
+        "comment": "",
+        "key": "Add",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 534
+        }
+      }
+    ]
+  },
+  "version": 1
+}

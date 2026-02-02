@@ -1,0 +1,56 @@
+{
+  "source": "/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/OpenFlix-tvOS/OpenFlix-tvOS/Views/Media/MoviesView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Movies",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 41
+        }
+      },
+      {
+        "comment": "",
+        "key": "All Movies",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 114
+        }
+      },
+      {
+        "comment": "",
+        "key": "Sort",
+        "location": {
+          "startingColumn": 23,
+          "startingLine": 138
+        }
+      },
+      {
+        "comment": "",
+        "key": "TV Shows",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 326
+        }
+      },
+      {
+        "comment": "",
+        "key": "All TV Shows",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 397
+        }
+      },
+      {
+        "comment": "",
+        "key": "Sort",
+        "location": {
+          "startingColumn": 23,
+          "startingLine": 420
+        }
+      }
+    ]
+  },
+  "version": 1
+}

@@ -1,0 +1,71 @@
+/*
+  Localizable.strings
+  OpenFlix-tvOS
+
+  Created for OpenFlix tvOS App
+*/
+
+// General
+"app_name" = "OpenFlix";
+"loading" = "Loading...";
+"error" = "Error";
+"retry" = "Try Again";
+"cancel" = "Cancel";
+"done" = "Done";
+"save" = "Save";
+"delete" = "Delete";
+"close" = "Close";
+
+// Auth
+"sign_in" = "Sign In";
+"sign_out" = "Sign Out";
+"create_account" = "Create Account";
+"username" = "Username";
+"password" = "Password";
+"email" = "Email";
+"remember_me" = "Remember Me";
+"server_url" = "Server URL";
+
+// Navigation
+"home" = "Home";
+"movies" = "Movies";
+"tv_shows" = "TV Shows";
+"live_tv" = "Live TV";
+"dvr" = "DVR";
+"search" = "Search";
+"settings" = "Settings";
+"watchlist" = "Watchlist";
+
+// Media
+"play" = "Play";
+"resume" = "Resume";
+"add_to_watchlist" = "Add to Watchlist";
+"remove_from_watchlist" = "Remove from Watchlist";
+"mark_as_watched" = "Mark as Watched";
+"mark_as_unwatched" = "Mark as Unwatched";
+"continue_watching" = "Continue Watching";
+"recently_added" = "Recently Added";
+
+// Live TV
+"channels" = "Channels";
+"guide" = "TV Guide";
+"now_playing" = "Now Playing";
+"up_next" = "Up Next";
+"favorites" = "Favorites";
+"all_channels" = "All Channels";
+
+// DVR
+"recordings" = "Recordings";
+"scheduled" = "Scheduled";
+"series_rules" = "Series";
+"record" = "Record";
+"recording_now" = "Recording Now";
+
+// Settings
+"playback" = "Playback";
+"auto_play_next" = "Auto-Play Next Episode";
+"skip_intros" = "Skip Intros";
+"skip_credits" = "Skip Credits";
+"subtitles" = "Subtitles";
+"sources" = "Sources";
+"about" = "About";

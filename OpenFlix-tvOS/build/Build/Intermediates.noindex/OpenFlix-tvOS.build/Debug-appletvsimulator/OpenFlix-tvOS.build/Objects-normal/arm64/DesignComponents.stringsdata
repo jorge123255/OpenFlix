@@ -1,0 +1,56 @@
+{
+  "source": "/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/OpenFlix-tvOS/OpenFlix-tvOS/Views/Components/DesignComponents.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "%lld",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 200
+        }
+      },
+      {
+        "comment": "",
+        "key": "EPISODE %lld",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 343
+        }
+      },
+      {
+        "comment": "",
+        "key": "Season",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 418
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 423
+        }
+      },
+      {
+        "comment": "",
+        "key": "Season %lld",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 433
+        }
+      },
+      {
+        "comment": "",
+        "key": "·",
+        "location": {
+          "startingColumn": 14,
+          "startingLine": 489
+        }
+      }
+    ]
+  },
+  "version": 1
+}

@@ -1,0 +1,16 @@
+{
+  "source": "/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/OpenFlix-tvOS/OpenFlix-tvOS/Core/Theme/EPGTheme.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "LIVE",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 253
+        }
+      }
+    ]
+  },
+  "version": 1
+}

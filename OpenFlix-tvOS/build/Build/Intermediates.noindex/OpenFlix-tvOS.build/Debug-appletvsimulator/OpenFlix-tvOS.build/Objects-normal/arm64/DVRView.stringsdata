@@ -1,0 +1,72 @@
+{
+  "source": "/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/OpenFlix-tvOS/OpenFlix-tvOS/Views/DVR/DVRView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "DVR",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 22
+        }
+      },
+      {
+        "comment": "",
+        "key": "Tab",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 42
+        }
+      },
+      {
+        "comment": "",
+        "key": "FAILED",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 255
+        }
+      },
+      {
+        "comment": "",
+        "key": "Delete",
+        "location": {
+          "startingColumn": 23,
+          "startingLine": 284
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 376
+        }
+      },
+      {
+        "comment": "",
+        "key": "Disabled",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 360
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld recordings",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 364
+        }
+      },
+      {
+        "comment": "",
+        "key": "Keep %lld",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 367
+        }
+      }
+    ]
+  },
+  "version": 1
+}

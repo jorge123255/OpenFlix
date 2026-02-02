@@ -1,0 +1,24 @@
+{
+  "source": "/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/OpenFlix-tvOS/OpenFlix-tvOS/Views/Components/HubSection.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "S%lld, E%lld",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 118
+        }
+      },
+      {
+        "comment": "",
+        "key": "·",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 123
+        }
+      }
+    ]
+  },
+  "version": 1
+}
