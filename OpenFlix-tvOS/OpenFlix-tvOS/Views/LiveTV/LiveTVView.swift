@@ -587,17 +587,15 @@ struct LiveTVPlayerView: View {
         Task {
             viewModel.selectChannel(newChannel)
 
-            // Check if we have a pre-buffered player for instant switch
-            if let preloadedPlayer = instantSwitchManager.getPreloadedPlayer(for: newChannel) {
-                // Use the pre-buffered player for instant switch
+            // Load the channel normally - instant switch pre-buffering helps with faster start
+            // but we still go through PlayerViewModel for proper state management
+            let isPreBuffered = instantSwitchManager.isChannelReady(newChannel)
+            if isPreBuffered {
                 instantSwitchManager.removeFromBuffer(newChannel)
-                playerViewModel.player?.pause()
-                playerViewModel.player = preloadedPlayer
-                preloadedPlayer.play()
-
-                // Show instant switch indicator
                 showPlayerToast("INSTANT", icon: "bolt.fill")
-            } else if let urlString = newChannel.streamUrl, let url = URL(string: urlString) {
+            }
+
+            if let urlString = newChannel.streamUrl, let url = URL(string: urlString) {
                 await playerViewModel.loadLiveChannel(url: url)
             } else if let url = try? await viewModel.getChannelStream(newChannel) {
                 await playerViewModel.loadLiveChannel(url: url)
@@ -922,7 +920,7 @@ struct LiveTVControlsOverlay: View {
                     .background(Color.black.opacity(0.6))
                     .cornerRadius(8)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.card)
                 .focused($focusedControl, equals: .streamInfo)
                 .scaleEffect(focusedControl == .streamInfo ? 1.05 : 1.0)
             }
@@ -1052,14 +1050,8 @@ struct LiveTVControlsOverlay: View {
                         .foregroundColor(.white)
                 }
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.card)
             .focused($focusedControl, equals: .playPause)
-            .scaleEffect(focusedControl == .playPause ? 1.1 : 1.0)
-            .overlay(
-                Circle()
-                    .stroke(focusedControl == .playPause ? Color.white : .clear, lineWidth: 3)
-                    .frame(width: 100, height: 100)
-            )
 
             // Skip forward 10s
             controlButton(
@@ -1167,13 +1159,8 @@ struct LiveTVControlsOverlay: View {
                     .background(EPGTheme.accent.opacity(0.3))
                     .cornerRadius(10)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.card)
             .focused($focusedControl, equals: .guide)
-            .scaleEffect(focusedControl == .guide ? 1.05 : 1.0)
-            .overlay(
-                RoundedRectangle(cornerRadius: 10)
-                    .stroke(focusedControl == .guide ? Color.white : .clear, lineWidth: 2)
-            )
 
             Spacer()
 
@@ -1197,13 +1184,8 @@ struct LiveTVControlsOverlay: View {
                     .background(Color.white.opacity(0.2))
                     .cornerRadius(10)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.card)
             .focused($focusedControl, equals: .channels)
-            .scaleEffect(focusedControl == .channels ? 1.05 : 1.0)
-            .overlay(
-                RoundedRectangle(cornerRadius: 10)
-                    .stroke(focusedControl == .channels ? Color.white : .clear, lineWidth: 2)
-            )
         }
     }
 
@@ -1225,13 +1207,8 @@ struct LiveTVControlsOverlay: View {
                 .background(Color.black.opacity(0.6))
                 .clipShape(Circle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.card)
         .focused($focusedControl, equals: control)
-        .scaleEffect(focusedControl == control ? 1.1 : 1.0)
-        .overlay(
-            Circle()
-                .stroke(focusedControl == control ? Color.white : .clear, lineWidth: 2)
-        )
     }
 
     private func actionButton(
@@ -1255,14 +1232,9 @@ struct LiveTVControlsOverlay: View {
             .background(Color.white.opacity(isEnabled ? 0.15 : 0.05))
             .cornerRadius(12)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.card)
         .disabled(!isEnabled)
         .focused($focusedControl, equals: control)
-        .scaleEffect(focusedControl == control ? 1.05 : 1.0)
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(focusedControl == control ? Color.white : .clear, lineWidth: 2)
-        )
     }
 
     private func keyboardHint(key: String, action: String) -> some View {
@@ -1356,7 +1328,7 @@ struct LiveTVControlsOverlay: View {
                                 )
                                 .cornerRadius(12)
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.card)
                     }
                 }
                 .padding(.horizontal, 60)
@@ -1706,7 +1678,7 @@ struct MiniEPGChannelRow: View {
                     .stroke(isSelected ? EPGTheme.accent : (isFocused ? .white.opacity(0.5) : .clear), lineWidth: 2)
             )
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.card)
     }
 }
 

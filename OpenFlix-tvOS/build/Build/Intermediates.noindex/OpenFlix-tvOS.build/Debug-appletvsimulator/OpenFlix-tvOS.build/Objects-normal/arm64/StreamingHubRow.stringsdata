@@ -1,0 +1,16 @@
+{
+  "source": "/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/OpenFlix-tvOS/OpenFlix-tvOS/Views/Components/StreamingHubRow.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "See All",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 47
+        }
+      }
+    ]
+  },
+  "version": 1
+}
