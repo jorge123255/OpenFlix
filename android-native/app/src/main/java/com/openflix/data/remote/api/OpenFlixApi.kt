@@ -368,6 +368,9 @@ interface OpenFlixApi {
     @GET("server/capabilities")
     suspend fun getServerCapabilities(): Response<ServerCapabilitiesDto>
 
+    @GET("api/client/settings")
+    suspend fun getServerSettings(): Response<ServerSettingsResponse>
+
     // === On Later (Browse upcoming content) ===
 
     @GET("api/onlater/stats")
