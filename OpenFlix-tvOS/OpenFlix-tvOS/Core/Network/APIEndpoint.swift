@@ -37,6 +37,8 @@ enum APIEndpoint {
     case getMediaChildren(key: Int)
     case getRecentlyAdded
     case getOnDeck
+    case getSectionRecentlyAdded(sectionId: Int)
+    case getSectionNewest(sectionId: Int)
 
     // MARK: - Hubs
     case getHubs(sectionId: Int)
@@ -201,6 +203,7 @@ enum APIEndpoint {
     case getServerInfo
     case getCapabilities
     case getIdentity
+    case getServerSettings
 
     // MARK: - Client Logs
     case submitLogs(entries: [[String: Any]])
@@ -238,6 +241,8 @@ enum APIEndpoint {
         case .getMediaChildren(let key): return "/library/metadata/\(key)/children"
         case .getRecentlyAdded: return "/library/recentlyAdded"
         case .getOnDeck: return "/library/onDeck"
+        case .getSectionRecentlyAdded(let sectionId): return "/library/sections/\(sectionId)/recentlyAdded"
+        case .getSectionNewest(let sectionId): return "/library/sections/\(sectionId)/newest"
 
         // Hubs
         case .getHubs(let sectionId): return "/hubs/sections/\(sectionId)"
@@ -404,6 +409,7 @@ enum APIEndpoint {
         case .getServerInfo: return "/server/info"
         case .getCapabilities: return "/server/capabilities"
         case .getIdentity: return "/identity"
+        case .getServerSettings: return "/api/client/settings"
 
         // Client Logs
         case .submitLogs: return "/api/client-logs"
@@ -480,6 +486,8 @@ enum APIEndpoint {
         switch self {
         case .getLibraryItems(_, let start, let size, let sort, let filters):
             var items: [URLQueryItem] = []
+            // Request extended metadata including Genre, Director, etc.
+            items.append(URLQueryItem(name: "includeElements", value: "Genre"))
             if let start = start { items.append(URLQueryItem(name: "X-Plex-Container-Start", value: "\(start)")) }
             if let size = size { items.append(URLQueryItem(name: "X-Plex-Container-Size", value: "\(size)")) }
             if let sort = sort { items.append(URLQueryItem(name: "sort", value: sort)) }
@@ -488,7 +496,7 @@ enum APIEndpoint {
                     items.append(URLQueryItem(name: key, value: value))
                 }
             }
-            return items.isEmpty ? nil : items
+            return items
 
         case .search(let query, let limit):
             var items = [URLQueryItem(name: "query", value: query)]

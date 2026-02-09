@@ -15,6 +15,10 @@ class MediaDetailViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var error: String?
 
+    // TMDB-enhanced metadata (for movies without server metadata)
+    @Published var tmdbInfo: TMDBMovieInfo?
+    @Published var isLoadingTMDB = false
+
     private var mediaId: Int = 0
 
     // MARK: - Load
@@ -46,6 +50,12 @@ class MediaDetailViewModel: ObservableObject {
             if item.type == .show {
                 NSLog("MediaDetailViewModel: Loading seasons for show")
                 await loadSeasons(showId: id)
+            }
+
+            // If movie is missing metadata, fetch from TMDB
+            if item.type == .movie && needsTMDBMetadata(item) {
+                NSLog("MediaDetailViewModel: Movie missing metadata, fetching from TMDB...")
+                await loadTMDBMetadata(for: item)
             }
 
         } catch let networkError as NetworkError {
@@ -141,5 +151,85 @@ class MediaDetailViewModel: ObservableObject {
     var nextUpEpisode: MediaItem? {
         // Find first unwatched episode
         episodes.first { !$0.isWatched }
+    }
+
+    // MARK: - TMDB Metadata
+
+    /// Check if movie is missing metadata that TMDB can provide
+    private func needsTMDBMetadata(_ item: MediaItem) -> Bool {
+        // If missing summary OR cast, we should fetch from TMDB
+        let missingSummary = item.summary == nil || item.summary?.isEmpty == true
+        let missingCast = item.roles.isEmpty
+        let missingGenres = item.genres.isEmpty
+        return missingSummary || missingCast || missingGenres
+    }
+
+    /// Fetch metadata from TMDB for movies without server metadata
+    private func loadTMDBMetadata(for item: MediaItem) async {
+        isLoadingTMDB = true
+        defer { isLoadingTMDB = false }
+
+        let info = await TMDBService.shared.getMovieDetails(title: item.title, year: item.year)
+        if let info = info {
+            tmdbInfo = info
+            NSLog("MediaDetailViewModel: Loaded TMDB metadata - summary: \(info.overview?.prefix(50) ?? "nil"), cast: \(info.cast.count), genres: \(info.genres)")
+        } else {
+            NSLog("MediaDetailViewModel: No TMDB metadata found for '\(item.title)'")
+        }
+    }
+
+    // MARK: - Combined Metadata Accessors
+
+    /// Get summary - prefer server data, fallback to TMDB
+    var effectiveSummary: String? {
+        if let summary = mediaItem?.summary, !summary.isEmpty {
+            return summary
+        }
+        return tmdbInfo?.overview
+    }
+
+    /// Get genres - prefer server data, fallback to TMDB
+    var effectiveGenres: [String] {
+        if let genres = mediaItem?.genres, !genres.isEmpty {
+            return genres
+        }
+        return tmdbInfo?.genres ?? []
+    }
+
+    /// Get cast - prefer server data, fallback to TMDB
+    var effectiveCast: [CastMember] {
+        if let roles = mediaItem?.roles, !roles.isEmpty {
+            return roles
+        }
+        // Generate unique IDs for TMDB cast members using enumeration
+        return tmdbInfo?.cast.enumerated().map { index, castMember in
+            CastMember(
+                id: 10000 + index,  // Use offset to avoid conflicts with server IDs
+                name: castMember.name,
+                role: castMember.character,
+                thumb: castMember.profileURL?.absoluteString
+            )
+        } ?? []
+    }
+
+    /// Get directors - prefer server data, fallback to TMDB
+    var effectiveDirectors: [String] {
+        if let directors = mediaItem?.directors, !directors.isEmpty {
+            return directors
+        }
+        return tmdbInfo?.directors ?? []
+    }
+
+    /// Get backdrop URL - prefer TMDB high quality
+    var effectiveBackdropURL: URL? {
+        tmdbInfo?.backdropURL
+    }
+
+    /// Get audience rating - prefer server data, fallback to TMDB
+    var effectiveRating: Double? {
+        if let rating = mediaItem?.audienceRating, rating > 0 {
+            return rating
+        }
+        return tmdbInfo?.voteAverage
     }
 }

@@ -429,4 +429,4 @@ If issues arise:
 
 This is a comprehensive, professional-grade Live TV player that rivals commercial streaming apps. All critical features implemented, audio issue resolved, and multi-platform support complete.
 
-Generated with ❤️ by Claude Code
+Generated with ❤️ by the OpenFlix Team

@@ -22,11 +22,15 @@ import com.openflix.presentation.screens.media.MediaDetailViewModel_HiltModules;
 import com.openflix.presentation.screens.movies.MoviesViewModel_HiltModules;
 import com.openflix.presentation.screens.onlater.OnLaterViewModel_HiltModules;
 import com.openflix.presentation.screens.player.VideoPlayerViewModel_HiltModules;
+import com.openflix.presentation.screens.playlist.PlaylistsViewModel_HiltModules;
+import com.openflix.presentation.screens.profile.ProfileSelectionViewModel_HiltModules;
 import com.openflix.presentation.screens.search.SearchViewModel_HiltModules;
 import com.openflix.presentation.screens.settings.RemoteMappingViewModel_HiltModules;
 import com.openflix.presentation.screens.settings.SettingsViewModel_HiltModules;
+import com.openflix.presentation.screens.sources.SourcesViewModel_HiltModules;
 import com.openflix.presentation.screens.teampass.TeamPassViewModel_HiltModules;
 import com.openflix.presentation.screens.tvshows.TVShowsViewModel_HiltModules;
+import com.openflix.presentation.screens.watchlist.WatchlistViewModel_HiltModules;
 import com.openflix.presentation.screens.watchstats.WatchStatsViewModel_HiltModules;
 import dagger.Binds;
 import dagger.Component;
@@ -203,13 +207,17 @@ public final class OpenFlixApp_HiltComponents {
           OnLaterViewModel_HiltModules.KeyModule.class,
           ActivityCBuilderModule.class,
           ViewModelCBuilderModule.class,
+          PlaylistsViewModel_HiltModules.KeyModule.class,
+          ProfileSelectionViewModel_HiltModules.KeyModule.class,
           RemoteMappingViewModel_HiltModules.KeyModule.class,
           SearchViewModel_HiltModules.KeyModule.class,
           SettingsViewModel_HiltModules.KeyModule.class,
+          SourcesViewModel_HiltModules.KeyModule.class,
           TVShowsViewModel_HiltModules.KeyModule.class,
           TeamPassViewModel_HiltModules.KeyModule.class,
           VideoPlayerViewModel_HiltModules.KeyModule.class,
-          WatchStatsViewModel_HiltModules.KeyModule.class
+          WatchStatsViewModel_HiltModules.KeyModule.class,
+          WatchlistViewModel_HiltModules.KeyModule.class
       }
   )
   @ActivityRetainedScoped
@@ -264,13 +272,17 @@ public final class OpenFlixApp_HiltComponents {
           MoviesViewModel_HiltModules.BindsModule.class,
           MultiviewViewModel_HiltModules.BindsModule.class,
           OnLaterViewModel_HiltModules.BindsModule.class,
+          PlaylistsViewModel_HiltModules.BindsModule.class,
+          ProfileSelectionViewModel_HiltModules.BindsModule.class,
           RemoteMappingViewModel_HiltModules.BindsModule.class,
           SearchViewModel_HiltModules.BindsModule.class,
           SettingsViewModel_HiltModules.BindsModule.class,
+          SourcesViewModel_HiltModules.BindsModule.class,
           TVShowsViewModel_HiltModules.BindsModule.class,
           TeamPassViewModel_HiltModules.BindsModule.class,
           VideoPlayerViewModel_HiltModules.BindsModule.class,
-          WatchStatsViewModel_HiltModules.BindsModule.class
+          WatchStatsViewModel_HiltModules.BindsModule.class,
+          WatchlistViewModel_HiltModules.BindsModule.class
       }
   )
   @ViewModelScoped

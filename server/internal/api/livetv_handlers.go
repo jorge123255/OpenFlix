@@ -35,9 +35,13 @@ func (s *Server) getLiveTVSources(c *gin.Context) {
 // addLiveTVSource adds a new M3U source
 func (s *Server) addLiveTVSource(c *gin.Context) {
 	var req struct {
-		Name   string `json:"name" binding:"required"`
-		URL    string `json:"url" binding:"required"`
-		EPGUrl string `json:"epgUrl"`
+		Name            string `json:"name" binding:"required"`
+		URL             string `json:"url" binding:"required"`
+		EPGUrl          string `json:"epgUrl"`
+		ImportVOD       bool   `json:"importVod"`
+		ImportSeries    bool   `json:"importSeries"`
+		VODLibraryID    *uint  `json:"vodLibraryId"`
+		SeriesLibraryID *uint  `json:"seriesLibraryId"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -45,10 +49,14 @@ func (s *Server) addLiveTVSource(c *gin.Context) {
 	}
 
 	source := models.M3USource{
-		Name:    req.Name,
-		URL:     req.URL,
-		EPGUrl:  req.EPGUrl,
-		Enabled: true,
+		Name:            req.Name,
+		URL:             req.URL,
+		EPGUrl:          req.EPGUrl,
+		Enabled:         true,
+		ImportVOD:       req.ImportVOD,
+		ImportSeries:    req.ImportSeries,
+		VODLibraryID:    req.VODLibraryID,
+		SeriesLibraryID: req.SeriesLibraryID,
 	}
 
 	if err := s.db.Create(&source).Error; err != nil {

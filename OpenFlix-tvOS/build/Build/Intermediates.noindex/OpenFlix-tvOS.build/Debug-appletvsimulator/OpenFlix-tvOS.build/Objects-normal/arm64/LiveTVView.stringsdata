@@ -7,7 +7,7 @@
         "key": "Loading %@...",
         "location": {
           "startingColumn": 18,
-          "startingLine": 197
+          "startingLine": 346
         }
       },
       {
@@ -15,7 +15,7 @@
         "key": "Try Again",
         "location": {
           "startingColumn": 24,
-          "startingLine": 215
+          "startingLine": 364
         }
       },
       {
@@ -23,7 +23,7 @@
         "key": "Close",
         "location": {
           "startingColumn": 24,
-          "startingLine": 222
+          "startingLine": 371
         }
       },
       {
@@ -31,7 +31,7 @@
         "key": "%lld",
         "location": {
           "startingColumn": 26,
-          "startingLine": 275
+          "startingLine": 424
         }
       },
       {
@@ -39,7 +39,7 @@
         "key": "CH",
         "location": {
           "startingColumn": 18,
-          "startingLine": 324
+          "startingLine": 473
         }
       },
       {
@@ -47,7 +47,7 @@
         "key": "Menu",
         "location": {
           "startingColumn": 18,
-          "startingLine": 329
+          "startingLine": 478
         }
       },
       {
@@ -55,7 +55,71 @@
         "key": "Guide",
         "location": {
           "startingColumn": 18,
-          "startingLine": 332
+          "startingLine": 481
+        }
+      },
+      {
+        "comment": "",
+        "key": "Go to Channel",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 698
+        }
+      },
+      {
+        "comment": "",
+        "key": "Press Back to cancel",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 707
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 972
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld%%",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 1000
+        }
+      },
+      {
+        "comment": "",
+        "key": "Guide",
+        "location": {
+          "startingColumn": 23,
+          "startingLine": 1152
+        }
+      },
+      {
+        "comment": "",
+        "key": "Channels",
+        "location": {
+          "startingColumn": 23,
+          "startingLine": 1177
+        }
+      },
+      {
+        "comment": "",
+        "key": "Sleep Timer",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 1301
+        }
+      },
+      {
+        "comment": "",
+        "key": "Cancel",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 1332
         }
       },
       {
@@ -63,7 +127,7 @@
         "key": "• %@",
         "location": {
           "startingColumn": 38,
-          "startingLine": 515
+          "startingLine": 1403
         }
       },
       {
@@ -71,7 +135,7 @@
         "key": "%lld",
         "location": {
           "startingColumn": 26,
-          "startingLine": 573
+          "startingLine": 1461
         }
       },
       {
@@ -79,7 +143,7 @@
         "key": "Select to switch now",
         "location": {
           "startingColumn": 23,
-          "startingLine": 587
+          "startingLine": 1475
         }
       },
       {
@@ -87,7 +151,7 @@
         "key": "Back to cancel",
         "location": {
           "startingColumn": 23,
-          "startingLine": 588
+          "startingLine": 1476
         }
       },
       {
@@ -95,7 +159,7 @@
         "key": "%lld",
         "location": {
           "startingColumn": 26,
-          "startingLine": 615
+          "startingLine": 1503
         }
       },
       {
@@ -103,7 +167,7 @@
         "key": "Quick Guide",
         "location": {
           "startingColumn": 26,
-          "startingLine": 660
+          "startingLine": 1547
         }
       },
       {
@@ -111,7 +175,7 @@
         "key": "Press Back to close",
         "location": {
           "startingColumn": 26,
-          "startingLine": 663
+          "startingLine": 1550
         }
       },
       {
@@ -119,7 +183,15 @@
         "key": "%lld",
         "location": {
           "startingColumn": 26,
-          "startingLine": 715
+          "startingLine": 1604
+        }
+      },
+      {
+        "comment": "",
+        "key": "INSTANT",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 1625
         }
       },
       {
@@ -127,7 +199,7 @@
         "key": "%lldm",
         "location": {
           "startingColumn": 38,
-          "startingLine": 746
+          "startingLine": 1650
         }
       }
     ]

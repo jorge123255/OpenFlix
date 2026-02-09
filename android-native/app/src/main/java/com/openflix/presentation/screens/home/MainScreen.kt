@@ -177,7 +177,7 @@ fun MainScreen(
                     onNavigateToRemoteMapping = { /* TODO */ },
                     onNavigateToAbout = { /* TODO */ },
                     onNavigateToLogs = { /* TODO */ },
-                    onNavigateToSources = { /* TODO: Navigate to sources */ },
+                    onNavigateToSources = { /* TODO: Navigate to sources screen */ },
                     onSignOut = { /* TODO */ }
                 )
             }

@@ -99,3 +99,8 @@ server/transcode/
 *.apk
 server/downloads/*.apk
 android-native/app/build/
+
+# Claude Code artifacts
+.claude/
+currentwork.txt
+*.claude-worktree

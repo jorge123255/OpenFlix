@@ -1,37 +1,23 @@
 {
-  "/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/OpenFlix-tvOS/OpenFlix-tvOS/Core/Extensions/OpenFlixColors.swift" : {
-    "const-values" : "/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/OpenFlix-tvOS/build/Build/Intermediates.noindex/OpenFlix-tvOS.build/Debug-appletvsimulator/OpenFlix-tvOS.build/Objects-normal/arm64/OpenFlixColors.swiftconstvalues",
-    "dependencies" : "/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/OpenFlix-tvOS/build/Build/Intermediates.noindex/OpenFlix-tvOS.build/Debug-appletvsimulator/OpenFlix-tvOS.build/Objects-normal/arm64/OpenFlixColors.d",
-    "diagnostics" : "/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/OpenFlix-tvOS/build/Build/Intermediates.noindex/OpenFlix-tvOS.build/Debug-appletvsimulator/OpenFlix-tvOS.build/Objects-normal/arm64/OpenFlixColors.dia",
-    "object" : "/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/OpenFlix-tvOS/build/Build/Intermediates.noindex/OpenFlix-tvOS.build/Debug-appletvsimulator/OpenFlix-tvOS.build/Objects-normal/arm64/OpenFlixColors.o",
-    "swift-dependencies" : "/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/OpenFlix-tvOS/build/Build/Intermediates.noindex/OpenFlix-tvOS.build/Debug-appletvsimulator/OpenFlix-tvOS.build/Objects-normal/arm64/OpenFlixColors.swiftdeps"
+  "/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/OpenFlix-tvOS/OpenFlix-tvOS/Views/Components/HubSection.swift" : {
+    "const-values" : "/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/OpenFlix-tvOS/build/Build/Intermediates.noindex/OpenFlix-tvOS.build/Debug-appletvsimulator/OpenFlix-tvOS.build/Objects-normal/arm64/HubSection.swiftconstvalues",
+    "dependencies" : "/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/OpenFlix-tvOS/build/Build/Intermediates.noindex/OpenFlix-tvOS.build/Debug-appletvsimulator/OpenFlix-tvOS.build/Objects-normal/arm64/HubSection.d",
+    "diagnostics" : "/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/OpenFlix-tvOS/build/Build/Intermediates.noindex/OpenFlix-tvOS.build/Debug-appletvsimulator/OpenFlix-tvOS.build/Objects-normal/arm64/HubSection.dia",
+    "object" : "/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/OpenFlix-tvOS/build/Build/Intermediates.noindex/OpenFlix-tvOS.build/Debug-appletvsimulator/OpenFlix-tvOS.build/Objects-normal/arm64/HubSection.o",
+    "swift-dependencies" : "/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/OpenFlix-tvOS/build/Build/Intermediates.noindex/OpenFlix-tvOS.build/Debug-appletvsimulator/OpenFlix-tvOS.build/Objects-normal/arm64/HubSection.swiftdeps"
   },
-  "/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/OpenFlix-tvOS/OpenFlix-tvOS/Core/Extensions/String+Extensions.swift" : {
-    "const-values" : "/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/OpenFlix-tvOS/build/Build/Intermediates.noindex/OpenFlix-tvOS.build/Debug-appletvsimulator/OpenFlix-tvOS.build/Objects-normal/arm64/String+Extensions.swiftconstvalues",
-    "dependencies" : "/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/OpenFlix-tvOS/build/Build/Intermediates.noindex/OpenFlix-tvOS.build/Debug-appletvsimulator/OpenFlix-tvOS.build/Objects-normal/arm64/String+Extensions.d",
-    "diagnostics" : "/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/OpenFlix-tvOS/build/Build/Intermediates.noindex/OpenFlix-tvOS.build/Debug-appletvsimulator/OpenFlix-tvOS.build/Objects-normal/arm64/String+Extensions.dia",
-    "object" : "/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/OpenFlix-tvOS/build/Build/Intermediates.noindex/OpenFlix-tvOS.build/Debug-appletvsimulator/OpenFlix-tvOS.build/Objects-normal/arm64/String+Extensions.o",
-    "swift-dependencies" : "/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/OpenFlix-tvOS/build/Build/Intermediates.noindex/OpenFlix-tvOS.build/Debug-appletvsimulator/OpenFlix-tvOS.build/Objects-normal/arm64/String+Extensions.swiftdeps"
+  "/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/OpenFlix-tvOS/OpenFlix-tvOS/Views/Components/LoadingView.swift" : {
+    "const-values" : "/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/OpenFlix-tvOS/build/Build/Intermediates.noindex/OpenFlix-tvOS.build/Debug-appletvsimulator/OpenFlix-tvOS.build/Objects-normal/arm64/LoadingView.swiftconstvalues",
+    "dependencies" : "/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/OpenFlix-tvOS/build/Build/Intermediates.noindex/OpenFlix-tvOS.build/Debug-appletvsimulator/OpenFlix-tvOS.build/Objects-normal/arm64/LoadingView.d",
+    "diagnostics" : "/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/OpenFlix-tvOS/build/Build/Intermediates.noindex/OpenFlix-tvOS.build/Debug-appletvsimulator/OpenFlix-tvOS.build/Objects-normal/arm64/LoadingView.dia",
+    "object" : "/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/OpenFlix-tvOS/build/Build/Intermediates.noindex/OpenFlix-tvOS.build/Debug-appletvsimulator/OpenFlix-tvOS.build/Objects-normal/arm64/LoadingView.o",
+    "swift-dependencies" : "/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/OpenFlix-tvOS/build/Build/Intermediates.noindex/OpenFlix-tvOS.build/Debug-appletvsimulator/OpenFlix-tvOS.build/Objects-normal/arm64/LoadingView.swiftdeps"
   },
-  "/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/OpenFlix-tvOS/OpenFlix-tvOS/Core/Extensions/URL+Extensions.swift" : {
-    "const-values" : "/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/OpenFlix-tvOS/build/Build/Intermediates.noindex/OpenFlix-tvOS.build/Debug-appletvsimulator/OpenFlix-tvOS.build/Objects-normal/arm64/URL+Extensions.swiftconstvalues",
-    "dependencies" : "/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/OpenFlix-tvOS/build/Build/Intermediates.noindex/OpenFlix-tvOS.build/Debug-appletvsimulator/OpenFlix-tvOS.build/Objects-normal/arm64/URL+Extensions.d",
-    "diagnostics" : "/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/OpenFlix-tvOS/build/Build/Intermediates.noindex/OpenFlix-tvOS.build/Debug-appletvsimulator/OpenFlix-tvOS.build/Objects-normal/arm64/URL+Extensions.dia",
-    "object" : "/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/OpenFlix-tvOS/build/Build/Intermediates.noindex/OpenFlix-tvOS.build/Debug-appletvsimulator/OpenFlix-tvOS.build/Objects-normal/arm64/URL+Extensions.o",
-    "swift-dependencies" : "/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/OpenFlix-tvOS/build/Build/Intermediates.noindex/OpenFlix-tvOS.build/Debug-appletvsimulator/OpenFlix-tvOS.build/Objects-normal/arm64/URL+Extensions.swiftdeps"
-  },
-  "/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/OpenFlix-tvOS/OpenFlix-tvOS/Core/Storage/KeychainHelper.swift" : {
-    "const-values" : "/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/OpenFlix-tvOS/build/Build/Intermediates.noindex/OpenFlix-tvOS.build/Debug-appletvsimulator/OpenFlix-tvOS.build/Objects-normal/arm64/KeychainHelper.swiftconstvalues",
-    "dependencies" : "/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/OpenFlix-tvOS/build/Build/Intermediates.noindex/OpenFlix-tvOS.build/Debug-appletvsimulator/OpenFlix-tvOS.build/Objects-normal/arm64/KeychainHelper.d",
-    "diagnostics" : "/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/OpenFlix-tvOS/build/Build/Intermediates.noindex/OpenFlix-tvOS.build/Debug-appletvsimulator/OpenFlix-tvOS.build/Objects-normal/arm64/KeychainHelper.dia",
-    "object" : "/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/OpenFlix-tvOS/build/Build/Intermediates.noindex/OpenFlix-tvOS.build/Debug-appletvsimulator/OpenFlix-tvOS.build/Objects-normal/arm64/KeychainHelper.o",
-    "swift-dependencies" : "/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/OpenFlix-tvOS/build/Build/Intermediates.noindex/OpenFlix-tvOS.build/Debug-appletvsimulator/OpenFlix-tvOS.build/Objects-normal/arm64/KeychainHelper.swiftdeps"
-  },
-  "/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/OpenFlix-tvOS/OpenFlix-tvOS/Core/Storage/UserDefaults+Extensions.swift" : {
-    "const-values" : "/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/OpenFlix-tvOS/build/Build/Intermediates.noindex/OpenFlix-tvOS.build/Debug-appletvsimulator/OpenFlix-tvOS.build/Objects-normal/arm64/UserDefaults+Extensions.swiftconstvalues",
-    "dependencies" : "/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/OpenFlix-tvOS/build/Build/Intermediates.noindex/OpenFlix-tvOS.build/Debug-appletvsimulator/OpenFlix-tvOS.build/Objects-normal/arm64/UserDefaults+Extensions.d",
-    "diagnostics" : "/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/OpenFlix-tvOS/build/Build/Intermediates.noindex/OpenFlix-tvOS.build/Debug-appletvsimulator/OpenFlix-tvOS.build/Objects-normal/arm64/UserDefaults+Extensions.dia",
-    "object" : "/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/OpenFlix-tvOS/build/Build/Intermediates.noindex/OpenFlix-tvOS.build/Debug-appletvsimulator/OpenFlix-tvOS.build/Objects-normal/arm64/UserDefaults+Extensions.o",
-    "swift-dependencies" : "/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/OpenFlix-tvOS/build/Build/Intermediates.noindex/OpenFlix-tvOS.build/Debug-appletvsimulator/OpenFlix-tvOS.build/Objects-normal/arm64/UserDefaults+Extensions.swiftdeps"
+  "/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/OpenFlix-tvOS/OpenFlix-tvOS/Views/Components/ProgramCell.swift" : {
+    "const-values" : "/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/OpenFlix-tvOS/build/Build/Intermediates.noindex/OpenFlix-tvOS.build/Debug-appletvsimulator/OpenFlix-tvOS.build/Objects-normal/arm64/ProgramCell.swiftconstvalues",
+    "dependencies" : "/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/OpenFlix-tvOS/build/Build/Intermediates.noindex/OpenFlix-tvOS.build/Debug-appletvsimulator/OpenFlix-tvOS.build/Objects-normal/arm64/ProgramCell.d",
+    "diagnostics" : "/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/OpenFlix-tvOS/build/Build/Intermediates.noindex/OpenFlix-tvOS.build/Debug-appletvsimulator/OpenFlix-tvOS.build/Objects-normal/arm64/ProgramCell.dia",
+    "object" : "/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/OpenFlix-tvOS/build/Build/Intermediates.noindex/OpenFlix-tvOS.build/Debug-appletvsimulator/OpenFlix-tvOS.build/Objects-normal/arm64/ProgramCell.o",
+    "swift-dependencies" : "/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/OpenFlix-tvOS/build/Build/Intermediates.noindex/OpenFlix-tvOS.build/Debug-appletvsimulator/OpenFlix-tvOS.build/Objects-normal/arm64/ProgramCell.swiftdeps"
   }
 }

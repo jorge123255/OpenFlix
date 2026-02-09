@@ -1,5 +1,40 @@
 {
   "source": "/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/OpenFlix-tvOS/OpenFlix-tvOS/Views/Components/MediaCard.swift",
-  "tables": {},
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "NEW",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 49
+        }
+      },
+      {
+        "comment": "",
+        "key": "NEW",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 185
+        }
+      },
+      {
+        "comment": "",
+        "key": "·",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 143
+        }
+      },
+      {
+        "comment": "",
+        "key": "·",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 151
+        }
+      }
+    ]
+  },
   "version": 1
 }

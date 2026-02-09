@@ -1,31 +1,32 @@
 import SwiftUI
 
 // MARK: - Movies View
-// Apple TV-style browse view with genre tiles and content rows
+// Netflix/Apple TV+ style hub view with hero, carousels, and browse option
 
 struct MoviesView: View {
-    @StateObject private var viewModel = MediaBrowseViewModel()
+    @StateObject private var viewModel = MoviesViewModel()
     @State private var selectedItem: MediaItem?
     @State private var showDetail = false
-    @State private var selectedGenre: String? = nil
+    @State private var showPlayer = false
+    @State private var showGridBrowse = false
 
     var body: some View {
         NavigationStack {
             Group {
-                if viewModel.isLoading && viewModel.items.isEmpty {
-                    LoadingView()
+                if viewModel.isLoading && !viewModel.hasFeatured {
+                    LoadingView(message: "Loading movies...")
                 } else if let error = viewModel.error {
                     ErrorView(message: error) {
-                        Task { await viewModel.loadItems() }
+                        Task { await viewModel.loadMoviesHub() }
                     }
-                } else if viewModel.items.isEmpty {
+                } else if !viewModel.hasFeatured && viewModel.allMovies.isEmpty {
                     EmptyStateView(
                         icon: "film",
                         title: "No Movies",
                         message: "Your movie library is empty. Add some movies to get started."
                     )
                 } else {
-                    contentView
+                    hubContentView
                 }
             }
             .navigationBarHidden(true)
@@ -34,44 +35,89 @@ struct MoviesView: View {
                     MediaDetailView(mediaId: item.id)
                 }
             }
+            .navigationDestination(isPresented: $showGridBrowse) {
+                MoviesGridBrowseView(viewModel: viewModel)
+            }
         }
         .task {
-            await viewModel.loadSections(type: .movie)
+            await viewModel.loadMoviesHub()
+        }
+        .fullScreenCover(isPresented: $showPlayer) {
+            if let item = selectedItem {
+                VideoPlayerView(mediaItem: item, startPosition: item.viewOffset)
+            }
         }
     }
 
-    private var contentView: some View {
-        ScrollView(.vertical, showsIndicators: false) {
-            LazyVStack(alignment: .leading, spacing: 32) {
-                // Page title
-                Text("Movies")
-                    .font(.largeTitle)
-                    .fontWeight(.bold)
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 50)
-                    .padding(.top, 40)
+    // MARK: - Hub Content View
 
-                // Filter bar at top
-                if !viewModel.availableGenres.isEmpty && selectedGenre == nil {
-                    filterChips
+    private var hubContentView: some View {
+        ScrollView(.vertical, showsIndicators: false) {
+            LazyVStack(alignment: .leading, spacing: 40) {
+                // Hero Carousel Section with trailers
+                if viewModel.hasFeaturedCarousel {
+                    HeroCarouselView(
+                        movies: viewModel.featuredMovies,
+                        trailers: viewModel.trailers,
+                        currentIndex: $viewModel.currentFeaturedIndex,
+                        onPlay: { movie in
+                            selectedItem = movie
+                            showPlayer = true
+                        },
+                        onMoreInfo: { movie in
+                            selectedItem = movie
+                            showDetail = true
+                        }
+                    )
+                    .focusSection()
+                } else if let featured = viewModel.featuredItem {
+                    // Fallback to single hero if carousel not available
+                    MovieHeroSection(
+                        item: featured,
+                        onPlay: {
+                            selectedItem = featured
+                            showPlayer = true
+                        },
+                        onMoreInfo: {
+                            selectedItem = featured
+                            showDetail = true
+                        }
+                    )
+                    .focusSection()
                 }
 
-                // Genre browse tiles (when no filter selected)
-                if selectedGenre == nil && !viewModel.availableGenres.isEmpty {
-                    GenreBrowseSection(genres: viewModel.availableGenres) { genre in
-                        selectedGenre = genre
+                // Browse All Button
+                BrowseAllButton(mediaType: "Movies") {
+                    showGridBrowse = true
+                }
+                .focusSection()
+
+                // Continue Watching
+                if viewModel.hasContinueWatching {
+                    MoviesContinueWatchingSection(items: viewModel.continueWatching) { item in
+                        selectedItem = item
+                        showPlayer = true
                     }
                     .focusSection()
                 }
 
-                // Selected genre header with back button
-                if let genre = selectedGenre {
-                    selectedGenreHeader(genre)
+                // Recently Added
+                if viewModel.hasRecentlyAdded {
+                    RecentlyAddedSection(items: viewModel.recentlyAdded) { item in
+                        selectedItem = item
+                        showDetail = true
+                    }
+                    .focusSection()
                 }
 
-                // Content grid
-                contentGrid
+                // Genre Hubs
+                ForEach(viewModel.genreHubs, id: \.genre) { hub in
+                    GenreHubSection(genre: hub.genre, items: hub.items) { item in
+                        selectedItem = item
+                        showDetail = true
+                    }
                     .focusSection()
+                }
 
                 // Bottom spacing
                 Spacer().frame(height: 60)
@@ -79,33 +125,180 @@ struct MoviesView: View {
         }
         .background(OpenFlixColors.background)
     }
+}
 
-    // MARK: - Filter Chips
+// MARK: - Movies Continue Watching Section
+// Uses play icon in header
 
-    private var filterChips: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 12) {
-                // All button
-                SimpleFilterChip(title: "All", isSelected: selectedGenre == nil) {
-                    selectedGenre = nil
-                }
+struct MoviesContinueWatchingSection: View {
+    let items: [MediaItem]
+    var onItemSelected: ((MediaItem) -> Void)?
 
-                // Genre chips
-                ForEach(viewModel.availableGenres.prefix(8), id: \.self) { genre in
-                    SimpleFilterChip(title: genre, isSelected: selectedGenre == genre) {
-                        selectedGenre = genre
-                    }
-                }
+    var body: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            // Header with play icon
+            HStack(spacing: 8) {
+                Image(systemName: "play.circle.fill")
+                    .font(.title3)
+                    .foregroundColor(OpenFlixColors.accent)
+
+                Text("Continue Watching")
+                    .font(.title3)
+                    .fontWeight(.bold)
+                    .foregroundColor(OpenFlixColors.textPrimary)
+
+                Spacer()
             }
             .padding(.horizontal, 50)
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 20) {
+                    ForEach(items) { item in
+                        ContinueWatchingCard(item: item) {
+                            onItemSelected?(item)
+                        }
+                    }
+                }
+                .padding(.horizontal, 50)
+                .padding(.vertical, 10)
+            }
         }
+    }
+}
+
+// MARK: - Genre Hub Section
+
+struct GenreHubSection: View {
+    let genre: String
+    let items: [MediaItem]
+    var onItemSelected: ((MediaItem) -> Void)?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            SectionHeader(title: genre, showChevron: true)
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 20) {
+                    ForEach(items) { item in
+                        MediaCard(item: item) {
+                            onItemSelected?(item)
+                        }
+                    }
+                }
+                .padding(.horizontal, 50)
+                .padding(.vertical, 10)
+            }
+        }
+    }
+}
+
+// MARK: - Movies Grid Browse View
+// Full grid browse with filters and sorting
+
+struct MoviesGridBrowseView: View {
+    @ObservedObject var viewModel: MoviesViewModel
+    @State private var selectedItem: MediaItem?
+    @State private var showDetail = false
+    @State private var showSortPicker = false
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        ZStack {
+            // Main content
+            ScrollView(.vertical, showsIndicators: false) {
+                LazyVStack(alignment: .leading, spacing: 32) {
+                    // Header with back button
+                    gridHeader
+
+                    // Filter bar with genres and sort button (always show for sorting)
+                    MovieFilterBar(
+                        genres: viewModel.availableGenres,
+                        selectedGenre: $viewModel.selectedGenre,
+                        showSortPicker: $showSortPicker,
+                        currentSort: viewModel.currentSort
+                    )
+
+                    // Genre browse tiles (when no filter selected)
+                    if viewModel.selectedGenre == nil && !viewModel.availableGenres.isEmpty {
+                        GenreBrowseSection(genres: viewModel.availableGenres) { genre in
+                            viewModel.selectedGenre = genre
+                        }
+                        .focusSection()
+                    }
+
+                    // Selected genre header
+                    if let genre = viewModel.selectedGenre {
+                        selectedGenreHeader(genre)
+                    }
+
+                    // Content grid
+                    contentGrid
+                        .focusSection()
+
+                    // Bottom spacing
+                    Spacer().frame(height: 60)
+                }
+            }
+            .background(OpenFlixColors.background)
+
+            // Sort picker overlay
+            if showSortPicker {
+                SortPickerSheet(
+                    isPresented: $showSortPicker,
+                    selectedSort: Binding(
+                        get: { viewModel.currentSort },
+                        set: { viewModel.sortBy($0) }
+                    )
+                )
+                .transition(.opacity)
+                .zIndex(1)
+            }
+        }
+        .navigationBarHidden(true)
+        .navigationDestination(isPresented: $showDetail) {
+            if let item = selectedItem {
+                MediaDetailView(mediaId: item.id)
+            }
+        }
+        .animation(.easeInOut(duration: OpenFlixColors.animationNormal), value: showSortPicker)
+    }
+
+    // MARK: - Grid Header
+
+    private var gridHeader: some View {
+        HStack {
+            Button(action: { dismiss() }) {
+                HStack(spacing: 8) {
+                    Image(systemName: "chevron.left")
+                    Text("Back")
+                }
+                .font(.subheadline)
+                .foregroundColor(OpenFlixColors.accent)
+            }
+            .buttonStyle(.plain)
+
+            Spacer()
+
+            Text("All Movies")
+                .font(.largeTitle)
+                .fontWeight(.bold)
+                .foregroundColor(.white)
+
+            Spacer()
+
+            // Placeholder to balance the header layout
+            Color.clear
+                .frame(width: 60)
+        }
+        .padding(.horizontal, 50)
+        .padding(.top, 40)
     }
 
     // MARK: - Selected Genre Header
 
     private func selectedGenreHeader(_ genre: String) -> some View {
         HStack {
-            Button(action: { selectedGenre = nil }) {
+            Button(action: { viewModel.selectedGenre = nil }) {
                 HStack(spacing: 8) {
                     Image(systemName: "chevron.left")
                     Text("All Movies")
@@ -123,19 +316,6 @@ struct MoviesView: View {
                 .foregroundColor(OpenFlixColors.textPrimary)
 
             Spacer()
-
-            // Sort menu
-            Menu {
-                ForEach(SortOption.allCases, id: \.self) { option in
-                    Button(option.displayName) {
-                        viewModel.sortBy(option)
-                    }
-                }
-            } label: {
-                Label("Sort", systemImage: "arrow.up.arrow.down")
-                    .font(.subheadline)
-                    .foregroundColor(OpenFlixColors.textSecondary)
-            }
         }
         .padding(.horizontal, 50)
     }
@@ -152,7 +332,7 @@ struct MoviesView: View {
             GridItem(.fixed(200), spacing: 24),
             GridItem(.fixed(200), spacing: 24)
         ], spacing: 40) {
-            ForEach(filteredItems) { item in
+            ForEach(viewModel.filteredItems) { item in
                 MediaCard(item: item) {
                     selectedItem = item
                     showDetail = true
@@ -160,19 +340,14 @@ struct MoviesView: View {
             }
 
             // Load more indicator
-            if viewModel.hasMore && selectedGenre == nil {
+            if viewModel.hasMore && viewModel.selectedGenre == nil {
                 ProgressView()
                     .onAppear {
-                        Task { await viewModel.loadMore() }
+                        Task { await viewModel.loadMoreGridItems() }
                     }
             }
         }
         .padding(.horizontal, 50)
-    }
-
-    private var filteredItems: [MediaItem] {
-        guard let genre = selectedGenre else { return viewModel.items }
-        return viewModel.items.filter { $0.genres.contains(genre) }
     }
 }
 
@@ -214,24 +389,40 @@ struct TVShowsView: View {
     @State private var selectedItem: MediaItem?
     @State private var showDetail = false
     @State private var selectedGenre: String? = nil
+    @State private var showSortPicker = false
 
     var body: some View {
         NavigationStack {
-            Group {
-                if viewModel.isLoading && viewModel.items.isEmpty {
-                    LoadingView()
-                } else if let error = viewModel.error {
-                    ErrorView(message: error) {
-                        Task { await viewModel.loadItems() }
+            ZStack {
+                Group {
+                    if viewModel.isLoading && viewModel.items.isEmpty {
+                        LoadingView()
+                    } else if let error = viewModel.error {
+                        ErrorView(message: error) {
+                            Task { await viewModel.loadItems() }
+                        }
+                    } else if viewModel.items.isEmpty {
+                        EmptyStateView(
+                            icon: "tv",
+                            title: "No TV Shows",
+                            message: "Your TV show library is empty."
+                        )
+                    } else {
+                        tvContentView
                     }
-                } else if viewModel.items.isEmpty {
-                    EmptyStateView(
-                        icon: "tv",
-                        title: "No TV Shows",
-                        message: "Your TV show library is empty."
+                }
+
+                // Sort picker overlay
+                if showSortPicker {
+                    SortPickerSheet(
+                        isPresented: $showSortPicker,
+                        selectedSort: Binding(
+                            get: { viewModel.currentSort },
+                            set: { viewModel.sortBy($0) }
+                        )
                     )
-                } else {
-                    tvContentView
+                    .transition(.opacity)
+                    .zIndex(1)
                 }
             }
             .navigationBarHidden(true)
@@ -240,6 +431,7 @@ struct TVShowsView: View {
                     MediaDetailView(mediaId: item.id)
                 }
             }
+            .animation(.easeInOut(duration: OpenFlixColors.animationNormal), value: showSortPicker)
         }
         .task {
             await viewModel.loadSections(type: .show)
@@ -257,12 +449,15 @@ struct TVShowsView: View {
                     .padding(.horizontal, 50)
                     .padding(.top, 40)
 
-                // Filter bar at top
-                if !viewModel.availableGenres.isEmpty && selectedGenre == nil {
-                    tvFilterChips
-                }
+                // Filter bar with genres and sort button (always show for sorting)
+                MovieFilterBar(
+                    genres: viewModel.availableGenres,
+                    selectedGenre: $selectedGenre,
+                    showSortPicker: $showSortPicker,
+                    currentSort: viewModel.currentSort
+                )
 
-                // Genre browse tiles (when no filter selected)
+                // Genre browse tiles (when no filter selected and genres available)
                 if selectedGenre == nil && !viewModel.availableGenres.isEmpty {
                     GenreBrowseSection(genres: viewModel.availableGenres) { genre in
                         selectedGenre = genre
@@ -284,25 +479,6 @@ struct TVShowsView: View {
             }
         }
         .background(OpenFlixColors.background)
-    }
-
-    // MARK: - Filter Chips
-
-    private var tvFilterChips: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 12) {
-                SimpleFilterChip(title: "All", isSelected: selectedGenre == nil) {
-                    selectedGenre = nil
-                }
-
-                ForEach(viewModel.availableGenres.prefix(8), id: \.self) { genre in
-                    SimpleFilterChip(title: genre, isSelected: selectedGenre == genre) {
-                        selectedGenre = genre
-                    }
-                }
-            }
-            .padding(.horizontal, 50)
-        }
     }
 
     // MARK: - Selected Genre Header
@@ -328,17 +504,9 @@ struct TVShowsView: View {
 
             Spacer()
 
-            Menu {
-                ForEach(SortOption.allCases, id: \.self) { option in
-                    Button(option.displayName) {
-                        viewModel.sortBy(option)
-                    }
-                }
-            } label: {
-                Label("Sort", systemImage: "arrow.up.arrow.down")
-                    .font(.subheadline)
-                    .foregroundColor(OpenFlixColors.textSecondary)
-            }
+            // Placeholder to balance the header layout
+            Color.clear
+                .frame(width: 100)
         }
         .padding(.horizontal, 50)
     }
@@ -374,7 +542,7 @@ struct TVShowsView: View {
 
     private var tvFilteredItems: [MediaItem] {
         guard let genre = selectedGenre else { return viewModel.items }
-        return viewModel.items.filter { $0.genres.contains(genre) }
+        return viewModel.items.filter { viewModel.getGenresForItem($0).contains(genre) }
     }
 }
 
@@ -388,15 +556,21 @@ class MediaBrowseViewModel: ObservableObject {
     @Published var items: [MediaItem] = []
     @Published var isLoading = false
     @Published var error: String?
-    @Published var currentSort: SortOption = .titleAsc
+    @Published var currentSort: SortOption = .addedDesc
     @Published var hasMore = false
     @Published var availableGenres: [String] = []
+
+    // TMDB genre cache for items without server genres
+    private var tmdbGenreCache: [Int: [String]] = [:]
+    @Published var isLoadingTMDBGenres = false
 
     private var currentSectionId: Int?
     private var currentOffset = 0
     private let pageSize = 50
+    private var currentMediaType: LibrarySectionType = .show
 
     func loadSections(type: LibrarySectionType) async {
+        currentMediaType = type
         isLoading = true
         defer { isLoading = false }
 
@@ -412,6 +586,11 @@ class MediaBrowseViewModel: ObservableObject {
             error = networkError.errorDescription
         } catch {
             self.error = error.localizedDescription
+        }
+
+        // Load TMDB genres in background
+        Task {
+            await loadTMDBGenresForItemsWithoutGenres()
         }
     }
 
@@ -469,6 +648,54 @@ class MediaBrowseViewModel: ObservableObject {
         }
     }
 
+    // MARK: - TMDB Genre Loading
+
+    private func loadTMDBGenresForItemsWithoutGenres() async {
+        let itemsWithoutGenres = items.filter { $0.genres.isEmpty }.prefix(30)
+
+        guard !itemsWithoutGenres.isEmpty else {
+            NSLog("MediaBrowseViewModel: All items have genres")
+            return
+        }
+
+        isLoadingTMDBGenres = true
+        defer { isLoadingTMDBGenres = false }
+
+        NSLog("MediaBrowseViewModel: Loading TMDB genres for %d items", itemsWithoutGenres.count)
+
+        await TMDBService.shared.reloadApiKey()
+
+        await withTaskGroup(of: (Int, [String]).self) { group in
+            for item in itemsWithoutGenres {
+                group.addTask {
+                    let genres = await self.fetchTMDBGenres(for: item)
+                    return (item.id, genres)
+                }
+            }
+
+            for await (itemId, genres) in group {
+                if !genres.isEmpty {
+                    tmdbGenreCache[itemId] = genres
+                }
+            }
+        }
+
+        NSLog("MediaBrowseViewModel: Loaded TMDB genres for %d items", tmdbGenreCache.count)
+
+        extractGenresWithTMDB()
+    }
+
+    private func fetchTMDBGenres(for item: MediaItem) async -> [String] {
+        // For TV shows, we'd need a different TMDB endpoint
+        // For now, try the movie endpoint (works for some content)
+        guard let info = await TMDBService.shared.getMovieDetails(title: item.title, year: item.year) else {
+            return []
+        }
+        return info.genres
+    }
+
+    // MARK: - Genre Extraction
+
     private func extractGenres() {
         var genreSet = Set<String>()
         for item in items {
@@ -478,26 +705,67 @@ class MediaBrowseViewModel: ObservableObject {
         }
         availableGenres = genreSet.sorted()
     }
+
+    private func extractGenresWithTMDB() {
+        var genreSet = Set<String>()
+
+        for item in items {
+            if !item.genres.isEmpty {
+                for genre in item.genres {
+                    genreSet.insert(genre)
+                }
+            } else if let tmdbGenres = tmdbGenreCache[item.id] {
+                for genre in tmdbGenres {
+                    genreSet.insert(genre)
+                }
+            }
+        }
+
+        availableGenres = genreSet.sorted()
+        NSLog("MediaBrowseViewModel: Extracted %d genres (including TMDB)", availableGenres.count)
+    }
+
+    /// Get genres for an item (server or TMDB fallback)
+    func getGenresForItem(_ item: MediaItem) -> [String] {
+        if !item.genres.isEmpty {
+            return item.genres
+        }
+        return tmdbGenreCache[item.id] ?? []
+    }
 }
 
 // MARK: - Sort Option
 
 enum SortOption: String, CaseIterable {
+    case addedDesc = "addedAt:desc"
     case titleAsc = "title:asc"
     case titleDesc = "title:desc"
-    case yearAsc = "year:asc"
     case yearDesc = "year:desc"
-    case addedDesc = "addedAt:desc"
+    case yearAsc = "year:asc"
     case ratingDesc = "audienceRating:desc"
+    case durationAsc = "duration:asc"
+    case durationDesc = "duration:desc"
 
     var displayName: String {
         switch self {
-        case .titleAsc: return "Title (A-Z)"
-        case .titleDesc: return "Title (Z-A)"
-        case .yearAsc: return "Year (Old-New)"
-        case .yearDesc: return "Year (New-Old)"
         case .addedDesc: return "Recently Added"
-        case .ratingDesc: return "Highest Rated"
+        case .titleAsc: return "Title A-Z"
+        case .titleDesc: return "Title Z-A"
+        case .yearDesc: return "Newest First"
+        case .yearAsc: return "Oldest First"
+        case .ratingDesc: return "Top Rated"
+        case .durationAsc: return "Shortest"
+        case .durationDesc: return "Longest"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .addedDesc: return "clock.fill"
+        case .titleAsc, .titleDesc: return "textformat.abc"
+        case .yearDesc, .yearAsc: return "calendar"
+        case .ratingDesc: return "star.fill"
+        case .durationAsc, .durationDesc: return "timer"
         }
     }
 

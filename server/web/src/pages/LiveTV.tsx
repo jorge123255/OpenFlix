@@ -49,6 +49,21 @@ function AddSourceModal({
   const [isPreviewing, setIsPreviewing] = useState(false)
   const [previewError, setPreviewError] = useState('')
 
+  // M3U VOD import options
+  const [importVod, setImportVod] = useState(false)
+  const [importSeries, setImportSeries] = useState(false)
+  const [vodLibraryId, setVodLibraryId] = useState<number | null>(null)
+  const [seriesLibraryId, setSeriesLibraryId] = useState<number | null>(null)
+
+  // Fetch libraries for VOD import
+  const { data: libraries } = useQuery({
+    queryKey: ['libraries'],
+    queryFn: () => api.getLibraries(),
+    enabled: type === 'm3u',
+  })
+  const movieLibraries = libraries?.filter(l => l.type === 'movie') || []
+  const showLibraries = libraries?.filter(l => l.type === 'show') || []
+
   // Provider discovery state
   const [providerGroups, setProviderGroups] = useState<ProviderGroup[]>([])
   const [selectedProvider, setSelectedProvider] = useState<Provider | null>(null)
@@ -120,7 +135,14 @@ function AddSourceModal({
     e.preventDefault()
 
     if (type === 'm3u') {
-      await createM3U.mutateAsync({ name, url })
+      await createM3U.mutateAsync({
+        name,
+        url,
+        importVod,
+        importSeries,
+        vodLibraryId: vodLibraryId ?? undefined,
+        seriesLibraryId: seriesLibraryId ?? undefined,
+      })
     } else {
       // EPG source with provider type selection
       if (providerType === 'xmltv') {
@@ -196,17 +218,75 @@ function AddSourceModal({
           )}
 
           {type === 'm3u' && (
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-300 mb-2">URL</label>
-              <input
-                type="url"
-                value={url}
-                onChange={(e) => setUrl(e.target.value)}
-                className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
-                placeholder="http://example.com/playlist.m3u"
-                required
-              />
-            </div>
+            <>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-300 mb-2">URL</label>
+                <input
+                  type="url"
+                  value={url}
+                  onChange={(e) => setUrl(e.target.value)}
+                  className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
+                  placeholder="http://example.com/playlist.m3u"
+                  required
+                />
+              </div>
+
+              {/* Content Import Options */}
+              <div className="mb-6 p-4 bg-gray-700/50 rounded-lg border border-gray-600">
+                <h3 className="text-sm font-semibold text-white mb-3">Content Import</h3>
+                <p className="text-xs text-gray-400 mb-3">Choose what to import from this M3U. Live channels are always imported.</p>
+                <div className="mb-4">
+                  <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={importVod}
+                      onChange={(e) => setImportVod(e.target.checked)}
+                      className="rounded bg-gray-600 border-gray-500"
+                    />
+                    Import VOD Movies
+                  </label>
+                  {importVod && (
+                    <div className="mt-2 ml-6">
+                      <select
+                        value={vodLibraryId || ''}
+                        onChange={(e) => setVodLibraryId(e.target.value ? parseInt(e.target.value) : null)}
+                        className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm"
+                      >
+                        <option value="">Select Movie Library...</option>
+                        {movieLibraries.map(lib => (
+                          <option key={lib.id} value={lib.id}>{lib.title}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={importSeries}
+                      onChange={(e) => setImportSeries(e.target.checked)}
+                      className="rounded bg-gray-600 border-gray-500"
+                    />
+                    Import TV Series
+                  </label>
+                  {importSeries && (
+                    <div className="mt-2 ml-6">
+                      <select
+                        value={seriesLibraryId || ''}
+                        onChange={(e) => setSeriesLibraryId(e.target.value ? parseInt(e.target.value) : null)}
+                        className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm"
+                      >
+                        <option value="">Select TV Library...</option>
+                        {showLibraries.map(lib => (
+                          <option key={lib.id} value={lib.id}>{lib.title}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </>
           )}
 
           {type === 'epg' && providerType === 'xmltv' && (
@@ -1155,7 +1235,7 @@ function EditM3USourceModal({
                   >
                     <option value="">Select Movie Library...</option>
                     {movieLibraries.map((lib) => (
-                      <option key={lib.id} value={lib.id}>{lib.name}</option>
+                      <option key={lib.id} value={lib.id}>{lib.title}</option>
                     ))}
                   </select>
                 </div>
@@ -1181,7 +1261,7 @@ function EditM3USourceModal({
                   >
                     <option value="">Select TV Library...</option>
                     {showLibraries.map((lib) => (
-                      <option key={lib.id} value={lib.id}>{lib.name}</option>
+                      <option key={lib.id} value={lib.id}>{lib.title}</option>
                     ))}
                   </select>
                 </div>

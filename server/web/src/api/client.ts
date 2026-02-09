@@ -173,7 +173,14 @@ class ApiClient {
     return response.data.sources || []
   }
 
-  async createM3USource(data: { name: string; url: string }): Promise<M3USource> {
+  async createM3USource(data: {
+    name: string
+    url: string
+    importVod?: boolean
+    importSeries?: boolean
+    vodLibraryId?: number
+    seriesLibraryId?: number
+  }): Promise<M3USource> {
     const response = await this.client.post<M3USource>('/livetv/sources', data)
     return response.data
   }

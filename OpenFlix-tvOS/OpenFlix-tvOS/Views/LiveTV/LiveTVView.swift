@@ -821,12 +821,10 @@ struct LiveTVControlsOverlay: View {
 
     var body: some View {
         ZStack {
-            // Semi-transparent background
+            // Semi-transparent background - no tap gesture to avoid blocking focus
             Color.black.opacity(0.7)
                 .ignoresSafeArea()
-                .onTapGesture {
-                    onDismiss()
-                }
+                .allowsHitTesting(false)
 
             VStack(spacing: 0) {
                 // Top bar
@@ -1297,9 +1295,7 @@ struct LiveTVControlsOverlay: View {
         ZStack {
             Color.black.opacity(0.9)
                 .ignoresSafeArea()
-                .onTapGesture {
-                    showSleepTimerPicker = false
-                }
+                .allowsHitTesting(false)
 
             VStack(spacing: 24) {
                 Text("Sleep Timer")
@@ -1336,6 +1332,7 @@ struct LiveTVControlsOverlay: View {
                 Button("Cancel") {
                     showSleepTimerPicker = false
                 }
+                .buttonStyle(.card)
                 .font(.system(size: 18))
                 .foregroundColor(.white.opacity(0.7))
                 .padding(.top, 16)
@@ -1539,12 +1536,10 @@ struct MiniEPGOverlay: View {
 
     var body: some View {
         ZStack {
-            // Dim background
+            // Dim background - no tap gesture to avoid blocking focus
             Color.black.opacity(0.8)
                 .ignoresSafeArea()
-                .onTapGesture {
-                    onDismiss()
-                }
+                .allowsHitTesting(false)
 
             VStack(spacing: 0) {
                 // Title bar

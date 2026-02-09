@@ -4,18 +4,10 @@
     "Localizable": [
       {
         "comment": "",
-        "key": "Home",
-        "location": {
-          "startingColumn": 30,
-          "startingLine": 39
-        }
-      },
-      {
-        "comment": "",
         "key": "Welcome to OpenFlix",
         "location": {
           "startingColumn": 18,
-          "startingLine": 255
+          "startingLine": 171
         }
       },
       {
@@ -23,7 +15,7 @@
         "key": "Your library is empty. Use the tabs above to browse Movies, TV Shows, or Live TV.",
         "location": {
           "startingColumn": 18,
-          "startingLine": 260
+          "startingLine": 176
         }
       }
     ]

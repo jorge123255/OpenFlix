@@ -1,0 +1,64 @@
+{
+  "source": "/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/OpenFlix-tvOS/OpenFlix-tvOS/Views/Components/HeroCarouselView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "FEATURED",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 138
+        }
+      },
+      {
+        "comment": "",
+        "key": "•",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 177
+        }
+      },
+      {
+        "comment": "",
+        "key": "•",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 187
+        }
+      },
+      {
+        "comment": "",
+        "key": "•",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 196
+        }
+      },
+      {
+        "comment": "",
+        "key": "Resume",
+        "location": {
+          "startingColumn": 51,
+          "startingLine": 225
+        }
+      },
+      {
+        "comment": "",
+        "key": "Play",
+        "location": {
+          "startingColumn": 62,
+          "startingLine": 225
+        }
+      },
+      {
+        "comment": "",
+        "key": "More Info",
+        "location": {
+          "startingColumn": 31,
+          "startingLine": 241
+        }
+      }
+    ]
+  },
+  "version": 1
+}

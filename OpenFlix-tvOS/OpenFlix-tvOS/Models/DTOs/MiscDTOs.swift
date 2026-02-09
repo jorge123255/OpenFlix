@@ -319,3 +319,25 @@ struct ClientLogEntry: Codable {
         case stackTrace = "stack_trace"
     }
 }
+
+// MARK: - Server Settings
+
+struct ServerSettingsResponse: Codable {
+    let settings: ServerSettingsDTO
+}
+
+struct ServerSettingsDTO: Codable {
+    let tmdbApiKey: String?
+    let tvdbApiKey: String?
+    let metadataLang: String?
+    let scanInterval: Int?
+    let vodApiUrl: String?
+
+    enum CodingKeys: String, CodingKey {
+        case tmdbApiKey = "tmdb_api_key"
+        case tvdbApiKey = "tvdb_api_key"
+        case metadataLang = "metadata_lang"
+        case scanInterval = "scan_interval"
+        case vodApiUrl = "vod_api_url"
+    }
+}

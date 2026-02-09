@@ -12,7 +12,14 @@ export function useCreateM3USource() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (data: { name: string; url: string }) => api.createM3USource(data),
+    mutationFn: (data: {
+      name: string
+      url: string
+      importVod?: boolean
+      importSeries?: boolean
+      vodLibraryId?: number
+      seriesLibraryId?: number
+    }) => api.createM3USource(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['m3uSources'] })
     },

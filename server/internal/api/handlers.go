@@ -2991,6 +2991,12 @@ func (s *Server) streamMedia(c *gin.Context) {
 		return
 	}
 
+	// Check if this is an M3U VOD stream
+	if strings.HasPrefix(file.FilePath, "m3u://") {
+		s.streamM3UVOD(c, &file)
+		return
+	}
+
 	// Check if file exists on disk for local files
 	if _, err := os.Stat(file.FilePath); os.IsNotExist(err) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "File not found on disk"})
@@ -3157,6 +3163,71 @@ func (s *Server) streamXtreamVOD(c *gin.Context, file *models.MediaFile) {
 	}
 
 	// Forward response headers for non-M3U8 content
+	c.Header("Content-Type", contentType)
+	if contentLength := resp.Header.Get("Content-Length"); contentLength != "" {
+		c.Header("Content-Length", contentLength)
+	}
+	if contentRange := resp.Header.Get("Content-Range"); contentRange != "" {
+		c.Header("Content-Range", contentRange)
+	}
+	c.Header("Accept-Ranges", "bytes")
+
+	// Set appropriate status code
+	c.Status(resp.StatusCode)
+
+	// Stream the response body
+	io.Copy(c.Writer, resp.Body)
+}
+
+// streamM3UVOD proxies VOD/Series content from an M3U source
+func (s *Server) streamM3UVOD(c *gin.Context, file *models.MediaFile) {
+	// For M3U VOD, the RemoteURL field contains the actual stream URL
+	if file.RemoteURL == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "No remote URL for M3U VOD"})
+		return
+	}
+
+	log.Printf("Proxying M3U VOD: %s", file.RemoteURL)
+
+	// Create HTTP request to fetch the VOD stream
+	req, err := http.NewRequestWithContext(c.Request.Context(), "GET", file.RemoteURL, nil)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create request"})
+		return
+	}
+
+	// Forward range header if present
+	if rangeHeader := c.GetHeader("Range"); rangeHeader != "" {
+		req.Header.Set("Range", rangeHeader)
+	}
+
+	// Forward user-agent
+	req.Header.Set("User-Agent", "OpenFlix/1.0")
+
+	client := &http.Client{
+		Timeout: 0, // No timeout for streaming
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			if len(via) >= 10 {
+				return fmt.Errorf("too many redirects")
+			}
+			return nil
+		},
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Printf("Error fetching M3U VOD: %v", err)
+		c.JSON(http.StatusBadGateway, gin.H{"error": "Failed to fetch VOD stream"})
+		return
+	}
+	defer resp.Body.Close()
+
+	// Forward response headers
+	contentType := resp.Header.Get("Content-Type")
+	if contentType == "" {
+		// Default to mp4 if no content type
+		contentType = "video/mp4"
+	}
 	c.Header("Content-Type", contentType)
 	if contentLength := resp.Header.Get("Content-Length"); contentLength != "" {
 		c.Header("Content-Length", contentLength)
@@ -4072,6 +4143,19 @@ func (s *Server) adminGetSettings(c *gin.Context) {
 		TVDBApiKey:   maskAPIKey(s.config.Library.TVDBApiKey),
 		MetadataLang: s.config.Library.MetadataLang,
 		ScanInterval: s.config.Library.ScanInterval,
+		VODAPIURL:    s.config.VOD.APIURL,
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"settings": settings,
+	})
+}
+
+// getClientSettings returns settings needed by client apps (with full API keys for TMDB lookups)
+func (s *Server) getClientSettings(c *gin.Context) {
+	settings := ServerSettings{
+		TMDBApiKey:   s.config.Library.TMDBApiKey, // Full key for client-side TMDB API calls
+		MetadataLang: s.config.Library.MetadataLang,
 		VODAPIURL:    s.config.VOD.APIURL,
 	}
 
