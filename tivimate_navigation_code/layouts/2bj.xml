@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<LinearLayout android:orientation="vertical" android:id="@id/1ph" android:background="?android:windowBackground" android:layout_width="fill_parent" android:layout_height="fill_parent" android:transitionGroup="false" android:elevation="@dimen/1c1"
-  xmlns:android="http://schemas.android.com/apk/res/android">
-    <FrameLayout android:id="@id/d5" android:background="?5ts" android:layout_width="fill_parent" android:layout_height="wrap_content" android:transitionGroup="false" android:elevation="@dimen/6d2">
-        <TextView android:id="@id/up" android:layout_width="fill_parent" android:layout_height="wrap_content" style="?android:titleTextStyle" />
-    </FrameLayout>
-    <TextView android:id="@android:id/message" android:visibility="gone" android:layout_width="fill_parent" android:layout_height="wrap_content" style="?android:subtitleTextStyle" />
-    <androidx.leanback.widget.VerticalGridView android:id="@android:id/list" android:layout_width="fill_parent" android:layout_height="fill_parent" android:transitionGroup="true" />
-</LinearLayout>

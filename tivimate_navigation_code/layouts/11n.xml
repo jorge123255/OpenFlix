@@ -1,6 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout android:id="@id/604" android:layout_width="@dimen/ev" android:layout_height="fill_parent" android:paddingEnd="@dimen/486" android:transitionGroup="true" android:elevation="@dimen/761"
-  xmlns:android="http://schemas.android.com/apk/res/android">
-    <androidx.leanback.widget.VerticalGridView android:id="@id/340" android:layout_width="@dimen/ev" android:layout_height="fill_parent" style="?of" />
-    <View android:id="@id/11f" android:background="@drawable/rc" android:layout_width="@dimen/1g6" android:layout_height="fill_parent" android:layout_alignParentEnd="true" />
-</RelativeLayout>
