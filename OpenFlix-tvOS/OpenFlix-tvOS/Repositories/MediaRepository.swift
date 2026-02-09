@@ -59,6 +59,30 @@ class MediaRepository: ObservableObject {
         return response.MediaContainer?.Metadata?.map { $0.toDomain() } ?? []
     }
 
+    /// Get recently added items for a specific library section
+    func getSectionRecentlyAdded(sectionId: Int, limit: Int = 20) async throws -> [MediaItem] {
+        // Use the standard library items endpoint with sort by addedAt
+        // This is more reliable than a dedicated recentlyAdded endpoint
+        let response = try await api.getLibraryItems(
+            sectionId: sectionId,
+            start: 0,
+            size: limit,
+            sort: "addedAt:desc",
+            filters: nil
+        )
+        return response.MediaContainer?.Metadata?.map { $0.toDomain() } ?? []
+    }
+
+    /// Get on-deck items filtered by section type (movies only)
+    func getSectionOnDeck(sectionId: Int) async throws -> [MediaItem] {
+        // Plex doesn't have a section-specific onDeck endpoint,
+        // so we get global onDeck and filter by type
+        let response = try await api.getOnDeck()
+        return response.MediaContainer?.Metadata?
+            .filter { $0.type == "movie" }
+            .map { $0.toDomain() } ?? []
+    }
+
     // MARK: - Hubs
 
     func getHubs(sectionId: Int) async throws -> [Hub] {

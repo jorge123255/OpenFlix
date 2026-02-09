@@ -380,7 +380,16 @@ func (p *M3UParser) RefreshSource(source *models.M3USource) error {
 		return err
 	}
 
-	_, _, err = p.ImportChannels(source.ID, channels)
+	// Filter out VOD content - only import live TV channels
+	// VOD content should be imported separately via ImportVOD/ImportSeries
+	var liveChannels []ParsedChannel
+	for _, ch := range channels {
+		if !IsVODGroup(ch.Group) {
+			liveChannels = append(liveChannels, ch)
+		}
+	}
+
+	_, _, err = p.ImportChannels(source.ID, liveChannels)
 	if err != nil {
 		return err
 	}

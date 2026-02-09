@@ -4,10 +4,26 @@
     "Localizable": [
       {
         "comment": "",
-        "key": "Movies",
+        "key": "Continue Watching",
         "location": {
-          "startingColumn": 30,
-          "startingLine": 41
+          "startingColumn": 22,
+          "startingLine": 145
+        }
+      },
+      {
+        "comment": "",
+        "key": "All Movies",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 284
+        }
+      },
+      {
+        "comment": "",
+        "key": "Back",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 275
         }
       },
       {
@@ -15,23 +31,15 @@
         "key": "All Movies",
         "location": {
           "startingColumn": 26,
-          "startingLine": 114
-        }
-      },
-      {
-        "comment": "",
-        "key": "Sort",
-        "location": {
-          "startingColumn": 23,
-          "startingLine": 138
+          "startingLine": 306
         }
       },
       {
         "comment": "",
         "key": "TV Shows",
         "location": {
-          "startingColumn": 30,
-          "startingLine": 326
+          "startingColumn": 22,
+          "startingLine": 447
         }
       },
       {
@@ -39,15 +47,7 @@
         "key": "All TV Shows",
         "location": {
           "startingColumn": 26,
-          "startingLine": 397
-        }
-      },
-      {
-        "comment": "",
-        "key": "Sort",
-        "location": {
-          "startingColumn": 23,
-          "startingLine": 420
+          "startingLine": 495
         }
       }
     ]

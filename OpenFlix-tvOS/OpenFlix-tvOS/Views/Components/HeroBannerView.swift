@@ -258,6 +258,7 @@ struct HeroBannerItem: View {
         MediaItem(
             id: 1,
             key: "/library/metadata/1",
+            guid: "tmdb://157336",
             type: .movie,
             title: "Interstellar",
             originalTitle: nil,

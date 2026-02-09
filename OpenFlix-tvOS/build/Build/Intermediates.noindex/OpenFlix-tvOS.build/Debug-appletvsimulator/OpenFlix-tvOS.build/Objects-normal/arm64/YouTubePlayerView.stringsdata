@@ -1,0 +1,24 @@
+{
+  "source": "/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/OpenFlix-tvOS/OpenFlix-tvOS/Views/Components/YouTubePlayerView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Trailer Available",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 106
+        }
+      },
+      {
+        "comment": "",
+        "key": "TRAILER",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 123
+        }
+      }
+    ]
+  },
+  "version": 1
+}

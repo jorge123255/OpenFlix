@@ -208,6 +208,14 @@ actor OpenFlixAPI {
         try await request(.getOnDeck)
     }
 
+    func getSectionRecentlyAdded(sectionId: Int) async throws -> MediaContainerResponse {
+        try await request(.getSectionRecentlyAdded(sectionId: sectionId))
+    }
+
+    func getSectionNewest(sectionId: Int) async throws -> MediaContainerResponse {
+        try await request(.getSectionNewest(sectionId: sectionId))
+    }
+
     // MARK: - Hubs Convenience Methods
 
     func getHubs(sectionId: Int) async throws -> HubsResponse {
@@ -364,5 +372,9 @@ actor OpenFlixAPI {
 
     func getCapabilities() async throws -> ServerCapabilitiesDTO {
         try await request(.getCapabilities)
+    }
+
+    func getServerSettings() async throws -> ServerSettingsResponse {
+        try await request(.getServerSettings)
     }
 }

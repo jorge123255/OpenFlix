@@ -10,6 +10,7 @@ struct MediaDetailView: View {
     @State private var showPlayer = false
     @State private var selectedEpisode: MediaItem?
     @State private var showMoreOptions = false
+    @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         Group {
@@ -46,6 +47,9 @@ struct MediaDetailView: View {
             }
             Button("Cancel", role: .cancel) {}
         }
+        .onExitCommand {
+            dismiss()
+        }
     }
 
     // MARK: - Detail Content
@@ -58,18 +62,30 @@ struct MediaDetailView: View {
 
                 // Content sections
                 VStack(alignment: .leading, spacing: 40) {
-                    // Summary
-                    if let summary = item.summary {
-                        Text(summary)
-                            .font(.body)
-                            .foregroundColor(OpenFlixColors.textSecondary)
-                            .lineLimit(3)
-                            .frame(maxWidth: 900, alignment: .leading)
+                    // Summary (expanded) - uses TMDB fallback
+                    if let summary = viewModel.effectiveSummary, !summary.isEmpty {
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("About")
+                                .font(.headline)
+                                .fontWeight(.bold)
+                                .foregroundColor(OpenFlixColors.textPrimary)
+
+                            Text(summary)
+                                .font(.body)
+                                .foregroundColor(OpenFlixColors.textSecondary)
+                                .lineLimit(6)
+                                .frame(maxWidth: 900, alignment: .leading)
+                        }
                     }
 
-                    // How to Watch section (for movies)
-                    if item.type == .movie && viewModel.canPlay {
-                        howToWatchSection(item)
+                    // Genres (from server or TMDB)
+                    if !viewModel.effectiveGenres.isEmpty {
+                        genresSection
+                    }
+
+                    // Directors and Writers (from server or TMDB)
+                    if !viewModel.effectiveDirectors.isEmpty || !item.writers.isEmpty {
+                        crewSectionEnhanced
                     }
 
                     // Seasons & Episodes (for TV shows)
@@ -77,9 +93,9 @@ struct MediaDetailView: View {
                         seasonsSection
                     }
 
-                    // Cast & Crew
-                    if !item.roles.isEmpty {
-                        castSection(item.roles)
+                    // Cast & Crew (from server or TMDB)
+                    if !viewModel.effectiveCast.isEmpty {
+                        castSection(viewModel.effectiveCast)
                     }
 
                     // Related content
@@ -126,6 +142,16 @@ struct MediaDetailView: View {
                     .foregroundColor(.white)
                     .shadow(color: .black.opacity(0.5), radius: 4)
                     .lineLimit(2)
+
+                // Tagline (if available)
+                if let tagline = item.tagline, !tagline.isEmpty {
+                    Text("\"\(tagline)\"")
+                        .font(.title3)
+                        .italic()
+                        .foregroundColor(.white.opacity(0.7))
+                        .lineLimit(2)
+                        .padding(.top, 8)
+                }
 
                 Spacer().frame(height: 16)
 
@@ -194,6 +220,15 @@ struct MediaDetailView: View {
                         .font(.subheadline)
                         .foregroundColor(.white)
                     }
+
+                    // Studio
+                    if let studio = item.studio, !studio.isEmpty {
+                        Text("·")
+                            .foregroundColor(.white.opacity(0.6))
+                        Text(studio)
+                            .font(.subheadline)
+                            .foregroundColor(.white.opacity(0.8))
+                    }
                 }
 
                 Spacer().frame(height: 24)
@@ -228,30 +263,104 @@ struct MediaDetailView: View {
         )
     }
 
-    // MARK: - How to Watch Section
+    // MARK: - Crew Section (Directors & Writers)
 
-    private func howToWatchSection(_ item: MediaItem) -> some View {
-        VStack(alignment: .leading, spacing: 16) {
-            // Section divider with title
-            HStack {
-                Text("How to Watch")
-                    .font(.headline)
-                    .fontWeight(.bold)
-                    .foregroundColor(OpenFlixColors.textPrimary)
+    // MARK: - Genres Section
 
-                Rectangle()
-                    .fill(OpenFlixColors.textTertiary)
-                    .frame(height: 1)
+    private var genresSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Genres")
+                .font(.headline)
+                .fontWeight(.bold)
+                .foregroundColor(OpenFlixColors.textPrimary)
+
+            HStack(spacing: 12) {
+                ForEach(viewModel.effectiveGenres.prefix(5), id: \.self) { genre in
+                    Text(genre)
+                        .font(.subheadline)
+                        .foregroundColor(OpenFlixColors.textSecondary)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
+                        .background(OpenFlixColors.surface)
+                        .cornerRadius(OpenFlixColors.cornerRadiusSmall)
+                }
+            }
+        }
+    }
+
+    // MARK: - Crew Section (Enhanced with TMDB fallback)
+
+    private var crewSectionEnhanced: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            // Directors (from server or TMDB)
+            if !viewModel.effectiveDirectors.isEmpty {
+                HStack(alignment: .top, spacing: 8) {
+                    Text("Directed by:")
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .foregroundColor(OpenFlixColors.textTertiary)
+                        .frame(width: 110, alignment: .leading)
+
+                    Text(viewModel.effectiveDirectors.joined(separator: ", "))
+                        .font(.subheadline)
+                        .foregroundColor(OpenFlixColors.textSecondary)
+                        .lineLimit(2)
+                }
             }
 
-            // Play option
-            HowToWatchRow(
-                icon: "play.fill",
-                title: "Play Movie",
-                subtitle: "In your library",
-                onSelect: { showPlayer = true }
-            )
+            // Writers (from server)
+            if let item = viewModel.mediaItem, !item.writers.isEmpty {
+                HStack(alignment: .top, spacing: 8) {
+                    Text("Written by:")
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .foregroundColor(OpenFlixColors.textTertiary)
+                        .frame(width: 110, alignment: .leading)
+
+                    Text(item.writers.joined(separator: ", "))
+                        .font(.subheadline)
+                        .foregroundColor(OpenFlixColors.textSecondary)
+                        .lineLimit(2)
+                }
+            }
         }
+    }
+
+    private func crewSection(_ item: MediaItem) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            // Directors
+            if !item.directors.isEmpty {
+                HStack(alignment: .top, spacing: 8) {
+                    Text("Directed by:")
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .foregroundColor(OpenFlixColors.textTertiary)
+                        .frame(width: 110, alignment: .leading)
+
+                    Text(item.directors.joined(separator: ", "))
+                        .font(.subheadline)
+                        .foregroundColor(OpenFlixColors.textSecondary)
+                        .lineLimit(2)
+                }
+            }
+
+            // Writers
+            if !item.writers.isEmpty {
+                HStack(alignment: .top, spacing: 8) {
+                    Text("Written by:")
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .foregroundColor(OpenFlixColors.textTertiary)
+                        .frame(width: 110, alignment: .leading)
+
+                    Text(item.writers.joined(separator: ", "))
+                        .font(.subheadline)
+                        .foregroundColor(OpenFlixColors.textSecondary)
+                        .lineLimit(2)
+                }
+            }
+        }
+        .frame(maxWidth: 900, alignment: .leading)
     }
 
     // MARK: - Cast Section
@@ -369,61 +478,6 @@ struct CastMemberCard: View {
             }
             .frame(width: 120)
             .scaleEffect(isFocused ? 1.05 : 1.0)
-            .animation(.easeInOut(duration: OpenFlixColors.animationFast), value: isFocused)
-        }
-        .buttonStyle(.card)
-        .focused($isFocused)
-    }
-}
-
-// MARK: - How to Watch Row
-
-struct HowToWatchRow: View {
-    let icon: String
-    let title: String
-    let subtitle: String
-    var onSelect: (() -> Void)?
-
-    @FocusState private var isFocused: Bool
-
-    var body: some View {
-        Button(action: { onSelect?() }) {
-            HStack(spacing: 16) {
-                // Icon
-                Image(systemName: icon)
-                    .font(.title2)
-                    .foregroundColor(OpenFlixColors.accent)
-                    .frame(width: 44, height: 44)
-                    .background(OpenFlixColors.surface)
-                    .cornerRadius(8)
-
-                // Text
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(title)
-                        .font(.headline)
-                        .foregroundColor(OpenFlixColors.textPrimary)
-
-                    Text(subtitle)
-                        .font(.caption)
-                        .foregroundColor(OpenFlixColors.textSecondary)
-                }
-
-                Spacer()
-
-                // Subscribed badge
-                Text("In Library")
-                    .font(.caption)
-                    .fontWeight(.medium)
-                    .foregroundColor(OpenFlixColors.textTertiary)
-            }
-            .padding(16)
-            .background(isFocused ? OpenFlixColors.surfaceElevated : OpenFlixColors.surface)
-            .cornerRadius(OpenFlixColors.cornerRadiusMedium)
-            .overlay(
-                RoundedRectangle(cornerRadius: OpenFlixColors.cornerRadiusMedium)
-                    .stroke(isFocused ? OpenFlixColors.accent : .clear, lineWidth: 3)
-            )
-            .scaleEffect(isFocused ? 1.02 : 1.0)
             .animation(.easeInOut(duration: OpenFlixColors.animationFast), value: isFocused)
         }
         .buttonStyle(.card)

@@ -31,6 +31,7 @@ enum MediaType: String, Codable {
 struct MediaItem: Identifiable, Hashable {
     let id: Int
     let key: String
+    let guid: String?               // Plex GUID for external ID matching (e.g., "tmdb://12345")
     let type: MediaType
     let title: String
     let originalTitle: String?
@@ -93,6 +94,12 @@ struct MediaItem: Identifiable, Hashable {
     var isInProgress: Bool {
         guard let offset = viewOffset, offset > 0 else { return false }
         return progressPercent < 0.9
+    }
+
+    var isRecentlyAdded: Bool {
+        guard let addedAt = addedAt else { return false }
+        let sevenDaysAgo = Date().addingTimeInterval(-7 * 24 * 60 * 60)
+        return addedAt > sevenDaysAgo
     }
 
     var episodeLabel: String? {
@@ -240,6 +247,7 @@ extension MediaItemDTO {
         MediaItem(
             id: ratingKeyInt,
             key: safeKey,
+            guid: guid,
             type: MediaType(rawValue: safeType) ?? .movie,
             title: safeTitle,
             originalTitle: originalTitle,

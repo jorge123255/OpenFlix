@@ -102,10 +102,10 @@ type MediaItem struct {
 	XtreamParentCategory   string `gorm:"size:255;index" json:"xtreamParentCategory,omitempty"`       // Parent category name (e.g., "Netflix")
 
 	// M3U VOD tracking
-	M3USourceID  *uint  `gorm:"index" json:"m3uSourceId,omitempty"`         // M3U source ID for VOD
-	M3UVODID     string `gorm:"size:50;index" json:"m3uVodId,omitempty"`    // Hash of stream URL for movies
-	M3USeriesID  string `gorm:"size:50;index" json:"m3uSeriesId,omitempty"` // Hash of series name for shows
-	M3UEpisodeID string `gorm:"size:50;index" json:"m3uEpisodeId,omitempty"` // Hash of stream URL for episodes
+	M3USourceID  *uint  `gorm:"column:m3u_source_id;index" json:"m3uSourceId,omitempty"`         // M3U source ID for VOD
+	M3UVODID     string `gorm:"column:m3u_vod_id;size:50;index" json:"m3uVodId,omitempty"`    // Hash of stream URL for movies
+	M3USeriesID  string `gorm:"column:m3u_series_id;size:50;index" json:"m3uSeriesId,omitempty"` // Hash of series name for shows
+	M3UEpisodeID string `gorm:"column:m3u_episode_id;size:50;index" json:"m3uEpisodeId,omitempty"` // Hash of stream URL for episodes
 
 	// Hierarchy (for episodes/seasons)
 	ParentID            *uint  `gorm:"index" json:"parentRatingKey,omitempty"`

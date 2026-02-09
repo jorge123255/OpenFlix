@@ -7,7 +7,7 @@
         "key": "Options",
         "location": {
           "startingColumn": 29,
-          "startingLine": 40
+          "startingLine": 41
         }
       },
       {
@@ -15,7 +15,7 @@
         "key": "Mark as Watched",
         "location": {
           "startingColumn": 20,
-          "startingLine": 41
+          "startingLine": 42
         }
       },
       {
@@ -23,7 +23,7 @@
         "key": "Mark as Unwatched",
         "location": {
           "startingColumn": 20,
-          "startingLine": 44
+          "startingLine": 45
         }
       },
       {
@@ -31,7 +31,23 @@
         "key": "Cancel",
         "location": {
           "startingColumn": 20,
-          "startingLine": 47
+          "startingLine": 48
+        }
+      },
+      {
+        "comment": "",
+        "key": "About",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 68
+        }
+      },
+      {
+        "comment": "",
+        "key": "\"%@\"",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 148
         }
       },
       {
@@ -39,7 +55,7 @@
         "key": "·",
         "location": {
           "startingColumn": 30,
-          "startingLine": 145
+          "startingLine": 171
         }
       },
       {
@@ -47,7 +63,7 @@
         "key": "·",
         "location": {
           "startingColumn": 30,
-          "startingLine": 170
+          "startingLine": 196
         }
       },
       {
@@ -55,7 +71,7 @@
         "key": "·",
         "location": {
           "startingColumn": 30,
-          "startingLine": 178
+          "startingLine": 204
         }
       },
       {
@@ -63,15 +79,55 @@
         "key": "·",
         "location": {
           "startingColumn": 30,
-          "startingLine": 187
+          "startingLine": 213
         }
       },
       {
         "comment": "",
-        "key": "How to Watch",
+        "key": "·",
         "location": {
-          "startingColumn": 22,
-          "startingLine": 237
+          "startingColumn": 30,
+          "startingLine": 226
+        }
+      },
+      {
+        "comment": "",
+        "key": "Genres",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 272
+        }
+      },
+      {
+        "comment": "",
+        "key": "Directed by:",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 298
+        }
+      },
+      {
+        "comment": "",
+        "key": "Written by:",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 314
+        }
+      },
+      {
+        "comment": "",
+        "key": "Directed by:",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 334
+        }
+      },
+      {
+        "comment": "",
+        "key": "Written by:",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 350
         }
       },
       {
@@ -79,15 +135,7 @@
         "key": "Cast & Crew",
         "location": {
           "startingColumn": 22,
-          "startingLine": 263
-        }
-      },
-      {
-        "comment": "",
-        "key": "In Library",
-        "location": {
-          "startingColumn": 22,
-          "startingLine": 414
+          "startingLine": 372
         }
       }
     ]

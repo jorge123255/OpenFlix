@@ -224,7 +224,7 @@ struct LibrarySectionCard: View {
         case .movie:
             MoviesView()
         case .show:
-            TVShowsView()
+            TVShowsHubView()
         default:
             MoviesView()
         }

@@ -290,12 +290,239 @@ struct GenreBrowseSection: View {
     }
 }
 
+// MARK: - Movie Hero Section
+// Full-width hero section for Movies hub page
+
+struct MovieHeroSection: View {
+    let item: MediaItem
+    var onPlay: () -> Void
+    var onMoreInfo: () -> Void
+
+    @FocusState private var focusedButton: HeroButton?
+
+    enum HeroButton: Hashable {
+        case play, info
+    }
+
+    private let heroHeight: CGFloat = 480
+
+    var body: some View {
+        ZStack(alignment: .bottomLeading) {
+            // Full-width backdrop image
+            AuthenticatedImage(
+                path: item.art ?? item.thumb,
+                systemPlaceholder: "film"
+            )
+            .aspectRatio(contentMode: .fill)
+            .frame(height: heroHeight)
+            .clipped()
+
+            // Horizontal gradient (left side)
+            LinearGradient(
+                colors: [
+                    OpenFlixColors.background,
+                    OpenFlixColors.background.opacity(0.8),
+                    .clear
+                ],
+                startPoint: .leading,
+                endPoint: .trailing
+            )
+            .frame(width: 800)
+
+            // Vertical gradient (bottom)
+            LinearGradient(
+                colors: [.clear, OpenFlixColors.background.opacity(0.9), OpenFlixColors.background],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .frame(height: heroHeight * 0.5)
+            .offset(y: heroHeight * 0.5)
+
+            // Content overlay
+            VStack(alignment: .leading, spacing: 0) {
+                Spacer()
+
+                // MOVIES badge
+                HStack(spacing: 8) {
+                    Image(systemName: "film.fill")
+                        .font(.caption)
+                    Text("MOVIES")
+                        .font(.caption)
+                        .fontWeight(.bold)
+                        .tracking(2)
+                }
+                .foregroundColor(OpenFlixColors.accent)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(OpenFlixColors.accent.opacity(0.2))
+                .cornerRadius(4)
+
+                Spacer().frame(height: 16)
+
+                // Title
+                Text(item.title)
+                    .font(.system(size: 48, weight: .bold))
+                    .foregroundColor(.white)
+                    .shadow(color: .black.opacity(0.5), radius: 4)
+                    .lineLimit(2)
+
+                Spacer().frame(height: 12)
+
+                // Metadata row
+                HStack(spacing: 12) {
+                    if let year = item.year {
+                        Text(String(year))
+                            .font(.subheadline)
+                            .foregroundColor(.white.opacity(0.8))
+                    }
+
+                    if let rating = item.contentRating {
+                        ContentRatingBadge(rating: rating, size: .medium)
+                    }
+
+                    let duration = item.durationFormatted
+                    if !duration.isEmpty {
+                        Text("·")
+                            .foregroundColor(.white.opacity(0.6))
+                        Text(duration)
+                            .font(.subheadline)
+                            .foregroundColor(.white.opacity(0.8))
+                    }
+
+                    if let audienceRating = item.audienceRating {
+                        Text("·")
+                            .foregroundColor(.white.opacity(0.6))
+                        HStack(spacing: 4) {
+                            Image(systemName: "star.fill")
+                                .foregroundColor(.yellow)
+                            Text(String(format: "%.1f", audienceRating))
+                        }
+                        .font(.subheadline)
+                        .foregroundColor(.white)
+                    }
+                }
+
+                Spacer().frame(height: 16)
+
+                // Summary (2 lines max)
+                if let summary = item.summary {
+                    Text(summary)
+                        .font(.body)
+                        .foregroundColor(.white.opacity(0.8))
+                        .lineLimit(2)
+                        .frame(maxWidth: 600, alignment: .leading)
+                }
+
+                Spacer().frame(height: 24)
+
+                // Action buttons
+                HStack(spacing: 16) {
+                    // Play button
+                    Button(action: onPlay) {
+                        Label(item.isInProgress ? "Resume" : "Play", systemImage: "play.fill")
+                            .font(.headline)
+                            .foregroundColor(.black)
+                            .padding(.horizontal, 36)
+                            .padding(.vertical, 18)
+                            .background(Color.white)
+                            .cornerRadius(8)
+                    }
+                    .buttonStyle(.card)
+                    .focused($focusedButton, equals: .play)
+                    .scaleEffect(focusedButton == .play ? 1.05 : 1.0)
+                    .shadow(color: focusedButton == .play ? .white.opacity(0.3) : .clear, radius: 10)
+                    .animation(.easeInOut(duration: 0.15), value: focusedButton)
+
+                    // More Info button
+                    Button(action: onMoreInfo) {
+                        Label("More Info", systemImage: "info.circle")
+                            .font(.headline)
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 28)
+                            .padding(.vertical, 18)
+                            .background(Color.white.opacity(0.25))
+                            .cornerRadius(8)
+                    }
+                    .buttonStyle(.card)
+                    .focused($focusedButton, equals: .info)
+                    .scaleEffect(focusedButton == .info ? 1.05 : 1.0)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(focusedButton == .info ? Color.white : .clear, lineWidth: 2)
+                    )
+                    .animation(.easeInOut(duration: 0.15), value: focusedButton)
+                }
+
+                Spacer().frame(height: 40)
+            }
+            .padding(.horizontal, 80)
+        }
+        .frame(height: heroHeight)
+    }
+}
+
+// MARK: - Browse All Button
+// Prominent button to navigate to full grid browse
+
+struct BrowseAllButton: View {
+    let mediaType: String  // "Movies" or "TV Shows"
+    var onSelect: () -> Void
+
+    @FocusState private var isFocused: Bool
+
+    var body: some View {
+        Button(action: onSelect) {
+            HStack(spacing: 16) {
+                // Icon
+                Image(systemName: mediaType == "Movies" ? "film" : "tv")
+                    .font(.title2)
+                    .foregroundColor(OpenFlixColors.accent)
+                    .frame(width: 50, height: 50)
+                    .background(OpenFlixColors.accent.opacity(0.2))
+                    .cornerRadius(10)
+
+                // Text
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Browse All")
+                        .font(.headline)
+                        .fontWeight(.bold)
+                        .foregroundColor(OpenFlixColors.textPrimary)
+
+                    Text(mediaType)
+                        .font(.subheadline)
+                        .foregroundColor(OpenFlixColors.textSecondary)
+                }
+
+                Spacer()
+
+                // Arrow
+                Image(systemName: "chevron.right")
+                    .font(.title3)
+                    .foregroundColor(isFocused ? OpenFlixColors.accent : OpenFlixColors.textTertiary)
+            }
+            .padding(20)
+            .background(isFocused ? OpenFlixColors.surfaceElevated : OpenFlixColors.surface)
+            .cornerRadius(OpenFlixColors.cornerRadiusMedium)
+            .overlay(
+                RoundedRectangle(cornerRadius: OpenFlixColors.cornerRadiusMedium)
+                    .stroke(isFocused ? OpenFlixColors.accent : .clear, lineWidth: 3)
+            )
+            .scaleEffect(isFocused ? 1.02 : 1.0)
+            .animation(.easeInOut(duration: OpenFlixColors.animationFast), value: isFocused)
+        }
+        .buttonStyle(.card)
+        .focused($isFocused)
+        .padding(.horizontal, 50)
+    }
+}
+
 // MARK: - Preview
 
 #Preview {
     VStack(spacing: 32) {
         ContinueWatchingSection(items: [])
         RecentlyAddedSection(items: [])
+        BrowseAllButton(mediaType: "Movies") {}
     }
     .background(Color.black)
 }

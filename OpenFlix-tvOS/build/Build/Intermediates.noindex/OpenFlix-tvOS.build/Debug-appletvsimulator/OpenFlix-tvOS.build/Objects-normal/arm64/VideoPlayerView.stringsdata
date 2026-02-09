@@ -7,7 +7,7 @@
         "key": "Close",
         "location": {
           "startingColumn": 28,
-          "startingLine": 64
+          "startingLine": 67
         }
       },
       {
@@ -15,7 +15,7 @@
         "key": "10",
         "location": {
           "startingColumn": 30,
-          "startingLine": 274
+          "startingLine": 330
         }
       },
       {
@@ -23,7 +23,15 @@
         "key": "10",
         "location": {
           "startingColumn": 30,
-          "startingLine": 322
+          "startingLine": 378
+        }
+      },
+      {
+        "comment": "",
+        "key": "Speed: %@",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 533
         }
       },
       {
@@ -31,39 +39,7 @@
         "key": "Info",
         "location": {
           "startingColumn": 27,
-          "startingLine": 415
-        }
-      },
-      {
-        "comment": "",
-        "key": "Details",
-        "location": {
-          "startingColumn": 27,
-          "startingLine": 428
-        }
-      },
-      {
-        "comment": "",
-        "key": "Off",
-        "location": {
-          "startingColumn": 32,
-          "startingLine": 442
-        }
-      },
-      {
-        "comment": "",
-        "key": "Subtitles",
-        "location": {
-          "startingColumn": 31,
-          "startingLine": 451
-        }
-      },
-      {
-        "comment": "",
-        "key": "Audio",
-        "location": {
-          "startingColumn": 31,
-          "startingLine": 466
+          "startingLine": 471
         }
       }
     ]

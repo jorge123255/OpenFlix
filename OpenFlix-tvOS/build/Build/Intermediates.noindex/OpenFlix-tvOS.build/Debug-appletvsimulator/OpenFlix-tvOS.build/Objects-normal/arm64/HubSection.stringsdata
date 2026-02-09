@@ -7,7 +7,7 @@
         "key": "S%lld, E%lld",
         "location": {
           "startingColumn": 38,
-          "startingLine": 118
+          "startingLine": 120
         }
       },
       {
@@ -15,7 +15,63 @@
         "key": "·",
         "location": {
           "startingColumn": 34,
-          "startingLine": 123
+          "startingLine": 125
+        }
+      },
+      {
+        "comment": "",
+        "key": "MOVIES",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 349
+        }
+      },
+      {
+        "comment": "",
+        "key": "·",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 385
+        }
+      },
+      {
+        "comment": "",
+        "key": "·",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 393
+        }
+      },
+      {
+        "comment": "",
+        "key": "Resume",
+        "location": {
+          "startingColumn": 51,
+          "startingLine": 422
+        }
+      },
+      {
+        "comment": "",
+        "key": "Play",
+        "location": {
+          "startingColumn": 62,
+          "startingLine": 422
+        }
+      },
+      {
+        "comment": "",
+        "key": "More Info",
+        "location": {
+          "startingColumn": 31,
+          "startingLine": 438
+        }
+      },
+      {
+        "comment": "",
+        "key": "Browse All",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 486
         }
       }
     ]

@@ -284,6 +284,10 @@ func (s *Server) setupRouter() {
 	r.GET("/api/v2/home/users", s.authRequired(), s.getHomeUsers)
 	r.POST("/api/v2/home/users/:uuid/switch", s.authRequired(), s.switchUser)
 
+	// ============ Client Settings API (authenticated but not admin) ============
+	// This endpoint provides settings needed by client apps (TMDB API key for trailers, etc.)
+	r.GET("/api/client/settings", s.authRequired(), s.getClientSettings)
+
 	// ============ Admin Library Management API ============
 	admin := r.Group("/admin")
 	admin.Use(s.authRequired(), s.adminRequired())

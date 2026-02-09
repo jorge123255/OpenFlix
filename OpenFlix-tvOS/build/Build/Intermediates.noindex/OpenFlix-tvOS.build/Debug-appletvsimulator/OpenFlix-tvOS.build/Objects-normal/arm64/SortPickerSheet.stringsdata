@@ -1,0 +1,24 @@
+{
+  "source": "/Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/OpenFlix-tvOS/OpenFlix-tvOS/Views/Components/SortPickerSheet.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Sort By",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 25
+        }
+      },
+      {
+        "comment": "",
+        "key": "Press Menu to cancel",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 46
+        }
+      }
+    ]
+  },
+  "version": 1
+}

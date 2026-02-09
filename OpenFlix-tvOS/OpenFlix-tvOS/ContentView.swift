@@ -39,7 +39,7 @@ struct MainTabView: View {
                 }
                 .tag(1)
 
-            TVShowsView()
+            TVShowsHubView()
                 .tabItem {
                     Label("TV Shows", systemImage: "tv")
                 }
