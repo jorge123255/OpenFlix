@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<FrameLayout android:id="@id/468" android:focusable="true" android:focusableInTouchMode="true" android:nextFocusLeft="@id/468" android:nextFocusRight="@id/468" android:nextFocusUp="@id/468" android:nextFocusDown="@id/468" android:descendantFocusability="afterDescendants" android:layout_width="fill_parent" android:layout_height="fill_parent"
-  xmlns:android="http://schemas.android.com/apk/res/android">
-    <LinearLayout android:layout_gravity="center" android:orientation="vertical" android:layout_width="wrap_content" android:layout_height="wrap_content">
-        <ImageView android:layout_gravity="center" android:id="@id/1m9" android:visibility="gone" android:layout_width="wrap_content" android:layout_height="@dimen/de" />
-        <TextView android:layout_gravity="center" android:id="@id/3tv" android:visibility="gone" android:layout_width="wrap_content" android:layout_height="wrap_content" android:maxWidth="@dimen/50m" style="?1s4" />
-        <Button android:layout_gravity="center" android:id="@id/3k2" android:visibility="gone" android:nextFocusLeft="@id/3k2" android:nextFocusRight="@id/3k2" android:nextFocusUp="@id/3k2" android:nextFocusDown="@id/3k2" android:layout_width="wrap_content" android:layout_height="wrap_content" style="?android:buttonStyle" />
-    </LinearLayout>
-</FrameLayout>
