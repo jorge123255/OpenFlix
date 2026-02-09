@@ -1,5 +1,7 @@
 package com.openflix.presentation.screens.tvshows
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -20,6 +22,7 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -27,17 +30,20 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.tv.material3.*
 import coil.compose.AsyncImage
+import com.openflix.domain.model.GenreHub
 import com.openflix.domain.model.Hub
 import com.openflix.domain.model.backdropUrl
 import com.openflix.domain.model.posterUrl
 import com.openflix.domain.model.watchProgress
 import com.openflix.domain.model.MediaItem
 import com.openflix.domain.model.MediaType
+import com.openflix.presentation.components.ContentType
+import com.openflix.presentation.components.HeroCarousel
 import com.openflix.presentation.components.MediaCard
 import com.openflix.presentation.theme.OpenFlixColors
 
 /**
- * TV Shows screen - shows only TV show content
+ * TV Shows screen - shows only TV show content with hero carousel and genre hubs
  */
 @Composable
 fun TVShowsScreen(
@@ -47,6 +53,7 @@ fun TVShowsScreen(
     viewModel: TVShowsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
 
     LaunchedEffect(Unit) {
         viewModel.loadTVShows()
@@ -69,13 +76,27 @@ fun TVShowsScreen(
                     .background(OpenFlixColors.Background),
                 contentPadding = PaddingValues(bottom = 48.dp)
             ) {
-                // Hero Section
-                uiState.featuredItem?.let { featured ->
-                    item {
+                // Hero Carousel Section
+                item {
+                    if (uiState.featuredItems.isNotEmpty()) {
+                        HeroCarousel(
+                            items = uiState.featuredItems,
+                            trailers = uiState.trailers,
+                            onPlayClick = { item -> onPlayClick(item.id) },
+                            onInfoClick = { item -> onMediaClick(item.id) },
+                            onTrailerClick = { _, trailer ->
+                                // Open YouTube trailer
+                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(trailer.youtubeWatchUrl))
+                                context.startActivity(intent)
+                            },
+                            contentType = ContentType.TV_SHOWS
+                        )
+                    } else if (uiState.featuredItem != null) {
+                        // Fallback to single hero if no featured items
                         TVShowHeroSection(
-                            mediaItem = featured,
-                            onPlay = { onPlayClick(featured.id) },
-                            onDetails = { onMediaClick(featured.id) }
+                            mediaItem = uiState.featuredItem!!,
+                            onPlay = { onPlayClick(uiState.featuredItem!!.id) },
+                            onDetails = { onMediaClick(uiState.featuredItem!!.id) }
                         )
                     }
                 }
@@ -100,14 +121,69 @@ fun TVShowsScreen(
                     }
                 }
 
-                // TV Show Hubs
-                items(uiState.hubs) { hub ->
-                    TVShowHubSection(
-                        hub = hub,
-                        onItemClick = { mediaItem -> onMediaClick(mediaItem.id) },
-                        onPlayClick = { mediaItem -> onPlayClick(mediaItem.id) }
+                // Genre Hub Sections
+                items(uiState.genreHubs) { genreHub ->
+                    GenreHubSection(
+                        genreHub = genreHub,
+                        onItemClick = { mediaItem -> onMediaClick(mediaItem.id) }
                     )
                 }
+
+                // Original TV Show Hubs (for content not covered by genre hubs)
+                items(uiState.hubs) { hub ->
+                    // Skip if hub title matches any genre hub
+                    if (uiState.genreHubs.none { it.genre.equals(hub.title, ignoreCase = true) }) {
+                        TVShowHubSection(
+                            hub = hub,
+                            onItemClick = { mediaItem -> onMediaClick(mediaItem.id) },
+                            onPlayClick = { mediaItem -> onPlayClick(mediaItem.id) }
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun GenreHubSection(
+    genreHub: GenreHub,
+    onItemClick: (MediaItem) -> Unit
+) {
+    Column(modifier = Modifier.padding(top = 40.dp)) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 56.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = genreHub.genre,
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.SemiBold,
+                color = OpenFlixColors.TextPrimary
+            )
+            Text(
+                text = "${genreHub.items.size} shows",
+                style = MaterialTheme.typography.bodySmall,
+                color = OpenFlixColors.TextTertiary
+            )
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        LazyRow(
+            contentPadding = PaddingValues(horizontal = 56.dp),
+            horizontalArrangement = Arrangement.spacedBy(20.dp)
+        ) {
+            items(genreHub.items) { item ->
+                MediaCard(
+                    mediaItem = item,
+                    onClick = { onItemClick(item) },
+                    width = 180.dp,
+                    aspectRatio = 1.5f
+                )
             }
         }
     }

@@ -1,5 +1,7 @@
 package com.openflix.presentation.screens.movies
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -20,6 +22,7 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -27,15 +30,19 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.tv.material3.*
 import coil.compose.AsyncImage
+import com.openflix.domain.model.GenreHub
 import com.openflix.domain.model.Hub
+import com.openflix.domain.model.MediaItem
+import com.openflix.domain.model.TrailerInfo
 import com.openflix.domain.model.backdropUrl
 import com.openflix.domain.model.posterUrl
-import com.openflix.domain.model.MediaItem
+import com.openflix.presentation.components.ContentType
+import com.openflix.presentation.components.HeroCarousel
 import com.openflix.presentation.components.MediaCard
 import com.openflix.presentation.theme.OpenFlixColors
 
 /**
- * Movies screen - shows only movie content
+ * Movies screen - shows only movie content with hero carousel and genre hubs
  */
 @Composable
 fun MoviesScreen(
@@ -45,6 +52,7 @@ fun MoviesScreen(
     viewModel: MoviesViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
 
     LaunchedEffect(Unit) {
         viewModel.loadMovies()
@@ -67,13 +75,27 @@ fun MoviesScreen(
                     .background(OpenFlixColors.Background),
                 contentPadding = PaddingValues(bottom = 48.dp)
             ) {
-                // Hero Section
-                uiState.featuredItem?.let { featured ->
-                    item {
+                // Hero Carousel Section
+                item {
+                    if (uiState.featuredItems.isNotEmpty()) {
+                        HeroCarousel(
+                            items = uiState.featuredItems,
+                            trailers = uiState.trailers,
+                            onPlayClick = { item -> onPlayClick(item.id) },
+                            onInfoClick = { item -> onMediaClick(item.id) },
+                            onTrailerClick = { _, trailer ->
+                                // Open YouTube trailer
+                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(trailer.youtubeWatchUrl))
+                                context.startActivity(intent)
+                            },
+                            contentType = ContentType.MOVIES
+                        )
+                    } else if (uiState.featuredItem != null) {
+                        // Fallback to single hero if no featured items
                         MovieHeroSection(
-                            mediaItem = featured,
-                            onPlay = { onPlayClick(featured.id) },
-                            onDetails = { onMediaClick(featured.id) }
+                            mediaItem = uiState.featuredItem!!,
+                            onPlay = { onPlayClick(uiState.featuredItem!!.id) },
+                            onDetails = { onMediaClick(uiState.featuredItem!!.id) }
                         )
                     }
                 }
@@ -98,14 +120,69 @@ fun MoviesScreen(
                     }
                 }
 
-                // Movie Hubs
-                items(uiState.hubs) { hub ->
-                    MovieHubSection(
-                        hub = hub,
-                        onItemClick = { mediaItem -> onMediaClick(mediaItem.id) },
-                        onPlayClick = { mediaItem -> onPlayClick(mediaItem.id) }
+                // Genre Hub Sections
+                items(uiState.genreHubs) { genreHub ->
+                    GenreHubSection(
+                        genreHub = genreHub,
+                        onItemClick = { mediaItem -> onMediaClick(mediaItem.id) }
                     )
                 }
+
+                // Original Movie Hubs (for content not covered by genre hubs)
+                items(uiState.hubs) { hub ->
+                    // Skip if hub title matches any genre hub
+                    if (uiState.genreHubs.none { it.genre.equals(hub.title, ignoreCase = true) }) {
+                        MovieHubSection(
+                            hub = hub,
+                            onItemClick = { mediaItem -> onMediaClick(mediaItem.id) },
+                            onPlayClick = { mediaItem -> onPlayClick(mediaItem.id) }
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun GenreHubSection(
+    genreHub: GenreHub,
+    onItemClick: (MediaItem) -> Unit
+) {
+    Column(modifier = Modifier.padding(top = 40.dp)) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 56.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = genreHub.genre,
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.SemiBold,
+                color = OpenFlixColors.TextPrimary
+            )
+            Text(
+                text = "${genreHub.items.size} movies",
+                style = MaterialTheme.typography.bodySmall,
+                color = OpenFlixColors.TextTertiary
+            )
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        LazyRow(
+            contentPadding = PaddingValues(horizontal = 56.dp),
+            horizontalArrangement = Arrangement.spacedBy(20.dp)
+        ) {
+            items(genreHub.items) { item ->
+                MediaCard(
+                    mediaItem = item,
+                    onClick = { onItemClick(item) },
+                    width = 180.dp,
+                    aspectRatio = 1.5f
+                )
             }
         }
     }

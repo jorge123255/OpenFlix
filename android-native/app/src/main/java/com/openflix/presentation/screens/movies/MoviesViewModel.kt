@@ -3,9 +3,12 @@ package com.openflix.presentation.screens.movies
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.openflix.data.repository.MediaRepository
+import com.openflix.data.repository.TmdbRepository
+import com.openflix.domain.model.GenreHub
 import com.openflix.domain.model.Hub
 import com.openflix.domain.model.MediaItem
 import com.openflix.domain.model.MediaType
+import com.openflix.domain.model.TrailerInfo
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -14,11 +17,18 @@ import javax.inject.Inject
 
 @HiltViewModel
 class MoviesViewModel @Inject constructor(
-    private val mediaRepository: MediaRepository
+    private val mediaRepository: MediaRepository,
+    private val tmdbRepository: TmdbRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(MoviesUiState())
     val uiState: StateFlow<MoviesUiState> = _uiState.asStateFlow()
+
+    companion object {
+        private const val FEATURED_ITEMS_COUNT = 8
+        private const val MIN_GENRE_ITEMS = 3
+        private const val MAX_GENRE_HUBS = 8
+    }
 
     fun loadMovies() {
         viewModelScope.launch {
@@ -46,21 +56,30 @@ class MoviesViewModel @Inject constructor(
                         .flatMap { it.items }
                         .filter { it.type == MediaType.MOVIE }
 
-                    // Find featured movie
-                    val featuredItem = movieHubs
-                        .firstOrNull { it.promoted || it.style == "hero" }
-                        ?.items?.firstOrNull()
-                        ?: movieHubs.firstOrNull()?.items?.firstOrNull()
+                    // Collect all movies for featured and genre hubs
+                    val allMovies = movieHubs.flatMap { it.items }.distinctBy { it.id }
+
+                    // Select featured items (prioritize promoted hubs, then recent/popular)
+                    val featuredItems = selectFeaturedItems(movieHubs, allMovies)
+
+                    // Generate genre hubs
+                    val genreHubs = generateGenreHubs(allMovies)
 
                     _uiState.update {
                         it.copy(
                             isLoading = false,
                             hubs = movieHubs,
                             continueWatching = continueWatching,
-                            featuredItem = featuredItem
+                            featuredItems = featuredItems,
+                            currentFeaturedIndex = 0,
+                            genreHubs = genreHubs
                         )
                     }
-                    Timber.d("Loaded ${movieHubs.size} movie hubs")
+
+                    Timber.d("Loaded ${movieHubs.size} movie hubs, ${featuredItems.size} featured, ${genreHubs.size} genre hubs")
+
+                    // Load trailers for featured items in background
+                    loadTrailersForFeaturedItems(featuredItems)
                 },
                 onFailure = { error ->
                     Timber.e(error, "Failed to load movies")
@@ -75,6 +94,111 @@ class MoviesViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Select featured items for the hero carousel.
+     * Prioritizes:
+     * 1. Items from promoted hubs
+     * 2. Recently added items
+     * 3. Popular/highly rated items
+     */
+    private fun selectFeaturedItems(hubs: List<Hub>, allMovies: List<MediaItem>): List<MediaItem> {
+        val featured = mutableListOf<MediaItem>()
+        val usedIds = mutableSetOf<String>()
+
+        // First, add items from promoted hubs
+        hubs.filter { it.promoted || it.style == "hero" }
+            .flatMap { it.items }
+            .take(FEATURED_ITEMS_COUNT / 2)
+            .forEach { item ->
+                if (item.id !in usedIds) {
+                    featured.add(item)
+                    usedIds.add(item.id)
+                }
+            }
+
+        // Fill remaining with recently added or high-rated items
+        val remaining = FEATURED_ITEMS_COUNT - featured.size
+        if (remaining > 0) {
+            // Sort by addedAt (most recent first), then by rating
+            val candidates = allMovies
+                .filter { it.id !in usedIds }
+                .sortedWith(compareByDescending<MediaItem> { it.addedAt ?: 0L }
+                    .thenByDescending { it.rating ?: 0.0 })
+                .take(remaining)
+
+            featured.addAll(candidates)
+        }
+
+        return featured.take(FEATURED_ITEMS_COUNT)
+    }
+
+    /**
+     * Generate genre-based content hubs.
+     * Groups items by genre and returns top genres with most content.
+     */
+    private fun generateGenreHubs(allItems: List<MediaItem>): List<GenreHub> {
+        // Group items by genre
+        val genreMap = mutableMapOf<String, MutableList<MediaItem>>()
+
+        allItems.forEach { item ->
+            item.genres.forEach { genre ->
+                genreMap.getOrPut(genre) { mutableListOf() }.add(item)
+            }
+        }
+
+        // Filter genres with minimum items and sort by count
+        return genreMap
+            .filter { it.value.size >= MIN_GENRE_ITEMS }
+            .entries
+            .sortedByDescending { it.value.size }
+            .take(MAX_GENRE_HUBS)
+            .map { (genre, items) ->
+                GenreHub(
+                    genre = genre,
+                    items = items.distinctBy { it.id }.take(20) // Limit items per genre
+                )
+            }
+    }
+
+    /**
+     * Load trailers for featured items from TMDB
+     */
+    private fun loadTrailersForFeaturedItems(items: List<MediaItem>) {
+        viewModelScope.launch {
+            val trailers = mutableMapOf<String, TrailerInfo>()
+
+            items.forEach { item ->
+                try {
+                    val trailer = tmdbRepository.getMovieTrailer(
+                        mediaId = item.id,
+                        plexGuid = item.key,
+                        title = item.title,
+                        year = item.year
+                    )
+                    if (trailer != null) {
+                        trailers[item.id] = trailer
+                        // Update state incrementally as trailers are loaded
+                        _uiState.update { it.copy(trailers = trailers.toMap()) }
+                    }
+                } catch (e: Exception) {
+                    Timber.w(e, "Failed to load trailer for ${item.title}")
+                }
+            }
+
+            Timber.d("Loaded ${trailers.size} trailers for featured items")
+        }
+    }
+
+    /**
+     * Set the current featured index (for manual carousel control)
+     */
+    fun setFeaturedIndex(index: Int) {
+        val items = _uiState.value.featuredItems
+        if (index in items.indices) {
+            _uiState.update { it.copy(currentFeaturedIndex = index) }
+        }
+    }
+
     fun refresh() {
         loadMovies()
     }
@@ -84,6 +208,13 @@ data class MoviesUiState(
     val isLoading: Boolean = false,
     val hubs: List<Hub> = emptyList(),
     val continueWatching: List<MediaItem> = emptyList(),
-    val featuredItem: MediaItem? = null,
+    val featuredItems: List<MediaItem> = emptyList(),
+    val currentFeaturedIndex: Int = 0,
+    val trailers: Map<String, TrailerInfo> = emptyMap(),
+    val genreHubs: List<GenreHub> = emptyList(),
     val error: String? = null
-)
+) {
+    // Backwards compatibility - return first featured item
+    val featuredItem: MediaItem?
+        get() = featuredItems.getOrNull(currentFeaturedIndex)
+}

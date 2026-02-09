@@ -179,6 +179,11 @@ class PreferencesManager @Inject constructor(
         .catch { e -> handleError(e) }
         .map { it[PreferencesKeys.KIDS_MODE] ?: false }
 
+    // === TMDB ===
+    val tmdbApiKey: Flow<String?> = dataStore.data
+        .catch { e -> handleError(e) }
+        .map { it[PreferencesKeys.TMDB_API_KEY] }
+
     // === Advanced ===
     val debugLogging: Flow<Boolean> = dataStore.data
         .catch { e -> handleError(e) }
@@ -352,6 +357,16 @@ class PreferencesManager @Inject constructor(
         }
     }
 
+    suspend fun setTmdbApiKey(key: String?) {
+        dataStore.edit { prefs ->
+            if (key != null) {
+                prefs[PreferencesKeys.TMDB_API_KEY] = key
+            } else {
+                prefs.remove(PreferencesKeys.TMDB_API_KEY)
+            }
+        }
+    }
+
     suspend fun clearAll() {
         dataStore.edit { prefs ->
             prefs.clear()
@@ -423,6 +438,9 @@ class PreferencesManager @Inject constructor(
         val DEBUG_LOGGING = booleanPreferencesKey("debug_logging")
         val SCREENSAVER_ENABLED = booleanPreferencesKey("screensaver_enabled")
         val SCREENSAVER_IDLE_TIME = intPreferencesKey("screensaver_idle_time")
+
+        // TMDB
+        val TMDB_API_KEY = stringPreferencesKey("tmdb_api_key")
 
         // Live TV
         val FAVORITE_CHANNEL_IDS = stringPreferencesKey("favorite_channel_ids")

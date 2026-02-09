@@ -3,15 +3,17 @@
   OpenFlix
 </h1>
 
-OpenFlix is an open-source media server with Live TV/IPTV and DVR capabilities. It provides a complete self-hosted streaming solution with a modern Flutter client and a Go-powered backend.
+OpenFlix is an open-source media server with Live TV/IPTV and DVR capabilities. It provides a complete self-hosted streaming solution with native clients for Android TV, Apple TV, and a Go-powered backend.
 
 ## Project Structure
 
 ```
 openflix/
-├── lib/                 # Flutter client source
+├── android-native/      # Native Android/Android TV app (Kotlin/Compose)
+├── OpenFlix-tvOS/       # Native tvOS/Apple TV app (Swift/SwiftUI)
 ├── server/              # Go backend server
 │   ├── cmd/server/      # Server entrypoint
+│   ├── web/             # React web admin interface
 │   └── internal/        # Server modules
 │       ├── api/         # HTTP handlers
 │       ├── auth/        # JWT authentication
@@ -21,11 +23,7 @@ openflix/
 │       ├── livetv/      # M3U, EPG, channels
 │       ├── dvr/         # Recording engine
 │       └── transcode/   # FFmpeg wrapper
-├── android/             # Android app
-├── ios/                 # iOS app
-├── macos/               # macOS app
-├── windows/             # Windows app
-└── linux/               # Linux app
+└── assets/              # Shared assets
 ```
 
 ## Features
@@ -39,23 +37,34 @@ openflix/
 - Series recording rules
 - Commercial detection (Comskip integration)
 - Hardware-accelerated transcoding (FFmpeg)
+- Web-based admin interface
 
-### Client
-- Cross-platform (iOS, Android, macOS, Windows, Linux)
-- Rich media browsing with metadata
-- Advanced video playback (HEVC, AV1, VP9)
+### Android TV Client
+- Native Kotlin with Jetpack Compose for TV
+- Hero carousel with auto-rotation and TMDB trailers
+- Genre-based content discovery
+- MPV-powered video playback (HEVC, AV1, VP9, Dolby Vision)
 - Live TV guide with EPG grid
-- Channel surfing
+- Channel surfing with instant switch
 - DVR management and playback
-- Commercial skip (auto/manual)
 - Subtitle support (ASS/SSA)
-- Playback progress sync
+- D-pad optimized navigation
+
+### Apple TV Client
+- Native Swift with SwiftUI
+- Hero carousel with featured content
+- Genre hub sections
+- AVPlayer with custom overlay controls
+- Live TV with EPG and channel surfing
+- DVR playback with commercial skip
+- Siri Remote optimized
 
 ## Quick Start
 
 ### Prerequisites
 - Go 1.21+ (for server)
-- Flutter SDK 3.8.1+ (for client)
+- Android Studio (for Android TV app)
+- Xcode 15+ (for Apple TV app)
 - FFmpeg (for transcoding)
 - Comskip (optional, for commercial detection)
 
@@ -75,17 +84,27 @@ go build -o openflix-server ./cmd/server
 
 The server runs on `http://localhost:32400` by default.
 
-### Run the Client
+### Build Android TV App
 
 ```bash
-# Install dependencies
-flutter pub get
+cd android-native
 
-# Generate code
-dart run build_runner build
+# Build debug APK
+./gradlew assembleDebug
 
-# Run
-flutter run
+# Install to device
+adb install app/build/outputs/apk/debug/app-debug.apk
+```
+
+### Build Apple TV App
+
+```bash
+cd OpenFlix-tvOS
+
+# Open in Xcode
+open OpenFlix.xcodeproj
+
+# Build and run on Apple TV simulator or device
 ```
 
 ### Docker
@@ -163,11 +182,17 @@ go build ./...
 go test ./...
 ```
 
-### Client
+### Android TV
 ```bash
-flutter analyze
-flutter test
-dart format .
+cd android-native
+./gradlew build
+./gradlew test
+```
+
+### Apple TV
+```bash
+cd OpenFlix-tvOS
+xcodebuild -scheme OpenFlix -destination 'platform=tvOS Simulator,name=Apple TV'
 ```
 
 ## Building for Production
@@ -178,21 +203,25 @@ cd server
 CGO_ENABLED=0 go build -o openflix-server ./cmd/server
 ```
 
-### Client
+### Android TV
 ```bash
-flutter build macos --release
-flutter build windows --release
-flutter build linux --release
-flutter build apk --release
-flutter build ios --release
+cd android-native
+./gradlew assembleRelease
+```
+
+### Apple TV
+Build via Xcode with Release configuration or:
+```bash
+xcodebuild -scheme OpenFlix -configuration Release archive
 ```
 
 ## Acknowledgments
 
-- Client forked from [Plezy](https://github.com/edde746/plezy)
-- Built with [Flutter](https://flutter.dev) and [Go](https://golang.org)
-- Media playback powered by [MediaKit](https://github.com/media-kit/media-kit)
+- Built with [Kotlin](https://kotlinlang.org), [Swift](https://swift.org), and [Go](https://golang.org)
+- Android playback powered by [MPV](https://mpv.io)
+- Apple TV playback via AVPlayer
 - Commercial detection by [Comskip](https://github.com/erikkaashoek/Comskip)
+- Metadata from [TMDB](https://www.themoviedb.org)
 
 ## License
 
