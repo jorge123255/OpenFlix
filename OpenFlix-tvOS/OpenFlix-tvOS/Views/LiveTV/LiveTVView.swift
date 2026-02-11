@@ -26,7 +26,8 @@ struct LiveTVView: View {
                     message: "Add M3U or Xtream sources in Settings to get started."
                 )
             } else {
-                EPGGridView(
+                // Modern EPG with glass effects and smooth animations
+                EPGGridViewModern(
                     viewModel: viewModel,
                     onChannelSelect: { channel in
                         playChannel(channel)
