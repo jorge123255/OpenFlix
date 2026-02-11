@@ -19,6 +19,8 @@ import (
 	"github.com/openflix/openflix-server/internal/transcode"
 	"github.com/openflix/openflix-server/internal/instant"
 	"github.com/openflix/openflix-server/internal/multiview"
+	"github.com/openflix/openflix-server/internal/sports"
+	"github.com/openflix/openflix-server/internal/commercial"
 	limiter "github.com/ulule/limiter/v3"
 	mgin "github.com/ulule/limiter/v3/drivers/middleware/gin"
 	"github.com/ulule/limiter/v3/drivers/store/memory"
@@ -712,6 +714,26 @@ func (s *Server) setupRouter() {
 			s.multiviewManager = multiview.NewMultiviewManager(6, nil) // 6 streams max
 		}
 		multiview.RegisterRoutes(multiviewGroup, s.multiviewManager)
+	}
+
+	// ============ Sports Scores Overlay API ============
+	// Live scores from ESPN (FREE, no API key needed!)
+	// Favorites pinned to top, updates every 30s
+	sportsGroup := r.Group("/api/sports")
+	sportsGroup.Use(s.authRequired())
+	{
+		sportsManager := sports.SetupSportsScores()
+		sports.RegisterRoutes(sportsGroup, sportsManager)
+	}
+
+	// ============ Commercial Skip AI API ============
+	// Hybrid detection: comskip + black frames + audio analysis
+	// Auto-skip with "Skipping in 3...2...1..." UI
+	commercialGroup := r.Group("/api/commercial")
+	commercialGroup.Use(s.authRequired())
+	{
+		commercialDetector := commercial.SetupCommercialSkip()
+		commercial.RegisterRoutes(commercialGroup, commercialDetector)
 	}
 
 	// ============ Gracenote EPG API ============
