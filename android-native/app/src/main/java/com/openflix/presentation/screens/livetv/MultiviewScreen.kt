@@ -306,6 +306,34 @@ fun MultiviewScreen(
                             viewModel.toggleMuteOnSlot(currentSlot)
                             true
                         }
+                        // DVR Controls - Keyboard shortcuts
+                        Key.P, Key.MediaPause -> {
+                            // Toggle pause on focused slot, or pause all with long press
+                            viewModel.togglePauseSlot(currentSlot)
+                            true
+                        }
+                        Key.Spacebar, Key.MediaPlayPause -> {
+                            viewModel.togglePauseSlot(currentSlot)
+                            true
+                        }
+                        Key.L -> {
+                            // Jump all to live
+                            viewModel.jumpAllToLive()
+                            true
+                        }
+                        Key.S -> {
+                            // Sync all streams
+                            viewModel.syncAllStreams()
+                            true
+                        }
+                        Key.MediaRewind -> {
+                            viewModel.rewindSlot(currentSlot, 15)
+                            true
+                        }
+                        Key.MediaFastForward -> {
+                            viewModel.fastForwardSlot(currentSlot, 15)
+                            true
+                        }
                         Key.G, Key.Menu -> {
                             isInActionBar = !isInActionBar
                             if (isInActionBar) actionBarButtonIndex = 1
@@ -343,7 +371,15 @@ fun MultiviewScreen(
                 focusedSlotIndex = uiState.focusedSlotIndex,
                 layout = uiState.layout,
                 isInActionBar = isInActionBar,
-                actionBarButtonIndex = actionBarButtonIndex
+                actionBarButtonIndex = actionBarButtonIndex,
+                onPauseAll = { viewModel.pauseAll() },
+                onResumeAll = { viewModel.resumeAll() },
+                onLiveAll = { viewModel.jumpAllToLive() },
+                onSyncAll = { viewModel.syncAllStreams() },
+                onRewind = { viewModel.rewindSlot(uiState.focusedSlotIndex, 15) },
+                onFastForward = { viewModel.fastForwardSlot(uiState.focusedSlotIndex, 15) },
+                anyPaused = viewModel.anySlotPaused,
+                allLive = viewModel.allSlotsLive
             )
         }
 
@@ -633,6 +669,33 @@ private fun FocusableSlot(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
+                            // Paused indicator
+                            if (slot.dvrState.isPaused) {
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(4.dp))
+                                        .background(MultiviewColors.AccentGold)
+                                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                                ) {
+                                    Text(
+                                        text = "PAUSED",
+                                        color = Color.Black,
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
+
+                            // Time offset (when behind live)
+                            if (!slot.dvrState.isLive && slot.dvrState.liveOffsetSecs > 0) {
+                                Text(
+                                    text = "-${formatOffset(slot.dvrState.liveOffsetSecs)}",
+                                    color = MultiviewColors.AccentPurple,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+
                             if (!isMuted) {
                                 Box(
                                     modifier = Modifier
@@ -649,18 +712,25 @@ private fun FocusableSlot(
                                 }
                             }
 
-                            // LIVE or START OVER badge
+                            // LIVE or DVR badge
                             Box(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(4.dp))
                                     .background(
-                                        if (slot.isTimeshifted) MultiviewColors.AccentPurple
-                                        else MultiviewColors.AccentRed
+                                        when {
+                                            slot.isTimeshifted -> MultiviewColors.AccentPurple
+                                            !slot.dvrState.isLive -> MultiviewColors.AccentPurple
+                                            else -> MultiviewColors.AccentRed
+                                        }
                                     )
                                     .padding(horizontal = 6.dp, vertical = 2.dp)
                             ) {
                                 Text(
-                                    text = if (slot.isTimeshifted) "START OVER" else "LIVE",
+                                    text = when {
+                                        slot.isTimeshifted -> "START OVER"
+                                        !slot.dvrState.isLive -> "DVR"
+                                        else -> "LIVE"
+                                    },
                                     color = Color.White,
                                     fontSize = 10.sp,
                                     fontWeight = FontWeight.Bold
@@ -701,16 +771,34 @@ private fun FocusableSlot(
         }
     }
 
+/**
+ * Format seconds offset as MM:SS for display
+ */
+private fun formatOffset(seconds: Int): String {
+    val mins = seconds / 60
+    val secs = seconds % 60
+    return String.format("%d:%02d", mins, secs)
+}
+
 @Composable
 private fun MultiviewActionBar(
     slots: List<MultiviewSlot>,
     focusedSlotIndex: Int,
     layout: MultiviewLayout,
     isInActionBar: Boolean,
-    actionBarButtonIndex: Int
+    actionBarButtonIndex: Int,
+    onPauseAll: () -> Unit = {},
+    onResumeAll: () -> Unit = {},
+    onLiveAll: () -> Unit = {},
+    onSyncAll: () -> Unit = {},
+    onRewind: () -> Unit = {},
+    onFastForward: () -> Unit = {},
+    anyPaused: Boolean = false,
+    allLive: Boolean = true
 ) {
     val focusedSlot = slots.getOrNull(focusedSlotIndex)
     val isMuted = focusedSlot?.isMuted ?: true
+    val dvrState = focusedSlot?.dvrState ?: SlotDVRState()
 
     // Build the list of action buttons dynamically
     data class ActionButtonData(
@@ -773,15 +861,15 @@ private fun MultiviewActionBar(
             // Hint text - shows different hints based on mode
             Text(
                 text = if (isInActionBar) "◀ ▶ Select Button  •  ▲ Back to Slots  •  OK Confirm"
-                       else "D-Pad Navigate Slots  •  CH+/- Change Channel  •  OK Fullscreen",
+                       else "D-Pad Navigate  •  P Pause  •  L Live  •  S Sync  •  M Mute",
                 color = MultiviewColors.TextMuted,
                 fontSize = 12.sp,
                 modifier = Modifier.align(Alignment.CenterHorizontally)
             )
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
-            // Action buttons row
+            // Row 1: Main action buttons
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.Center,
@@ -796,6 +884,123 @@ private fun MultiviewActionBar(
                         isHighlighted = isInActionBar && actionBarButtonIndex == index
                     )
                 }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Row 2: DVR Controls - Our KEY DIFFERENTIATOR!
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Pause/Resume All
+                ActionButton(
+                    icon = if (anyPaused) Icons.Default.PlayArrow else Icons.Default.Pause,
+                    label = if (anyPaused) "Resume All" else "Pause All",
+                    color = if (anyPaused) MultiviewColors.AccentGreen else MultiviewColors.AccentGold,
+                    isHighlighted = false
+                )
+
+                Spacer(modifier = Modifier.width(8.dp))
+
+                // Rewind 15s
+                ActionButton(
+                    icon = Icons.Default.Replay,
+                    label = "-15s",
+                    color = MultiviewColors.TextSecondary,
+                    isHighlighted = false
+                )
+
+                Spacer(modifier = Modifier.width(8.dp))
+
+                // Current slot status
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(MultiviewColors.Surface)
+                        .padding(horizontal = 12.dp, vertical = 8.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        // Paused indicator
+                        if (dvrState.isPaused) {
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(4.dp))
+                                    .background(MultiviewColors.AccentGold)
+                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                            ) {
+                                Text(
+                                    text = "PAUSED",
+                                    color = Color.Black,
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+
+                        // Time offset
+                        if (!dvrState.isLive && dvrState.liveOffsetSecs > 0) {
+                            Text(
+                                text = "-${formatOffset(dvrState.liveOffsetSecs)}",
+                                color = MultiviewColors.AccentPurple,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+
+                        // Live/DVR indicator
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(
+                                    if (dvrState.isLive) MultiviewColors.AccentRed
+                                    else MultiviewColors.AccentPurple
+                                )
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                        ) {
+                            Text(
+                                text = if (dvrState.isLive) "LIVE" else "DVR",
+                                color = Color.White,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.width(8.dp))
+
+                // Fast forward 15s
+                ActionButton(
+                    icon = Icons.Default.Forward,
+                    label = "+15s",
+                    color = MultiviewColors.TextSecondary,
+                    isHighlighted = false
+                )
+
+                Spacer(modifier = Modifier.width(8.dp))
+
+                // Jump to Live
+                ActionButton(
+                    icon = Icons.Default.FiberManualRecord,
+                    label = "Live All",
+                    color = if (allLive) MultiviewColors.TextMuted else MultiviewColors.AccentRed,
+                    isHighlighted = false
+                )
+
+                Spacer(modifier = Modifier.width(8.dp))
+
+                // Sync All
+                ActionButton(
+                    icon = Icons.Default.Sync,
+                    label = "Sync",
+                    color = MultiviewColors.Accent,
+                    isHighlighted = false
+                )
             }
         }
     }
