@@ -62,7 +62,6 @@ fun HeroCarousel(
     }
 
     val currentItem = items[currentIndex]
-    val currentTrailer = trailers[currentItem.id]
 
     Box(
         modifier = modifier
@@ -78,7 +77,9 @@ fun HeroCarousel(
             },
             label = "hero_background"
         ) { item ->
-            val imageUrl = currentTrailer?.thumbnailUrl
+            // Use trailer for this specific item, not the outer scope currentTrailer
+            val itemTrailer = trailers[item.id]
+            val imageUrl = itemTrailer?.thumbnailUrl
                 ?: item.backdropUrl
                 ?: item.posterUrl
 
