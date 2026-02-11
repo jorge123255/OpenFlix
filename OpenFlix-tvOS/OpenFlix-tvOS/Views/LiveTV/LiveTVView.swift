@@ -101,6 +101,7 @@ struct LiveTVPlayerView: View {
     @State private var surfingCountdown: Int = 0
     @State private var showStreamInfo = true
     @State private var showControls = false // Full controls panel
+    @State private var showMultiview = false
 
     // Number pad entry
     @State private var channelNumberEntry: String = ""
@@ -215,11 +216,28 @@ struct LiveTVPlayerView: View {
                     onToggleFavorite: {
                         handleToggleFavorite()
                     },
+                    onMultiview: {
+                        showControls = false
+                        showMultiview = true
+                    },
                     onDismiss: {
                         showControls = false
                     }
                 )
             }
+        }
+        .fullScreenCover(isPresented: $showMultiview) {
+            MultiviewView(
+                initialChannelIds: [viewModel.selectedChannel?.id ?? channel.id],
+                onBack: {
+                    showMultiview = false
+                },
+                onFullScreen: { fullScreenChannel in
+                    showMultiview = false
+                    // Switch to the selected channel from multiview
+                    changeChannel(to: fullScreenChannel)
+                }
+            )
         }
         .onAppear {
             Task {
@@ -306,6 +324,13 @@ struct LiveTVPlayerView: View {
         .onKeyPress("r") {
             let mode = playerViewModel.cycleAspectRatio()
             showPlayerToast(mode.rawValue, icon: mode.icon)
+            return .handled
+        }
+        // M key - Launch multiview
+        .onKeyPress("m") {
+            if !showControls && !showMiniEPG && !showChannelSurfing && !showMultiview {
+                showMultiview = true
+            }
             return .handled
         }
         // Number keys 0-9 for direct channel entry
@@ -805,6 +830,7 @@ struct LiveTVControlsOverlay: View {
     var onChannels: () -> Void
     var onPreviousChannel: () -> Void
     var onToggleFavorite: () -> Void
+    var onMultiview: () -> Void
     var onDismiss: () -> Void
 
     @FocusState private var focusedControl: LiveTVControl?
@@ -815,7 +841,7 @@ struct LiveTVControlsOverlay: View {
     enum LiveTVControl: Hashable {
         case close, streamInfo, mute
         case skipBack, playPause, skipForward
-        case favorite, previousChannel, aspectRatio, sleepTimer, audio, subtitles
+        case favorite, previousChannel, aspectRatio, sleepTimer, audio, subtitles, multiview
         case guide, channels
     }
 
@@ -1140,6 +1166,16 @@ struct LiveTVControlsOverlay: View {
                     }
                 }
             )
+
+            // Multiview
+            actionButton(
+                icon: "rectangle.split.2x2",
+                label: "Multiview",
+                control: .multiview,
+                action: {
+                    onMultiview()
+                }
+            )
         }
     }
 
@@ -1167,6 +1203,7 @@ struct LiveTVControlsOverlay: View {
                 keyboardHint(key: "P", action: "Previous")
                 keyboardHint(key: "F", action: "Favorite")
                 keyboardHint(key: "R", action: "Aspect")
+                keyboardHint(key: "M", action: "Multiview")
             }
             .foregroundColor(EPGTheme.textMuted)
 
