@@ -40,6 +40,7 @@ import com.openflix.presentation.screens.player.VideoPlayerScreen
 import com.openflix.presentation.screens.allmedia.AllMediaScreen
 import com.openflix.presentation.screens.search.SearchScreen
 import com.openflix.presentation.screens.settings.RemoteMappingScreen
+import com.openflix.presentation.screens.settings.RemoteStreamingSettingsScreen
 import com.openflix.presentation.screens.settings.SettingsScreen
 import com.openflix.presentation.screens.teampass.TeamPassScreen
 import com.openflix.presentation.screens.catchup.CatchupScreen
@@ -367,6 +368,9 @@ fun OpenFlixNavHost(
                 onNavigateToRemoteMapping = {
                     navController.navigate(NavRoutes.RemoteMapping.route)
                 },
+                onNavigateToRemoteStreaming = {
+                    navController.navigate(NavRoutes.RemoteStreaming.route)
+                },
                 onNavigateToAbout = {
                     navController.navigate(NavRoutes.About.route)
                 },
@@ -455,6 +459,13 @@ fun OpenFlixNavHost(
         // === Remote Mapping ===
         composable(NavRoutes.RemoteMapping.route) {
             RemoteMappingScreen(
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        // === Remote Streaming Settings ===
+        composable(NavRoutes.RemoteStreaming.route) {
+            RemoteStreamingSettingsScreen(
                 onBack = { navController.popBackStack() }
             )
         }

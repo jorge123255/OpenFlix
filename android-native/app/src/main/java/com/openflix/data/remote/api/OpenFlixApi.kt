@@ -459,4 +459,27 @@ interface OpenFlixApi {
 
     @POST("api/teampass/process")
     suspend fun processTeamPasses(): Response<Unit>
+
+    // === Remote Access (Tailscale) ===
+
+    @GET("remote-access/connection-info")
+    suspend fun getConnectionInfo(): Response<ConnectionInfoDto>
+
+    @GET("remote-access/status")
+    suspend fun getRemoteAccessStatus(): Response<RemoteAccessStatusDto>
+
+    @POST("remote-access/enable")
+    suspend fun enableRemoteAccess(): Response<RemoteAccessActionResponse>
+
+    @POST("remote-access/disable")
+    suspend fun disableRemoteAccess(): Response<RemoteAccessActionResponse>
+
+    @GET("remote-access/health")
+    suspend fun getRemoteAccessHealth(): Response<RemoteAccessHealthDto>
+
+    @GET("remote-access/install-info")
+    suspend fun getRemoteAccessInstallInfo(): Response<TailscaleInstallInfoDto>
+
+    @GET("remote-access/login-url")
+    suspend fun getRemoteAccessLoginUrl(): Response<TailscaleLoginUrlDto>
 }

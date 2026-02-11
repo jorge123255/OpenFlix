@@ -25,6 +25,7 @@ fun SettingsScreen(
     onNavigateToSubtitleStyling: () -> Unit,
     onNavigateToChannelLogoEditor: () -> Unit,
     onNavigateToRemoteMapping: () -> Unit,
+    onNavigateToRemoteStreaming: () -> Unit,
     onNavigateToAbout: () -> Unit,
     onNavigateToLogs: () -> Unit,
     onNavigateToSources: () -> Unit,
@@ -134,6 +135,20 @@ fun SettingsScreen(
                     title = "Remote Button Mapping",
                     subtitle = "Customize remote control actions",
                     onClick = onNavigateToRemoteMapping
+                )
+            }
+
+            // Remote Streaming Section
+            item {
+                Spacer(modifier = Modifier.height(16.dp))
+                SettingsSectionHeader("Remote Access")
+            }
+
+            item {
+                SettingsItem(
+                    title = "Remote Streaming",
+                    subtitle = "Stream from anywhere via Tailscale",
+                    onClick = onNavigateToRemoteStreaming
                 )
             }
 
