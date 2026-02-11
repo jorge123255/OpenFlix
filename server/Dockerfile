@@ -111,6 +111,13 @@ RUN apt-get update && apt-get install -y \
     && make install \
     && rm -rf /tmp/comskip
 
+# Install Tailscale for remote access
+RUN curl -fsSL https://pkgs.tailscale.com/stable/ubuntu/jammy.noarmor.gpg | tee /usr/share/keyrings/tailscale-archive-keyring.gpg >/dev/null \
+    && curl -fsSL https://pkgs.tailscale.com/stable/ubuntu/jammy.tailscale-keyring.list | tee /etc/apt/sources.list.d/tailscale.list \
+    && apt-get update \
+    && apt-get install -y tailscale \
+    && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 
 # Copy binary from builder
@@ -124,6 +131,13 @@ COPY comskip.ini /app/config/comskip.ini
 
 # Copy downloads folder if it exists (for APK files)
 COPY --from=builder /app/downloads/ /app/downloads/
+
+# Copy entrypoint script
+COPY entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
+
+# Create Tailscale directories
+RUN mkdir -p /data/tailscale /var/run/tailscale
 
 # Expose port
 EXPOSE 32400
@@ -151,5 +165,5 @@ ENV NVIDIA_DRIVER_CAPABILITIES=compute,video,utility
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
     CMD curl -sf http://localhost:32400/health | grep -q ok || exit 1
 
-# Run the server
-CMD ["./openflix-server"]
+# Run the server via entrypoint (starts tailscaled first)
+CMD ["/app/entrypoint.sh"]
