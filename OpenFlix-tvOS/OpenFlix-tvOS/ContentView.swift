@@ -27,13 +27,13 @@ struct MainTabView: View {
 
     var body: some View {
         TabView(selection: $selectedTab) {
-            DiscoverView()
+            DiscoverViewModern()
                 .tabItem {
                     Label("Home", systemImage: "house.fill")
                 }
                 .tag(0)
 
-            MoviesView()
+            MoviesViewModern()
                 .tabItem {
                     Label("Movies", systemImage: "film")
                 }
