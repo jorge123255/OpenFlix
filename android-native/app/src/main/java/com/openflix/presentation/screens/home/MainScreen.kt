@@ -107,7 +107,7 @@ fun MainScreen(
                 .weight(1f)
         ) {
             when (selectedTab) {
-                MainTab.HOME -> DiscoverScreen(
+                MainTab.HOME -> DiscoverScreenModern(
                     onMediaClick = onNavigateToMediaDetail,
                     onPlayClick = onNavigateToPlayer,
                     liveTVPlayer = liveTVPlayer,
