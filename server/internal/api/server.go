@@ -17,6 +17,7 @@ import (
 	"github.com/openflix/openflix-server/internal/logger"
 	"github.com/openflix/openflix-server/internal/metadata"
 	"github.com/openflix/openflix-server/internal/transcode"
+	"github.com/openflix/openflix-server/internal/instant"
 	limiter "github.com/ulule/limiter/v3"
 	mgin "github.com/ulule/limiter/v3/drivers/middleware/gin"
 	"github.com/ulule/limiter/v3/drivers/store/memory"
@@ -42,6 +43,7 @@ type Server struct {
 	epgEnricher       *livetv.EPGEnricher
 	dvrEnricher       *dvr.Enricher
 	remoteAccess      *livetv.RemoteAccessManager
+	prebuffer         *instant.PrebufferManager
 }
 
 // NewServer creates a new API server
@@ -149,6 +151,10 @@ func NewServer(cfg *config.Config, db *gorm.DB) *Server {
 	})
 	logger.Info("Remote Access Manager initialized")
 
+	// Initialize Instant Switch Prebuffer Manager
+	prebuffer := instant.NewPrebufferManager(6, 500, dataDir)
+	logger.Info("Instant Switch Prebuffer Manager initialized")
+
 	s := &Server{
 		config:            cfg,
 		db:                db,
@@ -166,6 +172,7 @@ func NewServer(cfg *config.Config, db *gorm.DB) *Server {
 		epgEnricher:       epgEnricher,
 		dvrEnricher:       dvrEnricher,
 		remoteAccess:      remoteAccess,
+		prebuffer:         prebuffer,
 	}
 	s.setupRouter()
 
@@ -682,6 +689,14 @@ func (s *Server) setupRouter() {
 		remoteAccess.GET("/health", s.adminRequired(), s.getRemoteAccessHealth)
 		remoteAccess.GET("/install-info", s.adminRequired(), s.getRemoteAccessInstallInfo)
 		remoteAccess.GET("/login-url", s.adminRequired(), s.getRemoteAccessLoginUrl)
+	}
+
+	// ============ Instant Switch API ============
+	instantSwitch := r.Group("/api/instant")
+	instantSwitch.Use(s.authRequired())
+	{
+		instantHandlers := instant.NewInstantSwitchHandlers(s.prebuffer)
+		instantHandlers.RegisterRoutes(instantSwitch)
 	}
 
 	// ============ Gracenote EPG API ============
