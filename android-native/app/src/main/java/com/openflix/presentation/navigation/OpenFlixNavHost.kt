@@ -33,7 +33,7 @@ import com.openflix.presentation.screens.livetv.LiveTVGuideScreen
 import com.openflix.presentation.screens.livetv.ChannelSurfingScreen
 import com.openflix.presentation.screens.livetv.LiveTVPlayerScreen
 import com.openflix.presentation.screens.livetv.LiveTVScreen
-import com.openflix.presentation.screens.livetv.MultiviewScreen
+import com.openflix.presentation.screens.livetv.MultiviewScreenV2
 import com.openflix.presentation.screens.media.MediaDetailScreen
 import com.openflix.presentation.screens.onlater.OnLaterScreen
 import com.openflix.presentation.screens.player.VideoPlayerScreen
@@ -575,7 +575,7 @@ fun OpenFlixNavHost(
                 onDispose { onPlayerScreenChanged(false) }
             }
 
-            MultiviewScreen(
+            MultiviewScreenV2(
                 onBack = { navController.popBackStack() },
                 onFullScreen = { channel ->
                     navController.navigate(NavRoutes.LiveTVPlayer.createRoute(channel.id))

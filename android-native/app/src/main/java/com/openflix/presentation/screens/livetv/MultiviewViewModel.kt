@@ -317,6 +317,66 @@ class MultiviewViewModel @Inject constructor(
         Timber.d("Went live in slot $slotIndex")
     }
 
+    /**
+     * Swap channels between two slots.
+     */
+    fun swapSlots(sourceIndex: Int, targetIndex: Int) {
+        val state = _uiState.value
+        val sourceSlot = state.slots.getOrNull(sourceIndex) ?: return
+        val targetSlot = state.slots.getOrNull(targetIndex) ?: return
+
+        if (sourceIndex == targetIndex) return
+
+        // Swap the streams in the players
+        players[sourceIndex]?.apply {
+            targetSlot.channel.streamUrl?.let { url -> play(url) }
+        }
+        players[targetIndex]?.apply {
+            sourceSlot.channel.streamUrl?.let { url -> play(url) }
+        }
+
+        // Swap the channels in slots
+        val updatedSlots = state.slots.toMutableList()
+        updatedSlots[sourceIndex] = sourceSlot.copy(
+            channel = targetSlot.channel,
+            isReady = false,
+            isTimeshifted = false
+        )
+        updatedSlots[targetIndex] = targetSlot.copy(
+            channel = sourceSlot.channel,
+            isReady = false,
+            isTimeshifted = false
+        )
+
+        _uiState.update { it.copy(slots = updatedSlots) }
+        Timber.d("Swapped slots $sourceIndex and $targetIndex")
+    }
+
+    /**
+     * Set audio to a specific slot (mute all others).
+     */
+    fun setAudioSlot(slotIndex: Int) {
+        val state = _uiState.value
+        if (slotIndex >= state.slots.size) return
+
+        // Mute all players except the target
+        players.forEach { (index, player) ->
+            if (index == slotIndex) {
+                player.unmute()
+            } else {
+                player.mute()
+            }
+        }
+
+        // Update slot mute states
+        val updatedSlots = state.slots.mapIndexed { index, slot ->
+            slot.copy(isMuted = index != slotIndex)
+        }
+
+        _uiState.update { it.copy(slots = updatedSlots) }
+        Timber.d("Set audio to slot $slotIndex")
+    }
+
     override fun onCleared() {
         super.onCleared()
         players.values.forEach { it.release() }
