@@ -431,11 +431,11 @@ enum APIEndpoint {
         case .clearLogs: return "/api/client-logs"
 
         // Remote Access
-        case .getRemoteAccessStatus: return "/api/remote/status"
-        case .enableRemoteAccess: return "/api/remote/enable"
-        case .disableRemoteAccess: return "/api/remote/disable"
-        case .getRemoteAccessHealth: return "/api/remote/health"
-        case .getConnectionInfo: return "/api/remote/connection"
+        case .getRemoteAccessStatus: return "/remote-access/status"
+        case .enableRemoteAccess: return "/remote-access/enable"
+        case .disableRemoteAccess: return "/remote-access/disable"
+        case .getRemoteAccessHealth: return "/remote-access/health"
+        case .getConnectionInfo: return "/remote-access/connection-info"
 
         // Instant Switch
         case .getInstantSwitchStatus: return "/api/instant/status"
