@@ -20,6 +20,7 @@ func NewInstantSwitchHandlers(pm *PrebufferManager) *InstantSwitchHandlers {
 // RegisterRoutes registers all instant switch API routes with Gin
 func (h *InstantSwitchHandlers) RegisterRoutes(rg *gin.RouterGroup) {
 	rg.GET("/status", h.handleStatus)
+	rg.POST("/enabled", h.handleSetEnabled)
 	rg.POST("/switch", h.handleSwitch)
 	rg.GET("/favorites", h.handleGetFavorites)
 	rg.POST("/favorites", h.handleSetFavorites)
@@ -40,6 +41,31 @@ func (h *InstantSwitchHandlers) handleStatus(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"data":    stats,
+	})
+}
+
+// handleSetEnabled enables or disables instant switch
+func (h *InstantSwitchHandlers) handleSetEnabled(c *gin.Context) {
+	var req struct {
+		Enabled bool `json:"enabled"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+		return
+	}
+
+	h.prebuffer.SetEnabled(req.Enabled)
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"enabled": h.prebuffer.IsEnabled(),
+		"message": func() string {
+			if req.Enabled {
+				return "Instant switch enabled"
+			}
+			return "Instant switch disabled"
+		}(),
 	})
 }
 

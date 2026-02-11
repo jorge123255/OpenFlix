@@ -81,6 +81,27 @@ enum NetworkType: String, Codable, CaseIterable {
     }
 }
 
+// MARK: - Instant Switch Status
+struct InstantSwitchStatusDTO: Codable {
+    let enabled: Bool
+    let activeChannel: String?
+    let cachedStreams: Int
+    let totalMemoryMB: Int
+    let predictions: [String]?
+}
+
+// MARK: - Cached Streams
+struct CachedStreamsDTO: Codable {
+    let streams: [CachedStreamDTO]
+}
+
+struct CachedStreamDTO: Codable {
+    let channelId: String
+    let bufferSize: Int
+    let isLive: Bool
+    let lastAccess: Date?
+}
+
 // MARK: - Remote Streaming Quality
 enum RemoteStreamingQuality: String, Codable, CaseIterable {
     case original = "original"
