@@ -302,3 +302,40 @@ struct TeamDTO: Codable {
     let aliases: [String]?
     let logo: String?
 }
+
+// MARK: - Start Over / Timeshift
+
+struct StartOverInfoDTO: Codable {
+    let available: Bool
+    let streamUrl: String?
+    let programTitle: String?
+    let programStart: String?
+    let currentPosition: Int?
+    let bufferHours: Int?
+}
+
+struct StartOverInfoResponse: Codable {
+    let success: Bool?
+    let startOver: StartOverInfoDTO?
+
+    // Domain conversion
+    var info: StartOverInfo {
+        StartOverInfo(
+            available: startOver?.available ?? false,
+            streamUrl: startOver?.streamUrl,
+            programTitle: startOver?.programTitle,
+            programStart: startOver?.programStart,
+            currentPosition: startOver?.currentPosition,
+            bufferHours: startOver?.bufferHours
+        )
+    }
+}
+
+struct StartOverInfo {
+    let available: Bool
+    let streamUrl: String?
+    let programTitle: String?
+    let programStart: String?
+    let currentPosition: Int?
+    let bufferHours: Int?
+}

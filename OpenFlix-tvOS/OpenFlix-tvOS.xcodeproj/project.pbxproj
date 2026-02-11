@@ -89,6 +89,9 @@
 		F10000010000000000000057 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000010000000000000057 /* SettingsView.swift */; };
 		F10000010000000000000058 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F20000010000000000000058 /* Assets.xcassets */; };
 		F10000010000000000000060 /* OpenFlixColors.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000010000000000000060 /* OpenFlixColors.swift */; };
+		F10000010000000000000061 /* RemoteAccessDTOs.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000010000000000000061 /* RemoteAccessDTOs.swift */; };
+		F10000010000000000000062 /* MultiviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000010000000000000062 /* MultiviewView.swift */; };
+		F10000010000000000000063 /* MultiviewViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000010000000000000063 /* MultiviewViewModel.swift */; };
 		FDB6CD2395F345C75D324E67 /* TMDBService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CF45205690461EC3CCD7DFB /* TMDBService.swift */; };
 /* End PBXBuildFile section */
 
@@ -175,6 +178,9 @@
 		F20000010000000000000058 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		F20000010000000000000059 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		F20000010000000000000060 /* OpenFlixColors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenFlixColors.swift; sourceTree = "<group>"; };
+		F20000010000000000000061 /* RemoteAccessDTOs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteAccessDTOs.swift; sourceTree = "<group>"; };
+		F20000010000000000000062 /* MultiviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MultiviewView.swift; sourceTree = "<group>"; };
+		F20000010000000000000063 /* MultiviewViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MultiviewViewModel.swift; sourceTree = "<group>"; };
 		F320CA143D4F275AFCF41847 /* EPGChannelCell.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Components/EPGChannelCell.swift; sourceTree = "<group>"; };
 		F51826684C34892071DD91B7 /* MovieFilterBar.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MovieFilterBar.swift; sourceTree = "<group>"; };
 		F95BBADA637A9FD02EB88E96 /* PlaylistsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Playlists/PlaylistsView.swift; sourceTree = "<group>"; };
@@ -307,6 +313,7 @@
 				F20000010000000000000011 /* MediaDTOs.swift */,
 				F20000010000000000000012 /* LiveTVDTOs.swift */,
 				F20000010000000000000013 /* MiscDTOs.swift */,
+				F20000010000000000000061 /* RemoteAccessDTOs.swift */,
 			);
 			path = DTOs;
 			sourceTree = "<group>";
@@ -358,6 +365,7 @@
 				021C5A5ADB9634BCCF40F46D /* InstantSwitchManager.swift */,
 				6B2CE0678DE709EB9183B51C /* MoviesViewModel.swift */,
 				TVSVM002002002002002002 /* TVShowsViewModel.swift */,
+				F20000010000000000000063 /* MultiviewViewModel.swift */,
 			);
 			path = ViewModels;
 			sourceTree = "<group>";
@@ -437,6 +445,7 @@
 				F20000010000000000000052 /* EPGGuideView.swift */,
 				6EA791837A6438C64CA5C8B4 /* Components */,
 				2F06418578FD320559B8F4E7 /* EPGGridView.swift */,
+				F20000010000000000000062 /* MultiviewView.swift */,
 			);
 			path = LiveTV;
 			sourceTree = "<group>";
@@ -573,6 +582,9 @@
 				F10000010000000000000011 /* MediaDTOs.swift in Sources */,
 				F10000010000000000000012 /* LiveTVDTOs.swift in Sources */,
 				F10000010000000000000013 /* MiscDTOs.swift in Sources */,
+				F10000010000000000000061 /* RemoteAccessDTOs.swift in Sources */,
+				F10000010000000000000062 /* MultiviewView.swift in Sources */,
+				F10000010000000000000063 /* MultiviewViewModel.swift in Sources */,
 				F10000010000000000000014 /* MediaItem.swift in Sources */,
 				F10000010000000000000015 /* Channel.swift in Sources */,
 				F10000010000000000000016 /* Program.swift in Sources */,
