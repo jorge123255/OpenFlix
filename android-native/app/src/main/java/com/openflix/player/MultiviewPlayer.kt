@@ -33,8 +33,27 @@ class MultiviewPlayer(
     private val _isMuted = MutableStateFlow(true) // Muted by default in multiview
     val isMuted: StateFlow<Boolean> = _isMuted.asStateFlow()
 
+    private val _isPaused = MutableStateFlow(false)
+    val isPaused: StateFlow<Boolean> = _isPaused.asStateFlow()
+
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
+
+    // For calculating live offset
+    val currentPositionMs: Long
+        get() = exoPlayer?.currentPosition ?: 0L
+
+    val durationMs: Long
+        get() = exoPlayer?.duration ?: 0L
+
+    val isLive: Boolean
+        get() {
+            val player = exoPlayer ?: return true
+            val duration = player.duration
+            val position = player.currentPosition
+            // Consider live if within 10 seconds of duration
+            return duration <= 0 || (duration - position) < 10_000
+        }
 
     private val playerListener = object : Player.Listener {
         override fun onPlaybackStateChanged(playbackState: Int) {
@@ -117,6 +136,55 @@ class MultiviewPlayer(
         val player = exoPlayer ?: return
         _isMuted.value = muted
         player.volume = if (muted) 0f else 1f
+    }
+
+    // DVR Controls - Key differentiator vs Channels DVR!
+    fun pause() {
+        val player = exoPlayer ?: return
+        player.pause()
+        _isPaused.value = true
+        Timber.d("MultiviewPlayer paused")
+    }
+
+    fun resume() {
+        val player = exoPlayer ?: return
+        player.play()
+        _isPaused.value = false
+        Timber.d("MultiviewPlayer resumed")
+    }
+
+    fun togglePause() {
+        if (_isPaused.value) resume() else pause()
+    }
+
+    fun seekBack(seconds: Int = 15) {
+        val player = exoPlayer ?: return
+        val newPosition = (player.currentPosition - (seconds * 1000L)).coerceAtLeast(0)
+        player.seekTo(newPosition)
+        Timber.d("MultiviewPlayer seeked back $seconds seconds")
+    }
+
+    fun seekForward(seconds: Int = 15) {
+        val player = exoPlayer ?: return
+        val newPosition = player.currentPosition + (seconds * 1000L)
+        val duration = player.duration
+        if (duration > 0) {
+            player.seekTo(newPosition.coerceAtMost(duration))
+        } else {
+            player.seekTo(newPosition)
+        }
+        Timber.d("MultiviewPlayer seeked forward $seconds seconds")
+    }
+
+    fun seekToLive() {
+        val player = exoPlayer ?: return
+        val duration = player.duration
+        if (duration > 0) {
+            player.seekTo(duration)
+        }
+        player.play()
+        _isPaused.value = false
+        Timber.d("MultiviewPlayer jumped to live")
     }
 
     fun release() {

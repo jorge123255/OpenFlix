@@ -317,6 +317,173 @@ class MultiviewViewModel @Inject constructor(
         Timber.d("Went live in slot $slotIndex")
     }
 
+    // ==========================================================================
+    // DVR Controls - Our KEY DIFFERENTIATOR vs Channels DVR!
+    // Channels DVR CAN'T pause/rewind in multiview. We CAN!
+    // ==========================================================================
+
+    /**
+     * Pause a specific slot - Channels DVR CAN'T do this!
+     */
+    fun pauseSlot(slotIndex: Int) {
+        val state = _uiState.value
+        val slot = state.slots.getOrNull(slotIndex) ?: return
+
+        players[slotIndex]?.pause()
+
+        val updatedSlots = state.slots.toMutableList()
+        updatedSlots[slotIndex] = slot.copy(
+            dvrState = slot.dvrState.copy(isPaused = true, isLive = false)
+        )
+        _uiState.update { it.copy(slots = updatedSlots) }
+        Timber.d("Paused slot $slotIndex")
+    }
+
+    /**
+     * Resume a paused slot
+     */
+    fun resumeSlot(slotIndex: Int) {
+        val state = _uiState.value
+        val slot = state.slots.getOrNull(slotIndex) ?: return
+
+        players[slotIndex]?.resume()
+
+        val updatedSlots = state.slots.toMutableList()
+        updatedSlots[slotIndex] = slot.copy(
+            dvrState = slot.dvrState.copy(isPaused = false)
+        )
+        _uiState.update { it.copy(slots = updatedSlots) }
+        Timber.d("Resumed slot $slotIndex")
+    }
+
+    /**
+     * Toggle pause on a slot
+     */
+    fun togglePauseSlot(slotIndex: Int) {
+        val state = _uiState.value
+        val slot = state.slots.getOrNull(slotIndex) ?: return
+        if (slot.dvrState.isPaused) {
+            resumeSlot(slotIndex)
+        } else {
+            pauseSlot(slotIndex)
+        }
+    }
+
+    /**
+     * Rewind a slot by seconds - Channels DVR CAN'T do this!
+     */
+    fun rewindSlot(slotIndex: Int, seconds: Int = 15) {
+        val state = _uiState.value
+        val slot = state.slots.getOrNull(slotIndex) ?: return
+
+        players[slotIndex]?.seekBack(seconds)
+
+        val newOffset = slot.dvrState.liveOffsetSecs + seconds
+        val updatedSlots = state.slots.toMutableList()
+        updatedSlots[slotIndex] = slot.copy(
+            dvrState = slot.dvrState.copy(isLive = false, liveOffsetSecs = newOffset)
+        )
+        _uiState.update { it.copy(slots = updatedSlots) }
+        Timber.d("Rewound slot $slotIndex by $seconds seconds")
+    }
+
+    /**
+     * Fast forward a slot
+     */
+    fun fastForwardSlot(slotIndex: Int, seconds: Int = 15) {
+        val state = _uiState.value
+        val slot = state.slots.getOrNull(slotIndex) ?: return
+
+        players[slotIndex]?.seekForward(seconds)
+
+        val newOffset = (slot.dvrState.liveOffsetSecs - seconds).coerceAtLeast(0)
+        val isNowLive = newOffset == 0
+        val updatedSlots = state.slots.toMutableList()
+        updatedSlots[slotIndex] = slot.copy(
+            dvrState = slot.dvrState.copy(isLive = isNowLive, liveOffsetSecs = newOffset)
+        )
+        _uiState.update { it.copy(slots = updatedSlots) }
+        Timber.d("Fast-forwarded slot $slotIndex by $seconds seconds")
+    }
+
+    /**
+     * Jump a slot back to live
+     */
+    fun jumpToLiveSlot(slotIndex: Int) {
+        val state = _uiState.value
+        val slot = state.slots.getOrNull(slotIndex) ?: return
+
+        players[slotIndex]?.seekToLive()
+
+        val updatedSlots = state.slots.toMutableList()
+        updatedSlots[slotIndex] = slot.copy(
+            dvrState = SlotDVRState(isLive = true)  // Reset to default live state
+        )
+        _uiState.update { it.copy(slots = updatedSlots) }
+        Timber.d("Jumped slot $slotIndex to live")
+    }
+
+    /**
+     * PAUSE ALL streams - one button convenience!
+     */
+    fun pauseAll() {
+        _uiState.value.slots.forEachIndexed { index, _ ->
+            pauseSlot(index)
+        }
+        Timber.d("Paused all slots")
+    }
+
+    /**
+     * RESUME ALL streams
+     */
+    fun resumeAll() {
+        _uiState.value.slots.forEachIndexed { index, _ ->
+            resumeSlot(index)
+        }
+        Timber.d("Resumed all slots")
+    }
+
+    /**
+     * JUMP ALL TO LIVE - sync all streams to live
+     */
+    fun jumpAllToLive() {
+        _uiState.value.slots.forEachIndexed { index, _ ->
+            jumpToLiveSlot(index)
+        }
+        Timber.d("Jumped all slots to live")
+    }
+
+    /**
+     * SYNC all streams - align timestamps by rewinding all to match furthest behind
+     */
+    fun syncAllStreams() {
+        val state = _uiState.value
+        // Find the stream that's furthest behind live
+        val maxOffset = state.slots.maxOfOrNull { it.dvrState.liveOffsetSecs } ?: 0
+
+        // Rewind all streams to match
+        state.slots.forEachIndexed { index, slot ->
+            val currentOffset = slot.dvrState.liveOffsetSecs
+            if (currentOffset < maxOffset) {
+                val rewindAmount = maxOffset - currentOffset
+                rewindSlot(index, rewindAmount)
+            }
+        }
+        Timber.d("Synced all slots to offset $maxOffset seconds")
+    }
+
+    /**
+     * Check if any slot is paused
+     */
+    val anySlotPaused: Boolean
+        get() = _uiState.value.slots.any { it.dvrState.isPaused }
+
+    /**
+     * Check if all slots are live
+     */
+    val allSlotsLive: Boolean
+        get() = _uiState.value.slots.all { it.dvrState.isLive }
+
     override fun onCleared() {
         super.onCleared()
         players.values.forEach { it.release() }
@@ -334,13 +501,26 @@ data class MultiviewUiState(
     val channelPickerSlotIndex: Int? = null
 )
 
+/**
+ * DVR state for a multiview slot - Our KEY DIFFERENTIATOR vs Channels DVR!
+ * Channels DVR has NO pause/rewind in multiview. We do!
+ */
+data class SlotDVRState(
+    val isPaused: Boolean = false,
+    val isLive: Boolean = true,
+    val liveOffsetSecs: Int = 0,
+    val playbackSpeed: Float = 1.0f,
+    val bufferSecs: Int = 1800  // 30 minutes default
+)
+
 data class MultiviewSlot(
     val index: Int,
     val channel: Channel,
     val isReady: Boolean = false,
     val isMuted: Boolean = true,
     val isTimeshifted: Boolean = false,
-    val timeshiftProgramTitle: String? = null
+    val timeshiftProgramTitle: String? = null,
+    val dvrState: SlotDVRState = SlotDVRState()
 )
 
 enum class MultiviewLayout {
