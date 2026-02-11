@@ -496,4 +496,53 @@ interface OpenFlixApi {
 
     @POST("api/instant/favorites")
     suspend fun setInstantSwitchFavorites(@Body request: InstantSwitchFavoritesRequest): Response<Unit>
+
+    // === Sports Scores ===
+
+    @GET("api/sports/scores")
+    suspend fun getSportsScores(@Query("sport") sport: String = "all"): Response<Map<String, Any>>
+
+    @GET("api/sports/overlay")
+    suspend fun getSportsOverlay(@Query("max") max: Int = 5): Response<Map<String, Any>>
+
+    @GET("api/sports/favorites")
+    suspend fun getSportsFavorites(): Response<Map<String, Any>>
+
+    @POST("api/sports/favorites")
+    suspend fun setSportsFavorites(@Body request: Map<String, List<String>>): Response<Map<String, Any>>
+
+    @POST("api/sports/alerts")
+    suspend fun addSportsAlert(@Body request: Map<String, Any>): Response<Map<String, Any>>
+
+    @GET("api/sports/stats")
+    suspend fun getSportsStats(): Response<Map<String, Any>>
+
+    // === Commercial Skip ===
+
+    @GET("api/commercial/get")
+    suspend fun getCommercials(@Query("recording_id") recordingId: String): Response<Map<String, Any>>
+
+    @GET("api/commercial/check")
+    suspend fun checkCommercialPosition(
+        @Query("recording_id") recordingId: String,
+        @Query("position") position: Double
+    ): Response<Map<String, Any>>
+
+    @POST("api/commercial/detect")
+    suspend fun detectCommercials(@Body request: Map<String, String>): Response<Map<String, Any>>
+
+    @POST("api/commercial/mark")
+    suspend fun markCommercial(@Body request: Map<String, Any>): Response<Map<String, Any>>
+
+    @POST("api/commercial/unmark")
+    suspend fun unmarkCommercial(@Body request: Map<String, Any>): Response<Map<String, Any>>
+
+    @GET("api/commercial/config")
+    suspend fun getCommercialConfig(): Response<Map<String, Any>>
+
+    @POST("api/commercial/config")
+    suspend fun setCommercialConfig(@Body request: Map<String, Any>): Response<Map<String, Any>>
+
+    @GET("api/commercial/stats")
+    suspend fun getCommercialStats(): Response<Map<String, Any>>
 }
