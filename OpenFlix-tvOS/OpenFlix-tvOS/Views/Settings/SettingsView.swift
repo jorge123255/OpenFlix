@@ -69,6 +69,13 @@ struct SettingsView: View {
                             Text("Playlists")
                         }
                     }
+                    
+                    NavigationLink(destination: WatchStatsView()) {
+                        HStack {
+                            Image(systemName: "chart.bar.xaxis")
+                            Text("Watch Stats")
+                        }
+                    }
                 }
 
                 // Sources Section
