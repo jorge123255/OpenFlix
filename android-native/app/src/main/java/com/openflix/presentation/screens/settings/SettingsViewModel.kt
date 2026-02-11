@@ -2,6 +2,8 @@ package com.openflix.presentation.screens.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.openflix.data.remote.api.OpenFlixApi
+import com.openflix.data.remote.dto.InstantSwitchEnabledRequest
 import com.openflix.data.repository.SettingsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
@@ -10,7 +12,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
-    private val settingsRepository: SettingsRepository
+    private val settingsRepository: SettingsRepository,
+    private val api: OpenFlixApi
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SettingsUiState())
@@ -18,6 +21,38 @@ class SettingsViewModel @Inject constructor(
 
     init {
         collectSettings()
+        loadInstantSwitchStatus()
+    }
+
+    private fun loadInstantSwitchStatus() {
+        viewModelScope.launch {
+            try {
+                val response = api.getInstantSwitchStatus()
+                if (response.isSuccessful) {
+                    response.body()?.data?.let { data ->
+                        _uiState.update { it.copy(
+                            instantSwitchEnabled = data.enabled,
+                            cachedStreamCount = data.cachedStreams
+                        ) }
+                    }
+                }
+            } catch (e: Exception) {
+                // Silently fail - server may not support instant switch
+            }
+        }
+    }
+
+    fun setInstantSwitchEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            try {
+                val response = api.setInstantSwitchEnabled(InstantSwitchEnabledRequest(enabled))
+                if (response.isSuccessful) {
+                    _uiState.update { it.copy(instantSwitchEnabled = enabled) }
+                }
+            } catch (e: Exception) {
+                // Revert on failure
+            }
+        }
     }
 
     private fun collectSettings() {
@@ -200,5 +235,8 @@ data class SettingsUiState(
     val videoQuality: String = "auto",
     val sharpening: Float = 0.3f,
     val debandEnabled: Boolean = true,
-    val audioUpmix: Boolean = true
+    val audioUpmix: Boolean = true,
+    // Instant Switch (server-side)
+    val instantSwitchEnabled: Boolean = true,
+    val cachedStreamCount: Int = 0
 )

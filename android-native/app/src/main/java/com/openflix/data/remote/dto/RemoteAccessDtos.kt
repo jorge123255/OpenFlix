@@ -66,3 +66,61 @@ data class TailscaleLoginUrlDto(
     @SerializedName("url") val url: String?,
     @SerializedName("expires_at") val expiresAt: Long?
 )
+
+// === Instant Switch DTOs ===
+
+/**
+ * DTO for instant switch status response.
+ */
+data class InstantSwitchStatusDto(
+    @SerializedName("success") val success: Boolean,
+    @SerializedName("data") val data: InstantSwitchDataDto?
+)
+
+data class InstantSwitchDataDto(
+    @SerializedName("enabled") val enabled: Boolean,
+    @SerializedName("active_channel") val activeChannel: String?,
+    @SerializedName("cached_streams") val cachedStreams: Int,
+    @SerializedName("total_memory_mb") val totalMemoryMB: Int,
+    @SerializedName("recent_channels") val recentChannels: List<String>?
+)
+
+/**
+ * Request to enable/disable instant switch.
+ */
+data class InstantSwitchEnabledRequest(
+    @SerializedName("enabled") val enabled: Boolean
+)
+
+/**
+ * Response for enable/disable instant switch.
+ */
+data class InstantSwitchEnabledResponse(
+    @SerializedName("success") val success: Boolean,
+    @SerializedName("enabled") val enabled: Boolean,
+    @SerializedName("message") val message: String?
+)
+
+/**
+ * DTO for cached streams response.
+ */
+data class CachedStreamsDto(
+    @SerializedName("success") val success: Boolean,
+    @SerializedName("cached") val cached: List<CachedStreamDto>?,
+    @SerializedName("count") val count: Int
+)
+
+data class CachedStreamDto(
+    @SerializedName("channel_id") val channelId: String,
+    @SerializedName("buffered_bytes") val bufferedBytes: Int,
+    @SerializedName("buffered_duration") val bufferedDuration: Double,
+    @SerializedName("is_live") val isLive: Boolean,
+    @SerializedName("last_access") val lastAccess: String?
+)
+
+/**
+ * Request to set instant switch favorites.
+ */
+data class InstantSwitchFavoritesRequest(
+    @SerializedName("favorites") val favorites: List<String>
+)
