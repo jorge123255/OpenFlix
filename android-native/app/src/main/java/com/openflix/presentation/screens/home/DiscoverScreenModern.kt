@@ -50,6 +50,9 @@ fun DiscoverScreenModern(
     onPlayClick: (String) -> Unit,
     onNavigateToLiveTVPlayer: ((String) -> Unit)? = null,
     onNavigateToGuide: (() -> Unit)? = null,
+    onNavigateToMultiview: (() -> Unit)? = null,
+    onNavigateToSports: (() -> Unit)? = null,
+    onWatchlistToggle: ((String) -> Unit)? = null,
     viewModel: DiscoverViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -92,9 +95,24 @@ fun DiscoverScreenModern(
                         currentIndex = heroIndex,
                         onIndexChange = { heroIndex = it },
                         onPlay = { onPlayClick(it.id.toString()) },
-                        onDetails = { onMediaClick(it.id.toString()) }
+                        onDetails = { onMediaClick(it.id.toString()) },
+                        onWatchlist = onWatchlistToggle?.let { toggle -> 
+                            { item: MediaItem -> toggle(item.id.toString()) }
+                        }
                     )
                 }
+            }
+            
+            // Quick Access Row (Live TV, Multiview, Guide, Sports)
+            item {
+                QuickAccessRow(
+                    onLiveTVClick = { 
+                        uiState.channels.firstOrNull()?.let { onNavigateToLiveTVPlayer?.invoke(it.id) }
+                    },
+                    onMultiviewClick = onNavigateToMultiview,
+                    onGuideClick = onNavigateToGuide,
+                    onSportsClick = onNavigateToSports
+                )
             }
             
             // Continue Watching
@@ -184,7 +202,8 @@ private fun ModernHeroBanner(
     currentIndex: Int,
     onIndexChange: (Int) -> Unit,
     onPlay: (MediaItem) -> Unit,
-    onDetails: (MediaItem) -> Unit
+    onDetails: (MediaItem) -> Unit,
+    onWatchlist: ((MediaItem) -> Unit)? = null
 ) {
     val pagerState = rememberPagerState(
         initialPage = currentIndex,
@@ -208,7 +227,8 @@ private fun ModernHeroBanner(
                 ModernHeroItem(
                     item = item,
                     onPlay = { onPlay(item) },
-                    onDetails = { onDetails(item) }
+                    onDetails = { onDetails(item) },
+                    onWatchlist = onWatchlist?.let { { it(item) } }
                 )
             }
         }
@@ -253,10 +273,12 @@ private fun ModernHeroBanner(
 private fun ModernHeroItem(
     item: MediaItem,
     onPlay: () -> Unit,
-    onDetails: () -> Unit
+    onDetails: () -> Unit,
+    onWatchlist: (() -> Unit)? = null
 ) {
     var playFocused by remember { mutableStateOf(false) }
     var infoFocused by remember { mutableStateOf(false) }
+    var watchlistFocused by remember { mutableStateOf(false) }
     
     Box(modifier = Modifier.fillMaxSize()) {
         // Background image
@@ -467,6 +489,36 @@ private fun ModernHeroItem(
                             .padding(14.dp)
                             .size(24.dp)
                     )
+                }
+                
+                // Watchlist button
+                onWatchlist?.let { watchlistAction ->
+                    Surface(
+                        onClick = watchlistAction,
+                        modifier = Modifier
+                            .onFocusChanged { watchlistFocused = it.isFocused }
+                            .graphicsLayer {
+                                scaleX = if (watchlistFocused) 1.1f else 1f
+                                scaleY = if (watchlistFocused) 1.1f else 1f
+                            },
+                        shape = CircleShape,
+                        colors = SurfaceDefaults.colors(
+                            containerColor = Color.White.copy(alpha = 0.2f)
+                        ),
+                        border = BorderStroke(
+                            width = if (watchlistFocused) 2.dp else 1.dp,
+                            color = if (watchlistFocused) Color(0xFF00D4AA) else Color.White.copy(alpha = 0.5f)
+                        )
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.BookmarkAdd,
+                            contentDescription = "Add to Watchlist",
+                            tint = if (watchlistFocused) Color(0xFF00D4AA) else Color.White,
+                            modifier = Modifier
+                                .padding(14.dp)
+                                .size(24.dp)
+                        )
+                    }
                 }
             }
         }
@@ -978,6 +1030,130 @@ private fun ModernTop10Card(
                     ),
                 contentScale = ContentScale.Crop
             )
+        }
+    }
+}
+
+// MARK: - Quick Access Row
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun QuickAccessRow(
+    onLiveTVClick: (() -> Unit)?,
+    onMultiviewClick: (() -> Unit)?,
+    onGuideClick: (() -> Unit)?,
+    onSportsClick: (() -> Unit)?
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 48.dp, vertical = 24.dp),
+        horizontalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        // Live TV
+        QuickAccessCard(
+            icon = Icons.Default.LiveTv,
+            title = "Live TV",
+            subtitle = "Watch now",
+            color = Color(0xFFE53935),
+            onClick = onLiveTVClick
+        )
+        
+        // Multiview
+        QuickAccessCard(
+            icon = Icons.Default.GridView,
+            title = "Multiview",
+            subtitle = "Watch 2-4 channels",
+            color = Color(0xFF00D4AA),
+            onClick = onMultiviewClick
+        )
+        
+        // Guide
+        QuickAccessCard(
+            icon = Icons.Default.CalendarMonth,
+            title = "TV Guide",
+            subtitle = "What's on",
+            color = Color(0xFF2196F3),
+            onClick = onGuideClick
+        )
+        
+        // Sports
+        QuickAccessCard(
+            icon = Icons.Default.SportsFootball,
+            title = "Sports",
+            subtitle = "Live scores",
+            color = Color(0xFFFF9800),
+            onClick = onSportsClick
+        )
+    }
+}
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun QuickAccessCard(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    title: String,
+    subtitle: String,
+    color: Color,
+    onClick: (() -> Unit)?
+) {
+    var focused by remember { mutableStateOf(false) }
+    val scale by animateFloatAsState(
+        targetValue = if (focused) 1.05f else 1f,
+        animationSpec = spring(dampingRatio = 0.7f, stiffness = 300f)
+    )
+    
+    Surface(
+        onClick = { onClick?.invoke() },
+        modifier = Modifier
+            .weight(1f)
+            .height(100.dp)
+            .graphicsLayer { 
+                scaleX = scale
+                scaleY = scale
+            },
+        shape = RoundedCornerShape(16.dp),
+        colors = SurfaceDefaults.colors(
+            containerColor = if (focused) color.copy(alpha = 0.3f) else Color.White.copy(alpha = 0.1f),
+            focusedContainerColor = color.copy(alpha = 0.3f)
+        ),
+        border = if (focused) BorderStroke(2.dp, color) else BorderStroke(1.dp, Color.White.copy(alpha = 0.1f))
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(CircleShape)
+                    .background(color.copy(alpha = 0.2f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = color,
+                    modifier = Modifier.size(28.dp)
+                )
+            }
+            
+            Column {
+                Text(
+                    text = title,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
+                Text(
+                    text = subtitle,
+                    fontSize = 12.sp,
+                    color = Color.White.copy(alpha = 0.6f)
+                )
+            }
         }
     }
 }
