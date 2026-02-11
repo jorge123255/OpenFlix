@@ -17,6 +17,7 @@ type AdjacentChannelResolver func(channelID string) []string
 // PrebufferManager maintains background streams for instant channel switching
 type PrebufferManager struct {
 	mu                sync.RWMutex
+	enabled           bool
 	activeChannel     string
 	cachedStreams     map[string]*CachedStream
 	favorites         []string
@@ -47,6 +48,7 @@ func NewPrebufferManager(maxCached, maxMemoryMB int, dataDir string) *PrebufferM
 	ctx, cancel := context.WithCancel(context.Background())
 
 	pm := &PrebufferManager{
+		enabled:        true, // Enabled by default
 		cachedStreams:  make(map[string]*CachedStream),
 		recentChannels: make([]string, 0, 10),
 		maxCached:      maxCached,   // typically 5-6 streams
@@ -77,6 +79,30 @@ func (pm *PrebufferManager) SetAdjacentChannelResolver(resolver AdjacentChannelR
 	pm.mu.Lock()
 	defer pm.mu.Unlock()
 	pm.adjacentResolver = resolver
+}
+
+// SetEnabled enables or disables the prebuffer manager
+func (pm *PrebufferManager) SetEnabled(enabled bool) {
+	pm.mu.Lock()
+	pm.enabled = enabled
+	pm.mu.Unlock()
+
+	if !enabled {
+		// Stop all cached streams when disabled
+		pm.mu.Lock()
+		for _, stream := range pm.cachedStreams {
+			stream.Stop()
+		}
+		pm.cachedStreams = make(map[string]*CachedStream)
+		pm.mu.Unlock()
+	}
+}
+
+// IsEnabled returns whether the prebuffer manager is enabled
+func (pm *PrebufferManager) IsEnabled() bool {
+	pm.mu.RLock()
+	defer pm.mu.RUnlock()
+	return pm.enabled
 }
 
 // SetActiveChannel updates the current channel and triggers pre-buffering
@@ -124,6 +150,11 @@ func (pm *PrebufferManager) SetFavorites(channelIDs []string) {
 func (pm *PrebufferManager) updatePrebuffer() {
 	pm.mu.Lock()
 	defer pm.mu.Unlock()
+
+	// Don't update if disabled
+	if !pm.enabled {
+		return
+	}
 
 	// Build priority list of channels to cache
 	toCache := make(map[string]int) // channelID -> priority
@@ -321,6 +352,7 @@ func (pm *PrebufferManager) Stats() map[string]interface{} {
 	}
 
 	return map[string]interface{}{
+		"enabled":         pm.enabled,
 		"active_channel":  pm.activeChannel,
 		"cached_streams":  len(pm.cachedStreams),
 		"total_memory_mb": totalMemory / (1024 * 1024),

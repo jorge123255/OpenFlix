@@ -377,4 +377,44 @@ actor OpenFlixAPI {
     func getServerSettings() async throws -> ServerSettingsResponse {
         try await request(.getServerSettings)
     }
+
+    // MARK: - Remote Access
+
+    func getRemoteAccessStatus() async throws -> RemoteAccessStatusDTO {
+        try await request(.getRemoteAccessStatus)
+    }
+
+    func enableRemoteAccess() async throws -> RemoteAccessActionResponse {
+        try await request(.enableRemoteAccess)
+    }
+
+    func disableRemoteAccess() async throws -> RemoteAccessActionResponse {
+        try await request(.disableRemoteAccess)
+    }
+
+    func getRemoteAccessHealth() async throws -> RemoteAccessHealthDTO {
+        try await request(.getRemoteAccessHealth)
+    }
+
+    func getConnectionInfo() async throws -> ConnectionInfoDTO {
+        try await request(.getConnectionInfo)
+    }
+
+    // MARK: - Instant Switch
+
+    func getInstantSwitchStatus() async throws -> InstantSwitchStatusDTO {
+        try await request(.getInstantSwitchStatus)
+    }
+
+    func setInstantSwitchEnabled(_ enabled: Bool) async throws {
+        try await requestVoid(.setInstantSwitchEnabled(enabled: enabled))
+    }
+
+    func getCachedStreams() async throws -> CachedStreamsDTO {
+        try await request(.getCachedStreams)
+    }
+
+    func setInstantSwitchFavorites(_ channelIds: [String]) async throws {
+        try await requestVoid(.setInstantSwitchFavorites(channelIds: channelIds))
+    }
 }

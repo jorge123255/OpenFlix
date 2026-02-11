@@ -210,6 +210,20 @@ enum APIEndpoint {
     case getLogs
     case clearLogs
 
+    // MARK: - Remote Access
+    case getRemoteAccessStatus
+    case enableRemoteAccess
+    case disableRemoteAccess
+    case getRemoteAccessHealth
+    case getConnectionInfo
+
+    // MARK: - Instant Switch
+    case getInstantSwitchStatus
+    case setInstantSwitchEnabled(enabled: Bool)
+    case getInstantSwitchPredictions(channelId: String)
+    case getCachedStreams
+    case setInstantSwitchFavorites(channelIds: [String])
+
     // MARK: - Path & Method
     var path: String {
         switch self {
@@ -415,6 +429,20 @@ enum APIEndpoint {
         case .submitLogs: return "/api/client-logs"
         case .getLogs: return "/api/client-logs"
         case .clearLogs: return "/api/client-logs"
+
+        // Remote Access
+        case .getRemoteAccessStatus: return "/api/remote/status"
+        case .enableRemoteAccess: return "/api/remote/enable"
+        case .disableRemoteAccess: return "/api/remote/disable"
+        case .getRemoteAccessHealth: return "/api/remote/health"
+        case .getConnectionInfo: return "/api/remote/connection"
+
+        // Instant Switch
+        case .getInstantSwitchStatus: return "/api/instant/status"
+        case .setInstantSwitchEnabled: return "/api/instant/enabled"
+        case .getInstantSwitchPredictions(let channelId): return "/api/instant/predictions/\(channelId)"
+        case .getCachedStreams: return "/api/instant/cached"
+        case .setInstantSwitchFavorites: return "/api/instant/favorites"
         }
     }
 
@@ -441,7 +469,9 @@ enum APIEndpoint {
              .addToWatchlist,
              .createCollection, .addToCollection,
              .timeline,
-             .submitLogs:
+             .submitLogs,
+             .enableRemoteAccess, .disableRemoteAccess,
+             .setInstantSwitchEnabled, .setInstantSwitchFavorites:
             return .post
 
         // PUT
@@ -727,6 +757,12 @@ enum APIEndpoint {
                 return try? JSONSerialization.data(withJSONObject: ["libraryId": libraryId])
             }
             return nil
+
+        case .setInstantSwitchEnabled(let enabled):
+            return try? JSONSerialization.data(withJSONObject: ["enabled": enabled])
+
+        case .setInstantSwitchFavorites(let channelIds):
+            return try? JSONSerialization.data(withJSONObject: ["channelIds": channelIds])
 
         default:
             return nil
