@@ -8,34 +8,70 @@ struct LiveTVView: View {
     @State private var showPlayer = false
     @State private var streamURL: URL?
     @State private var selectedChannelForPlayback: Channel?
+    
+    // Feature navigation
+    @State private var showCatchup = false
+    @State private var showOnLater = false
+    @State private var showTeamPass = false
+    @State private var showChannelGroups = false
+    @State private var showMultiview = false
 
     var body: some View {
-        ZStack {
-            EPGTheme.background.ignoresSafeArea()
+        NavigationStack {
+            ZStack {
+                EPGTheme.background.ignoresSafeArea()
 
-            if viewModel.isLoading && viewModel.channels.isEmpty {
-                LoadingView(message: "Loading guide...")
-            } else if let error = viewModel.error {
-                ErrorView(message: error) {
-                    Task { await viewModel.loadChannels() }
-                }
-            } else if viewModel.channels.isEmpty {
-                EmptyStateView(
-                    icon: "play.tv",
-                    title: "No Channels",
-                    message: "Add M3U or Xtream sources in Settings to get started."
-                )
-            } else {
-                // Modern EPG with glass effects and smooth animations
-                EPGGridViewModern(
-                    viewModel: viewModel,
-                    onChannelSelect: { channel in
-                        playChannel(channel)
-                    },
-                    onProgramSelect: { program, channel in
-                        playChannel(channel)
+                VStack(spacing: 0) {
+                    // Feature bar
+                    LiveTVFeatureBar(
+                        onCatchup: { showCatchup = true },
+                        onOnLater: { showOnLater = true },
+                        onTeamPass: { showTeamPass = true },
+                        onChannelGroups: { showChannelGroups = true },
+                        onMultiview: { showMultiview = true }
+                    )
+                    
+                    // Main content
+                    if viewModel.isLoading && viewModel.channels.isEmpty {
+                        LoadingView(message: "Loading guide...")
+                    } else if let error = viewModel.error {
+                        ErrorView(message: error) {
+                            Task { await viewModel.loadChannels() }
+                        }
+                    } else if viewModel.channels.isEmpty {
+                        EmptyStateView(
+                            icon: "play.tv",
+                            title: "No Channels",
+                            message: "Add M3U or Xtream sources in Settings to get started."
+                        )
+                    } else {
+                        // Modern EPG with glass effects and smooth animations
+                        EPGGridViewModern(
+                            viewModel: viewModel,
+                            onChannelSelect: { channel in
+                                playChannel(channel)
+                            },
+                            onProgramSelect: { program, channel in
+                                playChannel(channel)
+                            }
+                        )
                     }
-                )
+                }
+            }
+            .navigationDestination(isPresented: $showCatchup) {
+                CatchupView()
+            }
+            .navigationDestination(isPresented: $showOnLater) {
+                OnLaterView()
+            }
+            .navigationDestination(isPresented: $showTeamPass) {
+                TeamPassView()
+            }
+            .navigationDestination(isPresented: $showChannelGroups) {
+                ChannelGroupsView()
+            }
+            .navigationDestination(isPresented: $showMultiview) {
+                MultiviewPlayerV2(initialChannelIds: [], onFullScreen: { _ in })
             }
         }
         .task {
@@ -1675,6 +1711,96 @@ struct MiniEPGChannelRow: View {
             )
         }
         .buttonStyle(.card)
+    }
+}
+
+// MARK: - Live TV Feature Bar
+
+struct LiveTVFeatureBar: View {
+    let onCatchup: () -> Void
+    let onOnLater: () -> Void
+    let onTeamPass: () -> Void
+    let onChannelGroups: () -> Void
+    let onMultiview: () -> Void
+    
+    var body: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 16) {
+                FeatureButton(
+                    icon: "clock.arrow.circlepath",
+                    title: "Catch Up",
+                    color: Color(red: 0.55, green: 0.36, blue: 0.96),
+                    action: onCatchup
+                )
+                
+                FeatureButton(
+                    icon: "clock.badge.checkmark",
+                    title: "On Later",
+                    color: Color(red: 0.23, green: 0.51, blue: 0.96),
+                    action: onOnLater
+                )
+                
+                FeatureButton(
+                    icon: "sportscourt",
+                    title: "Team Pass",
+                    color: Color(red: 0.06, green: 0.73, blue: 0.51),
+                    action: onTeamPass
+                )
+                
+                FeatureButton(
+                    icon: "rectangle.stack",
+                    title: "Groups",
+                    color: Color(red: 0.96, green: 0.62, blue: 0.04),
+                    action: onChannelGroups
+                )
+                
+                FeatureButton(
+                    icon: "rectangle.split.2x2",
+                    title: "Multiview",
+                    color: Color(red: 0, green: 0.83, blue: 0.67),
+                    action: onMultiview
+                )
+            }
+            .padding(.horizontal, 48)
+            .padding(.vertical, 16)
+        }
+        .background(Color.black.opacity(0.3))
+    }
+}
+
+struct FeatureButton: View {
+    let icon: String
+    let title: String
+    let color: Color
+    let action: () -> Void
+    @State private var isFocused = false
+    
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 10) {
+                Image(systemName: icon)
+                    .font(.system(size: 18))
+                Text(title)
+                    .font(.system(size: 16, weight: .medium))
+            }
+            .foregroundColor(isFocused ? .black : .white)
+            .padding(.horizontal, 20)
+            .padding(.vertical, 12)
+            .background(
+                Capsule()
+                    .fill(isFocused ? color : color.opacity(0.3))
+            )
+            .overlay(
+                Capsule()
+                    .stroke(color, lineWidth: isFocused ? 0 : 1)
+            )
+        }
+        .buttonStyle(.plain)
+        .scaleEffect(isFocused ? 1.05 : 1.0)
+        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isFocused)
+        .onFocusChange { focused in
+            isFocused = focused
+        }
     }
 }
 
