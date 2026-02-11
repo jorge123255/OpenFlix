@@ -4,10 +4,13 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.openflix.data.repository.MediaRepository
 import com.openflix.data.repository.TmdbRepository
+import com.openflix.domain.model.DeduplicationKey
 import com.openflix.domain.model.GenreHub
 import com.openflix.domain.model.Hub
 import com.openflix.domain.model.MediaItem
+import com.openflix.domain.model.MediaSource
 import com.openflix.domain.model.MediaType
+import com.openflix.domain.model.MergedMediaItem
 import com.openflix.domain.model.TrailerInfo
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
@@ -59,17 +62,22 @@ class TVShowsViewModel @Inject constructor(
                         .flatMap { it.items }
                         .filter { it.type == MediaType.EPISODE }
 
-                    // Collect all shows for featured and genre hubs
-                    val allShows = showHubs
+                    // Collect all shows and deduplicate
+                    val allShowsRaw = showHubs
                         .flatMap { it.items }
                         .filter { it.type == MediaType.SHOW }
-                        .distinctBy { it.id }
+
+                    // Deduplicate shows from multiple sources
+                    val (deduplicatedShows, mergedMap) = deduplicateShows(allShowsRaw)
 
                     // Select featured items (prioritize promoted hubs, then recent/popular)
-                    val featuredItems = selectFeaturedItems(showHubs, allShows)
+                    val featuredItems = selectFeaturedItems(showHubs, deduplicatedShows)
 
-                    // Generate genre hubs
-                    val genreHubs = generateGenreHubs(allShows)
+                    // Generate genre hubs from deduplicated shows
+                    val genreHubs = generateGenreHubs(deduplicatedShows)
+
+                    // Count duplicates found
+                    val duplicatesFound = allShowsRaw.size - deduplicatedShows.size
 
                     _uiState.update {
                         it.copy(
@@ -78,11 +86,12 @@ class TVShowsViewModel @Inject constructor(
                             continueWatching = continueWatching,
                             featuredItems = featuredItems,
                             currentFeaturedIndex = 0,
-                            genreHubs = genreHubs
+                            genreHubs = genreHubs,
+                            mergedItems = mergedMap
                         )
                     }
 
-                    Timber.d("Loaded ${showHubs.size} TV show hubs, ${featuredItems.size} featured, ${genreHubs.size} genre hubs")
+                    Timber.d("Loaded ${showHubs.size} TV show hubs, ${featuredItems.size} featured, ${genreHubs.size} genre hubs, merged $duplicatesFound duplicates")
 
                     // Load trailers for featured items in background
                     loadTrailersForFeaturedItems(featuredItems)
@@ -137,6 +146,73 @@ class TVShowsViewModel @Inject constructor(
         }
 
         return featured.take(FEATURED_ITEMS_COUNT)
+    }
+
+    /**
+     * Deduplicate shows by title and year.
+     * Returns the deduplicated list and a map of primary ID to MergedMediaItem.
+     * Only merges items from DIFFERENT libraries to avoid false positives.
+     */
+    private fun deduplicateShows(shows: List<MediaItem>): Pair<List<MediaItem>, Map<String, MergedMediaItem>> {
+        val deduplicatedList = mutableListOf<MediaItem>()
+        val mergedMap = mutableMapOf<String, MergedMediaItem>()
+        val processedIds = mutableSetOf<String>()
+
+        // Sort by rating first so best items are processed first
+        val sortedShows = shows.sortedWith(
+            compareByDescending<MediaItem> { it.rating ?: 0.0 }
+                .thenByDescending { it.addedAt ?: 0L }
+                .thenByDescending { it.summary?.length ?: 0 }
+        )
+
+        for (show in sortedShows) {
+            if (show.id in processedIds) continue
+
+            val showKey = DeduplicationKey.from(show)
+
+            // Find all potential duplicates (from DIFFERENT libraries only)
+            val duplicates = sortedShows.filter { other ->
+                other.id !in processedIds &&
+                other.id != show.id &&
+                other.librarySectionId != show.librarySectionId &&  // Must be from different library
+                showKey.shouldMergeWith(DeduplicationKey.from(other))
+            }
+
+            // Mark all as processed
+            processedIds.add(show.id)
+            duplicates.forEach { processedIds.add(it.id) }
+
+            if (duplicates.isEmpty()) {
+                deduplicatedList.add(show)
+            } else {
+                // Create merged entry
+                val alternates = duplicates.map { item ->
+                    MediaSource(
+                        id = item.id,
+                        libraryId = item.librarySectionId,
+                        libraryTitle = item.librarySectionTitle
+                    )
+                }
+
+                deduplicatedList.add(show)
+                mergedMap[show.id] = MergedMediaItem(
+                    primary = show,
+                    alternateSources = alternates
+                )
+
+                Timber.d("Merged ${duplicates.size + 1} sources for '${show.title}': ${show.librarySectionTitle} + ${duplicates.map { it.librarySectionTitle }}")
+            }
+        }
+
+        return Pair(deduplicatedList, mergedMap)
+    }
+
+    /**
+     * Get alternate source IDs for a media item (for failover)
+     */
+    fun getAlternateSources(mediaId: String): List<String> {
+        val merged = _uiState.value.mergedItems[mediaId]
+        return merged?.alternateSources?.map { it.id } ?: emptyList()
     }
 
     /**
@@ -219,9 +295,15 @@ data class TVShowsUiState(
     val currentFeaturedIndex: Int = 0,
     val trailers: Map<String, TrailerInfo> = emptyMap(),
     val genreHubs: List<GenreHub> = emptyList(),
+    val mergedItems: Map<String, MergedMediaItem> = emptyMap(),
     val error: String? = null
 ) {
     // Backwards compatibility - return first featured item
     val featuredItem: MediaItem?
         get() = featuredItems.getOrNull(currentFeaturedIndex)
+
+    /** Get alternate sources for failover */
+    fun getAlternateSources(mediaId: String): List<String> {
+        return mergedItems[mediaId]?.alternateSources?.map { it.id } ?: emptyList()
+    }
 }
