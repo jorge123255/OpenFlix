@@ -39,10 +39,12 @@ import com.openflix.presentation.screens.dvr.DVRScreen
 import com.openflix.presentation.screens.watchstats.WatchStatsScreen
 import com.openflix.presentation.screens.livetv.LiveTVGuideScreen
 import com.openflix.presentation.screens.movies.MoviesScreen
+import com.openflix.presentation.screens.movies.MoviesScreenModern
 import com.openflix.presentation.screens.onlater.OnLaterScreen
 import com.openflix.presentation.screens.settings.SettingsScreen
 import com.openflix.presentation.screens.teampass.TeamPassScreen
 import com.openflix.presentation.screens.tvshows.TVShowsScreen
+import com.openflix.presentation.screens.tvshows.TVShowsScreenModern
 import com.openflix.presentation.screens.watchlist.WatchlistScreen
 import com.openflix.presentation.screens.playlist.PlaylistsScreen
 import com.openflix.presentation.theme.OpenFlixColors
@@ -117,12 +119,12 @@ fun MainScreen(
                         try { sidebarFocusRequester.requestFocus() } catch (_: Exception) {}
                     }
                 )
-                MainTab.MOVIES -> MoviesScreen(
+                MainTab.MOVIES -> MoviesScreenModern(
                     onMediaClick = onNavigateToMediaDetail,
                     onPlayClick = onNavigateToPlayer,
                     onBrowseAll = { onNavigateToBrowseAll("all", "movie") }
                 )
-                MainTab.TV_SHOWS -> TVShowsScreen(
+                MainTab.TV_SHOWS -> TVShowsScreenModern(
                     onMediaClick = onNavigateToMediaDetail,
                     onPlayClick = onNavigateToPlayer,
                     onBrowseAll = { onNavigateToBrowseAll("all", "show") }
