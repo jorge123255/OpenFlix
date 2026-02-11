@@ -70,6 +70,7 @@ fun MoviesScreenModern(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
+    var selectedGenre by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) {
         viewModel.loadMovies()
@@ -126,6 +127,10 @@ fun MoviesScreenModern(
                     item {
                         GenreFilterBarModern(
                             genres = uiState.genreHubs.map { it.genre },
+                            selectedGenre = selectedGenre,
+                            onGenreSelected = { genre ->
+                                selectedGenre = if (selectedGenre == genre) null else genre
+                            },
                             onBrowseAll = onBrowseAll
                         )
                     }
@@ -163,8 +168,14 @@ fun MoviesScreenModern(
                         }
                     }
 
-                    // Genre Hubs with colored accents
-                    itemsIndexed(uiState.genreHubs) { index, genreHub ->
+                    // Genre Hubs with colored accents (filtered if genre selected)
+                    val displayedGenres = if (selectedGenre != null) {
+                        uiState.genreHubs.filter { it.genre == selectedGenre }
+                    } else {
+                        uiState.genreHubs
+                    }
+                    
+                    itemsIndexed(displayedGenres) { index, genreHub ->
                         ModernContentRow(
                             title = genreHub.genre,
                             subtitle = "${genreHub.items.size} movies",
@@ -523,6 +534,8 @@ private fun TheaterModeHeroModern(
 @Composable
 private fun GenreFilterBarModern(
     genres: List<String>,
+    selectedGenre: String?,
+    onGenreSelected: (String) -> Unit,
     onBrowseAll: () -> Unit
 ) {
     LazyRow(
@@ -584,13 +597,21 @@ private fun GenreFilterBarModern(
 
         // Genre pills
         items(genres.take(12)) { genre ->
-            GenrePillModern(genre = genre)
+            GenrePillModern(
+                genre = genre,
+                isSelected = genre == selectedGenre,
+                onSelect = { onGenreSelected(genre) }
+            )
         }
     }
 }
 
 @Composable
-private fun GenrePillModern(genre: String) {
+private fun GenrePillModern(
+    genre: String,
+    isSelected: Boolean = false,
+    onSelect: () -> Unit = {}
+) {
     var focused by remember { mutableStateOf(false) }
     val scale by animateFloatAsState(
         targetValue = if (focused) 1.05f else 1f,
@@ -599,21 +620,29 @@ private fun GenrePillModern(genre: String) {
     val color = genreColor(genre)
 
     Surface(
-        onClick = { /* TODO: Filter by genre */ },
+        onClick = onSelect,
         modifier = Modifier
             .scale(scale)
             .onFocusChanged { focused = it.isFocused },
         shape = RoundedCornerShape(20.dp),
         colors = SurfaceDefaults.colors(
-            containerColor = if (focused) color.copy(alpha = 0.3f) else Color.White.copy(alpha = 0.1f)
+            containerColor = when {
+                isSelected -> color.copy(alpha = 0.5f)
+                focused -> color.copy(alpha = 0.3f)
+                else -> Color.White.copy(alpha = 0.1f)
+            }
         ),
-        border = if (focused) BorderStroke(2.dp, Color.White) else null
+        border = when {
+            isSelected -> BorderStroke(2.dp, color)
+            focused -> BorderStroke(2.dp, Color.White)
+            else -> null
+        }
     ) {
         Text(
             text = genre,
-            color = if (focused) Color.White else Color.White.copy(alpha = 0.9f),
+            color = if (focused || isSelected) Color.White else Color.White.copy(alpha = 0.9f),
             fontSize = 14.sp,
-            fontWeight = if (focused) FontWeight.Bold else FontWeight.Medium,
+            fontWeight = if (focused || isSelected) FontWeight.Bold else FontWeight.Medium,
             modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp)
         )
     }
