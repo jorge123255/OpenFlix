@@ -119,6 +119,10 @@ class MultiviewPlayer(
         player.volume = if (muted) 0f else 1f
     }
 
+    fun mute() = setMuted(true)
+
+    fun unmute() = setMuted(false)
+
     fun release() {
         exoPlayer?.removeListener(playerListener)
         exoPlayer?.release()
