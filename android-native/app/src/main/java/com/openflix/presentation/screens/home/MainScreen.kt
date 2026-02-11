@@ -112,12 +112,10 @@ fun MainScreen(
                 MainTab.HOME -> DiscoverScreenModern(
                     onMediaClick = onNavigateToMediaDetail,
                     onPlayClick = onNavigateToPlayer,
-                    liveTVPlayer = liveTVPlayer,
-                    lastWatchedService = lastWatchedService,
                     onNavigateToLiveTVPlayer = onNavigateToLiveTVPlayer,
-                    onNavigateToSidebar = {
-                        try { sidebarFocusRequester.requestFocus() } catch (_: Exception) {}
-                    }
+                    onNavigateToGuide = { selectedTab = MainTab.LIVE_TV },
+                    onNavigateToMultiview = onNavigateToMultiview,
+                    onNavigateToSports = null // TODO: Add sports screen navigation
                 )
                 MainTab.MOVIES -> MoviesScreenModern(
                     onMediaClick = onNavigateToMediaDetail,
