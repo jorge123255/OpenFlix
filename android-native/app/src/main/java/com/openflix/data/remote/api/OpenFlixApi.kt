@@ -482,4 +482,18 @@ interface OpenFlixApi {
 
     @GET("remote-access/login-url")
     suspend fun getRemoteAccessLoginUrl(): Response<TailscaleLoginUrlDto>
+
+    // === Instant Switch ===
+
+    @GET("api/instant/status")
+    suspend fun getInstantSwitchStatus(): Response<InstantSwitchStatusDto>
+
+    @POST("api/instant/enabled")
+    suspend fun setInstantSwitchEnabled(@Body request: InstantSwitchEnabledRequest): Response<InstantSwitchEnabledResponse>
+
+    @GET("api/instant/cached")
+    suspend fun getCachedStreams(): Response<CachedStreamsDto>
+
+    @POST("api/instant/favorites")
+    suspend fun setInstantSwitchFavorites(@Body request: InstantSwitchFavoritesRequest): Response<Unit>
 }

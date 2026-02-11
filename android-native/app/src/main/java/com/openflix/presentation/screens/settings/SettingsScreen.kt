@@ -138,6 +138,18 @@ fun SettingsScreen(
                 )
             }
 
+            item {
+                SettingsToggle(
+                    title = "Instant Channel Switch",
+                    subtitle = if (uiState.instantSwitchEnabled)
+                        "Pre-buffers nearby channels (${uiState.cachedStreamCount} cached)"
+                    else
+                        "Pre-buffer channels for instant switching",
+                    checked = uiState.instantSwitchEnabled,
+                    onCheckedChange = viewModel::setInstantSwitchEnabled
+                )
+            }
+
             // Remote Streaming Section
             item {
                 Spacer(modifier = Modifier.height(16.dp))
