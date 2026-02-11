@@ -30,6 +30,15 @@ enum MultiviewLayout: String, CaseIterable {
     }
 }
 
+/// DVR state for a multiview slot
+struct SlotDVRState {
+    var isPaused: Bool = false
+    var isLive: Bool = true
+    var liveOffsetSecs: Int = 0
+    var playbackSpeed: Float = 1.0
+    var bufferSecs: Int = 1800 // 30 minutes default
+}
+
 /// Represents one slot in the multiview grid
 struct MultiviewSlot: Identifiable {
     let id = UUID()
@@ -41,6 +50,7 @@ struct MultiviewSlot: Identifiable {
     var isTimeshifted: Bool = false
     var timeshiftProgramTitle: String?
     var isBuffering: Bool = false
+    var dvrState: SlotDVRState = SlotDVRState()
 }
 
 @MainActor
@@ -345,6 +355,125 @@ class MultiviewViewModel: ObservableObject {
 
     func hideChannelPicker() {
         channelPickerSlotIndex = nil
+    }
+
+    // MARK: - DVR Controls (Key Differentiator vs Channels DVR!)
+
+    /// Pause a specific slot - Channels DVR CAN'T do this!
+    func pauseSlot(_ slotIndex: Int) {
+        guard slotIndex < slots.count else { return }
+        slots[slotIndex].player?.pause()
+        slots[slotIndex].dvrState.isPaused = true
+        slots[slotIndex].dvrState.isLive = false
+    }
+
+    /// Resume a paused slot
+    func resumeSlot(_ slotIndex: Int) {
+        guard slotIndex < slots.count else { return }
+        slots[slotIndex].player?.play()
+        slots[slotIndex].dvrState.isPaused = false
+    }
+
+    /// Toggle pause on a slot
+    func togglePauseSlot(_ slotIndex: Int) {
+        guard slotIndex < slots.count else { return }
+        if slots[slotIndex].dvrState.isPaused {
+            resumeSlot(slotIndex)
+        } else {
+            pauseSlot(slotIndex)
+        }
+    }
+
+    /// Rewind a slot by seconds - Channels DVR CAN'T do this!
+    func rewindSlot(_ slotIndex: Int, seconds: Double = 15) {
+        guard slotIndex < slots.count,
+              let player = slots[slotIndex].player else { return }
+
+        let currentTime = player.currentTime()
+        let newTime = CMTimeSubtract(currentTime, CMTimeMakeWithSeconds(seconds, preferredTimescale: 600))
+        player.seek(to: newTime)
+
+        slots[slotIndex].dvrState.isLive = false
+        slots[slotIndex].dvrState.liveOffsetSecs += Int(seconds)
+    }
+
+    /// Fast forward a slot
+    func fastForwardSlot(_ slotIndex: Int, seconds: Double = 15) {
+        guard slotIndex < slots.count,
+              let player = slots[slotIndex].player else { return }
+
+        let currentTime = player.currentTime()
+        let newTime = CMTimeAdd(currentTime, CMTimeMakeWithSeconds(seconds, preferredTimescale: 600))
+        player.seek(to: newTime)
+
+        slots[slotIndex].dvrState.liveOffsetSecs = max(0, slots[slotIndex].dvrState.liveOffsetSecs - Int(seconds))
+        if slots[slotIndex].dvrState.liveOffsetSecs == 0 {
+            slots[slotIndex].dvrState.isLive = true
+        }
+    }
+
+    /// Jump a slot back to live
+    func jumpToLiveSlot(_ slotIndex: Int) {
+        guard slotIndex < slots.count,
+              let player = slots[slotIndex].player,
+              let duration = player.currentItem?.duration else { return }
+
+        player.seek(to: duration)
+        slots[slotIndex].dvrState.isLive = true
+        slots[slotIndex].dvrState.liveOffsetSecs = 0
+        slots[slotIndex].dvrState.isPaused = false
+        player.play()
+    }
+
+    /// PAUSE ALL streams - one button convenience!
+    func pauseAll() {
+        for i in slots.indices {
+            pauseSlot(i)
+        }
+    }
+
+    /// RESUME ALL streams
+    func resumeAll() {
+        for i in slots.indices {
+            resumeSlot(i)
+        }
+    }
+
+    /// JUMP ALL TO LIVE - sync all streams to live
+    func jumpAllToLive() {
+        for i in slots.indices {
+            jumpToLiveSlot(i)
+        }
+    }
+
+    /// SYNC all streams - align timestamps
+    func syncAllStreams() {
+        // Find the stream that's furthest behind live
+        var maxOffset = 0
+        for slot in slots {
+            if slot.dvrState.liveOffsetSecs > maxOffset {
+                maxOffset = slot.dvrState.liveOffsetSecs
+            }
+        }
+
+        // Rewind all streams to match
+        for i in slots.indices {
+            let currentOffset = slots[i].dvrState.liveOffsetSecs
+            if currentOffset < maxOffset {
+                let rewindAmount = Double(maxOffset - currentOffset)
+                rewindSlot(i, seconds: rewindAmount)
+            }
+        }
+    }
+
+    /// Check if any slot is paused
+    var anySlotPaused: Bool {
+        slots.contains { $0.dvrState.isPaused }
+    }
+
+    /// Check if all slots are live
+    var allSlotsLive: Bool {
+        slots.allSatisfy { $0.dvrState.isLive }
     }
 
     // MARK: - Cleanup

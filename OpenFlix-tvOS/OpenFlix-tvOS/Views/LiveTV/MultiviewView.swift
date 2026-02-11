@@ -89,8 +89,43 @@ struct MultiviewView: View {
             handleMoveCommand(direction)
         }
         .onPlayPauseCommand {
-            // Toggle mute on focused slot
+            // Toggle pause on focused slot (DVR feature!)
+            viewModel.togglePauseSlot(viewModel.focusedSlotIndex)
+        }
+        .focusable()
+        // P key - Pause/Resume ALL streams
+        .onKeyPress("p") {
+            if viewModel.anySlotPaused {
+                viewModel.resumeAll()
+            } else {
+                viewModel.pauseAll()
+            }
+            return .handled
+        }
+        // L key - Jump all to LIVE
+        .onKeyPress("l") {
+            viewModel.jumpAllToLive()
+            return .handled
+        }
+        // S key - SYNC all streams
+        .onKeyPress("s") {
+            viewModel.syncAllStreams()
+            return .handled
+        }
+        // Left arrow - Rewind focused slot
+        .onKeyPress(.leftArrow) {
+            viewModel.rewindSlot(viewModel.focusedSlotIndex, seconds: 15)
+            return .handled
+        }
+        // Right arrow - Forward focused slot
+        .onKeyPress(.rightArrow) {
+            viewModel.fastForwardSlot(viewModel.focusedSlotIndex, seconds: 15)
+            return .handled
+        }
+        // M key - Toggle mute (audio focus)
+        .onKeyPress("m") {
             viewModel.toggleMuteOnSlot(viewModel.focusedSlotIndex)
+            return .handled
         }
     }
 
@@ -230,6 +265,7 @@ struct MultiviewView: View {
 
             // Status badges
             HStack(spacing: 8) {
+                // Audio indicator
                 if !slot.isMuted {
                     Image(systemName: "speaker.wave.2.fill")
                         .foregroundColor(MultiviewColors.accentGreen)
@@ -239,13 +275,43 @@ struct MultiviewView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 4))
                 }
 
-                Text(slot.isTimeshifted ? "START OVER" : "LIVE")
+                // Paused indicator - DVR feature!
+                if slot.dvrState.isPaused {
+                    HStack(spacing: 4) {
+                        Image(systemName: "pause.fill")
+                        Text("PAUSED")
+                    }
                     .font(.caption2)
                     .fontWeight(.bold)
                     .foregroundColor(.white)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
-                    .background(slot.isTimeshifted ? MultiviewColors.accentPurple : MultiviewColors.accentRed)
+                    .background(MultiviewColors.accentGold)
+                    .clipShape(RoundedRectangle(cornerRadius: 4))
+                }
+
+                // Time offset indicator (when behind live)
+                if !slot.dvrState.isLive && slot.dvrState.liveOffsetSecs > 0 {
+                    Text("-\(formatOffset(slot.dvrState.liveOffsetSecs))")
+                        .font(.caption2)
+                        .fontWeight(.bold)
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(MultiviewColors.accentPurple)
+                        .clipShape(RoundedRectangle(cornerRadius: 4))
+                }
+
+                // Live/Start Over badge
+                let statusText = slot.dvrState.isLive ? "LIVE" : (slot.isTimeshifted ? "START OVER" : "DVR")
+                let statusColor = slot.dvrState.isLive ? MultiviewColors.accentRed : MultiviewColors.accentPurple
+                Text(statusText)
+                    .font(.caption2)
+                    .fontWeight(.bold)
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(statusColor)
                     .clipShape(RoundedRectangle(cornerRadius: 4))
             }
         }
@@ -278,66 +344,119 @@ struct MultiviewView: View {
     private var actionBar: some View {
         VStack(spacing: 16) {
             // Hint text
-            Text("D-Pad: Navigate Slots  |  Play/Pause: Toggle Audio  |  Select: Fullscreen")
+            Text("D-Pad: Navigate  |  Play: Toggle Audio  |  Select: Fullscreen  |  P: Pause All")
                 .font(.caption)
                 .foregroundColor(MultiviewColors.textMuted)
 
-            // Action buttons
-            HStack(spacing: 16) {
-                actionButton(icon: "arrow.left", label: "Back", color: MultiviewColors.textSecondary) {
-                    onBack()
-                }
-
-                actionButton(icon: "arrow.up.left.and.arrow.down.right", label: "Fullscreen", color: MultiviewColors.accent) {
-                    if let slot = viewModel.slots[safe: viewModel.focusedSlotIndex] {
-                        onFullScreen(slot.channel)
+            // Action buttons - two rows for DVR controls
+            VStack(spacing: 12) {
+                // Row 1: Navigation and layout
+                HStack(spacing: 16) {
+                    actionButton(icon: "arrow.left", label: "Back", color: MultiviewColors.textSecondary) {
+                        onBack()
                     }
-                }
 
-                actionButton(icon: viewModel.layout.icon, label: viewModel.layout.rawValue, color: MultiviewColors.textSecondary) {
-                    viewModel.cycleLayout()
-                }
-
-                let focusedSlot = viewModel.slots[safe: viewModel.focusedSlotIndex]
-                let isTimeshifted = focusedSlot?.isTimeshifted ?? false
-
-                actionButton(
-                    icon: isTimeshifted ? "play.fill" : "gobackward",
-                    label: isTimeshifted ? "Go Live" : "Start Over",
-                    color: isTimeshifted ? MultiviewColors.accentGold : MultiviewColors.accentPurple
-                ) {
-                    Task {
-                        if isTimeshifted {
-                            viewModel.goLiveSlot(viewModel.focusedSlotIndex)
-                        } else {
-                            await viewModel.startOverSlot(viewModel.focusedSlotIndex)
+                    actionButton(icon: "arrow.up.left.and.arrow.down.right", label: "Fullscreen", color: MultiviewColors.accent) {
+                        if let slot = viewModel.slots[safe: viewModel.focusedSlotIndex] {
+                            onFullScreen(slot.channel)
                         }
                     }
-                }
 
-                if viewModel.slots.count < 4 {
-                    actionButton(icon: "plus", label: "Add", color: MultiviewColors.accentGreen) {
-                        viewModel.addSlot()
+                    actionButton(icon: viewModel.layout.icon, label: viewModel.layout.rawValue, color: MultiviewColors.textSecondary) {
+                        viewModel.cycleLayout()
+                    }
+
+                    if viewModel.slots.count < 4 {
+                        actionButton(icon: "plus", label: "Add", color: MultiviewColors.accentGreen) {
+                            viewModel.addSlot()
+                        }
+                    }
+
+                    if viewModel.slots.count > 1 {
+                        actionButton(icon: "minus", label: "Remove", color: MultiviewColors.accentRed) {
+                            viewModel.removeSlot(viewModel.focusedSlotIndex)
+                        }
+                    }
+
+                    actionButton(icon: "arrow.left.arrow.right", label: "Swap", color: MultiviewColors.textSecondary) {
+                        viewModel.showChannelPicker(for: viewModel.focusedSlotIndex)
+                    }
+
+                    let focusedSlot = viewModel.slots[safe: viewModel.focusedSlotIndex]
+                    let isMuted = focusedSlot?.isMuted ?? true
+                    actionButton(
+                        icon: isMuted ? "speaker.slash.fill" : "speaker.wave.2.fill",
+                        label: isMuted ? "Unmute" : "Mute",
+                        color: isMuted ? MultiviewColors.textSecondary : MultiviewColors.accentGreen
+                    ) {
+                        viewModel.toggleMuteOnSlot(viewModel.focusedSlotIndex)
                     }
                 }
 
-                if viewModel.slots.count > 1 {
-                    actionButton(icon: "minus", label: "Remove", color: MultiviewColors.accentRed) {
-                        viewModel.removeSlot(viewModel.focusedSlotIndex)
+                // Row 2: DVR Controls - Our killer feature vs Channels DVR!
+                HStack(spacing: 16) {
+                    // Pause/Resume focused slot
+                    let focusedSlot = viewModel.slots[safe: viewModel.focusedSlotIndex]
+                    let isPaused = focusedSlot?.dvrState.isPaused ?? false
+
+                    actionButton(
+                        icon: isPaused ? "play.fill" : "pause.fill",
+                        label: isPaused ? "Resume" : "Pause",
+                        color: isPaused ? MultiviewColors.accentGreen : MultiviewColors.accentGold
+                    ) {
+                        viewModel.togglePauseSlot(viewModel.focusedSlotIndex)
                     }
-                }
 
-                actionButton(icon: "arrow.left.arrow.right", label: "Swap", color: MultiviewColors.textSecondary) {
-                    viewModel.showChannelPicker(for: viewModel.focusedSlotIndex)
-                }
+                    // Rewind 15s
+                    actionButton(icon: "gobackward.15", label: "-15s", color: MultiviewColors.textSecondary) {
+                        viewModel.rewindSlot(viewModel.focusedSlotIndex, seconds: 15)
+                    }
 
-                let isMuted = focusedSlot?.isMuted ?? true
-                actionButton(
-                    icon: isMuted ? "speaker.slash.fill" : "speaker.wave.2.fill",
-                    label: isMuted ? "Unmute" : "Mute",
-                    color: isMuted ? MultiviewColors.textSecondary : MultiviewColors.accentGreen
-                ) {
-                    viewModel.toggleMuteOnSlot(viewModel.focusedSlotIndex)
+                    // Forward 15s
+                    actionButton(icon: "goforward.15", label: "+15s", color: MultiviewColors.textSecondary) {
+                        viewModel.fastForwardSlot(viewModel.focusedSlotIndex, seconds: 15)
+                    }
+
+                    // Jump to Live
+                    let isLive = focusedSlot?.dvrState.isLive ?? true
+                    actionButton(
+                        icon: "antenna.radiowaves.left.and.right",
+                        label: isLive ? "LIVE" : "Go Live",
+                        color: isLive ? MultiviewColors.accentRed : MultiviewColors.accentGold
+                    ) {
+                        viewModel.jumpToLiveSlot(viewModel.focusedSlotIndex)
+                    }
+
+                    Divider()
+                        .frame(height: 30)
+                        .background(MultiviewColors.textMuted)
+
+                    // PAUSE ALL - one button for everything!
+                    actionButton(
+                        icon: viewModel.anySlotPaused ? "play.circle.fill" : "pause.circle.fill",
+                        label: viewModel.anySlotPaused ? "Play All" : "Pause All",
+                        color: MultiviewColors.accentPurple
+                    ) {
+                        if viewModel.anySlotPaused {
+                            viewModel.resumeAll()
+                        } else {
+                            viewModel.pauseAll()
+                        }
+                    }
+
+                    // SYNC ALL - align all streams
+                    actionButton(icon: "arrow.triangle.2.circlepath", label: "Sync All", color: MultiviewColors.accent) {
+                        viewModel.syncAllStreams()
+                    }
+
+                    // LIVE ALL - jump all to live
+                    actionButton(
+                        icon: "livephoto",
+                        label: "All Live",
+                        color: viewModel.allSlotsLive ? MultiviewColors.textMuted : MultiviewColors.accentGold
+                    ) {
+                        viewModel.jumpAllToLive()
+                    }
                 }
             }
         }
@@ -514,6 +633,19 @@ struct MultiviewView: View {
 
         @unknown default:
             break
+        }
+    }
+
+    // MARK: - Helpers
+
+    /// Format time offset for display (e.g., "2:30" for 150 seconds)
+    private func formatOffset(_ seconds: Int) -> String {
+        let mins = seconds / 60
+        let secs = seconds % 60
+        if mins > 0 {
+            return String(format: "%d:%02d", mins, secs)
+        } else {
+            return "\(secs)s"
         }
     }
 }

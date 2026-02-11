@@ -18,6 +18,7 @@ import (
 	"github.com/openflix/openflix-server/internal/metadata"
 	"github.com/openflix/openflix-server/internal/transcode"
 	"github.com/openflix/openflix-server/internal/instant"
+	"github.com/openflix/openflix-server/internal/multiview"
 	limiter "github.com/ulule/limiter/v3"
 	mgin "github.com/ulule/limiter/v3/drivers/middleware/gin"
 	"github.com/ulule/limiter/v3/drivers/store/memory"
@@ -42,8 +43,9 @@ type Server struct {
 	metadataScheduler *metadata.Scheduler
 	epgEnricher       *livetv.EPGEnricher
 	dvrEnricher       *dvr.Enricher
-	remoteAccess      *livetv.RemoteAccessManager
-	prebuffer         *instant.PrebufferManager
+	remoteAccess       *livetv.RemoteAccessManager
+	prebuffer          *instant.PrebufferManager
+	multiviewManager   *multiview.MultiviewManager
 }
 
 // NewServer creates a new API server
@@ -697,6 +699,19 @@ func (s *Server) setupRouter() {
 	{
 		instantHandlers := instant.NewInstantSwitchHandlers(s.prebuffer)
 		instantHandlers.RegisterRoutes(instantSwitch)
+	}
+
+	// ============ Multiview API ============
+	// KEY DIFFERENTIATOR: Full DVR support in multiview (pause/rewind/sync)
+	// Channels DVR has NO DVR in multiview - we beat them here!
+	multiviewGroup := r.Group("/api/multiview")
+	multiviewGroup.Use(s.authRequired())
+	{
+		// Initialize multiview manager with DVR support
+		if s.multiviewManager == nil {
+			s.multiviewManager = multiview.NewMultiviewManager(6, nil) // 6 streams max
+		}
+		multiview.RegisterRoutes(multiviewGroup, s.multiviewManager)
 	}
 
 	// ============ Gracenote EPG API ============
