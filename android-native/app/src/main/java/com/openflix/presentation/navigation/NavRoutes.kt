@@ -83,6 +83,7 @@ sealed class NavRoutes(val route: String) {
     data object SubtitleStyling : NavRoutes("settings/subtitles")
     data object ChannelLogoEditor : NavRoutes("settings/channel_logos")
     data object RemoteMapping : NavRoutes("settings/remote_mapping")
+    data object RemoteStreaming : NavRoutes("settings/remote_streaming")
     data object About : NavRoutes("settings/about")
     data object Licenses : NavRoutes("settings/licenses")
     data object Logs : NavRoutes("settings/logs")

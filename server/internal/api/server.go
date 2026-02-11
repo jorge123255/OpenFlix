@@ -41,6 +41,7 @@ type Server struct {
 	metadataScheduler *metadata.Scheduler
 	epgEnricher       *livetv.EPGEnricher
 	dvrEnricher       *dvr.Enricher
+	remoteAccess      *livetv.RemoteAccessManager
 }
 
 // NewServer creates a new API server
@@ -140,6 +141,14 @@ func NewServer(cfg *config.Config, db *gorm.DB) *Server {
 	archiveManager.Start()
 	logger.Info("Archive Manager initialized for catch-up TV")
 
+	// Initialize Remote Access Manager for Tailscale
+	remoteAccess := livetv.NewRemoteAccessManager(livetv.TailscaleConfig{
+		Enabled:  true,
+		Hostname: "openflix",
+		Port:     cfg.Server.Port,
+	})
+	logger.Info("Remote Access Manager initialized")
+
 	s := &Server{
 		config:            cfg,
 		db:                db,
@@ -156,6 +165,7 @@ func NewServer(cfg *config.Config, db *gorm.DB) *Server {
 		metadataScheduler: metadataScheduler,
 		epgEnricher:       epgEnricher,
 		dvrEnricher:       dvrEnricher,
+		remoteAccess:      remoteAccess,
 	}
 	s.setupRouter()
 
@@ -658,6 +668,22 @@ func (s *Server) setupRouter() {
 		teampass.GET("/leagues/:league/teams", s.handleGetLeagueTeams)
 	}
 
+	// ============ Remote Access API ============
+	remoteAccess := r.Group("/remote-access")
+	remoteAccess.Use(s.authRequired())
+	{
+		// Connection info (any authenticated user)
+		remoteAccess.GET("/connection-info", s.getRemoteConnectionInfo)
+
+		// Admin-only endpoints
+		remoteAccess.GET("/status", s.adminRequired(), s.getRemoteAccessStatus)
+		remoteAccess.POST("/enable", s.adminRequired(), s.enableRemoteAccess)
+		remoteAccess.POST("/disable", s.adminRequired(), s.disableRemoteAccess)
+		remoteAccess.GET("/health", s.adminRequired(), s.getRemoteAccessHealth)
+		remoteAccess.GET("/install-info", s.adminRequired(), s.getRemoteAccessInstallInfo)
+		remoteAccess.GET("/login-url", s.adminRequired(), s.getRemoteAccessLoginUrl)
+	}
+
 	// ============ Gracenote EPG API ============
 	s.epgService.RegisterRoutes(r)
 
@@ -904,4 +930,159 @@ func (s *Server) healthCheck(c *gin.Context) {
 		"status": "ok",
 		"time":   time.Now().Unix(),
 	})
+}
+
+// ============ Remote Access Handlers ============
+
+func (s *Server) getRemoteConnectionInfo(c *gin.Context) {
+	clientIP := c.ClientIP()
+	info := s.remoteAccess.GetConnectionInfo(clientIP)
+
+	// Convert to DTO format expected by clients
+	c.JSON(http.StatusOK, gin.H{
+		"serverUrl":          info.RecommendedURL,
+		"networkType":        s.detectNetworkType(clientIP),
+		"isRemote":           info.IsRemote,
+		"suggestedQuality":   s.getSuggestedQuality(info.IsRemote),
+		"tailscaleAvailable": info.TailscaleURL != "",
+	})
+}
+
+func (s *Server) getRemoteAccessStatus(c *gin.Context) {
+	status := s.remoteAccess.RefreshStatus()
+
+	c.JSON(http.StatusOK, gin.H{
+		"enabled":           status.Enabled,
+		"connected":         status.Status == "connected",
+		"method":            "tailscale",
+		"tailscaleIp":       status.TailscaleIP,
+		"tailscaleHostname": status.Hostname,
+		"magicDnsName":      status.TailscaleURL,
+		"backendState":      status.Status,
+		"loginUrl":          nil,
+		"lastSeen":          status.LastChecked,
+		"error":             status.Error,
+	})
+}
+
+func (s *Server) enableRemoteAccess(c *gin.Context) {
+	var req struct {
+		AuthKey string `json:"authKey"`
+	}
+	c.BindJSON(&req)
+
+	if err := s.remoteAccess.Enable(req.AuthKey); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"message": err.Error(),
+		})
+		return
+	}
+
+	status := s.remoteAccess.GetStatus()
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "Remote access enabled",
+		"status": gin.H{
+			"enabled":           status.Enabled,
+			"connected":         status.Status == "connected",
+			"method":            "tailscale",
+			"tailscaleIp":       status.TailscaleIP,
+			"tailscaleHostname": status.Hostname,
+			"magicDnsName":      status.TailscaleURL,
+			"backendState":      status.Status,
+			"loginUrl":          nil,
+			"lastSeen":          status.LastChecked,
+			"error":             status.Error,
+		},
+	})
+}
+
+func (s *Server) disableRemoteAccess(c *gin.Context) {
+	if err := s.remoteAccess.Disable(); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"message": err.Error(),
+		})
+		return
+	}
+
+	status := s.remoteAccess.GetStatus()
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "Remote access disabled",
+		"status": gin.H{
+			"enabled":           status.Enabled,
+			"connected":         status.Status == "connected",
+			"method":            "tailscale",
+			"tailscaleIp":       status.TailscaleIP,
+			"tailscaleHostname": status.Hostname,
+			"magicDnsName":      status.TailscaleURL,
+			"backendState":      status.Status,
+			"loginUrl":          nil,
+			"lastSeen":          status.LastChecked,
+			"error":             status.Error,
+		},
+	})
+}
+
+func (s *Server) getRemoteAccessHealth(c *gin.Context) {
+	health := s.remoteAccess.HealthCheck()
+
+	c.JSON(http.StatusOK, gin.H{
+		"healthy":  health["tailscale_connected"],
+		"checks":   health,
+		"warnings": []string{},
+	})
+}
+
+func (s *Server) getRemoteAccessInstallInfo(c *gin.Context) {
+	instructions := livetv.GetInstallInstructions()
+
+	// Check if tailscale is installed
+	_, installed := instructions["command"]
+
+	c.JSON(http.StatusOK, gin.H{
+		"isInstalled":      installed,
+		"currentVersion":   nil,
+		"installCommand":   instructions["command"],
+		"configureCommand": "tailscale up --hostname=openflix",
+		"docUrl":           instructions["download_url"],
+	})
+}
+
+func (s *Server) getRemoteAccessLoginUrl(c *gin.Context) {
+	url, err := s.remoteAccess.GetLoginURL()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"url":   nil,
+			"error": err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"url": url,
+	})
+}
+
+// Helper functions for remote access
+func (s *Server) detectNetworkType(clientIP string) string {
+	if strings.HasPrefix(clientIP, "100.") {
+		return "vpn" // Tailscale CGNAT range
+	}
+	if strings.HasPrefix(clientIP, "192.168.") ||
+		strings.HasPrefix(clientIP, "10.") ||
+		strings.HasPrefix(clientIP, "172.16.") ||
+		clientIP == "127.0.0.1" {
+		return "wifi"
+	}
+	return "cellular"
+}
+
+func (s *Server) getSuggestedQuality(isRemote bool) string {
+	if isRemote {
+		return "720p"
+	}
+	return "original"
 }

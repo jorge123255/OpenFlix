@@ -184,6 +184,11 @@ class PreferencesManager @Inject constructor(
         .catch { e -> handleError(e) }
         .map { it[PreferencesKeys.TMDB_API_KEY] }
 
+    // === Remote Streaming ===
+    val remoteStreamingQuality: Flow<String> = dataStore.data
+        .catch { e -> handleError(e) }
+        .map { it[PreferencesKeys.REMOTE_STREAMING_QUALITY] ?: "AUTO" }
+
     // === Advanced ===
     val debugLogging: Flow<Boolean> = dataStore.data
         .catch { e -> handleError(e) }
@@ -367,6 +372,12 @@ class PreferencesManager @Inject constructor(
         }
     }
 
+    suspend fun setRemoteStreamingQuality(quality: String) {
+        dataStore.edit { prefs ->
+            prefs[PreferencesKeys.REMOTE_STREAMING_QUALITY] = quality
+        }
+    }
+
     suspend fun clearAll() {
         dataStore.edit { prefs ->
             prefs.clear()
@@ -441,6 +452,9 @@ class PreferencesManager @Inject constructor(
 
         // TMDB
         val TMDB_API_KEY = stringPreferencesKey("tmdb_api_key")
+
+        // Remote Streaming
+        val REMOTE_STREAMING_QUALITY = stringPreferencesKey("remote_streaming_quality")
 
         // Live TV
         val FAVORITE_CHANNEL_IDS = stringPreferencesKey("favorite_channel_ids")

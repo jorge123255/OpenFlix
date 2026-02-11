@@ -175,6 +175,7 @@ fun MainScreen(
                     onNavigateToSubtitleStyling = { /* TODO */ },
                     onNavigateToChannelLogoEditor = { /* TODO */ },
                     onNavigateToRemoteMapping = { /* TODO */ },
+                    onNavigateToRemoteStreaming = { /* TODO */ },
                     onNavigateToAbout = { /* TODO */ },
                     onNavigateToLogs = { /* TODO */ },
                     onNavigateToSources = { /* TODO: Navigate to sources screen */ },
