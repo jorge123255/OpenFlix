@@ -37,7 +37,7 @@ import com.openflix.player.MpvPlayer
 import com.openflix.presentation.screens.catchup.CatchupScreen
 import com.openflix.presentation.screens.dvr.DVRScreen
 import com.openflix.presentation.screens.watchstats.WatchStatsScreen
-import com.openflix.presentation.screens.livetv.LiveTVGuideScreen
+import com.openflix.presentation.screens.epg.EPGGuideScreenModern
 import com.openflix.presentation.screens.movies.MoviesScreen
 import com.openflix.presentation.screens.movies.MoviesScreenModern
 import com.openflix.presentation.screens.onlater.OnLaterScreen
@@ -113,7 +113,7 @@ fun MainScreen(
                     onMediaClick = onNavigateToMediaDetail,
                     onPlayClick = onNavigateToPlayer,
                     onNavigateToLiveTVPlayer = onNavigateToLiveTVPlayer,
-                    onNavigateToGuide = { selectedTab = MainTab.LIVE_TV },
+                    onNavigateToGuide = { selectedTab = MainTab.GUIDE },
                     onNavigateToMultiview = onNavigateToMultiview,
                     onNavigateToSports = null // TODO: Add sports screen navigation
                 )
@@ -127,18 +127,15 @@ fun MainScreen(
                     onPlayClick = onNavigateToPlayer,
                     onBrowseAll = { onNavigateToBrowseAll("all", "show") }
                 )
-                MainTab.LIVE_TV -> LiveTVGuideScreen(
+                MainTab.GUIDE -> EPGGuideScreenModern(
                     onBack = { selectedTab = MainTab.HOME },
                     onChannelSelected = onNavigateToLiveTVPlayer,
-                    liveTVPlayer = liveTVPlayer,
-                    onFullscreenChanged = { isLiveTVFullscreen = it },
-                    onNavigateToMultiview = onNavigateToMultiview,
-                    onNavigateToChannelSurfing = onNavigateToChannelSurfing,
-                    onNavigateToCatchup = onNavigateToCatchup,
-                    onNavigateToChannelGroups = onNavigateToChannelGroups
+                    onArchivePlayback = { channelId, startTime ->
+                        onNavigateToArchivePlayer(channelId, startTime)
+                    }
                 )
                 MainTab.CATCHUP -> CatchupScreen(
-                    onBack = { selectedTab = MainTab.LIVE_TV },
+                    onBack = { selectedTab = MainTab.GUIDE },
                     onPlayProgram = { channelId, startTime ->
                         onNavigateToArchivePlayer(channelId, startTime)
                     }
@@ -384,7 +381,7 @@ enum class MainTab(
     HOME("Home", Icons.Outlined.Home, Icons.Filled.Home),
     MOVIES("Movies", Icons.Outlined.Movie, Icons.Filled.Movie),
     TV_SHOWS("TV Shows", Icons.Outlined.Tv, Icons.Filled.Tv),
-    LIVE_TV("Live TV", Icons.Outlined.LiveTv, Icons.Filled.LiveTv),
+    GUIDE("Guide", Icons.Outlined.GridView, Icons.Filled.GridView),
     CATCHUP("Catch Up", Icons.Outlined.History, Icons.Filled.History),
     ON_LATER("On Later", Icons.Outlined.Schedule, Icons.Filled.Schedule),
     TEAM_PASS("Team Pass", Icons.Outlined.SportsFootball, Icons.Filled.SportsFootball),
