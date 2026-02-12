@@ -225,7 +225,7 @@ fun OpenFlixNavHost(
                 channelId = channelId,
                 onBack = { navController.popBackStack() },
                 onMultiview = {
-                    navController.navigate(NavRoutes.Multiview.route)
+                    navController.navigate(NavRoutes.Multiview.createRoute(channelId))
                 },
                 onEPGGuide = {
                     navController.navigate(NavRoutes.EPGGuide.route)
@@ -568,7 +568,18 @@ fun OpenFlixNavHost(
         }
 
         // === Multiview ===
-        composable(NavRoutes.Multiview.route) {
+        composable(
+            route = NavRoutes.Multiview.route,
+            arguments = listOf(
+                navArgument("channelId") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                }
+            )
+        ) { backStackEntry ->
+            val initialChannelId = backStackEntry.arguments?.getString("channelId")
+            
             // Track player screen for PiP
             DisposableEffect(Unit) {
                 onPlayerScreenChanged(true)
@@ -576,6 +587,7 @@ fun OpenFlixNavHost(
             }
 
             MultiviewScreenV2(
+                initialChannelIds = listOfNotNull(initialChannelId),
                 onBack = { navController.popBackStack() },
                 onFullScreen = { channel ->
                     navController.navigate(NavRoutes.LiveTVPlayer.createRoute(channel.id))
