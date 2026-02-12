@@ -45,8 +45,8 @@ import java.text.SimpleDateFormat
 import java.util.*
 
 // Modern EPG Grid dimensions
-private val CHANNEL_WIDTH = 240.dp
-private val ROW_HEIGHT = 96.dp
+private val CHANNEL_WIDTH = 200.dp
+private val ROW_HEIGHT = 72.dp  // Compact rows for more channels visible
 private val TIME_HEADER_HEIGHT = 56.dp
 private val TIME_SLOT_WIDTH = 280.dp
 
@@ -175,7 +175,32 @@ private fun filterChannels(
     category: String?
 ): List<ChannelWithPrograms> {
     if (category == null) return channels
-    return channels.filter { it.channel.group == category }
+    
+    // Special category filters
+    val lowerCategory = category.lowercase()
+    return channels.filter { channelWithPrograms ->
+        val name = channelWithPrograms.channel.name.lowercase()
+        val group = channelWithPrograms.channel.group?.lowercase() ?: ""
+        
+        when (lowerCategory) {
+            "sports" -> name.contains("espn") || name.contains("fox sports") || 
+                       name.contains("nfl") || name.contains("nba") || name.contains("mlb") ||
+                       name.contains("nhl") || name.contains("tennis") || name.contains("golf") ||
+                       name.contains("fs1") || name.contains("fs2") || name.contains("btn") ||
+                       name.contains("sec") || name.contains("acc") || name.contains("pac") ||
+                       name.contains("sport") || group.contains("sport")
+            "news" -> name.contains("news") || name.contains("cnn") || name.contains("msnbc") ||
+                     name.contains("fox news") || name.contains("cnbc") || name.contains("bbc") ||
+                     name.contains("cspan") || group.contains("news")
+            "movies" -> name.contains("movie") || name.contains("hbo") || name.contains("showtime") ||
+                       name.contains("starz") || name.contains("cinemax") || name.contains("tcm") ||
+                       name.contains("amc") || name.contains("fx") || group.contains("movie")
+            "kids" -> name.contains("nick") || name.contains("disney") || name.contains("cartoon") ||
+                     name.contains("pbs kids") || name.contains("kids") || name.contains("junior") ||
+                     name.contains("boomerang") || group.contains("kids")
+            else -> channelWithPrograms.channel.group == category
+        }
+    }
 }
 
 // MARK: - Quick Nav Bar
@@ -288,6 +313,34 @@ private fun ModernCategoryTabs(
                 label = "⭐ Favorites",
                 isSelected = false,
                 onClick = { /* Filter favorites */ }
+            )
+        }
+        item {
+            CategoryChip(
+                label = "🏈 Live Sports",
+                isSelected = selectedCategory == "Sports",
+                onClick = { onCategorySelected(if (selectedCategory == "Sports") null else "Sports") }
+            )
+        }
+        item {
+            CategoryChip(
+                label = "📰 News",
+                isSelected = selectedCategory == "News",
+                onClick = { onCategorySelected(if (selectedCategory == "News") null else "News") }
+            )
+        }
+        item {
+            CategoryChip(
+                label = "🎬 Movies",
+                isSelected = selectedCategory == "Movies",
+                onClick = { onCategorySelected(if (selectedCategory == "Movies") null else "Movies") }
+            )
+        }
+        item {
+            CategoryChip(
+                label = "👶 Kids",
+                isSelected = selectedCategory == "Kids",
+                onClick = { onCategorySelected(if (selectedCategory == "Kids") null else "Kids") }
             )
         }
         items(categories.size) { index ->
