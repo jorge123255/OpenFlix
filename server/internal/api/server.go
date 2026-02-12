@@ -428,6 +428,13 @@ func (s *Server) setupRouter() {
 	}
 
 	// ============ Live TV API ============
+	// Public endpoints for external integrations (Channels DVR, etc.)
+	livetvPublic := r.Group("/livetv")
+	{
+		livetvPublic.GET("/export.m3u", s.exportChannelsM3U)      // M3U playlist with tvc-guide-stationid
+		livetvPublic.GET("/lineup.json", s.exportChannelsLineup)  // JSON lineup
+	}
+
 	livetv := r.Group("/livetv")
 	livetv.Use(s.authRequired())
 	{
@@ -440,10 +447,6 @@ func (s *Server) setupRouter() {
 		// M3U VOD/Series import
 		livetv.POST("/sources/:id/import-vod", s.importM3UVOD)
 		livetv.POST("/sources/:id/import-series", s.importM3USeries)
-
-		// Channel Export (for Channels DVR integration)
-		livetv.GET("/export.m3u", s.exportChannelsM3U)      // M3U playlist with tvc-guide-stationid
-		livetv.GET("/lineup.json", s.exportChannelsLineup)  // JSON lineup
 
 		// Channels
 		livetv.GET("/channels", s.getChannels)
