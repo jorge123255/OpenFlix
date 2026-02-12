@@ -441,6 +441,10 @@ func (s *Server) setupRouter() {
 		livetv.POST("/sources/:id/import-vod", s.importM3UVOD)
 		livetv.POST("/sources/:id/import-series", s.importM3USeries)
 
+		// Channel Export (for Channels DVR integration)
+		livetv.GET("/export.m3u", s.exportChannelsM3U)      // M3U playlist with tvc-guide-stationid
+		livetv.GET("/lineup.json", s.exportChannelsLineup)  // JSON lineup
+
 		// Channels
 		livetv.GET("/channels", s.getChannels)
 		livetv.GET("/channels/:id", s.getChannel)
