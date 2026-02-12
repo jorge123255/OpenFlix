@@ -1,5 +1,6 @@
 package com.openflix.presentation.screens.livetv
 
+import android.util.Log
 import android.view.SurfaceView
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
@@ -234,8 +235,9 @@ fun MultiviewScreenV2(
                         true
                     }
                     
-                    // CHANNEL CHANGE - Only with CH+/- or Page keys
-                    Key.PageUp, Key.ChannelUp -> {
+                    // CHANNEL CHANGE - CH+/-, Page keys, or media keys
+                    // Many TV remotes send different keycodes - handle them all
+                    Key.PageUp, Key.ChannelUp, Key.MediaPrevious -> {
                         if (showQuickStrip) {
                             val channel = uiState.allChannels.getOrNull(quickStripIndex)
                             if (channel != null) viewModel.swapChannel(current, channel)
@@ -245,7 +247,7 @@ fun MultiviewScreenV2(
                         }
                         true
                     }
-                    Key.PageDown, Key.ChannelDown -> {
+                    Key.PageDown, Key.ChannelDown, Key.MediaNext -> {
                         if (showQuickStrip) {
                             val channel = uiState.allChannels.getOrNull(quickStripIndex)
                             if (channel != null) viewModel.swapChannel(current, channel)
@@ -304,7 +306,27 @@ fun MultiviewScreenV2(
                     Key.Three -> { viewModel.setAudioSlot(2); true }
                     Key.Four -> { viewModel.setAudioSlot(3); true }
                     
-                    else -> false
+                    // Catch-all for raw keycodes (some TV remotes)
+                    else -> {
+                        // KEYCODE_CHANNEL_UP = 166, KEYCODE_CHANNEL_DOWN = 167
+                        val nativeCode = event.nativeKeyEvent.keyCode
+                        Log.d("MultiviewV2", "Unhandled key: ${event.key}, nativeCode=$nativeCode")
+                        when (nativeCode) {
+                            166, 188 -> { // CHANNEL_UP variants
+                                if (!showQuickStrip && !showChannelPicker) {
+                                    viewModel.changeChannelInSlot(current, -1)
+                                }
+                                true
+                            }
+                            167, 189 -> { // CHANNEL_DOWN variants  
+                                if (!showQuickStrip && !showChannelPicker) {
+                                    viewModel.changeChannelInSlot(current, 1)
+                                }
+                                true
+                            }
+                            else -> false
+                        }
+                    }
                 }
             }
     ) {
