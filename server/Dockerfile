@@ -33,6 +33,9 @@ RUN echo "Build timestamp: $CACHEBUST" && CGO_ENABLED=1 GOOS=linux go build -o o
 # Runtime stage - Use Ubuntu for better NVIDIA compatibility
 FROM ubuntu:22.04
 
+# Capture target architecture for conditional builds
+ARG TARGETARCH
+
 ENV DEBIAN_FRONTEND=noninteractive
 
 # Install runtime dependencies (including X11 libraries needed for Chrome)
@@ -73,16 +76,30 @@ RUN apt-get update && apt-get install -y \
     xdg-utils \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Google Chrome (works properly in Docker unlike Ubuntu's snap-based chromium)
-RUN wget -q -O /tmp/chrome.deb https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb \
-    && apt-get update \
-    && apt-get install -y /tmp/chrome.deb \
-    && rm /tmp/chrome.deb \
-    && rm -rf /var/lib/apt/lists/*
+# Install browser for headless web scraping (Gracenote EPG)
+# - amd64: Google Chrome (best compatibility)
+# - arm64: Chromium from apt
+RUN if [ "$TARGETARCH" = "amd64" ]; then \
+        wget -q -O /tmp/chrome.deb https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb \
+        && apt-get update \
+        && apt-get install -y /tmp/chrome.deb \
+        && rm /tmp/chrome.deb \
+        && rm -rf /var/lib/apt/lists/*; \
+    else \
+        apt-get update \
+        && apt-get install -y chromium-browser \
+        && rm -rf /var/lib/apt/lists/* \
+        && ln -sf /usr/bin/chromium-browser /usr/bin/google-chrome-stable; \
+    fi
 
 # Download jellyfin-ffmpeg with full hardware encoding support (NVENC, QSV, VAAPI)
+# Use architecture-specific builds
 RUN mkdir -p /opt/ffmpeg && \
-    wget -q https://github.com/jellyfin/jellyfin-ffmpeg/releases/download/v7.1.3-1/jellyfin-ffmpeg_7.1.3-1_portable_linux64-gpl.tar.xz -O /tmp/ffmpeg.tar.xz && \
+    if [ "$TARGETARCH" = "amd64" ]; then \
+        wget -q https://github.com/jellyfin/jellyfin-ffmpeg/releases/download/v7.1.3-1/jellyfin-ffmpeg_7.1.3-1_portable_linux64-gpl.tar.xz -O /tmp/ffmpeg.tar.xz; \
+    else \
+        wget -q https://github.com/jellyfin/jellyfin-ffmpeg/releases/download/v7.1.3-1/jellyfin-ffmpeg_7.1.3-1_portable_linuxarm64-gpl.tar.xz -O /tmp/ffmpeg.tar.xz; \
+    fi && \
     tar -xf /tmp/ffmpeg.tar.xz -C /opt/ffmpeg && \
     rm /tmp/ffmpeg.tar.xz && \
     chmod +x /opt/ffmpeg/ffmpeg /opt/ffmpeg/ffprobe && \
