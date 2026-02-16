@@ -8,7 +8,8 @@ import com.google.gson.annotations.SerializedName
 
 data class ChannelDto(
     @SerializedName("id") val id: String,
-    @SerializedName("tvgId") val uuid: String?,  // Maps to tvgId from server (EPG channel ID)
+    @SerializedName("channelId") val channelId: String?,  // EPG channel ID (e.g. "gracenote-DITV803-10367")
+    @SerializedName("tvgId") val uuid: String?,  // Maps to tvgId from server
     @SerializedName("number") val number: Int?,  // Server sends int
     @SerializedName("name") val name: String,
     @SerializedName("title") val title: String?,

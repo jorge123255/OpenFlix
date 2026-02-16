@@ -34,6 +34,7 @@ import coil.compose.AsyncImage
 import com.openflix.domain.model.ChannelWithPrograms
 import com.openflix.domain.model.Program
 import com.openflix.domain.model.ProgramBadge
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
@@ -67,6 +68,14 @@ fun EPGGuideScreen(
     // Request focus
     LaunchedEffect(Unit) {
         focusRequester.requestFocus()
+    }
+
+    // Auto-refresh guide every 5 minutes
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(5 * 60 * 1000L)
+            viewModel.loadGuideData()
+        }
     }
 
     // Scroll to now when requested
@@ -205,6 +214,51 @@ fun EPGGuideScreen(
                         }
                         Key.G -> { // Green - Reminder
                             viewModel.showReminderDialog()
+                            true
+                        }
+
+                        // ========== HARDWARE REMOTE BUTTONS ==========
+                        // RED - Record focused program
+                        Key(android.view.KeyEvent.KEYCODE_PROG_RED.toLong()) -> {
+                            viewModel.showRecordDialog()
+                            true
+                        }
+                        // GREEN - Reminder for focused program
+                        Key(android.view.KeyEvent.KEYCODE_PROG_GREEN.toLong()) -> {
+                            viewModel.showReminderDialog()
+                            true
+                        }
+                        // YELLOW - Toggle favorites filter
+                        Key(android.view.KeyEvent.KEYCODE_PROG_YELLOW.toLong()) -> {
+                            viewModel.toggleFavoritesOnly()
+                            true
+                        }
+                        // BLUE - Toggle sidebar/categories
+                        Key(android.view.KeyEvent.KEYCODE_PROG_BLUE.toLong()) -> {
+                            viewModel.toggleSidebar()
+                            true
+                        }
+                        // INFO - Show program details (select focused program)
+                        Key.Info, Key(android.view.KeyEvent.KEYCODE_INFO.toLong()) -> {
+                            viewModel.getFocusedChannel()?.let { channel ->
+                                onChannelSelected(channel.channel.id)
+                            }
+                            true
+                        }
+                        // GUIDE - Refresh guide data
+                        Key.Guide, Key(android.view.KeyEvent.KEYCODE_GUIDE.toLong()),
+                        Key(android.view.KeyEvent.KEYCODE_TV_DATA_SERVICE.toLong()) -> {
+                            viewModel.loadGuideData()
+                            true
+                        }
+                        // RECORD button
+                        Key(android.view.KeyEvent.KEYCODE_MEDIA_RECORD.toLong()) -> {
+                            viewModel.showRecordDialog()
+                            true
+                        }
+                        // FAVORITES button
+                        Key(android.view.KeyEvent.KEYCODE_BOOKMARK.toLong()) -> {
+                            viewModel.toggleFavoritesOnly()
                             true
                         }
 

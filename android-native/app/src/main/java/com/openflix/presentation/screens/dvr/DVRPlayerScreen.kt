@@ -197,6 +197,23 @@ fun DVRPlayerScreen(
                             mpvPlayer.seekRelative(30)
                             true
                         }
+                        Key.MediaStop -> {
+                            viewModel.saveProgress(position)
+                            mpvPlayer.stop()
+                            onBack()
+                            true
+                        }
+                        // Subtitle button (CAPTIONS or YELLOW)
+                        Key(android.view.KeyEvent.KEYCODE_CAPTIONS.toLong()),
+                        Key(android.view.KeyEvent.KEYCODE_PROG_YELLOW.toLong()) -> {
+                            mpvPlayer.cycleSubtitleTrack()
+                            true
+                        }
+                        // Audio button (GREEN)
+                        Key(android.view.KeyEvent.KEYCODE_PROG_GREEN.toLong()) -> {
+                            mpvPlayer.cycleAudioTrack()
+                            true
+                        }
                         Key.Back, Key.Escape -> {
                             if (showOverlay) {
                                 showOverlay = false

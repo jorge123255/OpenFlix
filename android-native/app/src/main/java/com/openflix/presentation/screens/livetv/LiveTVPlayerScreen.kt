@@ -305,6 +305,21 @@ fun LiveTVPlayerScreen(
                             showOverlay = true
                             true
                         }
+                        // EPG button (alias for Guide)
+                        Key(android.view.KeyEvent.KEYCODE_TV_DATA_SERVICE.toLong()) -> {
+                            onEPGGuide()
+                            true
+                        }
+                        // RECORD button
+                        Key(android.view.KeyEvent.KEYCODE_MEDIA_RECORD.toLong()) -> {
+                            // Record current program
+                            true
+                        }
+                        // AUDIO button (separate from GREEN)
+                        Key(android.view.KeyEvent.KEYCODE_MEDIA_AUDIO_TRACK.toLong()) -> {
+                            viewModel.cycleAudioTrack()
+                            true
+                        }
 
                         // ========== PLAYBACK SPECIAL ==========
                         Key.MediaTopMenu -> {

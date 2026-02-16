@@ -428,6 +428,87 @@ fun LiveTVGuideScreen(
                             onNavigateToChannelGroups()
                             true
                         }
+
+                        // ========== HARDWARE REMOTE BUTTONS ==========
+                        // CHANNEL UP/DOWN (hardware buttons)
+                        Key.ChannelUp, Key.PageUp -> {
+                            if (isFullscreen) {
+                                val currentIndex = filteredGuide.indexOfFirst { it.channel.id == selectedChannel?.channel?.id }
+                                if (currentIndex > 0) {
+                                    val newChannel = filteredGuide[currentIndex - 1]
+                                    selectedChannel = newChannel
+                                    selectedProgram = newChannel.programs.find { it.isAiring }
+                                    currentChannelId = newChannel.channel.id
+                                    playChannel(newChannel.channel)
+                                    showFullscreenControls = true
+                                }
+                            }
+                            true
+                        }
+                        Key.ChannelDown, Key.PageDown -> {
+                            if (isFullscreen) {
+                                val currentIndex = filteredGuide.indexOfFirst { it.channel.id == selectedChannel?.channel?.id }
+                                if (currentIndex >= 0 && currentIndex < filteredGuide.size - 1) {
+                                    val newChannel = filteredGuide[currentIndex + 1]
+                                    selectedChannel = newChannel
+                                    selectedProgram = newChannel.programs.find { it.isAiring }
+                                    currentChannelId = newChannel.channel.id
+                                    playChannel(newChannel.channel)
+                                    showFullscreenControls = true
+                                }
+                            }
+                            true
+                        }
+                        // INFO button - toggle controls overlay
+                        Key.Info, Key(android.view.KeyEvent.KEYCODE_INFO.toLong()) -> {
+                            if (isFullscreen) { showFullscreenControls = !showFullscreenControls }
+                            true
+                        }
+                        // GUIDE/EPG - exit fullscreen to show guide
+                        Key.Guide, Key(android.view.KeyEvent.KEYCODE_GUIDE.toLong()),
+                        Key(android.view.KeyEvent.KEYCODE_TV_DATA_SERVICE.toLong()) -> {
+                            if (isFullscreen) { isFullscreen = false }
+                            else { viewModel.loadGuide(startTime, endTime) }
+                            true
+                        }
+                        // COLOR BUTTONS
+                        Key(android.view.KeyEvent.KEYCODE_PROG_RED.toLong()) -> {
+                            // Toggle favorites filter
+                            selectedCategory = if (selectedCategory == Category.FAVORITES) Category.ALL else Category.FAVORITES
+                            true
+                        }
+                        Key(android.view.KeyEvent.KEYCODE_PROG_GREEN.toLong()) -> {
+                            onNavigateToChannelGroups()
+                            true
+                        }
+                        Key(android.view.KeyEvent.KEYCODE_PROG_YELLOW.toLong()) -> {
+                            onNavigateToChannelSurfing()
+                            true
+                        }
+                        Key(android.view.KeyEvent.KEYCODE_PROG_BLUE.toLong()) -> {
+                            onNavigateToCatchup()
+                            true
+                        }
+                        // MEDIA controls (fullscreen playback)
+                        Key.MediaPlayPause, Key.Spacebar -> {
+                            if (isFullscreen) { liveTVPlayer.togglePlayPause(); showFullscreenControls = true }
+                            true
+                        }
+                        Key.MediaPlay -> {
+                            if (isFullscreen) { liveTVPlayer.resume(); showFullscreenControls = true }
+                            true
+                        }
+                        Key.MediaPause -> {
+                            if (isFullscreen) { liveTVPlayer.pause(); showFullscreenControls = true }
+                            true
+                        }
+                        // LAST CHANNEL / TV button
+                        Key(android.view.KeyEvent.KEYCODE_LAST_CHANNEL.toLong()),
+                        Key(android.view.KeyEvent.KEYCODE_TV.toLong()) -> {
+                            // Previous channel
+                            true
+                        }
+
                         else -> false
                     }
                 } else false

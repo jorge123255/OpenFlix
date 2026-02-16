@@ -169,8 +169,29 @@ fun ChannelSurfingScreen(
                         }
 
                         // Show/hide overlay
-                        Key.Info -> {
+                        Key.Info, Key(android.view.KeyEvent.KEYCODE_INFO.toLong()) -> {
                             showOverlay = !showOverlay
+                            true
+                        }
+
+                        // ========== HARDWARE REMOTE BUTTONS ==========
+                        // GREEN - cycle audio (placeholder)
+                        Key(android.view.KeyEvent.KEYCODE_PROG_GREEN.toLong()) -> { true }
+                        // YELLOW - cycle subtitle (placeholder)
+                        Key(android.view.KeyEvent.KEYCODE_PROG_YELLOW.toLong()) -> { true }
+                        // BLUE - aspect ratio (placeholder)
+                        Key(android.view.KeyEvent.KEYCODE_PROG_BLUE.toLong()) -> { true }
+                        // GUIDE button - navigate back to guide
+                        Key.Guide, Key(android.view.KeyEvent.KEYCODE_GUIDE.toLong()),
+                        Key(android.view.KeyEvent.KEYCODE_TV_DATA_SERVICE.toLong()) -> {
+                            liveTVPlayer.stop()
+                            onBack()
+                            true
+                        }
+                        // FAVORITES button
+                        Key(android.view.KeyEvent.KEYCODE_BOOKMARK.toLong()) -> {
+                            viewModel.toggleFavoritesFilter()
+                            showOverlay = true
                             true
                         }
 
