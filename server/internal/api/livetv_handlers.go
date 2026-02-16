@@ -1483,9 +1483,10 @@ func (s *Server) getGuide(c *gin.Context) {
 		}
 	}
 
-	// Get channels
+	// Get channels - only include channels with EPG mapping (channelId) for the guide
+	// This filters out VOD entries that were imported as channels
 	var channels []models.Channel
-	channelQuery := s.db.Where("enabled = ?", true).Order("number, name")
+	channelQuery := s.db.Where("enabled = ?", true).Where("channel_id != ''").Order("number, name")
 	if sourceID != "" {
 		channelQuery = channelQuery.Where("m3_u_source_id = ?", sourceID)
 	}
@@ -1494,36 +1495,37 @@ func (s *Server) getGuide(c *gin.Context) {
 		return
 	}
 
-	// Build mapping from Gracenote channel ID to our channel's channelId
-	// Programs are stored with Gracenote IDs but frontend looks up by channel.channelId
-	channelIDs := make([]string, 0, len(channels))
-	gracenoteToChannelID := make(map[string]string)
+	// Programs are stored with XMLTV channel IDs (e.g. "2", "11") which match
+	// the channel's tvg_id, NOT the channel's channel_id (e.g. "gracenote-DITV803-10367").
+	// We need to query programs by tvg_id and map results back to channel_id for the response.
+	programQueryIDs := make([]string, 0, len(channels))
+	tvgIDToChannelID := make(map[string]string) // tvg_id -> channel_id (for re-keying response)
 	for _, ch := range channels {
-		// Channels may have channelId in Gracenote format or just a number (tvgId)
-		// We need to query programs by whatever format matches the program.channel_id
-		if ch.ChannelID != "" {
-			channelIDs = append(channelIDs, ch.ChannelID)
-			gracenoteToChannelID[ch.ChannelID] = ch.ChannelID
+		if ch.TVGId != "" {
+			programQueryIDs = append(programQueryIDs, ch.TVGId)
+			tvgIDToChannelID[ch.TVGId] = ch.ChannelID
+		} else if ch.ChannelID != "" {
+			// Fallback: try channel_id directly (some EPG sources may use it)
+			programQueryIDs = append(programQueryIDs, ch.ChannelID)
+			tvgIDToChannelID[ch.ChannelID] = ch.ChannelID
 		}
 	}
 
-	// Get programs
+	// Get programs using the IDs that match the programs table
 	epgParser := livetv.NewEPGParser(s.db)
-	programs, err := epgParser.GetGuide(start, end, channelIDs)
+	programs, err := epgParser.GetGuide(start, end, programQueryIDs)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch programs"})
 		return
 	}
 
-	// Group programs by channel.channelId (what frontend uses for lookup)
-	// Map Gracenote program channel_id back to our channel's channelId
+	// Group programs by channelId (what frontend uses for lookup)
+	// Re-key from tvg_id to channel_id so the client can match programs to channels
 	programsByChannel := make(map[string][]models.Program)
 	for _, prog := range programs {
-		// Use the mapping to get the channel's channelId
-		if chID, ok := gracenoteToChannelID[prog.ChannelID]; ok {
+		if chID, ok := tvgIDToChannelID[prog.ChannelID]; ok {
 			programsByChannel[chID] = append(programsByChannel[chID], prog)
 		} else {
-			// Fallback: use program's channel_id directly
 			programsByChannel[prog.ChannelID] = append(programsByChannel[prog.ChannelID], prog)
 		}
 	}

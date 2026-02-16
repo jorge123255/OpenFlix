@@ -387,10 +387,10 @@ func parseXMLTVTime(s string) (*time.Time, error) {
 
 // GetCurrentProgram returns the currently playing program for a channel
 func (p *EPGParser) GetCurrentProgram(channelID string) (*models.Program, error) {
-	now := time.Now()
+	nowStr := time.Now().UTC().Format("2006-01-02 15:04:05+00:00")
 	var program models.Program
 	err := p.db.Where("channel_id = ? AND start <= ? AND end > ?",
-		channelID, now, now).First(&program).Error
+		channelID, nowStr, nowStr).First(&program).Error
 	if err != nil {
 		return nil, err
 	}
@@ -399,9 +399,9 @@ func (p *EPGParser) GetCurrentProgram(channelID string) (*models.Program, error)
 
 // GetNextProgram returns the next program for a channel
 func (p *EPGParser) GetNextProgram(channelID string) (*models.Program, error) {
-	now := time.Now()
+	nowStr := time.Now().UTC().Format("2006-01-02 15:04:05+00:00")
 	var program models.Program
-	err := p.db.Where("channel_id = ? AND start > ?", channelID, now).
+	err := p.db.Where("channel_id = ? AND start > ?", channelID, nowStr).
 		Order("start ASC").First(&program).Error
 	if err != nil {
 		return nil, err
@@ -412,7 +412,12 @@ func (p *EPGParser) GetNextProgram(channelID string) (*models.Program, error) {
 // GetGuide returns the EPG guide for a time range
 func (p *EPGParser) GetGuide(start, end time.Time, channelIDs []string) ([]models.Program, error) {
 	var programs []models.Program
-	query := p.db.Where("start < ? AND end > ?", end, start)
+	// Format times as UTC strings to match the stored format ("2026-02-16 06:00:00+00:00").
+	// GORM formats time.Time in the server's local timezone without offset, which causes
+	// incorrect string comparisons in SQLite when the server isn't in UTC.
+	startStr := start.UTC().Format("2006-01-02 15:04:05+00:00")
+	endStr := end.UTC().Format("2006-01-02 15:04:05+00:00")
+	query := p.db.Where("start < ? AND end > ?", endStr, startStr)
 
 	if len(channelIDs) > 0 {
 		query = query.Where("channel_id IN ?", channelIDs)

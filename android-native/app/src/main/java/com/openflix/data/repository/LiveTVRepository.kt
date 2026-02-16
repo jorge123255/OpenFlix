@@ -77,14 +77,18 @@ class LiveTVRepository @Inject constructor(
                 }
 
                 // Combine channels with their programs from the separate map
-                // Programs are keyed by channelId (EPG ID), not the database ID
+                // Programs are keyed by channelId (EPG ID like "gracenote-DITV803-10367")
                 val guide = guideResponse.channels.map { channelDto ->
-                    // Try channelId first (EPG ID), then fall back to id
-                    val channelId = channelDto.uuid ?: channelDto.id
-                    var programs = programsByChannel[channelId]?.map { it.toDomain() } ?: emptyList()
+                    // Try channelId first (EPG ID), then uuid (tvgId), then database id
+                    var programs = channelDto.channelId?.let { programsByChannel[it] }?.map { it.toDomain() } ?: emptyList()
 
-                    // If no programs found with channelId, try with the numeric id as string
-                    if (programs.isEmpty() && channelDto.uuid != null) {
+                    if (programs.isEmpty()) {
+                        val fallbackId = channelDto.uuid ?: channelDto.id
+                        programs = programsByChannel[fallbackId]?.map { it.toDomain() } ?: emptyList()
+                    }
+
+                    // Last resort: try database id as string
+                    if (programs.isEmpty()) {
                         programs = programsByChannel[channelDto.id]?.map { it.toDomain() } ?: emptyList()
                     }
 
