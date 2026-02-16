@@ -160,6 +160,7 @@ RUN mkdir -p /data/tailscale /var/run/tailscale
 EXPOSE 32400
 
 # Environment variables
+ENV TZ=UTC
 ENV OPENFLIX_HOST=0.0.0.0
 ENV OPENFLIX_PORT=32400
 ENV OPENFLIX_DB_DRIVER=sqlite
