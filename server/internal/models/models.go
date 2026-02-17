@@ -549,10 +549,14 @@ type TeamPass struct {
 	League      string    `gorm:"size:50" json:"league"`               // NFL, NBA, MLB, NHL, MLS, etc.
 	ChannelIDs  string    `gorm:"size:500" json:"channelIds,omitempty"` // Comma-separated channel IDs (empty = all)
 	PrePadding  int       `gorm:"default:5" json:"prePadding"`         // Minutes before start
-	PostPadding int       `gorm:"default:60" json:"postPadding"`       // Minutes after end (games run long)
-	KeepCount   int       `gorm:"default:0" json:"keepCount"`          // 0 = keep all
-	Priority    int       `gorm:"default:0" json:"priority"`           // For conflict resolution
-	Enabled     bool      `gorm:"default:true" json:"enabled"`
+	PostPadding     int       `gorm:"default:60" json:"postPadding"`       // Minutes after end (games run long)
+	RecordPreGame   bool      `gorm:"default:false" json:"recordPreGame"`  // Auto-detect and record pre-game show
+	RecordPostGame  bool      `gorm:"default:false" json:"recordPostGame"` // Auto-detect and record post-game show
+	PreGameMinutes  int       `gorm:"default:30" json:"preGameMinutes"`    // Max pre-game minutes to look for
+	PostGameMinutes int       `gorm:"default:60" json:"postGameMinutes"`   // Max post-game minutes to look for
+	KeepCount       int       `gorm:"default:0" json:"keepCount"`          // 0 = keep all
+	Priority        int       `gorm:"default:0" json:"priority"`           // For conflict resolution
+	Enabled         bool      `gorm:"default:true" json:"enabled"`
 	CreatedAt   time.Time `json:"createdAt"`
 	UpdatedAt   time.Time `json:"updatedAt"`
 }
@@ -561,6 +565,7 @@ type TeamPass struct {
 type CommercialSegment struct {
 	ID          uint    `gorm:"primaryKey" json:"id"`
 	RecordingID uint    `gorm:"index" json:"recordingId"`
+	FileID      *uint   `gorm:"index" json:"fileId,omitempty"` // DVR v2 link
 	StartTime   float64 `json:"startTime"`  // seconds from beginning
 	EndTime     float64 `json:"endTime"`    // seconds from beginning
 	Duration    float64 `json:"duration"`   // seconds

@@ -364,6 +364,16 @@ func (r *Recorder) processTeamPassesForUser(userID uint) int {
 			logger.Log.Infof("Team pass scheduled recording: %s on %s at %s",
 				prog.Title, channel.Name, prog.Start.Format("2006-01-02 15:04"))
 			scheduledCount++
+
+			// Schedule pre-game show if enabled
+			if tp.RecordPreGame {
+				scheduledCount += r.schedulePreGameForTeamPass(&tp, &prog, &channel)
+			}
+
+			// Schedule post-game show if enabled
+			if tp.RecordPostGame {
+				scheduledCount += r.schedulePostGameForTeamPass(&tp, &prog, &channel)
+			}
 		}
 
 		// Clean up old recordings if KeepCount is set
@@ -387,6 +397,92 @@ func (r *Recorder) processTeamPassesForUser(userID uint) int {
 	}
 
 	return scheduledCount
+}
+
+// schedulePreGameForTeamPass finds and schedules a pre-game show recording for a team pass
+func (r *Recorder) schedulePreGameForTeamPass(tp *models.TeamPass, gameProg *models.Program, channel *models.Channel) int {
+	detector := NewPrePostGameDetector(r.db)
+	windowMinutes := tp.PreGameMinutes
+	if windowMinutes <= 0 {
+		windowMinutes = 30
+	}
+
+	preGame := detector.FindPreGame(gameProg.ChannelID, gameProg.Start, tp.TeamName, tp.League, windowMinutes)
+	if preGame == nil {
+		return 0
+	}
+
+	// Check if already scheduled
+	var existing models.Recording
+	if r.db.Where("program_id = ? AND user_id = ?", preGame.ID, tp.UserID).First(&existing).Error == nil {
+		return 0
+	}
+
+	recording := models.Recording{
+		UserID:       tp.UserID,
+		ChannelID:    channel.ID,
+		ProgramID:    &preGame.ID,
+		Title:        preGame.Title,
+		Description:  preGame.Description,
+		StartTime:    preGame.Start,
+		EndTime:      preGame.End,
+		Status:       "scheduled",
+		Category:     "Sports",
+		SeriesRecord: true,
+	}
+
+	if err := r.db.Create(&recording).Error; err != nil {
+		logger.Log.Errorf("Failed to create pre-game recording for %s: %v", preGame.Title, err)
+		return 0
+	}
+
+	r.syncRecordingToDVR(&recording)
+	logger.Log.Infof("Team pass scheduled pre-game: %s on %s at %s",
+		preGame.Title, channel.Name, preGame.Start.Format("2006-01-02 15:04"))
+	return 1
+}
+
+// schedulePostGameForTeamPass finds and schedules a post-game show recording for a team pass
+func (r *Recorder) schedulePostGameForTeamPass(tp *models.TeamPass, gameProg *models.Program, channel *models.Channel) int {
+	detector := NewPrePostGameDetector(r.db)
+	windowMinutes := tp.PostGameMinutes
+	if windowMinutes <= 0 {
+		windowMinutes = 60
+	}
+
+	postGame := detector.FindPostGame(gameProg.ChannelID, gameProg.End, tp.TeamName, tp.League, windowMinutes)
+	if postGame == nil {
+		return 0
+	}
+
+	// Check if already scheduled
+	var existing models.Recording
+	if r.db.Where("program_id = ? AND user_id = ?", postGame.ID, tp.UserID).First(&existing).Error == nil {
+		return 0
+	}
+
+	recording := models.Recording{
+		UserID:       tp.UserID,
+		ChannelID:    channel.ID,
+		ProgramID:    &postGame.ID,
+		Title:        postGame.Title,
+		Description:  postGame.Description,
+		StartTime:    postGame.Start,
+		EndTime:      postGame.End,
+		Status:       "scheduled",
+		Category:     "Sports",
+		SeriesRecord: true,
+	}
+
+	if err := r.db.Create(&recording).Error; err != nil {
+		logger.Log.Errorf("Failed to create post-game recording for %s: %v", postGame.Title, err)
+		return 0
+	}
+
+	r.syncRecordingToDVR(&recording)
+	logger.Log.Infof("Team pass scheduled post-game: %s on %s at %s",
+		postGame.Title, channel.Name, postGame.Start.Format("2006-01-02 15:04"))
+	return 1
 }
 
 // processRules evaluates all enabled DVRRules against upcoming programs and creates DVRJobs.
@@ -551,6 +647,14 @@ func (r *Recorder) processRules() {
 				"channel": channel.Name,
 				"start":   prog.Start.Format("2006-01-02 15:04"),
 			}).Info("Rule scheduled recording")
+
+			// Schedule pre/post show recordings if enabled on the rule
+			if rule.RecordPreShow {
+				scheduled += r.schedulePreShowForRule(&rule, &prog, &channel)
+			}
+			if rule.RecordPostShow {
+				scheduled += r.schedulePostShowForRule(&rule, &prog, &channel)
+			}
 		}
 
 		// Enforce KeepNum - delete oldest completed recordings beyond the limit
@@ -590,6 +694,199 @@ func (r *Recorder) processRules() {
 		Message: fmt.Sprintf("Processed %d rules, scheduled %d jobs", len(rules), totalScheduled),
 		Data:    map[string]any{"rulesProcessed": len(rules), "jobsScheduled": totalScheduled},
 	})
+}
+
+// schedulePreShowForRule finds and schedules a pre-show recording for a DVR rule match.
+// It extracts team name from the program's Teams field for keyword matching.
+func (r *Recorder) schedulePreShowForRule(rule *models.DVRRule, prog *models.Program, channel *models.Channel) int {
+	detector := NewPrePostGameDetector(r.db)
+	windowMinutes := rule.PreShowMinutes
+	if windowMinutes <= 0 {
+		windowMinutes = 30
+	}
+
+	// Extract team name from program metadata for better matching
+	teamName := ""
+	if prog.Teams != "" {
+		parts := strings.Split(prog.Teams, ",")
+		if len(parts) > 0 {
+			teamName = strings.TrimSpace(parts[0])
+		}
+	}
+
+	preShow := detector.FindPreGame(prog.ChannelID, prog.Start, teamName, prog.League, windowMinutes)
+	if preShow == nil {
+		return 0
+	}
+
+	// Check if already scheduled
+	var existingJob models.DVRJob
+	if r.db.Where("program_id = ? AND user_id = ? AND status IN ?",
+		preShow.ID, rule.UserID, []string{"scheduled", "recording", "completed"}).
+		First(&existingJob).Error == nil {
+		return 0
+	}
+	var existingRec models.Recording
+	if r.db.Where("program_id = ? AND user_id = ?", preShow.ID, rule.UserID).
+		First(&existingRec).Error == nil {
+		return 0
+	}
+
+	ruleID := rule.ID
+	preShowID := preShow.ID
+	job := models.DVRJob{
+		UserID:        rule.UserID,
+		RuleID:        &ruleID,
+		ChannelID:     channel.ID,
+		ProgramID:     &preShowID,
+		Title:         preShow.Title,
+		Subtitle:      preShow.Subtitle,
+		Description:   preShow.Description,
+		StartTime:     preShow.Start,
+		EndTime:       preShow.End,
+		Status:        "scheduled",
+		Priority:      rule.Priority,
+		QualityPreset: rule.QualityPreset,
+		ChannelName:   channel.Name,
+		ChannelLogo:   channel.Logo,
+		Category:      preShow.Category,
+		IsSports:      preShow.IsSports,
+	}
+
+	if err := r.db.Create(&job).Error; err != nil {
+		logger.Log.WithFields(map[string]interface{}{
+			"rule_id": rule.ID,
+			"program": preShow.Title,
+			"error":   err.Error(),
+		}).Warn("Failed to create pre-show DVR job")
+		return 0
+	}
+
+	// Also create legacy Recording
+	recording := models.Recording{
+		UserID:        rule.UserID,
+		ChannelID:     channel.ID,
+		ProgramID:     &preShowID,
+		Title:         preShow.Title,
+		Description:   preShow.Description,
+		StartTime:     preShow.Start,
+		EndTime:       preShow.End,
+		Status:        "scheduled",
+		Category:      preShow.Category,
+		SeriesRecord:  true,
+		Priority:      rule.Priority,
+		QualityPreset: rule.QualityPreset,
+	}
+	if err := r.db.Create(&recording).Error; err == nil {
+		legacyID := recording.ID
+		job.LegacyRecordingID = &legacyID
+		r.db.Save(&job)
+	}
+
+	logger.Log.WithFields(map[string]interface{}{
+		"rule":    rule.Name,
+		"program": preShow.Title,
+		"channel": channel.Name,
+		"start":   preShow.Start.Format("2006-01-02 15:04"),
+	}).Info("Rule scheduled pre-show recording")
+
+	return 1
+}
+
+// schedulePostShowForRule finds and schedules a post-show recording for a DVR rule match.
+func (r *Recorder) schedulePostShowForRule(rule *models.DVRRule, prog *models.Program, channel *models.Channel) int {
+	detector := NewPrePostGameDetector(r.db)
+	windowMinutes := rule.PostShowMinutes
+	if windowMinutes <= 0 {
+		windowMinutes = 60
+	}
+
+	// Extract team name from program metadata for better matching
+	teamName := ""
+	if prog.Teams != "" {
+		parts := strings.Split(prog.Teams, ",")
+		if len(parts) > 0 {
+			teamName = strings.TrimSpace(parts[0])
+		}
+	}
+
+	postShow := detector.FindPostGame(prog.ChannelID, prog.End, teamName, prog.League, windowMinutes)
+	if postShow == nil {
+		return 0
+	}
+
+	// Check if already scheduled
+	var existingJob models.DVRJob
+	if r.db.Where("program_id = ? AND user_id = ? AND status IN ?",
+		postShow.ID, rule.UserID, []string{"scheduled", "recording", "completed"}).
+		First(&existingJob).Error == nil {
+		return 0
+	}
+	var existingRec models.Recording
+	if r.db.Where("program_id = ? AND user_id = ?", postShow.ID, rule.UserID).
+		First(&existingRec).Error == nil {
+		return 0
+	}
+
+	ruleID := rule.ID
+	postShowID := postShow.ID
+	job := models.DVRJob{
+		UserID:        rule.UserID,
+		RuleID:        &ruleID,
+		ChannelID:     channel.ID,
+		ProgramID:     &postShowID,
+		Title:         postShow.Title,
+		Subtitle:      postShow.Subtitle,
+		Description:   postShow.Description,
+		StartTime:     postShow.Start,
+		EndTime:       postShow.End,
+		Status:        "scheduled",
+		Priority:      rule.Priority,
+		QualityPreset: rule.QualityPreset,
+		ChannelName:   channel.Name,
+		ChannelLogo:   channel.Logo,
+		Category:      postShow.Category,
+		IsSports:      postShow.IsSports,
+	}
+
+	if err := r.db.Create(&job).Error; err != nil {
+		logger.Log.WithFields(map[string]interface{}{
+			"rule_id": rule.ID,
+			"program": postShow.Title,
+			"error":   err.Error(),
+		}).Warn("Failed to create post-show DVR job")
+		return 0
+	}
+
+	// Also create legacy Recording
+	recording := models.Recording{
+		UserID:        rule.UserID,
+		ChannelID:     channel.ID,
+		ProgramID:     &postShowID,
+		Title:         postShow.Title,
+		Description:   postShow.Description,
+		StartTime:     postShow.Start,
+		EndTime:       postShow.End,
+		Status:        "scheduled",
+		Category:      postShow.Category,
+		SeriesRecord:  true,
+		Priority:      rule.Priority,
+		QualityPreset: rule.QualityPreset,
+	}
+	if err := r.db.Create(&recording).Error; err == nil {
+		legacyID := recording.ID
+		job.LegacyRecordingID = &legacyID
+		r.db.Save(&job)
+	}
+
+	logger.Log.WithFields(map[string]interface{}{
+		"rule":    rule.Name,
+		"program": postShow.Title,
+		"channel": channel.Name,
+		"start":   postShow.Start.Format("2006-01-02 15:04"),
+	}).Info("Rule scheduled post-show recording")
+
+	return 1
 }
 
 // getFailoverURLs returns stream URLs for a channel, including ChannelGroup members sorted by priority.
@@ -1030,6 +1327,9 @@ func (r *Recorder) postProcessRecording(recording *models.Recording) {
 	// Run commercial detection after post-processing
 	if r.commercialDetect {
 		r.runCommercialDetection(recording)
+
+		// After commercial detection, optionally auto-strip ads
+		r.maybeAutoStripAds(recording)
 	}
 }
 
@@ -1046,6 +1346,32 @@ func (r *Recorder) runCommercialDetection(recording *models.Recording) {
 			"error":        err.Error(),
 		}).Warn("Commercial detection failed for recording")
 	}
+}
+
+// maybeAutoStripAds checks if auto ad stripping is enabled and strips ads from
+// the DVRFile linked to this recording.
+func (r *Recorder) maybeAutoStripAds(recording *models.Recording) {
+	stripper := NewAdStripper(r.db, r.ffmpegPath)
+	if !stripper.AutoStripEnabled() {
+		return
+	}
+
+	// Find the DVRFile linked to this recording
+	var file models.DVRFile
+	if err := r.db.Where("legacy_recording_id = ?", recording.ID).First(&file).Error; err != nil {
+		logger.Log.WithFields(map[string]interface{}{
+			"recording_id": recording.ID,
+			"error":        err.Error(),
+		}).Debug("No DVRFile found for auto ad stripping")
+		return
+	}
+
+	// Also link commercial segments to the DVRFile (they were stored with recording_id)
+	r.db.Model(&models.CommercialSegment{}).
+		Where("recording_id = ? AND file_id IS NULL", recording.ID).
+		Update("file_id", file.ID)
+
+	go stripper.AutoStripForFile(file.ID)
 }
 
 // GetCommercialSegments returns commercial segments for a recording

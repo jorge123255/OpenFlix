@@ -2,6 +2,7 @@ package db
 
 import (
 	"fmt"
+	"log"
 
 	"github.com/openflix/openflix-server/internal/config"
 	"github.com/openflix/openflix-server/internal/models"
@@ -47,7 +48,7 @@ func Initialize(cfg config.DatabaseConfig) (*gorm.DB, error) {
 
 // Migrate runs database migrations
 func Migrate(db *gorm.DB) error {
-	return db.AutoMigrate(
+	err := db.AutoMigrate(
 		// Users
 		&models.User{},
 		&models.UserProfile{},
@@ -82,15 +83,31 @@ func Migrate(db *gorm.DB) error {
 		&models.ChannelGroupMember{},
 		&models.Program{},
 
-		// DVR
+		// DVR (legacy - kept for backward compatibility)
 		&models.Recording{},
 		&models.SeriesRule{},
 		&models.TeamPass{},
 		&models.CommercialSegment{},
 		&models.RecordingWatchProgress{},
 
+		// DVR v2 (Channels DVR-style)
+		&models.DVRJob{},
+		&models.DVRFile{},
+		&models.DetectedSegment{},
+		&models.DVRGroup{},
+		&models.FileState{},
+		&models.GroupState{},
+		&models.DVRRule{},
+		&models.VirtualStation{},
+		&models.DVRCollection{},
+		&models.ChannelCollection{},
+
 		// Archive/Catch-up
 		&models.ArchiveProgram{},
+
+		// Bookmarks & Clips
+		&models.Bookmark{},
+		&models.Clip{},
 
 		// Play Queues
 		&models.PlayQueue{},
@@ -102,4 +119,14 @@ func Migrate(db *gorm.DB) error {
 		// Settings
 		&models.Setting{},
 	)
+	if err != nil {
+		return err
+	}
+
+	// Run data migrations
+	if err := MigrateRecordingsToDVR(db); err != nil {
+		log.Printf("Warning: DVR migration had issues: %v", err)
+	}
+
+	return nil
 }

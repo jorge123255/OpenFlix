@@ -838,19 +838,23 @@ func (s *Server) createRule(c *gin.Context) {
 	userID := c.GetUint("userID")
 
 	var req struct {
-		Name          string `json:"name" binding:"required"`
-		Image         string `json:"image"`
-		Query         string `json:"query" binding:"required"`
-		KeepOnly      bool   `json:"keepOnly"`
-		KeepNum       int    `json:"keepNum"`
-		Rerecord      bool   `json:"rerecord"`
-		Duplicates    string `json:"duplicates"`
-		Limit         int    `json:"limit"`
-		PaddingStart  int    `json:"paddingStart"`
-		PaddingEnd    int    `json:"paddingEnd"`
-		Priority      *int   `json:"priority"`
-		QualityPreset string `json:"qualityPreset"`
-		Paused        bool   `json:"paused"`
+		Name            string `json:"name" binding:"required"`
+		Image           string `json:"image"`
+		Query           string `json:"query" binding:"required"`
+		KeepOnly        bool   `json:"keepOnly"`
+		KeepNum         int    `json:"keepNum"`
+		Rerecord        bool   `json:"rerecord"`
+		Duplicates      string `json:"duplicates"`
+		Limit           int    `json:"limit"`
+		PaddingStart    int    `json:"paddingStart"`
+		PaddingEnd      int    `json:"paddingEnd"`
+		RecordPreShow   bool   `json:"recordPreShow"`
+		RecordPostShow  bool   `json:"recordPostShow"`
+		PreShowMinutes  int    `json:"preShowMinutes"`
+		PostShowMinutes int    `json:"postShowMinutes"`
+		Priority        *int   `json:"priority"`
+		QualityPreset   string `json:"qualityPreset"`
+		Paused          bool   `json:"paused"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -876,22 +880,35 @@ func (s *Server) createRule(c *gin.Context) {
 		qualityPreset = "original"
 	}
 
+	preShowMinutes := req.PreShowMinutes
+	if preShowMinutes <= 0 {
+		preShowMinutes = 30
+	}
+	postShowMinutes := req.PostShowMinutes
+	if postShowMinutes <= 0 {
+		postShowMinutes = 60
+	}
+
 	rule := models.DVRRule{
-		UserID:        userID,
-		Name:          req.Name,
-		Image:         req.Image,
-		Query:         req.Query,
-		KeepOnly:      req.KeepOnly,
-		KeepNum:       req.KeepNum,
-		Rerecord:      req.Rerecord,
-		Duplicates:    duplicates,
-		Limit:         req.Limit,
-		PaddingStart:  req.PaddingStart,
-		PaddingEnd:    req.PaddingEnd,
-		Priority:      priority,
-		QualityPreset: qualityPreset,
-		Paused:        req.Paused,
-		Enabled:       true,
+		UserID:          userID,
+		Name:            req.Name,
+		Image:           req.Image,
+		Query:           req.Query,
+		KeepOnly:        req.KeepOnly,
+		KeepNum:         req.KeepNum,
+		Rerecord:        req.Rerecord,
+		Duplicates:      duplicates,
+		Limit:           req.Limit,
+		PaddingStart:    req.PaddingStart,
+		PaddingEnd:      req.PaddingEnd,
+		RecordPreShow:   req.RecordPreShow,
+		RecordPostShow:  req.RecordPostShow,
+		PreShowMinutes:  preShowMinutes,
+		PostShowMinutes: postShowMinutes,
+		Priority:        priority,
+		QualityPreset:   qualityPreset,
+		Paused:          req.Paused,
+		Enabled:         true,
 	}
 
 	if err := s.db.Create(&rule).Error; err != nil {
@@ -924,20 +941,24 @@ func (s *Server) updateRule(c *gin.Context) {
 	}
 
 	var req struct {
-		Name          *string `json:"name"`
-		Image         *string `json:"image"`
-		Query         *string `json:"query"`
-		KeepOnly      *bool   `json:"keepOnly"`
-		KeepNum       *int    `json:"keepNum"`
-		Rerecord      *bool   `json:"rerecord"`
-		Duplicates    *string `json:"duplicates"`
-		Limit         *int    `json:"limit"`
-		PaddingStart  *int    `json:"paddingStart"`
-		PaddingEnd    *int    `json:"paddingEnd"`
-		Priority      *int    `json:"priority"`
-		QualityPreset *string `json:"qualityPreset"`
-		Paused        *bool   `json:"paused"`
-		Enabled       *bool   `json:"enabled"`
+		Name            *string `json:"name"`
+		Image           *string `json:"image"`
+		Query           *string `json:"query"`
+		KeepOnly        *bool   `json:"keepOnly"`
+		KeepNum         *int    `json:"keepNum"`
+		Rerecord        *bool   `json:"rerecord"`
+		Duplicates      *string `json:"duplicates"`
+		Limit           *int    `json:"limit"`
+		PaddingStart    *int    `json:"paddingStart"`
+		PaddingEnd      *int    `json:"paddingEnd"`
+		RecordPreShow   *bool   `json:"recordPreShow"`
+		RecordPostShow  *bool   `json:"recordPostShow"`
+		PreShowMinutes  *int    `json:"preShowMinutes"`
+		PostShowMinutes *int    `json:"postShowMinutes"`
+		Priority        *int    `json:"priority"`
+		QualityPreset   *string `json:"qualityPreset"`
+		Paused          *bool   `json:"paused"`
+		Enabled         *bool   `json:"enabled"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -973,6 +994,18 @@ func (s *Server) updateRule(c *gin.Context) {
 	}
 	if req.PaddingEnd != nil {
 		rule.PaddingEnd = *req.PaddingEnd
+	}
+	if req.RecordPreShow != nil {
+		rule.RecordPreShow = *req.RecordPreShow
+	}
+	if req.RecordPostShow != nil {
+		rule.RecordPostShow = *req.RecordPostShow
+	}
+	if req.PreShowMinutes != nil {
+		rule.PreShowMinutes = *req.PreShowMinutes
+	}
+	if req.PostShowMinutes != nil {
+		rule.PostShowMinutes = *req.PostShowMinutes
 	}
 	if req.Priority != nil {
 		if *req.Priority < 0 || *req.Priority > 100 {

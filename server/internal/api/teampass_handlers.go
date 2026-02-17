@@ -14,14 +14,18 @@ import (
 
 // TeamPassRequest is the request body for creating/updating a team pass
 type TeamPassRequest struct {
-	TeamName    string `json:"teamName" binding:"required"`
-	League      string `json:"league" binding:"required"`
-	ChannelIDs  string `json:"channelIds,omitempty"`
-	PrePadding  int    `json:"prePadding"`
-	PostPadding int    `json:"postPadding"`
-	KeepCount   int    `json:"keepCount"`
-	Priority    int    `json:"priority"`
-	Enabled     bool   `json:"enabled"`
+	TeamName        string `json:"teamName" binding:"required"`
+	League          string `json:"league" binding:"required"`
+	ChannelIDs      string `json:"channelIds,omitempty"`
+	PrePadding      int    `json:"prePadding"`
+	PostPadding     int    `json:"postPadding"`
+	RecordPreGame   bool   `json:"recordPreGame"`
+	RecordPostGame  bool   `json:"recordPostGame"`
+	PreGameMinutes  int    `json:"preGameMinutes"`
+	PostGameMinutes int    `json:"postGameMinutes"`
+	KeepCount       int    `json:"keepCount"`
+	Priority        int    `json:"priority"`
+	Enabled         bool   `json:"enabled"`
 }
 
 // TeamPassResponse is the response for a team pass with upcoming games
@@ -139,17 +143,31 @@ func (s *Server) handleCreateTeamPass(c *gin.Context) {
 		req.PrePadding = 5 // 5 minutes before
 	}
 
+	// Set default pre/post game search windows
+	preGameMinutes := req.PreGameMinutes
+	if preGameMinutes <= 0 {
+		preGameMinutes = 30
+	}
+	postGameMinutes := req.PostGameMinutes
+	if postGameMinutes <= 0 {
+		postGameMinutes = 60
+	}
+
 	teamPass := models.TeamPass{
-		UserID:      userID.(uint),
-		TeamName:    req.TeamName,
-		TeamAliases: aliases,
-		League:      req.League,
-		ChannelIDs:  req.ChannelIDs,
-		PrePadding:  req.PrePadding,
-		PostPadding: req.PostPadding,
-		KeepCount:   req.KeepCount,
-		Priority:    req.Priority,
-		Enabled:     true,
+		UserID:          userID.(uint),
+		TeamName:        req.TeamName,
+		TeamAliases:     aliases,
+		League:          req.League,
+		ChannelIDs:      req.ChannelIDs,
+		PrePadding:      req.PrePadding,
+		PostPadding:     req.PostPadding,
+		RecordPreGame:   req.RecordPreGame,
+		RecordPostGame:  req.RecordPostGame,
+		PreGameMinutes:  preGameMinutes,
+		PostGameMinutes: postGameMinutes,
+		KeepCount:       req.KeepCount,
+		Priority:        req.Priority,
+		Enabled:         true,
 	}
 
 	if err := s.db.Create(&teamPass).Error; err != nil {
@@ -189,6 +207,14 @@ func (s *Server) handleUpdateTeamPass(c *gin.Context) {
 	teamPass.ChannelIDs = req.ChannelIDs
 	teamPass.PrePadding = req.PrePadding
 	teamPass.PostPadding = req.PostPadding
+	teamPass.RecordPreGame = req.RecordPreGame
+	teamPass.RecordPostGame = req.RecordPostGame
+	if req.PreGameMinutes > 0 {
+		teamPass.PreGameMinutes = req.PreGameMinutes
+	}
+	if req.PostGameMinutes > 0 {
+		teamPass.PostGameMinutes = req.PostGameMinutes
+	}
 	teamPass.KeepCount = req.KeepCount
 	teamPass.Priority = req.Priority
 	teamPass.Enabled = req.Enabled

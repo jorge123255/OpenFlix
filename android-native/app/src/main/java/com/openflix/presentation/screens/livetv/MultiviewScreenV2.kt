@@ -10,10 +10,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -21,17 +18,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.key.*
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -43,35 +36,19 @@ import com.openflix.domain.model.Channel
 import com.openflix.player.MultiviewPlayer
 import kotlinx.coroutines.delay
 
-// Clean colors
-private object MV2Colors {
-    val Background = Color(0xFF0A0A0F)
-    val Surface = Color(0xFF1A1A24)
-    val SurfaceGlass = Color(0xFF1A1A24).copy(alpha = 0.85f)
-    val Accent = Color(0xFF00D4AA) // OpenFlix teal
-    val AccentGlow = Color(0xFF00D4AA).copy(alpha = 0.4f)
-    val Live = Color(0xFFFF3B5C)
-    val Audio = Color(0xFF10B981)
-    val TextPrimary = Color.White
-    val TextSecondary = Color(0xFFB0B0C0)
-    val TextMuted = Color(0xFF606070)
-    val FocusBorder = Color(0xFF00D4AA)
-}
-
 /**
- * Multiview V2 - Simplified controls
- * 
- * NAVIGATION:
- * - D-pad arrows: Move between slots (never changes channel)
- * - OK/Select: Open channel picker for focused slot
- * - CH+/CH- or Page Up/Down: Change channel in focused slot
- * - Back: Exit multiview
- * 
- * QUICK ACTIONS:
- * - M: Toggle mute/unmute on focused slot
- * - 1-4: Jump audio to slot number
- * - Double-tap OK: Go fullscreen
- * - Long-press OK (500ms): Enter swap mode
+ * YouTube TV-style Multiview Screen.
+ *
+ * UX MATCHES YTTV:
+ * - 2x2 grid of live streams (or 2x1 if only 2 channels)
+ * - D-pad navigates between quadrants; audio follows focus automatically
+ * - White border indicates which view has audio
+ * - OK/Select = expand focused view to fullscreen
+ * - Back = return to grid (or exit multiview if already in grid)
+ * - Long-press OK = open channel picker for focused slot
+ * - CH+/CH- = cycle channel in focused slot
+ * - Minimal overlay: channel name shown briefly, then auto-hides
+ * - No help bar, no slot numbers, no layout indicator
  */
 @Composable
 fun MultiviewScreenV2(
@@ -81,260 +58,177 @@ fun MultiviewScreenV2(
     viewModel: MultiviewViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    
-    // UI state
+
     var showChannelPicker by remember { mutableStateOf(false) }
-    var showQuickStrip by remember { mutableStateOf(false) }
-    var quickStripIndex by remember { mutableIntStateOf(0) }
-    var swapMode by remember { mutableStateOf(false) }
-    var swapSourceSlot by remember { mutableIntStateOf(-1) }
-    var lastOkPressTime by remember { mutableLongStateOf(0L) }
     var okHeldStartTime by remember { mutableLongStateOf(0L) }
-    
-    // Initialize
+
+    // Initialize slots
     LaunchedEffect(uiState.allChannels) {
         if (uiState.allChannels.isNotEmpty() && uiState.slots.isEmpty()) {
             viewModel.initializeSlots(initialChannelIds)
         }
     }
-    
-    // Auto-hide controls
-    LaunchedEffect(uiState.showControls) {
-        if (uiState.showControls) {
-            delay(5000)
-            viewModel.hideControls()
+
+    // Auto-hide overlay after 3 seconds (YTTV behavior)
+    LaunchedEffect(uiState.showOverlay) {
+        if (uiState.showOverlay) {
+            delay(3000)
+            viewModel.hideOverlay()
         }
     }
-    
-    // Auto-hide quick strip
-    LaunchedEffect(showQuickStrip) {
-        if (showQuickStrip) {
-            delay(4000)
-            showQuickStrip = false
-        }
-    }
-    
+
     val screenFocusRequester = remember { FocusRequester() }
     LaunchedEffect(Unit) {
         delay(100)
         screenFocusRequester.requestFocus()
     }
-    
-    // Grid navigation helpers
+
+    // 2x2 grid navigation
     fun getSlotInDirection(current: Int, direction: Int): Int {
-        val slots = uiState.slots.size
-        val is2x2 = uiState.layout == MultiviewLayout.TWO_BY_TWO && slots == 4
-        
+        val slotCount = uiState.slots.size
+        val is2x2 = slotCount == 4
+
         return when (direction) {
             0 -> { // Up
-                if (is2x2 && current >= 2) current - 2
-                else current
+                if (is2x2 && current >= 2) current - 2 else current
             }
             1 -> { // Down
-                if (is2x2 && current < 2 && current + 2 < slots) current + 2
-                else current
+                if (is2x2 && current < 2 && current + 2 < slotCount) current + 2 else current
             }
             2 -> { // Left
                 if (is2x2) {
                     when (current) { 1 -> 0; 3 -> 2; else -> current }
-                } else (current - 1).coerceAtLeast(0)
+                } else if (current > 0) current - 1 else current
             }
             3 -> { // Right
                 if (is2x2) {
-                    when (current) { 0 -> 1; 2 -> 3.coerceAtMost(slots - 1); else -> current }
-                } else (current + 1).coerceAtMost(slots - 1)
+                    when (current) { 0 -> 1; 2 -> 3.coerceAtMost(slotCount - 1); else -> current }
+                } else if (current < slotCount - 1) current + 1 else current
             }
             else -> current
         }
     }
-    
+
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(MV2Colors.Background)
+            .background(Color.Black)
             .focusRequester(screenFocusRequester)
             .focusable()
             .onPreviewKeyEvent { event ->
                 val current = uiState.focusedSlotIndex
-                
-                // Track OK button hold time
+
+                // Track OK button hold time for long-press detection
                 if (event.key == Key.Enter || event.key == Key.DirectionCenter) {
                     if (event.type == KeyEventType.KeyDown) {
                         if (okHeldStartTime == 0L) okHeldStartTime = System.currentTimeMillis()
                     } else if (event.type == KeyEventType.KeyUp) {
                         val holdDuration = System.currentTimeMillis() - okHeldStartTime
                         okHeldStartTime = 0L
-                        
-                        // Long press = swap mode
+
                         if (holdDuration > 500 && !showChannelPicker) {
-                            if (!swapMode) {
-                                swapMode = true
-                                swapSourceSlot = current
-                            } else {
-                                // Complete swap
-                                viewModel.swapSlots(swapSourceSlot, current)
-                                swapMode = false
-                                swapSourceSlot = -1
-                            }
+                            // Long-press = open channel picker
+                            showChannelPicker = true
                             return@onPreviewKeyEvent true
                         }
                     }
                 }
-                
+
                 if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
-                
-                viewModel.showControls()
-                
+
+                // Any key press shows the overlay briefly
+                viewModel.showOverlay()
+
                 when (event.key) {
                     Key.Escape, Key.Back -> {
                         when {
                             showChannelPicker -> { showChannelPicker = false; true }
-                            showQuickStrip -> { showQuickStrip = false; true }
-                            swapMode -> { swapMode = false; swapSourceSlot = -1; true }
+                            uiState.isFullscreen -> { viewModel.exitFullscreen(); true }
                             else -> { onBack(); true }
                         }
                     }
-                    
-                    // NAVIGATION - D-pad moves between slots, never changes channel
+
+                    // D-PAD: Navigate between quadrants. Audio follows focus.
                     Key.DirectionUp -> {
-                        if (showChannelPicker || showQuickStrip) return@onPreviewKeyEvent false
+                        if (showChannelPicker) return@onPreviewKeyEvent false
+                        if (uiState.isFullscreen) return@onPreviewKeyEvent true
                         val next = getSlotInDirection(current, 0)
                         if (next != current) viewModel.setFocusedSlot(next)
                         true
                     }
                     Key.DirectionDown -> {
-                        if (showChannelPicker || showQuickStrip) return@onPreviewKeyEvent false
+                        if (showChannelPicker) return@onPreviewKeyEvent false
+                        if (uiState.isFullscreen) return@onPreviewKeyEvent true
                         val next = getSlotInDirection(current, 1)
                         if (next != current) viewModel.setFocusedSlot(next)
                         true
                     }
                     Key.DirectionLeft -> {
-                        when {
-                            showQuickStrip -> {
-                                quickStripIndex = (quickStripIndex - 1).coerceAtLeast(0)
-                            }
-                            showChannelPicker -> return@onPreviewKeyEvent false
-                            else -> {
-                                val next = getSlotInDirection(current, 2)
-                                if (next != current) viewModel.setFocusedSlot(next)
-                            }
-                        }
+                        if (showChannelPicker) return@onPreviewKeyEvent false
+                        if (uiState.isFullscreen) return@onPreviewKeyEvent true
+                        val next = getSlotInDirection(current, 2)
+                        if (next != current) viewModel.setFocusedSlot(next)
                         true
                     }
                     Key.DirectionRight -> {
+                        if (showChannelPicker) return@onPreviewKeyEvent false
+                        if (uiState.isFullscreen) return@onPreviewKeyEvent true
+                        val next = getSlotInDirection(current, 3)
+                        if (next != current) viewModel.setFocusedSlot(next)
+                        true
+                    }
+
+                    // OK/Select = fullscreen (YTTV behavior)
+                    Key.Enter, Key.DirectionCenter -> {
                         when {
-                            showQuickStrip -> {
-                                quickStripIndex = (quickStripIndex + 1).coerceAtMost(uiState.allChannels.size - 1)
-                            }
                             showChannelPicker -> return@onPreviewKeyEvent false
+                            uiState.isFullscreen -> {
+                                // Already fullscreen - exit back to grid
+                                viewModel.exitFullscreen()
+                            }
                             else -> {
-                                val next = getSlotInDirection(current, 3)
-                                if (next != current) viewModel.setFocusedSlot(next)
+                                // Enter fullscreen for focused slot
+                                viewModel.enterFullscreen()
                             }
                         }
                         true
                     }
-                    
-                    // CHANNEL CHANGE - CH+/-, Page keys, or media keys
-                    // Many TV remotes send different keycodes - handle them all
+
+                    // CH+/CH- = cycle channel in focused slot
                     Key.PageUp, Key.ChannelUp, Key.MediaPrevious -> {
-                        if (showQuickStrip) {
-                            val channel = uiState.allChannels.getOrNull(quickStripIndex)
-                            if (channel != null) viewModel.swapChannel(current, channel)
-                            showQuickStrip = false
-                        } else {
-                            viewModel.changeChannelInSlot(current, -1)
-                        }
+                        val target = uiState.fullscreenSlotIndex ?: current
+                        viewModel.changeChannelInSlot(target, -1)
                         true
                     }
                     Key.PageDown, Key.ChannelDown, Key.MediaNext -> {
-                        if (showQuickStrip) {
-                            val channel = uiState.allChannels.getOrNull(quickStripIndex)
-                            if (channel != null) viewModel.swapChannel(current, channel)
-                            showQuickStrip = false
-                        } else {
-                            viewModel.changeChannelInSlot(current, 1)
-                        }
+                        val target = uiState.fullscreenSlotIndex ?: current
+                        viewModel.changeChannelInSlot(target, 1)
                         true
                     }
-                    
-                    // SELECT - Open channel picker
-                    Key.Enter, Key.DirectionCenter -> {
-                        val now = System.currentTimeMillis()
-                        when {
-                            showQuickStrip -> {
-                                val channel = uiState.allChannels.getOrNull(quickStripIndex)
-                                if (channel != null) viewModel.swapChannel(current, channel)
-                                showQuickStrip = false
-                            }
-                            showChannelPicker -> return@onPreviewKeyEvent false
-                            swapMode -> {
-                                // Handled in KeyUp
-                            }
-                            now - lastOkPressTime < 300 -> {
-                                // Double-tap = fullscreen
-                                uiState.slots.getOrNull(current)?.let { onFullScreen(it.channel) }
-                            }
-                            else -> {
-                                // Single tap = channel picker
-                                showChannelPicker = true
-                            }
-                        }
-                        lastOkPressTime = now
-                        true
-                    }
-                    
-                    // QUICK ACTIONS
-                    Key.M -> {
-                        viewModel.toggleMuteOnSlot(current)
-                        true
-                    }
-                    Key.G -> {
-                        // Show quick strip for fast channel browse
-                        val currentChannel = uiState.slots.getOrNull(current)?.channel
-                        quickStripIndex = uiState.allChannels.indexOfFirst { it.id == currentChannel?.id }
-                            .coerceAtLeast(0)
-                        showQuickStrip = true
-                        true
-                    }
-                    Key.L -> {
-                        viewModel.cycleLayout()
-                        true
-                    }
-                    Key.One -> { viewModel.setAudioSlot(0); true }
-                    Key.Two -> { viewModel.setAudioSlot(1); true }
-                    Key.Three -> { viewModel.setAudioSlot(2); true }
-                    Key.Four -> { viewModel.setAudioSlot(3); true }
 
-                    // ========== HARDWARE REMOTE BUTTONS ==========
-                    // INFO - show channel info overlay
+                    // Hardware remote buttons
                     Key.Info, Key(android.view.KeyEvent.KEYCODE_INFO.toLong()) -> {
-                        showQuickStrip = !showQuickStrip
+                        viewModel.showOverlay()
                         true
                     }
-                    // GUIDE - exit to EPG
                     Key.Guide, Key(android.view.KeyEvent.KEYCODE_GUIDE.toLong()),
                     Key(android.view.KeyEvent.KEYCODE_TV_DATA_SERVICE.toLong()) -> {
                         onBack()
                         true
                     }
 
-                    // Catch-all for raw keycodes (some TV remotes)
                     else -> {
-                        // KEYCODE_CHANNEL_UP = 166, KEYCODE_CHANNEL_DOWN = 167
                         val nativeCode = event.nativeKeyEvent.keyCode
                         Log.d("MultiviewV2", "Unhandled key: ${event.key}, nativeCode=$nativeCode")
                         when (nativeCode) {
-                            166, 188 -> { // CHANNEL_UP variants
-                                if (!showQuickStrip && !showChannelPicker) {
-                                    viewModel.changeChannelInSlot(current, -1)
-                                }
+                            166, 188 -> {
+                                val target = uiState.fullscreenSlotIndex ?: current
+                                viewModel.changeChannelInSlot(target, -1)
                                 true
                             }
-                            167, 189 -> { // CHANNEL_DOWN variants  
-                                if (!showQuickStrip && !showChannelPicker) {
-                                    viewModel.changeChannelInSlot(current, 1)
-                                }
+                            167, 189 -> {
+                                val target = uiState.fullscreenSlotIndex ?: current
+                                viewModel.changeChannelInSlot(target, 1)
                                 true
                             }
                             else -> false
@@ -343,67 +237,44 @@ fun MultiviewScreenV2(
                 }
             }
     ) {
-        // Main grid
-        MultiviewGridV2(
-            slots = uiState.slots,
-            layout = uiState.layout,
-            focusedSlotIndex = uiState.focusedSlotIndex,
-            swapMode = swapMode,
-            swapSourceSlot = swapSourceSlot,
-            showControls = uiState.showControls,
-            viewModel = viewModel
-        )
-        
-        // Help overlay (top)
-        AnimatedVisibility(
-            visible = uiState.showControls && !showChannelPicker && !showQuickStrip,
-            enter = fadeIn() + slideInVertically { -it },
-            exit = fadeOut() + slideOutVertically { -it },
-            modifier = Modifier.align(Alignment.TopCenter)
-        ) {
-            HelpBar(swapMode = swapMode)
-        }
-        
-        // Layout indicator (bottom-left)
-        AnimatedVisibility(
-            visible = uiState.showControls,
-            enter = fadeIn(),
-            exit = fadeOut(),
-            modifier = Modifier
-                .align(Alignment.BottomStart)
-                .padding(16.dp)
-        ) {
-            LayoutIndicator(
-                layout = uiState.layout,
-                slotCount = uiState.slots.size,
-                onClick = { viewModel.cycleLayout() }
+        // Main grid / fullscreen view
+        if (uiState.isFullscreen) {
+            // FULLSCREEN: Show only the selected slot
+            val fsIndex = uiState.fullscreenSlotIndex ?: uiState.focusedSlotIndex
+            uiState.slots.getOrNull(fsIndex)?.let { slot ->
+                MultiviewSlotView(
+                    slot = slot,
+                    index = fsIndex,
+                    player = viewModel.getPlayer(fsIndex),
+                    hasAudio = true,
+                    isFocused = true,
+                    showOverlay = uiState.showOverlay,
+                    isFullscreen = true,
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
+        } else {
+            // GRID: 2x2 (or 2x1 / 3-grid depending on slot count)
+            MultiviewGrid(
+                slots = uiState.slots,
+                focusedSlotIndex = uiState.focusedSlotIndex,
+                audioSlotIndex = uiState.audioSlotIndex,
+                showOverlay = uiState.showOverlay,
+                viewModel = viewModel
             )
         }
-        
-        // Quick strip (bottom)
-        AnimatedVisibility(
-            visible = showQuickStrip,
-            enter = fadeIn() + slideInVertically { it },
-            exit = fadeOut() + slideOutVertically { it },
-            modifier = Modifier.align(Alignment.BottomCenter)
-        ) {
-            QuickChannelStrip(
-                channels = uiState.allChannels,
-                selectedIndex = quickStripIndex,
-                onSelect = { channel ->
-                    viewModel.swapChannel(uiState.focusedSlotIndex, channel)
-                    showQuickStrip = false
-                }
-            )
-        }
-        
-        // Full channel picker
+
+        // Channel picker overlay (long-press OK)
         if (showChannelPicker) {
-            ChannelPickerV2(
+            ChannelPickerOverlay(
                 channels = uiState.allChannels,
                 currentChannel = uiState.slots.getOrNull(uiState.focusedSlotIndex)?.channel,
                 onSelect = { channel ->
-                    viewModel.swapChannel(uiState.focusedSlotIndex, channel)
+                    val target = if (uiState.isFullscreen)
+                        uiState.fullscreenSlotIndex ?: uiState.focusedSlotIndex
+                    else
+                        uiState.focusedSlotIndex
+                    viewModel.swapChannel(target, channel)
                     showChannelPicker = false
                 },
                 onDismiss = { showChannelPicker = false }
@@ -412,188 +283,109 @@ fun MultiviewScreenV2(
     }
 }
 
-@Composable
-private fun HelpBar(swapMode: Boolean) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(
-                        Color.Black.copy(alpha = 0.85f),
-                        Color.Transparent
-                    )
-                )
-            )
-            .padding(16.dp)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            if (swapMode) {
-                Text(
-                    text = "🔄 SWAP MODE - Navigate to target slot, press OK to swap",
-                    color = MV2Colors.Accent,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold
-                )
-            } else {
-                HelpItem(icon = "⬆⬇⬅➡", text = "Navigate")
-                Spacer(modifier = Modifier.width(24.dp))
-                HelpItem(icon = "OK", text = "Change Ch", highlight = true)
-                Spacer(modifier = Modifier.width(24.dp))
-                HelpItem(icon = "2×OK", text = "Fullscreen")
-                Spacer(modifier = Modifier.width(24.dp))
-                HelpItem(icon = "CH±", text = "Next/Prev")
-                Spacer(modifier = Modifier.width(24.dp))
-                HelpItem(icon = "M", text = "Mute")
-            }
-        }
-    }
-}
+// ── Grid Layout ──────────────────────────────────────────────────────────────
 
 @Composable
-private fun HelpItem(icon: String, text: String, highlight: Boolean = false) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Box(
-            modifier = Modifier
-                .clip(RoundedCornerShape(4.dp))
-                .background(if (highlight) MV2Colors.Accent else MV2Colors.Surface)
-                .padding(horizontal = 8.dp, vertical = 4.dp)
-        ) {
-            Text(
-                text = icon,
-                color = if (highlight) Color.Black else Color.White,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold
-            )
-        }
-        Spacer(modifier = Modifier.width(6.dp))
-        Text(
-            text = text,
-            color = MV2Colors.TextSecondary,
-            fontSize = 12.sp
-        )
-    }
-}
-
-@Composable
-private fun MultiviewGridV2(
+private fun MultiviewGrid(
     slots: List<MultiviewSlot>,
-    layout: MultiviewLayout,
     focusedSlotIndex: Int,
-    swapMode: Boolean,
-    swapSourceSlot: Int,
-    showControls: Boolean,
+    audioSlotIndex: Int,
+    showOverlay: Boolean,
     viewModel: MultiviewViewModel
 ) {
-    when (layout) {
-        MultiviewLayout.SINGLE -> {
-            if (slots.isNotEmpty()) {
-                SlotV2(
-                    slot = slots[0],
-                    index = 0,
-                    player = viewModel.getPlayer(0),
-                    isFocused = focusedSlotIndex == 0,
-                    isSwapSource = swapMode && swapSourceSlot == 0,
-                    isSwapTarget = swapMode && swapSourceSlot != 0,
-                    showInfo = showControls,
-                    modifier = Modifier.fillMaxSize()
-                )
-            }
+    when (slots.size) {
+        0 -> { /* Empty */ }
+        1 -> {
+            MultiviewSlotView(
+                slot = slots[0],
+                index = 0,
+                player = viewModel.getPlayer(0),
+                hasAudio = audioSlotIndex == 0,
+                isFocused = focusedSlotIndex == 0,
+                showOverlay = showOverlay,
+                modifier = Modifier.fillMaxSize()
+            )
         }
-        MultiviewLayout.TWO_BY_ONE -> {
+        2 -> {
+            // Side by side
             Row(modifier = Modifier.fillMaxSize()) {
-                slots.take(2).forEachIndexed { index, slot ->
-                    SlotV2(
+                slots.forEachIndexed { index, slot ->
+                    MultiviewSlotView(
                         slot = slot,
                         index = index,
                         player = viewModel.getPlayer(index),
+                        hasAudio = audioSlotIndex == index,
                         isFocused = focusedSlotIndex == index,
-                        isSwapSource = swapMode && swapSourceSlot == index,
-                        isSwapTarget = swapMode && swapSourceSlot != index,
-                        showInfo = showControls,
-                        modifier = Modifier.weight(1f).fillMaxHeight()
+                        showOverlay = showOverlay,
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight()
                     )
                 }
             }
         }
-        MultiviewLayout.ONE_BY_TWO -> {
-            Column(modifier = Modifier.fillMaxSize()) {
-                slots.take(2).forEachIndexed { index, slot ->
-                    SlotV2(
-                        slot = slot,
-                        index = index,
-                        player = viewModel.getPlayer(index),
-                        isFocused = focusedSlotIndex == index,
-                        isSwapSource = swapMode && swapSourceSlot == index,
-                        isSwapTarget = swapMode && swapSourceSlot != index,
-                        showInfo = showControls,
-                        modifier = Modifier.weight(1f).fillMaxWidth()
-                    )
-                }
-            }
-        }
-        MultiviewLayout.THREE_GRID -> {
+        3 -> {
+            // 2 top, 1 bottom
             Column(modifier = Modifier.fillMaxSize()) {
                 Row(modifier = Modifier.weight(1f).fillMaxWidth()) {
                     slots.take(2).forEachIndexed { index, slot ->
-                        SlotV2(
+                        MultiviewSlotView(
                             slot = slot,
                             index = index,
                             player = viewModel.getPlayer(index),
+                            hasAudio = audioSlotIndex == index,
                             isFocused = focusedSlotIndex == index,
-                            isSwapSource = swapMode && swapSourceSlot == index,
-                            isSwapTarget = swapMode && swapSourceSlot != index,
-                            showInfo = showControls,
-                            modifier = Modifier.weight(1f).fillMaxHeight()
+                            showOverlay = showOverlay,
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxHeight()
                         )
                     }
                 }
-                if (slots.size > 2) {
-                    SlotV2(
-                        slot = slots[2],
-                        index = 2,
-                        player = viewModel.getPlayer(2),
-                        isFocused = focusedSlotIndex == 2,
-                        isSwapSource = swapMode && swapSourceSlot == 2,
-                        isSwapTarget = swapMode && swapSourceSlot != 2,
-                        showInfo = showControls,
-                        modifier = Modifier.weight(1f).fillMaxWidth()
-                    )
-                }
+                MultiviewSlotView(
+                    slot = slots[2],
+                    index = 2,
+                    player = viewModel.getPlayer(2),
+                    hasAudio = audioSlotIndex == 2,
+                    isFocused = focusedSlotIndex == 2,
+                    showOverlay = showOverlay,
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                )
             }
         }
-        MultiviewLayout.TWO_BY_TWO -> {
+        else -> {
+            // 2x2 grid (YTTV default)
             Column(modifier = Modifier.fillMaxSize()) {
                 Row(modifier = Modifier.weight(1f).fillMaxWidth()) {
                     slots.take(2).forEachIndexed { index, slot ->
-                        SlotV2(
+                        MultiviewSlotView(
                             slot = slot,
                             index = index,
                             player = viewModel.getPlayer(index),
+                            hasAudio = audioSlotIndex == index,
                             isFocused = focusedSlotIndex == index,
-                            isSwapSource = swapMode && swapSourceSlot == index,
-                            isSwapTarget = swapMode && swapSourceSlot != index,
-                            showInfo = showControls,
-                            modifier = Modifier.weight(1f).fillMaxHeight()
+                            showOverlay = showOverlay,
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxHeight()
                         )
                     }
                 }
                 Row(modifier = Modifier.weight(1f).fillMaxWidth()) {
                     slots.drop(2).take(2).forEachIndexed { index, slot ->
                         val actualIndex = index + 2
-                        SlotV2(
+                        MultiviewSlotView(
                             slot = slot,
                             index = actualIndex,
                             player = viewModel.getPlayer(actualIndex),
+                            hasAudio = audioSlotIndex == actualIndex,
                             isFocused = focusedSlotIndex == actualIndex,
-                            isSwapSource = swapMode && swapSourceSlot == actualIndex,
-                            isSwapTarget = swapMode && swapSourceSlot != actualIndex,
-                            showInfo = showControls,
-                            modifier = Modifier.weight(1f).fillMaxHeight()
+                            showOverlay = showOverlay,
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxHeight()
                         )
                     }
                 }
@@ -602,51 +394,43 @@ private fun MultiviewGridV2(
     }
 }
 
+// ── Slot View ────────────────────────────────────────────────────────────────
+
 @Composable
-private fun SlotV2(
+private fun MultiviewSlotView(
     slot: MultiviewSlot,
     index: Int,
     player: MultiviewPlayer?,
+    hasAudio: Boolean,
     isFocused: Boolean,
-    isSwapSource: Boolean,
-    isSwapTarget: Boolean,
-    showInfo: Boolean,
+    showOverlay: Boolean,
+    isFullscreen: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val isBuffering by player?.isBuffering?.collectAsState() ?: remember { mutableStateOf(false) }
-    val isMuted by player?.isMuted?.collectAsState() ?: remember { mutableStateOf(true) }
-    
-    // Animation for focus
-    val scale by animateFloatAsState(
-        targetValue = if (isFocused) 1.0f else 0.98f,
-        animationSpec = spring(dampingRatio = 0.7f, stiffness = 300f),
-        label = "scale"
+
+    // YTTV-style: white border on audio source, thin gap between views
+    val borderWidth by animateDpAsState(
+        targetValue = if (hasAudio && !isFullscreen) 3.dp else 0.dp,
+        animationSpec = tween(150),
+        label = "borderWidth"
     )
-    
-    val borderColor by animateColorAsState(
-        targetValue = when {
-            isSwapSource -> MV2Colors.Accent
-            isSwapTarget && isFocused -> Color(0xFFFFB800)
-            isFocused -> MV2Colors.FocusBorder
-            else -> Color.Transparent
-        },
-        animationSpec = tween(200),
-        label = "border"
-    )
-    
+
     Box(
         modifier = modifier
-            .padding(3.dp)
-            .scale(scale)
-            .clip(RoundedCornerShape(12.dp))
-            .background(MV2Colors.Surface)
-            .border(
-                width = if (isFocused || isSwapSource) 3.dp else 0.dp,
-                color = borderColor,
-                shape = RoundedCornerShape(12.dp)
+            .padding(if (isFullscreen) 0.dp else 2.dp) // Thin black gap between views
+            .then(
+                if (hasAudio && !isFullscreen) {
+                    Modifier.border(
+                        width = borderWidth,
+                        color = Color.White,
+                        shape = RoundedCornerShape(0.dp)
+                    )
+                } else Modifier
             )
+            .background(Color(0xFF111111))
     ) {
-        // Video
+        // Video surface
         if (player != null) {
             AndroidView(
                 factory = { ctx ->
@@ -656,311 +440,157 @@ private fun SlotV2(
             )
         } else {
             Box(
-                modifier = Modifier.fillMaxSize().background(MV2Colors.Surface),
+                modifier = Modifier.fillMaxSize().background(Color(0xFF111111)),
                 contentAlignment = Alignment.Center
             ) {
-                LoadingDotsV2()
+                LoadingDots()
             }
         }
-        
-        // Buffering overlay
+
+        // Buffering spinner
         if (isBuffering) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.6f)),
+                    .background(Color.Black.copy(alpha = 0.5f)),
                 contentAlignment = Alignment.Center
             ) {
-                LoadingDotsV2()
+                LoadingDots()
             }
         }
-        
-        // Swap mode indicators
-        if (isSwapSource) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(MV2Colors.Accent.copy(alpha = 0.2f))
-            )
-            Box(
-                modifier = Modifier
-                    .align(Alignment.Center)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(MV2Colors.Accent)
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
-            ) {
-                Text(
-                    text = "SOURCE",
-                    color = Color.Black,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 14.sp
-                )
-            }
-        }
-        
-        if (isSwapTarget && isFocused) {
-            Box(
-                modifier = Modifier
-                    .align(Alignment.Center)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(Color(0xFFFFB800))
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
-            ) {
-                Text(
-                    text = "SWAP HERE",
-                    color = Color.Black,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 14.sp
-                )
-            }
-        }
-        
-        // Slot number badge (top-left)
-        Box(
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .padding(8.dp)
-                .size(28.dp)
-                .clip(CircleShape)
-                .background(
-                    if (isFocused) MV2Colors.Accent else Color.Black.copy(alpha = 0.7f)
-                ),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = "${index + 1}",
-                color = if (isFocused) Color.Black else Color.White,
-                fontWeight = FontWeight.Bold,
-                fontSize = 14.sp
-            )
-        }
-        
-        // Audio indicator (top-right)
-        if (!isMuted) {
-            Box(
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(8.dp)
-                    .clip(RoundedCornerShape(4.dp))
-                    .background(MV2Colors.Audio)
-                    .padding(horizontal = 8.dp, vertical = 4.dp)
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        Icons.Default.VolumeUp,
-                        contentDescription = null,
-                        tint = Color.White,
-                        modifier = Modifier.size(14.dp)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = "AUDIO",
-                        color = Color.White,
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            }
-        }
-        
-        // Channel info (bottom)
+
+        // Channel info overlay (YTTV-style: brief, minimal, bottom-left)
         AnimatedVisibility(
-            visible = showInfo || isFocused,
-            enter = fadeIn(),
-            exit = fadeOut(),
-            modifier = Modifier.align(Alignment.BottomCenter)
+            visible = showOverlay || (isFocused && !isFullscreen),
+            enter = fadeIn(tween(200)),
+            exit = fadeOut(tween(400)),
+            modifier = Modifier.align(Alignment.BottomStart)
+        ) {
+            ChannelInfoBadge(
+                slot = slot,
+                hasAudio = hasAudio,
+                isFullscreen = isFullscreen
+            )
+        }
+
+        // Audio indicator - small white speaker icon (top-right, YTTV-style)
+        AnimatedVisibility(
+            visible = hasAudio && !isFullscreen,
+            enter = fadeIn(tween(200)),
+            exit = fadeOut(tween(300)),
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(8.dp)
         ) {
             Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .background(
-                        Brush.verticalGradient(
-                            colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.9f))
-                        )
-                    )
-                    .padding(12.dp)
+                    .clip(RoundedCornerShape(4.dp))
+                    .background(Color.Black.copy(alpha = 0.6f))
+                    .padding(6.dp)
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    // Logo
-                    Box(
-                        modifier = Modifier
-                            .size(40.dp)
-                            .clip(RoundedCornerShape(6.dp))
-                            .background(MV2Colors.Surface),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        slot.channel.logoUrl?.let { url ->
-                            AsyncImage(
-                                model = url,
-                                contentDescription = null,
-                                modifier = Modifier.size(32.dp),
-                                contentScale = ContentScale.Fit
-                            )
-                        } ?: Text(
-                            text = slot.channel.number ?: "${index + 1}",
-                            color = Color.White,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 14.sp
-                        )
-                    }
-                    
-                    Spacer(modifier = Modifier.width(10.dp))
-                    
-                    Column(modifier = Modifier.weight(1f)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            slot.channel.number?.let {
-                                Text(
-                                    text = it,
-                                    color = MV2Colors.Accent,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 13.sp
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                            }
-                            Text(
-                                text = slot.channel.name,
-                                color = Color.White,
-                                fontWeight = FontWeight.SemiBold,
-                                fontSize = 13.sp,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
-                        slot.channel.nowPlaying?.let { program ->
-                            Text(
-                                text = program.title,
-                                color = MV2Colors.TextSecondary,
-                                fontSize = 11.sp,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
-                    }
-                    
-                    // LIVE badge
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(4.dp))
-                            .background(
-                                if (slot.isTimeshifted) Color(0xFF8B5CF6) else MV2Colors.Live
-                            )
-                            .padding(horizontal = 6.dp, vertical = 3.dp)
-                    ) {
-                        Text(
-                            text = if (slot.isTimeshifted) "DVR" else "LIVE",
-                            color = Color.White,
-                            fontSize = 9.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                }
+                Icon(
+                    Icons.Default.VolumeUp,
+                    contentDescription = "Audio active",
+                    tint = Color.White,
+                    modifier = Modifier.size(16.dp)
+                )
             }
         }
     }
 }
 
-@Composable
-private fun LayoutIndicator(
-    layout: MultiviewLayout,
-    slotCount: Int,
-    onClick: () -> Unit
-) {
-    Surface(
-        onClick = onClick,
-        shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(8.dp)),
-        colors = ClickableSurfaceDefaults.colors(
-            containerColor = MV2Colors.SurfaceGlass,
-            focusedContainerColor = MV2Colors.Accent.copy(alpha = 0.3f)
-        ),
-        border = ClickableSurfaceDefaults.border(
-            focusedBorder = Border(
-                border = BorderStroke(2.dp, MV2Colors.Accent),
-                shape = RoundedCornerShape(8.dp)
-            )
-        )
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                Icons.Default.GridView,
-                contentDescription = null,
-                tint = MV2Colors.TextSecondary,
-                modifier = Modifier.size(18.dp)
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = when (layout) {
-                    MultiviewLayout.SINGLE -> "1×1"
-                    MultiviewLayout.TWO_BY_ONE -> "2×1"
-                    MultiviewLayout.ONE_BY_TWO -> "1×2"
-                    MultiviewLayout.THREE_GRID -> "2+1"
-                    MultiviewLayout.TWO_BY_TWO -> "2×2"
-                },
-                color = Color.White,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Medium
-            )
-            Spacer(modifier = Modifier.width(4.dp))
-            Text(
-                text = "L",
-                color = MV2Colors.TextMuted,
-                fontSize = 10.sp
-            )
-        }
-    }
-}
+// ── Channel Info Badge ───────────────────────────────────────────────────────
 
 @Composable
-private fun QuickChannelStrip(
-    channels: List<Channel>,
-    selectedIndex: Int,
-    onSelect: (Channel) -> Unit
+private fun ChannelInfoBadge(
+    slot: MultiviewSlot,
+    hasAudio: Boolean,
+    isFullscreen: Boolean
 ) {
-    val listState = rememberLazyListState()
-    
-    LaunchedEffect(selectedIndex) {
-        listState.animateScrollToItem(
-            index = (selectedIndex - 2).coerceAtLeast(0),
-            scrollOffset = 0
-        )
-    }
-    
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .background(
                 Brush.verticalGradient(
-                    colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.95f))
+                    colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.8f))
                 )
             )
-            .padding(vertical = 16.dp)
-    ) {
-        Column {
-            Text(
-                text = "◀ ▶ Browse  •  OK Select  •  Back Cancel",
-                color = MV2Colors.TextMuted,
-                fontSize = 12.sp,
-                modifier = Modifier.align(Alignment.CenterHorizontally)
+            .padding(
+                start = if (isFullscreen) 24.dp else 12.dp,
+                end = if (isFullscreen) 24.dp else 12.dp,
+                top = 24.dp,
+                bottom = if (isFullscreen) 16.dp else 10.dp
             )
-            
-            Spacer(modifier = Modifier.height(12.dp))
-            
-            LazyRow(
-                state = listState,
-                contentPadding = PaddingValues(horizontal = 24.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                items(channels, key = { it.id }) { channel ->
-                    val isSelected = channels.indexOf(channel) == selectedIndex
-                    QuickChannelCard(
-                        channel = channel,
-                        isSelected = isSelected,
-                        onClick = { onSelect(channel) }
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            // Channel logo
+            slot.channel.logoUrl?.let { url ->
+                Box(
+                    modifier = Modifier
+                        .size(if (isFullscreen) 44.dp else 32.dp)
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(Color(0xFF222222)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    AsyncImage(
+                        model = url,
+                        contentDescription = null,
+                        modifier = Modifier.size(if (isFullscreen) 36.dp else 26.dp),
+                        contentScale = ContentScale.Fit
+                    )
+                }
+                Spacer(modifier = Modifier.width(if (isFullscreen) 12.dp else 8.dp))
+            }
+
+            Column(modifier = Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    slot.channel.number?.let { num ->
+                        Text(
+                            text = num,
+                            color = Color.White.copy(alpha = 0.7f),
+                            fontSize = if (isFullscreen) 16.sp else 12.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                    }
+                    Text(
+                        text = slot.channel.name,
+                        color = Color.White,
+                        fontSize = if (isFullscreen) 18.sp else 13.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+                slot.channel.nowPlaying?.let { program ->
+                    Text(
+                        text = program.title,
+                        color = Color.White.copy(alpha = 0.6f),
+                        fontSize = if (isFullscreen) 14.sp else 11.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+
+            // LIVE badge
+            if (isFullscreen) {
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(
+                            if (slot.isTimeshifted) Color(0xFF8B5CF6) else Color(0xFFFF3B5C)
+                        )
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                ) {
+                    Text(
+                        text = if (slot.isTimeshifted) "DVR" else "LIVE",
+                        color = Color.White,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold
                     )
                 }
             }
@@ -968,152 +598,79 @@ private fun QuickChannelStrip(
     }
 }
 
-@Composable
-private fun QuickChannelCard(
-    channel: Channel,
-    isSelected: Boolean,
-    onClick: () -> Unit
-) {
-    val scale by animateFloatAsState(
-        targetValue = if (isSelected) 1.1f else 1f,
-        animationSpec = spring(dampingRatio = 0.7f),
-        label = "scale"
-    )
-    
-    Box(
-        modifier = Modifier
-            .scale(scale)
-            .width(120.dp)
-            .clip(RoundedCornerShape(8.dp))
-            .background(if (isSelected) MV2Colors.Accent.copy(alpha = 0.3f) else MV2Colors.Surface)
-            .border(
-                width = if (isSelected) 2.dp else 0.dp,
-                color = if (isSelected) MV2Colors.Accent else Color.Transparent,
-                shape = RoundedCornerShape(8.dp)
-            )
-            .padding(8.dp)
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(48.dp)
-                    .clip(RoundedCornerShape(6.dp))
-                    .background(MV2Colors.Background),
-                contentAlignment = Alignment.Center
-            ) {
-                channel.logoUrl?.let { url ->
-                    AsyncImage(
-                        model = url,
-                        contentDescription = null,
-                        modifier = Modifier.size(40.dp),
-                        contentScale = ContentScale.Fit
-                    )
-                } ?: Icon(
-                    Icons.Default.Tv,
-                    contentDescription = null,
-                    tint = MV2Colors.TextMuted,
-                    modifier = Modifier.size(24.dp)
-                )
-            }
-            
-            Spacer(modifier = Modifier.height(6.dp))
-            
-            Text(
-                text = channel.number ?: "",
-                color = MV2Colors.Accent,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold
-            )
-            Text(
-                text = channel.name,
-                color = Color.White,
-                fontSize = 11.sp,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                textAlign = TextAlign.Center
-            )
-        }
-    }
-}
+// ── Channel Picker (long-press overlay) ──────────────────────────────────────
 
 @Composable
-private fun ChannelPickerV2(
+private fun ChannelPickerOverlay(
     channels: List<Channel>,
     currentChannel: Channel?,
     onSelect: (Channel) -> Unit,
     onDismiss: () -> Unit
 ) {
     val focusRequester = remember { FocusRequester() }
-    
+
     LaunchedEffect(Unit) {
         delay(100)
         focusRequester.requestFocus()
     }
-    
+
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.92f))
+            .background(Color.Black.copy(alpha = 0.85f))
             .onKeyEvent { event ->
                 if (event.type == KeyEventType.KeyDown && event.key == Key.Back) {
                     onDismiss()
                     true
                 } else false
             },
-        contentAlignment = Alignment.Center
+        contentAlignment = Alignment.CenterEnd
     ) {
+        // Side panel (YTTV-style - slides in from right)
         Column(
             modifier = Modifier
-                .width(600.dp)
-                .fillMaxHeight(0.85f)
-                .clip(RoundedCornerShape(16.dp))
-                .background(MV2Colors.Surface)
+                .width(400.dp)
+                .fillMaxHeight()
+                .background(Color(0xFF1A1A1A))
                 .padding(20.dp)
         ) {
-            // Header
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "Select Channel",
-                    color = Color.White,
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = "${channels.size} channels",
-                    color = MV2Colors.TextMuted,
-                    fontSize = 14.sp
-                )
-            }
-            
+            Text(
+                text = "Change Channel",
+                color = Color.White,
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Bold
+            )
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            Text(
+                text = "${channels.size} channels available",
+                color = Color.White.copy(alpha = 0.5f),
+                fontSize = 13.sp
+            )
+
             Spacer(modifier = Modifier.height(16.dp))
-            
-            // Channel list
+
             LazyColumn(
                 modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
+                verticalArrangement = Arrangement.spacedBy(2.dp)
             ) {
                 items(channels, key = { it.id }) { channel ->
-                    val isSelected = channel.id == currentChannel?.id
+                    val isCurrent = channel.id == currentChannel?.id
                     val isFirst = channels.indexOf(channel) == 0
-                    
+
                     Surface(
                         onClick = { onSelect(channel) },
                         modifier = if (isFirst) Modifier.focusRequester(focusRequester) else Modifier,
                         shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(8.dp)),
                         colors = ClickableSurfaceDefaults.colors(
-                            containerColor = if (isSelected) MV2Colors.Accent.copy(alpha = 0.2f)
-                                           else MV2Colors.Background,
-                            focusedContainerColor = MV2Colors.Accent.copy(alpha = 0.3f)
+                            containerColor = if (isCurrent) Color.White.copy(alpha = 0.15f)
+                            else Color.Transparent,
+                            focusedContainerColor = Color.White.copy(alpha = 0.2f)
                         ),
                         border = ClickableSurfaceDefaults.border(
                             focusedBorder = Border(
-                                border = BorderStroke(2.dp, MV2Colors.Accent),
+                                border = BorderStroke(2.dp, Color.White),
                                 shape = RoundedCornerShape(8.dp)
                             )
                         )
@@ -1121,40 +678,40 @@ private fun ChannelPickerV2(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(12.dp),
+                                .padding(horizontal = 12.dp, vertical = 10.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             // Logo
                             Box(
                                 modifier = Modifier
-                                    .size(48.dp)
-                                    .clip(RoundedCornerShape(6.dp))
-                                    .background(MV2Colors.Surface),
+                                    .size(40.dp)
+                                    .clip(RoundedCornerShape(4.dp))
+                                    .background(Color(0xFF222222)),
                                 contentAlignment = Alignment.Center
                             ) {
                                 channel.logoUrl?.let { url ->
                                     AsyncImage(
                                         model = url,
                                         contentDescription = null,
-                                        modifier = Modifier.size(40.dp),
+                                        modifier = Modifier.size(32.dp),
                                         contentScale = ContentScale.Fit
                                     )
                                 } ?: Icon(
                                     Icons.Default.Tv,
                                     contentDescription = null,
-                                    tint = MV2Colors.TextMuted
+                                    tint = Color.White.copy(alpha = 0.4f)
                                 )
                             }
-                            
+
                             Spacer(modifier = Modifier.width(12.dp))
-                            
+
                             Column(modifier = Modifier.weight(1f)) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
-                                    channel.number?.let {
+                                    channel.number?.let { num ->
                                         Text(
-                                            text = it,
-                                            color = MV2Colors.Accent,
-                                            fontSize = 14.sp,
+                                            text = num,
+                                            color = Color.White.copy(alpha = 0.6f),
+                                            fontSize = 13.sp,
                                             fontWeight = FontWeight.Bold
                                         )
                                         Spacer(modifier = Modifier.width(8.dp))
@@ -1162,7 +719,7 @@ private fun ChannelPickerV2(
                                     Text(
                                         text = channel.name,
                                         color = Color.White,
-                                        fontSize = 16.sp,
+                                        fontSize = 15.sp,
                                         fontWeight = FontWeight.Medium,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis
@@ -1171,63 +728,34 @@ private fun ChannelPickerV2(
                                 channel.nowPlaying?.let { program ->
                                     Text(
                                         text = program.title,
-                                        color = MV2Colors.TextSecondary,
+                                        color = Color.White.copy(alpha = 0.4f),
                                         fontSize = 12.sp,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis
                                     )
                                 }
                             }
-                            
-                            if (isSelected) {
+
+                            if (isCurrent) {
                                 Icon(
                                     Icons.Default.Check,
                                     contentDescription = "Current",
-                                    tint = MV2Colors.Accent,
-                                    modifier = Modifier.size(24.dp)
+                                    tint = Color.White,
+                                    modifier = Modifier.size(20.dp)
                                 )
                             }
                         }
                     }
                 }
             }
-            
-            Spacer(modifier = Modifier.height(12.dp))
-            
-            // Cancel button
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End
-            ) {
-                Surface(
-                    onClick = onDismiss,
-                    shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(8.dp)),
-                    colors = ClickableSurfaceDefaults.colors(
-                        containerColor = MV2Colors.Background,
-                        focusedContainerColor = Color(0xFFFF3B5C).copy(alpha = 0.3f)
-                    ),
-                    border = ClickableSurfaceDefaults.border(
-                        focusedBorder = Border(
-                            border = BorderStroke(2.dp, Color(0xFFFF3B5C)),
-                            shape = RoundedCornerShape(8.dp)
-                        )
-                    )
-                ) {
-                    Text(
-                        text = "Cancel",
-                        color = Color.White,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Medium,
-                        modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp)
-                    )
-                }
-            }
         }
     }
 }
 
+// ── Loading Animation ────────────────────────────────────────────────────────
+
 @Composable
-private fun LoadingDotsV2() {
+private fun LoadingDots() {
     val infiniteTransition = rememberInfiniteTransition(label = "loading")
     Row {
         repeat(3) { i ->
@@ -1244,8 +772,8 @@ private fun LoadingDotsV2() {
                 modifier = Modifier
                     .padding(horizontal = 3.dp)
                     .size(8.dp)
-                    .clip(CircleShape)
-                    .background(MV2Colors.Accent.copy(alpha = alpha))
+                    .clip(RoundedCornerShape(4.dp))
+                    .background(Color.White.copy(alpha = alpha))
             )
         }
     }
