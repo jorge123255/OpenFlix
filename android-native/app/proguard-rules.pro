@@ -12,6 +12,14 @@
     @retrofit2.http.* <methods>;
 }
 
+# Keep Retrofit API interface method signatures (R8 strips generic types otherwise)
+-keep,allowobfuscation,allowshrinking interface retrofit2.Call
+-keep,allowobfuscation,allowshrinking class retrofit2.Response
+-keep,allowobfuscation,allowshrinking class kotlin.coroutines.Continuation
+
+# Keep the OpenFlix API interface with full generic signatures
+-keep interface com.openflix.data.remote.api.** { *; }
+
 # Gson
 -keepattributes Signature
 -keepattributes *Annotation*

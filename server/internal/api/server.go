@@ -54,6 +54,7 @@ type Server struct {
 	searchEngine       *search.SearchEngine
 	updater            *updater.Updater
 	jobQueue           *jobq.JobQueue
+	clipManager        *dvr.ClipManager
 }
 
 // NewServer creates a new API server
@@ -177,6 +178,11 @@ func NewServer(cfg *config.Config, db *gorm.DB) *Server {
 	// Initialize background job queue
 	jobQueue := jobq.NewJobQueue()
 
+	// Initialize clip manager for bookmarks & clips
+	clipsDir := filepath.Join(dataDir, "clips")
+	clipManager := dvr.NewClipManager(db, clipsDir)
+	logger.Info("Clip manager initialized")
+
 	// Initialize self-updater
 	appUpdater := updater.New(updater.Config{
 		DataDir:        dataDir,
@@ -204,6 +210,7 @@ func NewServer(cfg *config.Config, db *gorm.DB) *Server {
 		searchEngine:      searchEngine,
 		updater:           appUpdater,
 		jobQueue:          jobQueue,
+		clipManager:       clipManager,
 	}
 	s.setupRouter()
 
@@ -656,6 +663,8 @@ func (s *Server) setupRouter() {
 		dvrGroup.GET("/recordings/:id/stream", s.getRecordingStreamUrl)
 		dvrGroup.GET("/recordings/:id/hls/master.m3u8", s.getRecordingHLSPlaylist)
 		dvrGroup.GET("/recordings/:id/hls/:segment", s.getRecordingHLSSegment)
+		dvrGroup.GET("/recordings/:id/dash/manifest.mpd", s.getRecordingDASHManifest)
+		dvrGroup.GET("/recordings/:id/dash/:segment", s.getRecordingDASHSegment)
 		dvrGroup.PUT("/recordings/:id/progress", s.updateRecordingProgress)
 
 		// Stream Validation (validates stream before scheduling)
@@ -691,6 +700,8 @@ func (s *Server) setupRouter() {
 			dvrV2.PUT("/files/:id", s.updateFile)
 			dvrV2.DELETE("/files/:id", s.deleteFile)
 			dvrV2.GET("/files/:id/stream", s.streamFile)
+			dvrV2.GET("/files/:id/dash/manifest.mpd", s.getFileDASHManifest)
+			dvrV2.GET("/files/:id/dash/:segment", s.getFileDASHSegment)
 			dvrV2.PUT("/files/:id/state", s.updateFileState)
 
 			// Groups
@@ -745,6 +756,11 @@ func (s *Server) setupRouter() {
 
 			// WebSocket event stream
 			dvrV2.GET("/events", s.dvrEvents)
+
+			// Ad Stripping
+			dvrV2.POST("/files/:id/strip-ads", s.stripAds)
+			dvrV2.GET("/files/:id/strip-ads/status", s.getStripAdsStatus)
+			dvrV2.POST("/files/:id/strip-ads/undo", s.undoStripAds)
 
 			// Channel Collections (custom lineups)
 			dvrV2.GET("/channel-collections", s.getChannelCollections)
@@ -912,6 +928,28 @@ func (s *Server) setupRouter() {
 		tunerGroup.POST("/:id/scan", s.scanTunerChannels)
 	}
 
+	// ============ Bookmarks & Clips API ============
+	bookmarkGroup := r.Group("/api/bookmarks")
+	bookmarkGroup.Use(s.authRequired())
+	{
+		bookmarkGroup.GET("", s.listBookmarks)
+		bookmarkGroup.POST("", s.createBookmark)
+		bookmarkGroup.GET("/:id", s.getBookmark)
+		bookmarkGroup.PUT("/:id", s.updateBookmark)
+		bookmarkGroup.DELETE("/:id", s.deleteBookmark)
+	}
+
+	clipGroup := r.Group("/api/clips")
+	clipGroup.Use(s.authRequired())
+	{
+		clipGroup.GET("", s.listClips)
+		clipGroup.POST("", s.createClip)
+		clipGroup.GET("/:id", s.getClip)
+		clipGroup.DELETE("/:id", s.deleteClip)
+		clipGroup.GET("/:id/download", s.downloadClip)
+		clipGroup.GET("/:id/stream", s.streamClip)
+	}
+
 	// ============ Server Preferences ============
 	// Plex uses /:/prefs - we use /-/prefs
 	plex.GET("/prefs", s.getServerPrefs)
@@ -937,6 +975,11 @@ func (s *Server) setupRouter() {
 	// Alternative routes
 	r.GET("/transcode/universal/start.m3u8", s.authRequired(), s.transcodeStart)
 	r.GET("/transcode/universal/session/:sessionId/:segment", s.authRequired(), s.transcodeSegment)
+
+	// DASH Transcode
+	r.GET("/video/-/transcode/dash/start.mpd", s.authRequired(), s.dashStart)
+	r.GET("/video/-/transcode/dash/session/:sessionId/:segment", s.authRequired(), s.dashSegment)
+	r.GET("/video/-/transcode/dash/session/:sessionId/manifest.mpd", s.authRequired(), s.dashManifest)
 
 	// ============ Playback Decision API ============
 	// Smart playback mode selection

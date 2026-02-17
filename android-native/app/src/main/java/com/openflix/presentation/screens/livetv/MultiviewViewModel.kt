@@ -17,8 +17,13 @@ import timber.log.Timber
 import javax.inject.Inject
 
 /**
- * ViewModel for the Multiview screen.
- * Manages multiple player slots for watching 2-4 channels simultaneously.
+ * ViewModel for YouTube TV-style Multiview.
+ *
+ * Key behaviors:
+ * - Audio follows focus: D-pad to a view = audio switches automatically
+ * - Fullscreen toggle: OK press expands focused view, Back returns to grid
+ * - Fixed 2x2 grid layout (no layout cycling)
+ * - Channel picker on long-press only
  */
 @HiltViewModel
 class MultiviewViewModel @Inject constructor(
@@ -59,9 +64,11 @@ class MultiviewViewModel @Inject constructor(
             channels.find { it.id == id }
         }.take(4)
 
-        // If no initial channels provided, use first few channels
-        val channelsToUse = initialChannels.ifEmpty {
-            channels.take(2)
+        // Default to 4 channels for YTTV-style 2x2 grid
+        val channelsToUse = if (initialChannels.size >= 2) {
+            initialChannels
+        } else {
+            channels.take(4)
         }
 
         val slots = channelsToUse.mapIndexed { index, channel ->
@@ -76,28 +83,74 @@ class MultiviewViewModel @Inject constructor(
             )
         }
 
-        val layout = when (slots.size) {
-            1 -> MultiviewLayout.SINGLE
-            2 -> MultiviewLayout.TWO_BY_ONE
-            3 -> MultiviewLayout.THREE_GRID
-            else -> MultiviewLayout.TWO_BY_TWO
-        }
+        // Set audio to first slot (audio follows focus, focus starts at 0)
+        players[0]?.unmute()
 
         _uiState.update {
             it.copy(
                 slots = slots,
-                layout = layout,
-                focusedSlotIndex = 0
+                focusedSlotIndex = 0,
+                audioSlotIndex = 0
             )
         }
 
-        Timber.d("Multiview initialized with ${slots.size} slots")
+        Timber.d("Multiview initialized with ${slots.size} slots (YTTV-style)")
     }
 
     fun getPlayer(slotIndex: Int): MultiviewPlayer? = players[slotIndex]
 
+    /**
+     * YTTV behavior: focus change = audio follows.
+     * When D-pad moves to a slot, audio switches to it automatically.
+     */
     fun setFocusedSlot(index: Int) {
-        _uiState.update { it.copy(focusedSlotIndex = index) }
+        if (index == _uiState.value.focusedSlotIndex) return
+        if (index >= _uiState.value.slots.size) return
+
+        // Audio follows focus
+        switchAudioToSlot(index)
+
+        _uiState.update {
+            it.copy(
+                focusedSlotIndex = index,
+                showOverlay = true
+            )
+        }
+    }
+
+    private fun switchAudioToSlot(slotIndex: Int) {
+        players.forEach { (index, player) ->
+            if (index == slotIndex) player.unmute() else player.mute()
+        }
+        _uiState.update { it.copy(audioSlotIndex = slotIndex) }
+        Timber.d("Audio switched to slot $slotIndex")
+    }
+
+    /**
+     * YTTV behavior: OK press = enter fullscreen for focused slot.
+     */
+    fun enterFullscreen() {
+        val focused = _uiState.value.focusedSlotIndex
+        _uiState.update {
+            it.copy(
+                isFullscreen = true,
+                fullscreenSlotIndex = focused
+            )
+        }
+        Timber.d("Entered fullscreen on slot $focused")
+    }
+
+    /**
+     * YTTV behavior: Back from fullscreen = return to 2x2 grid.
+     */
+    fun exitFullscreen() {
+        _uiState.update {
+            it.copy(
+                isFullscreen = false,
+                fullscreenSlotIndex = null
+            )
+        }
+        Timber.d("Exited fullscreen, back to grid")
     }
 
     fun changeChannelInSlot(slotIndex: Int, direction: Int) {
@@ -113,133 +166,38 @@ class MultiviewViewModel @Inject constructor(
 
         val newChannel = allChannels[newIndex]
 
-        // Update player with new channel
         players[slotIndex]?.apply {
             newChannel.streamUrl?.let { url -> play(url) }
         }
 
-        // Update slot in state
         val updatedSlots = state.slots.toMutableList()
         updatedSlots[slotIndex] = slot.copy(channel = newChannel, isReady = false)
 
-        _uiState.update { it.copy(slots = updatedSlots) }
+        _uiState.update { it.copy(slots = updatedSlots, showOverlay = true) }
         Timber.d("Changed slot $slotIndex to channel: ${newChannel.name}")
-    }
-
-    fun addSlot() {
-        val state = _uiState.value
-        if (state.slots.size >= 4) return
-
-        // Find a channel not already in a slot
-        val usedIds = state.slots.map { it.channel.id }.toSet()
-        val newChannel = state.allChannels.find { it.id !in usedIds }
-            ?: state.allChannels.firstOrNull()
-            ?: return
-
-        val newIndex = state.slots.size
-        val player = MultiviewPlayer(context).also { it.initialize() }
-        players[newIndex] = player
-        newChannel.streamUrl?.let { url -> player.play(url) }
-
-        val newSlot = MultiviewSlot(
-            index = newIndex,
-            channel = newChannel,
-            isReady = false
-        )
-
-        val updatedSlots = state.slots + newSlot
-        val newLayout = when (updatedSlots.size) {
-            2 -> MultiviewLayout.TWO_BY_ONE
-            3 -> MultiviewLayout.THREE_GRID
-            4 -> MultiviewLayout.TWO_BY_TWO
-            else -> state.layout
-        }
-
-        _uiState.update {
-            it.copy(slots = updatedSlots, layout = newLayout)
-        }
-        Timber.d("Added slot $newIndex with channel: ${newChannel.name}")
-    }
-
-    fun removeSlot(slotIndex: Int) {
-        val state = _uiState.value
-        if (state.slots.size <= 1) return
-        if (slotIndex >= state.slots.size) return
-
-        // Release player
-        players[slotIndex]?.release()
-        players.remove(slotIndex)
-
-        // Reindex remaining players
-        val remainingPlayers = mutableMapOf<Int, MultiviewPlayer>()
-        var newIndex = 0
-        players.forEach { (oldIndex, player) ->
-            if (oldIndex != slotIndex) {
-                remainingPlayers[newIndex] = player
-                newIndex++
-            }
-        }
-        players.clear()
-        players.putAll(remainingPlayers)
-
-        // Update slots
-        val updatedSlots = state.slots.filterIndexed { index, _ -> index != slotIndex }
-            .mapIndexed { index, slot -> slot.copy(index = index) }
-
-        val newLayout = when (updatedSlots.size) {
-            1 -> MultiviewLayout.SINGLE
-            2 -> MultiviewLayout.TWO_BY_ONE
-            3 -> MultiviewLayout.THREE_GRID
-            else -> MultiviewLayout.TWO_BY_TWO
-        }
-
-        val newFocusedIndex = state.focusedSlotIndex.coerceAtMost(updatedSlots.size - 1)
-
-        _uiState.update {
-            it.copy(
-                slots = updatedSlots,
-                layout = newLayout,
-                focusedSlotIndex = newFocusedIndex
-            )
-        }
-        Timber.d("Removed slot $slotIndex")
-    }
-
-    fun toggleMuteOnSlot(slotIndex: Int) {
-        players[slotIndex]?.toggleMute()
-
-        val state = _uiState.value
-        val slot = state.slots.getOrNull(slotIndex) ?: return
-        val updatedSlots = state.slots.toMutableList()
-        updatedSlots[slotIndex] = slot.copy(isMuted = players[slotIndex]?.isMuted?.value ?: true)
-
-        _uiState.update { it.copy(slots = updatedSlots) }
-    }
-
-    fun cycleLayout() {
-        val state = _uiState.value
-        val layouts = MultiviewLayout.entries
-        val currentIndex = layouts.indexOf(state.layout)
-        val nextIndex = (currentIndex + 1) % layouts.size
-
-        _uiState.update { it.copy(layout = layouts[nextIndex]) }
     }
 
     fun swapChannel(slotIndex: Int, newChannel: Channel) {
         val state = _uiState.value
         val slot = state.slots.getOrNull(slotIndex) ?: return
 
-        // Update player
         players[slotIndex]?.apply {
             newChannel.streamUrl?.let { url -> play(url) }
         }
 
-        // Update slot
         val updatedSlots = state.slots.toMutableList()
         updatedSlots[slotIndex] = slot.copy(channel = newChannel, isReady = false)
 
         _uiState.update { it.copy(slots = updatedSlots) }
         Timber.d("Swapped slot $slotIndex to channel: ${newChannel.name}")
+    }
+
+    fun showOverlay() {
+        _uiState.update { it.copy(showOverlay = true) }
+    }
+
+    fun hideOverlay() {
+        _uiState.update { it.copy(showOverlay = false) }
     }
 
     fun showControls() {
@@ -258,10 +216,6 @@ class MultiviewViewModel @Inject constructor(
         _uiState.update { it.copy(channelPickerSlotIndex = null) }
     }
 
-    /**
-     * Start over the current program in a slot from the beginning.
-     * Uses the server's timeshift buffer to seek back to program start.
-     */
     fun startOverSlot(slotIndex: Int) {
         val state = _uiState.value
         val slot = state.slots.getOrNull(slotIndex) ?: return
@@ -270,22 +224,17 @@ class MultiviewViewModel @Inject constructor(
             liveTVRepository.getStartOverInfo(slot.channel.id)
                 .onSuccess { startOverInfo ->
                     if (startOverInfo.available && !startOverInfo.streamUrl.isNullOrBlank()) {
-                        // Play the start-over stream URL
                         players[slotIndex]?.apply {
                             play(startOverInfo.streamUrl)
                         }
 
-                        // Update slot state to show it's timeshifted
                         val updatedSlots = state.slots.toMutableList()
                         updatedSlots[slotIndex] = slot.copy(
                             isTimeshifted = true,
                             timeshiftProgramTitle = startOverInfo.programTitle
                         )
                         _uiState.update { it.copy(slots = updatedSlots) }
-
                         Timber.d("Started over program '${startOverInfo.programTitle}' in slot $slotIndex")
-                    } else {
-                        Timber.w("Start over not available for channel: ${slot.channel.name}")
                     }
                 }
                 .onFailure { e ->
@@ -294,87 +243,21 @@ class MultiviewViewModel @Inject constructor(
         }
     }
 
-    /**
-     * Go back to live for a timeshifted slot.
-     */
     fun goLiveSlot(slotIndex: Int) {
         val state = _uiState.value
         val slot = state.slots.getOrNull(slotIndex) ?: return
 
-        // Switch back to live stream
         players[slotIndex]?.apply {
             slot.channel.streamUrl?.let { url -> play(url) }
         }
 
-        // Update slot state
         val updatedSlots = state.slots.toMutableList()
         updatedSlots[slotIndex] = slot.copy(
             isTimeshifted = false,
             timeshiftProgramTitle = null
         )
         _uiState.update { it.copy(slots = updatedSlots) }
-
         Timber.d("Went live in slot $slotIndex")
-    }
-
-    /**
-     * Swap channels between two slots.
-     */
-    fun swapSlots(sourceIndex: Int, targetIndex: Int) {
-        val state = _uiState.value
-        val sourceSlot = state.slots.getOrNull(sourceIndex) ?: return
-        val targetSlot = state.slots.getOrNull(targetIndex) ?: return
-
-        if (sourceIndex == targetIndex) return
-
-        // Swap the streams in the players
-        players[sourceIndex]?.apply {
-            targetSlot.channel.streamUrl?.let { url -> play(url) }
-        }
-        players[targetIndex]?.apply {
-            sourceSlot.channel.streamUrl?.let { url -> play(url) }
-        }
-
-        // Swap the channels in slots
-        val updatedSlots = state.slots.toMutableList()
-        updatedSlots[sourceIndex] = sourceSlot.copy(
-            channel = targetSlot.channel,
-            isReady = false,
-            isTimeshifted = false
-        )
-        updatedSlots[targetIndex] = targetSlot.copy(
-            channel = sourceSlot.channel,
-            isReady = false,
-            isTimeshifted = false
-        )
-
-        _uiState.update { it.copy(slots = updatedSlots) }
-        Timber.d("Swapped slots $sourceIndex and $targetIndex")
-    }
-
-    /**
-     * Set audio to a specific slot (mute all others).
-     */
-    fun setAudioSlot(slotIndex: Int) {
-        val state = _uiState.value
-        if (slotIndex >= state.slots.size) return
-
-        // Mute all players except the target
-        players.forEach { (index, player) ->
-            if (index == slotIndex) {
-                player.unmute()
-            } else {
-                player.mute()
-            }
-        }
-
-        // Update slot mute states
-        val updatedSlots = state.slots.mapIndexed { index, slot ->
-            slot.copy(isMuted = index != slotIndex)
-        }
-
-        _uiState.update { it.copy(slots = updatedSlots) }
-        Timber.d("Set audio to slot $slotIndex")
     }
 
     override fun onCleared() {
@@ -388,8 +271,11 @@ class MultiviewViewModel @Inject constructor(
 data class MultiviewUiState(
     val slots: List<MultiviewSlot> = emptyList(),
     val allChannels: List<Channel> = emptyList(),
-    val layout: MultiviewLayout = MultiviewLayout.TWO_BY_ONE,
     val focusedSlotIndex: Int = 0,
+    val audioSlotIndex: Int = 0,
+    val isFullscreen: Boolean = false,
+    val fullscreenSlotIndex: Int? = null,
+    val showOverlay: Boolean = true,
     val showControls: Boolean = true,
     val channelPickerSlotIndex: Int? = null
 )
@@ -405,8 +291,8 @@ data class MultiviewSlot(
 
 enum class MultiviewLayout {
     SINGLE,
-    TWO_BY_ONE,    // Side by side
-    ONE_BY_TWO,    // Stacked
-    THREE_GRID,    // 2 top, 1 bottom
-    TWO_BY_TWO     // 2x2 grid
+    TWO_BY_ONE,
+    ONE_BY_TWO,
+    THREE_GRID,
+    TWO_BY_TWO
 }

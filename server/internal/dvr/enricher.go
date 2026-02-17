@@ -394,3 +394,292 @@ func (e *Enricher) EnrichAllPendingRecordings() error {
 
 	return nil
 }
+
+// EnrichDVRFile fetches TMDB metadata for a DVRFile and updates it
+func (e *Enricher) EnrichDVRFile(file *models.DVRFile) error {
+	if e.tmdb == nil || !e.tmdb.IsConfigured() {
+		return nil
+	}
+
+	// Skip if already enriched
+	if file.TMDBId != nil && *file.TMDBId > 0 {
+		return nil
+	}
+
+	seasonNum, episodeNum, cleanTitle := e.parseEpisodeInfo(file.Title, file.EpisodeNum)
+
+	isMovie := e.isLikelyMovieFromFile(file)
+
+	if isMovie {
+		return e.enrichMovieDVRFile(file, cleanTitle)
+	}
+	return e.enrichTVDVRFile(file, cleanTitle, seasonNum, episodeNum)
+}
+
+// isLikelyMovieFromFile determines if a DVRFile is likely a movie
+func (e *Enricher) isLikelyMovieFromFile(file *models.DVRFile) bool {
+	if file.IsMovie {
+		return true
+	}
+
+	category := strings.ToLower(file.Category)
+	movieKeywords := []string{"movie", "film", "feature", "cinema"}
+	for _, kw := range movieKeywords {
+		if strings.Contains(category, kw) {
+			return true
+		}
+	}
+
+	// Check duration (seconds) - movies are typically 80+ minutes
+	if file.Duration >= 80*60 && file.Duration <= 240*60 {
+		sportsKeywords := []string{"sport", "game", "match", "nfl", "nba", "mlb", "nhl", "soccer", "football"}
+		for _, kw := range sportsKeywords {
+			if strings.Contains(category, kw) {
+				return false
+			}
+		}
+		if file.Duration >= 90*60 {
+			return true
+		}
+	}
+
+	return false
+}
+
+// enrichMovieDVRFile fetches movie metadata from TMDB for a DVRFile
+func (e *Enricher) enrichMovieDVRFile(file *models.DVRFile, title string) error {
+	e.logger.WithField("title", title).Info("Enriching movie DVR file")
+
+	year := 0
+	yearRe := regexp.MustCompile(`\((\d{4})\)\s*$`)
+	if matches := yearRe.FindStringSubmatch(title); len(matches) >= 2 {
+		year, _ = strconv.Atoi(matches[1])
+		title = strings.TrimSpace(yearRe.ReplaceAllString(title, ""))
+	}
+
+	movie, err := e.tmdb.SearchMovie(title, year)
+	if err != nil {
+		e.logger.WithError(err).WithField("title", title).Warn("Failed to find movie on TMDB")
+		return nil
+	}
+
+	details, err := e.tmdb.GetMovieDetails(movie.ID)
+	if err != nil {
+		details = movie
+	}
+
+	file.IsMovie = true
+	file.TMDBId = &details.ID
+	file.Summary = details.Overview
+
+	if details.PosterPath != "" {
+		file.Thumb = fmt.Sprintf("%s/w500%s", tmdbImageURL, details.PosterPath)
+	}
+	if details.BackdropPath != "" {
+		file.Art = fmt.Sprintf("%s/w1280%s", tmdbImageURL, details.BackdropPath)
+	}
+	if details.VoteAverage > 0 {
+		file.Rating = &details.VoteAverage
+	}
+	if details.Runtime > 0 {
+		file.Duration = details.Runtime * 60 // minutes to seconds
+	}
+
+	if details.ReleaseDate != "" {
+		if releaseTime, err := time.Parse("2006-01-02", details.ReleaseDate); err == nil {
+			y := releaseTime.Year()
+			file.Year = &y
+			file.OriginalAirDate = &releaseTime
+		}
+	}
+
+	for _, rd := range details.ReleaseDates.Results {
+		if rd.ISO3166_1 == "US" {
+			for _, release := range rd.ReleaseDates {
+				if release.Certification != "" {
+					file.ContentRating = release.Certification
+					break
+				}
+			}
+			break
+		}
+	}
+
+	var genres []string
+	for _, g := range details.Genres {
+		genres = append(genres, g.Name)
+	}
+	if len(genres) > 0 {
+		file.Genres = strings.Join(genres, ", ")
+	}
+
+	return e.db.Save(file).Error
+}
+
+// enrichTVDVRFile fetches TV show metadata from TMDB for a DVRFile
+func (e *Enricher) enrichTVDVRFile(file *models.DVRFile, title string, seasonNum, episodeNum *int) error {
+	e.logger.WithFields(logrus.Fields{
+		"title":   title,
+		"season":  seasonNum,
+		"episode": episodeNum,
+	}).Info("Enriching TV DVR file")
+
+	show, err := e.tmdb.SearchTV(title, 0)
+	if err != nil {
+		e.logger.WithError(err).WithField("title", title).Warn("Failed to find show on TMDB")
+		return nil
+	}
+
+	details, err := e.tmdb.GetTVDetails(show.ID)
+	if err != nil {
+		details = show
+	}
+
+	file.IsMovie = false
+	file.TMDBId = &details.ID
+
+	if details.PosterPath != "" {
+		file.Thumb = fmt.Sprintf("%s/w500%s", tmdbImageURL, details.PosterPath)
+	}
+	if details.BackdropPath != "" {
+		file.Art = fmt.Sprintf("%s/w1280%s", tmdbImageURL, details.BackdropPath)
+	}
+	if details.VoteAverage > 0 {
+		file.Rating = &details.VoteAverage
+	}
+
+	for _, cr := range details.ContentRatings.Results {
+		if cr.ISO3166_1 == "US" {
+			file.ContentRating = cr.Rating
+			break
+		}
+	}
+
+	var genres []string
+	for _, g := range details.Genres {
+		genres = append(genres, g.Name)
+	}
+	if len(genres) > 0 {
+		file.Genres = strings.Join(genres, ", ")
+	}
+
+	if details.FirstAirDate != "" {
+		if airTime, err := time.Parse("2006-01-02", details.FirstAirDate); err == nil {
+			y := airTime.Year()
+			file.Year = &y
+		}
+	}
+
+	file.SeasonNumber = seasonNum
+	file.EpisodeNumber = episodeNum
+
+	if seasonNum != nil && episodeNum != nil && *seasonNum > 0 && *episodeNum > 0 {
+		e.enrichDVRFileEpisodeInfo(file, details.ID, *seasonNum, *episodeNum)
+	} else {
+		file.Summary = details.Overview
+	}
+
+	return e.db.Save(file).Error
+}
+
+// enrichDVRFileEpisodeInfo fetches episode-specific metadata for a DVRFile
+func (e *Enricher) enrichDVRFileEpisodeInfo(file *models.DVRFile, showTMDBId, seasonNum, episodeNum int) {
+	season, err := e.tmdb.GetSeason(showTMDBId, seasonNum)
+	if err != nil {
+		return
+	}
+
+	for _, ep := range season.Episodes {
+		if ep.EpisodeNumber == episodeNum {
+			file.Subtitle = ep.Name
+			file.Summary = ep.Overview
+
+			if ep.StillPath != "" {
+				file.Thumb = fmt.Sprintf("%s/w500%s", tmdbImageURL, ep.StillPath)
+			}
+			if ep.Runtime > 0 {
+				file.Duration = ep.Runtime * 60 // minutes to seconds
+			}
+			if ep.AirDate != "" {
+				if airTime, err := time.Parse("2006-01-02", ep.AirDate); err == nil {
+					file.OriginalAirDate = &airTime
+				}
+			}
+			if ep.VoteAverage > 0 {
+				file.Rating = &ep.VoteAverage
+			}
+			break
+		}
+	}
+}
+
+// EnrichDVRGroup enriches a group with TMDB metadata from its files or a direct lookup
+func (e *Enricher) EnrichDVRGroup(group *models.DVRGroup) error {
+	if e.tmdb == nil || !e.tmdb.IsConfigured() {
+		return nil
+	}
+
+	// Skip if already enriched
+	if group.TMDBId != nil && *group.TMDBId > 0 {
+		return nil
+	}
+
+	// Try to get TMDB info from the first file in the group
+	var file models.DVRFile
+	if err := e.db.Where("group_id = ? AND tmdb_id IS NOT NULL AND deleted = ?", group.ID, false).
+		First(&file).Error; err == nil {
+		// Copy metadata from file to group
+		group.TMDBId = file.TMDBId
+		group.Genres = file.Genres
+		group.ContentRating = file.ContentRating
+		group.Year = file.Year
+		if file.IsMovie {
+			group.TMDBType = "movie"
+		} else {
+			group.TMDBType = "tv"
+		}
+		if group.Thumb == "" {
+			group.Thumb = file.Thumb
+		}
+		if group.Art == "" {
+			group.Art = file.Art
+		}
+		if group.Description == "" {
+			group.Description = file.Summary
+		}
+		return e.db.Save(group).Error
+	}
+
+	// Direct TMDB lookup by group title
+	if group.TMDBType == "movie" || group.TMDBType == "" {
+		if movie, err := e.tmdb.SearchMovie(group.Title, 0); err == nil {
+			group.TMDBId = &movie.ID
+			group.TMDBType = "movie"
+			group.Description = movie.Overview
+			if movie.PosterPath != "" {
+				group.Thumb = fmt.Sprintf("%s/w500%s", tmdbImageURL, movie.PosterPath)
+			}
+			if movie.BackdropPath != "" {
+				group.Art = fmt.Sprintf("%s/w1280%s", tmdbImageURL, movie.BackdropPath)
+			}
+			return e.db.Save(group).Error
+		}
+	}
+
+	if group.TMDBType == "tv" || group.TMDBType == "" {
+		if show, err := e.tmdb.SearchTV(group.Title, 0); err == nil {
+			group.TMDBId = &show.ID
+			group.TMDBType = "tv"
+			group.Description = show.Overview
+			if show.PosterPath != "" {
+				group.Thumb = fmt.Sprintf("%s/w500%s", tmdbImageURL, show.PosterPath)
+			}
+			if show.BackdropPath != "" {
+				group.Art = fmt.Sprintf("%s/w1280%s", tmdbImageURL, show.BackdropPath)
+			}
+			return e.db.Save(group).Error
+		}
+	}
+
+	return nil
+}
