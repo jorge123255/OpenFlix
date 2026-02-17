@@ -449,6 +449,13 @@ func (s *Server) setupRouter() {
 	}
 
 	// ============ Live TV API ============
+	// Public endpoints for external integrations (Channels DVR, etc.)
+	livetvPublic := r.Group("/livetv")
+	{
+		livetvPublic.GET("/export.m3u", s.exportChannelsM3U)      // M3U playlist with tvc-guide-stationid
+		livetvPublic.GET("/lineup.json", s.exportChannelsLineup)  // JSON lineup
+	}
+
 	livetv := r.Group("/livetv")
 	livetv.Use(s.authRequired())
 	{

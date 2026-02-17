@@ -146,8 +146,7 @@ RUN mkdir -p /data /app/downloads /app/recordings /app/transcode /app/config
 # Copy Comskip configuration
 COPY comskip.ini /app/config/comskip.ini
 
-# Copy downloads folder if it exists (for APK files)
-COPY --from=builder /app/downloads/ /app/downloads/
+# Note: downloads/ folder will be created at runtime if needed for APK files
 
 # Copy entrypoint script
 COPY entrypoint.sh /app/entrypoint.sh
