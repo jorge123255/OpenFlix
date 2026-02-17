@@ -87,6 +87,7 @@ func Migrate(db *gorm.DB) error {
 		&models.SeriesRule{},
 		&models.TeamPass{},
 		&models.CommercialSegment{},
+		&models.RecordingWatchProgress{},
 
 		// Archive/Catch-up
 		&models.ArchiveProgram{},

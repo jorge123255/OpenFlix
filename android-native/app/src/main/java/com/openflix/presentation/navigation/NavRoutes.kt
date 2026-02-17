@@ -49,7 +49,13 @@ sealed class NavRoutes(val route: String) {
     data object LiveTVGuide : NavRoutes("livetv/guide")
     data object EPGGuide : NavRoutes("epg")
     data object ChannelSurfing : NavRoutes("livetv/surfing")
-    data object Multiview : NavRoutes("livetv/multiview")
+    data object Multiview : NavRoutes("livetv/multiview?channelId={channelId}") {
+        fun createRoute(channelId: String? = null) = if (channelId != null) {
+            "livetv/multiview?channelId=$channelId"
+        } else {
+            "livetv/multiview"
+        }
+    }
     data object ChannelGroups : NavRoutes("livetv/groups")
     data object ChannelGroupPlayer : NavRoutes("livetv/groups/{groupId}/player") {
         fun createRoute(groupId: Int) = "livetv/groups/$groupId/player"
@@ -83,7 +89,6 @@ sealed class NavRoutes(val route: String) {
     data object SubtitleStyling : NavRoutes("settings/subtitles")
     data object ChannelLogoEditor : NavRoutes("settings/channel_logos")
     data object RemoteMapping : NavRoutes("settings/remote_mapping")
-    data object RemoteStreaming : NavRoutes("settings/remote_streaming")
     data object About : NavRoutes("settings/about")
     data object Licenses : NavRoutes("settings/licenses")
     data object Logs : NavRoutes("settings/logs")

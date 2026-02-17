@@ -4,6 +4,7 @@ import SwiftUI
 @MainActor
 class DiscoverViewModel: ObservableObject {
     private let mediaRepository = MediaRepository()
+    private let watchlistRepository = WatchlistRepository()
 
     @Published var sections: [LibrarySection] = []
     @Published var onDeck: [MediaItem] = []
@@ -280,5 +281,19 @@ class DiscoverViewModel: ObservableObject {
 
     var hasTopTen: Bool {
         !topTen.isEmpty
+    }
+
+    // MARK: - Watchlist
+
+    func toggleWatchlist(for item: MediaItem) async {
+        do {
+            try await watchlistRepository.toggleWatchlist(mediaId: item.id)
+        } catch {
+            print("Failed to toggle watchlist for \(item.title): \(error)")
+        }
+    }
+
+    func isInWatchlist(mediaId: Int) -> Bool {
+        watchlistRepository.isInWatchlist(mediaId: mediaId)
     }
 }

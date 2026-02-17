@@ -6,6 +6,8 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -13,6 +15,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -34,6 +37,13 @@ fun AuthScreen(
 
     val serverUrlFocusRequester = remember { FocusRequester() }
     val usernameFocusRequester = remember { FocusRequester() }
+    val passwordFocusRequester = remember { FocusRequester() }
+
+    // Responsive padding based on screen size
+    val configuration = LocalConfiguration.current
+    val screenHeight = configuration.screenHeightDp
+    val isSmallScreen = screenHeight < 600
+    val outerPadding = if (isSmallScreen) 16.dp else 32.dp
 
     // Navigate on successful auth
     LaunchedEffect(isAuthenticated) {
@@ -65,7 +75,8 @@ fun AuthScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(48.dp),
+                .verticalScroll(rememberScrollState())
+                .padding(outerPadding),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
@@ -195,7 +206,13 @@ fun AuthScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .focusRequester(serverUrlFocusRequester),
-                            singleLine = true
+                            singleLine = true,
+                            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                                imeAction = androidx.compose.ui.text.input.ImeAction.Done
+                            ),
+                            keyboardActions = androidx.compose.foundation.text.KeyboardActions(
+                                onDone = { viewModel.connectToServer() }
+                            )
                         )
 
                         Spacer(modifier = Modifier.height(24.dp))
@@ -235,7 +252,13 @@ fun AuthScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .focusRequester(usernameFocusRequester),
-                            singleLine = true
+                            singleLine = true,
+                            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                                imeAction = androidx.compose.ui.text.input.ImeAction.Next
+                            ),
+                            keyboardActions = androidx.compose.foundation.text.KeyboardActions(
+                                onNext = { passwordFocusRequester.requestFocus() }
+                            )
                         )
 
                         Spacer(modifier = Modifier.height(16.dp))
@@ -244,9 +267,21 @@ fun AuthScreen(
                             value = uiState.password,
                             onValueChange = viewModel::updatePassword,
                             label = "Password",
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .focusRequester(passwordFocusRequester),
                             singleLine = true,
-                            visualTransformation = PasswordVisualTransformation()
+                            visualTransformation = PasswordVisualTransformation(),
+                            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                                imeAction = androidx.compose.ui.text.input.ImeAction.Done
+                            ),
+                            keyboardActions = androidx.compose.foundation.text.KeyboardActions(
+                                onDone = {
+                                    if (!uiState.isRegisterMode) {
+                                        viewModel.login()
+                                    }
+                                }
+                            )
                         )
 
                         if (uiState.isRegisterMode) {

@@ -2,6 +2,7 @@ package com.openflix.presentation.screens.epg
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.openflix.data.repository.DVRRepository
 import com.openflix.data.repository.LiveTVRepository
 import com.openflix.domain.model.Channel
 import com.openflix.domain.model.ChannelWithPrograms
@@ -22,7 +23,8 @@ import javax.inject.Inject
  */
 @HiltViewModel
 class EPGGuideViewModel @Inject constructor(
-    private val liveTVRepository: LiveTVRepository
+    private val liveTVRepository: LiveTVRepository,
+    private val dvrRepository: DVRRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(EPGGuideUiState())
@@ -333,6 +335,52 @@ class EPGGuideViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Record the selected program via DVR
+     */
+    fun recordProgram(seriesRecord: Boolean = false) {
+        val program = _uiState.value.selectedProgramForAction ?: return
+        val channel = getFocusedChannel() ?: return
+
+        viewModelScope.launch {
+            val channelId = channel.channel.id.toIntOrNull() ?: return@launch
+            val programId = (program.programId ?: program.id)?.toIntOrNull() ?: return@launch
+
+            val result = dvrRepository.recordFromProgram(
+                channelId = channelId,
+                programId = programId,
+                seriesRecord = seriesRecord
+            )
+
+            result.fold(
+                onSuccess = {
+                    Timber.d("Scheduled ${if (seriesRecord) "series" else "single"} recording for: ${program.title}")
+                    _uiState.update {
+                        it.copy(
+                            recordingResult = "Recording scheduled for ${program.title}",
+                            showRecordDialog = false,
+                            selectedProgramForAction = null
+                        )
+                    }
+                },
+                onFailure = { error ->
+                    Timber.e(error, "Failed to schedule recording")
+                    _uiState.update {
+                        it.copy(
+                            recordingResult = "Failed: ${error.message}",
+                            showRecordDialog = false,
+                            selectedProgramForAction = null
+                        )
+                    }
+                }
+            )
+        }
+    }
+
+    fun clearRecordingResult() {
+        _uiState.update { it.copy(recordingResult = null) }
+    }
+
     fun dismissDialogs() {
         _uiState.update {
             it.copy(
@@ -427,7 +475,8 @@ data class EPGGuideUiState(
     val showRecordDialog: Boolean = false,
     val showReminderDialog: Boolean = false,
     val selectedProgramForAction: Program? = null,
-    val scrollToTimeOffset: Int? = null // Offset in minutes from start to scroll to
+    val scrollToTimeOffset: Int? = null, // Offset in minutes from start to scroll to
+    val recordingResult: String? = null
 )
 
 /**

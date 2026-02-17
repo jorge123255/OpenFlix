@@ -60,3 +60,11 @@ extension String {
         Double(self)
     }
 }
+
+// MARK: - Safe Array Subscript
+
+extension Array {
+    subscript(safe index: Int) -> Element? {
+        indices.contains(index) ? self[index] : nil
+    }
+}

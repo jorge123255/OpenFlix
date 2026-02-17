@@ -9,14 +9,6 @@ class SettingsViewModel: ObservableObject {
     @Published var serverInfo: ServerInfo?
     @Published var capabilities: ServerCapabilities?
 
-    // Remote Access
-    @Published var remoteAccessStatus: RemoteAccessStatusDTO?
-    @Published var isRemoteAccessLoading = false
-
-    // Instant Switch
-    @Published var instantSwitchStatus: InstantSwitchStatusDTO?
-    @AppStorage("instant_switch_enabled") var instantSwitchEnabled = true
-
     // Sources
     @Published var m3uSources: [M3USource] = []
     @Published var xtreamSources: [XtreamSource] = []
@@ -47,59 +39,6 @@ class SettingsViewModel: ObservableObject {
             capabilities = caps.toDomain()
         } catch {
             // Silently fail
-        }
-    }
-
-    // MARK: - Remote Access
-
-    func loadRemoteAccessStatus() async {
-        isRemoteAccessLoading = true
-        defer { isRemoteAccessLoading = false }
-
-        do {
-            remoteAccessStatus = try await OpenFlixAPI.shared.getRemoteAccessStatus()
-        } catch {
-            // Silently fail - server may not support remote access
-        }
-    }
-
-    func enableRemoteAccess() async throws -> RemoteAccessActionResponse {
-        isRemoteAccessLoading = true
-        defer { isRemoteAccessLoading = false }
-
-        let response = try await OpenFlixAPI.shared.enableRemoteAccess()
-        if let status = response.status {
-            remoteAccessStatus = status
-        }
-        return response
-    }
-
-    func disableRemoteAccess() async throws {
-        isRemoteAccessLoading = true
-        defer { isRemoteAccessLoading = false }
-
-        _ = try await OpenFlixAPI.shared.disableRemoteAccess()
-        await loadRemoteAccessStatus()
-    }
-
-    // MARK: - Instant Switch
-
-    func loadInstantSwitchStatus() async {
-        do {
-            instantSwitchStatus = try await OpenFlixAPI.shared.getInstantSwitchStatus()
-            instantSwitchEnabled = instantSwitchStatus?.enabled ?? false
-        } catch {
-            // Silently fail
-        }
-    }
-
-    func setInstantSwitchEnabled(_ enabled: Bool) async {
-        do {
-            try await OpenFlixAPI.shared.setInstantSwitchEnabled(enabled)
-            instantSwitchEnabled = enabled
-        } catch {
-            // Revert on failure
-            instantSwitchEnabled = !enabled
         }
     }
 
@@ -205,41 +144,5 @@ class SettingsViewModel: ObservableObject {
 
     var buildNumber: String {
         Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1"
-    }
-
-    var isRemoteAccessEnabled: Bool {
-        remoteAccessStatus?.enabled ?? false
-    }
-
-    var isRemoteAccessConnected: Bool {
-        remoteAccessStatus?.connected ?? false
-    }
-
-    var remoteAccessConnectionMethod: String? {
-        remoteAccessStatus?.method
-    }
-
-    var tailscaleIP: String? {
-        remoteAccessStatus?.tailscaleIp
-    }
-
-    var tailscaleHostname: String? {
-        remoteAccessStatus?.tailscaleHostname
-    }
-
-    var magicDNSName: String? {
-        remoteAccessStatus?.magicDnsName
-    }
-
-    var remoteAccessLoginUrl: String? {
-        remoteAccessStatus?.loginUrl
-    }
-
-    var hasInstantSwitch: Bool {
-        capabilities?.liveTV ?? false
-    }
-
-    var cachedStreamCount: Int {
-        instantSwitchStatus?.cachedStreams ?? 0
     }
 }

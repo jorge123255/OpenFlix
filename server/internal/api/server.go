@@ -575,6 +575,7 @@ func (s *Server) setupRouter() {
 		dvrGroup.POST("/recordings/from-program", s.recordFromProgram)
 		dvrGroup.GET("/recordings/stats", s.getActiveRecordingStats) // Must be before :id route
 		dvrGroup.GET("/recordings/:id", s.getRecording)
+		dvrGroup.PUT("/recordings/:id", s.updateRecording)
 		dvrGroup.DELETE("/recordings/:id", s.deleteRecording)
 		dvrGroup.PUT("/recordings/:id/priority", s.updateRecordingPriority)
 
@@ -604,6 +605,10 @@ func (s *Server) setupRouter() {
 		dvrGroup.GET("/conflicts", s.getRecordingConflicts)
 		dvrGroup.POST("/conflicts/check", s.checkRecordingConflict)
 		dvrGroup.POST("/conflicts/resolve", s.resolveConflict)
+
+		// Disk Usage & Quality
+		dvrGroup.GET("/disk-usage", s.getDiskUsage)
+		dvrGroup.GET("/quality-presets", s.getQualityPresets)
 
 		// DVR Settings
 		dvrGroup.GET("/settings", s.getDVRSettings)

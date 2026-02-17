@@ -310,6 +310,14 @@ class TVShowsViewModel: ObservableObject {
         !genreHubs.isEmpty
     }
 
+    var hasUpNext: Bool {
+        !continueWatching.isEmpty
+    }
+
+    var upNext: [MediaItem] {
+        continueWatching
+    }
+
     var filteredItems: [MediaItem] {
         guard let genre = selectedGenre else { return allShows }
         return allShows.filter { getGenresForItem($0).contains(genre) }

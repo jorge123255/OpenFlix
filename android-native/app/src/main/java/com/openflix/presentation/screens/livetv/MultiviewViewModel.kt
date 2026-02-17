@@ -317,172 +317,65 @@ class MultiviewViewModel @Inject constructor(
         Timber.d("Went live in slot $slotIndex")
     }
 
-    // ==========================================================================
-    // DVR Controls - Our KEY DIFFERENTIATOR vs Channels DVR!
-    // Channels DVR CAN'T pause/rewind in multiview. We CAN!
-    // ==========================================================================
-
     /**
-     * Pause a specific slot - Channels DVR CAN'T do this!
+     * Swap channels between two slots.
      */
-    fun pauseSlot(slotIndex: Int) {
+    fun swapSlots(sourceIndex: Int, targetIndex: Int) {
         val state = _uiState.value
-        val slot = state.slots.getOrNull(slotIndex) ?: return
+        val sourceSlot = state.slots.getOrNull(sourceIndex) ?: return
+        val targetSlot = state.slots.getOrNull(targetIndex) ?: return
 
-        players[slotIndex]?.pause()
+        if (sourceIndex == targetIndex) return
 
-        val updatedSlots = state.slots.toMutableList()
-        updatedSlots[slotIndex] = slot.copy(
-            dvrState = slot.dvrState.copy(isPaused = true, isLive = false)
-        )
-        _uiState.update { it.copy(slots = updatedSlots) }
-        Timber.d("Paused slot $slotIndex")
-    }
-
-    /**
-     * Resume a paused slot
-     */
-    fun resumeSlot(slotIndex: Int) {
-        val state = _uiState.value
-        val slot = state.slots.getOrNull(slotIndex) ?: return
-
-        players[slotIndex]?.resume()
-
-        val updatedSlots = state.slots.toMutableList()
-        updatedSlots[slotIndex] = slot.copy(
-            dvrState = slot.dvrState.copy(isPaused = false)
-        )
-        _uiState.update { it.copy(slots = updatedSlots) }
-        Timber.d("Resumed slot $slotIndex")
-    }
-
-    /**
-     * Toggle pause on a slot
-     */
-    fun togglePauseSlot(slotIndex: Int) {
-        val state = _uiState.value
-        val slot = state.slots.getOrNull(slotIndex) ?: return
-        if (slot.dvrState.isPaused) {
-            resumeSlot(slotIndex)
-        } else {
-            pauseSlot(slotIndex)
+        // Swap the streams in the players
+        players[sourceIndex]?.apply {
+            targetSlot.channel.streamUrl?.let { url -> play(url) }
         }
-    }
-
-    /**
-     * Rewind a slot by seconds - Channels DVR CAN'T do this!
-     */
-    fun rewindSlot(slotIndex: Int, seconds: Int = 15) {
-        val state = _uiState.value
-        val slot = state.slots.getOrNull(slotIndex) ?: return
-
-        players[slotIndex]?.seekBack(seconds)
-
-        val newOffset = slot.dvrState.liveOffsetSecs + seconds
-        val updatedSlots = state.slots.toMutableList()
-        updatedSlots[slotIndex] = slot.copy(
-            dvrState = slot.dvrState.copy(isLive = false, liveOffsetSecs = newOffset)
-        )
-        _uiState.update { it.copy(slots = updatedSlots) }
-        Timber.d("Rewound slot $slotIndex by $seconds seconds")
-    }
-
-    /**
-     * Fast forward a slot
-     */
-    fun fastForwardSlot(slotIndex: Int, seconds: Int = 15) {
-        val state = _uiState.value
-        val slot = state.slots.getOrNull(slotIndex) ?: return
-
-        players[slotIndex]?.seekForward(seconds)
-
-        val newOffset = (slot.dvrState.liveOffsetSecs - seconds).coerceAtLeast(0)
-        val isNowLive = newOffset == 0
-        val updatedSlots = state.slots.toMutableList()
-        updatedSlots[slotIndex] = slot.copy(
-            dvrState = slot.dvrState.copy(isLive = isNowLive, liveOffsetSecs = newOffset)
-        )
-        _uiState.update { it.copy(slots = updatedSlots) }
-        Timber.d("Fast-forwarded slot $slotIndex by $seconds seconds")
-    }
-
-    /**
-     * Jump a slot back to live
-     */
-    fun jumpToLiveSlot(slotIndex: Int) {
-        val state = _uiState.value
-        val slot = state.slots.getOrNull(slotIndex) ?: return
-
-        players[slotIndex]?.seekToLive()
-
-        val updatedSlots = state.slots.toMutableList()
-        updatedSlots[slotIndex] = slot.copy(
-            dvrState = SlotDVRState(isLive = true)  // Reset to default live state
-        )
-        _uiState.update { it.copy(slots = updatedSlots) }
-        Timber.d("Jumped slot $slotIndex to live")
-    }
-
-    /**
-     * PAUSE ALL streams - one button convenience!
-     */
-    fun pauseAll() {
-        _uiState.value.slots.forEachIndexed { index, _ ->
-            pauseSlot(index)
+        players[targetIndex]?.apply {
+            sourceSlot.channel.streamUrl?.let { url -> play(url) }
         }
-        Timber.d("Paused all slots")
+
+        // Swap the channels in slots
+        val updatedSlots = state.slots.toMutableList()
+        updatedSlots[sourceIndex] = sourceSlot.copy(
+            channel = targetSlot.channel,
+            isReady = false,
+            isTimeshifted = false
+        )
+        updatedSlots[targetIndex] = targetSlot.copy(
+            channel = sourceSlot.channel,
+            isReady = false,
+            isTimeshifted = false
+        )
+
+        _uiState.update { it.copy(slots = updatedSlots) }
+        Timber.d("Swapped slots $sourceIndex and $targetIndex")
     }
 
     /**
-     * RESUME ALL streams
+     * Set audio to a specific slot (mute all others).
      */
-    fun resumeAll() {
-        _uiState.value.slots.forEachIndexed { index, _ ->
-            resumeSlot(index)
-        }
-        Timber.d("Resumed all slots")
-    }
-
-    /**
-     * JUMP ALL TO LIVE - sync all streams to live
-     */
-    fun jumpAllToLive() {
-        _uiState.value.slots.forEachIndexed { index, _ ->
-            jumpToLiveSlot(index)
-        }
-        Timber.d("Jumped all slots to live")
-    }
-
-    /**
-     * SYNC all streams - align timestamps by rewinding all to match furthest behind
-     */
-    fun syncAllStreams() {
+    fun setAudioSlot(slotIndex: Int) {
         val state = _uiState.value
-        // Find the stream that's furthest behind live
-        val maxOffset = state.slots.maxOfOrNull { it.dvrState.liveOffsetSecs } ?: 0
+        if (slotIndex >= state.slots.size) return
 
-        // Rewind all streams to match
-        state.slots.forEachIndexed { index, slot ->
-            val currentOffset = slot.dvrState.liveOffsetSecs
-            if (currentOffset < maxOffset) {
-                val rewindAmount = maxOffset - currentOffset
-                rewindSlot(index, rewindAmount)
+        // Mute all players except the target
+        players.forEach { (index, player) ->
+            if (index == slotIndex) {
+                player.unmute()
+            } else {
+                player.mute()
             }
         }
-        Timber.d("Synced all slots to offset $maxOffset seconds")
+
+        // Update slot mute states
+        val updatedSlots = state.slots.mapIndexed { index, slot ->
+            slot.copy(isMuted = index != slotIndex)
+        }
+
+        _uiState.update { it.copy(slots = updatedSlots) }
+        Timber.d("Set audio to slot $slotIndex")
     }
-
-    /**
-     * Check if any slot is paused
-     */
-    val anySlotPaused: Boolean
-        get() = _uiState.value.slots.any { it.dvrState.isPaused }
-
-    /**
-     * Check if all slots are live
-     */
-    val allSlotsLive: Boolean
-        get() = _uiState.value.slots.all { it.dvrState.isLive }
 
     override fun onCleared() {
         super.onCleared()
@@ -501,26 +394,13 @@ data class MultiviewUiState(
     val channelPickerSlotIndex: Int? = null
 )
 
-/**
- * DVR state for a multiview slot - Our KEY DIFFERENTIATOR vs Channels DVR!
- * Channels DVR has NO pause/rewind in multiview. We do!
- */
-data class SlotDVRState(
-    val isPaused: Boolean = false,
-    val isLive: Boolean = true,
-    val liveOffsetSecs: Int = 0,
-    val playbackSpeed: Float = 1.0f,
-    val bufferSecs: Int = 1800  // 30 minutes default
-)
-
 data class MultiviewSlot(
     val index: Int,
     val channel: Channel,
     val isReady: Boolean = false,
     val isMuted: Boolean = true,
     val isTimeshifted: Boolean = false,
-    val timeshiftProgramTitle: String? = null,
-    val dvrState: SlotDVRState = SlotDVRState()
+    val timeshiftProgramTitle: String? = null
 )
 
 enum class MultiviewLayout {

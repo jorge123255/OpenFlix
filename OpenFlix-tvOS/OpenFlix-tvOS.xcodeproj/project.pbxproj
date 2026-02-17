@@ -7,6 +7,19 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		MODERN011001001001001001 /* DiscoverViewModern.swift in Sources */ = {isa = PBXBuildFile; fileRef = MODERN001001001001001001 /* DiscoverViewModern.swift */; };
+		MODERN012001001001001001 /* MoviesViewModern.swift in Sources */ = {isa = PBXBuildFile; fileRef = MODERN002001001001001001 /* MoviesViewModern.swift */; };
+		MODERN013001001001001001 /* TVShowsHubViewModern.swift in Sources */ = {isa = PBXBuildFile; fileRef = MODERN003001001001001001 /* TVShowsHubViewModern.swift */; };
+		MODERN014001001001001001 /* EPGGridViewModern.swift in Sources */ = {isa = PBXBuildFile; fileRef = MODERN004001001001001001 /* EPGGridViewModern.swift */; };
+		MODERN015001001001001001 /* EPGProgramCellModern.swift in Sources */ = {isa = PBXBuildFile; fileRef = MODERN005001001001001001 /* EPGProgramCellModern.swift */; };
+		STATS011001001001001001 /* WatchStatsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = STATS001001001001001001 /* WatchStatsView.swift */; };
+		TMPSS011001001001001001 /* TeamPassView.swift in Sources */ = {isa = PBXBuildFile; fileRef = TMPSS001001001001001001 /* TeamPassView.swift */; };
+		ONLTR011001001001001001 /* OnLaterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ONLTR001001001001001001 /* OnLaterView.swift */; };
+		CATCH011001001001001001 /* CatchupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CATCH001001001001001001 /* CatchupView.swift */; };
+		CHGRP011001001001001001 /* ChannelGroupsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CHGRP001001001001001001 /* ChannelGroupsView.swift */; };
+		MVPLR011001001001001001 /* MultiviewPlayerV2.swift in Sources */ = {isa = PBXBuildFile; fileRef = MVPLR001001001001001001 /* MultiviewPlayerV2.swift */; };
+		MVVIW011001001001001001 /* MultiviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = MVVIW001001001001001001 /* MultiviewView.swift */; };
+		MVVMW011001001001001001 /* MultiviewViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = MVVMW001001001001001001 /* MultiviewViewModel.swift */; };
 		03111047A5312D603ADAD776 /* SortPickerSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14AF3A24494438F790A5D77A /* SortPickerSheet.swift */; };
 		TVSHUB001001001001001001 /* TVShowsHubView.swift in Sources */ = {isa = PBXBuildFile; fileRef = TVSHUB002002002002002002 /* TVShowsHubView.swift */; };
 		TVSVM001001001001001001 /* TVShowsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = TVSVM002002002002002002 /* TVShowsViewModel.swift */; };
@@ -89,13 +102,23 @@
 		F10000010000000000000057 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000010000000000000057 /* SettingsView.swift */; };
 		F10000010000000000000058 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F20000010000000000000058 /* Assets.xcassets */; };
 		F10000010000000000000060 /* OpenFlixColors.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000010000000000000060 /* OpenFlixColors.swift */; };
-		F10000010000000000000061 /* RemoteAccessDTOs.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000010000000000000061 /* RemoteAccessDTOs.swift */; };
-		F10000010000000000000062 /* MultiviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000010000000000000062 /* MultiviewView.swift */; };
-		F10000010000000000000063 /* MultiviewViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000010000000000000063 /* MultiviewViewModel.swift */; };
 		FDB6CD2395F345C75D324E67 /* TMDBService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CF45205690461EC3CCD7DFB /* TMDBService.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		MODERN001001001001001001 /* DiscoverViewModern.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiscoverViewModern.swift; sourceTree = "<group>"; };
+		MODERN002001001001001001 /* MoviesViewModern.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MoviesViewModern.swift; sourceTree = "<group>"; };
+		MODERN003001001001001001 /* TVShowsHubViewModern.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TVShowsHubViewModern.swift; sourceTree = "<group>"; };
+		MODERN004001001001001001 /* EPGGridViewModern.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EPGGridViewModern.swift; sourceTree = "<group>"; };
+		MODERN005001001001001001 /* EPGProgramCellModern.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Components/EPGProgramCellModern.swift; sourceTree = "<group>"; };
+		STATS001001001001001001 /* WatchStatsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchStatsView.swift; sourceTree = "<group>"; };
+		TMPSS001001001001001001 /* TeamPassView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeamPassView.swift; sourceTree = "<group>"; };
+		ONLTR001001001001001001 /* OnLaterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnLaterView.swift; sourceTree = "<group>"; };
+		CATCH001001001001001001 /* CatchupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CatchupView.swift; sourceTree = "<group>"; };
+		CHGRP001001001001001001 /* ChannelGroupsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChannelGroupsView.swift; sourceTree = "<group>"; };
+		MVPLR001001001001001001 /* MultiviewPlayerV2.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MultiviewPlayerV2.swift; sourceTree = "<group>"; };
+		MVVIW001001001001001001 /* MultiviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MultiviewView.swift; sourceTree = "<group>"; };
+		MVVMW001001001001001001 /* MultiviewViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MultiviewViewModel.swift; sourceTree = "<group>"; };
 		021C5A5ADB9634BCCF40F46D /* InstantSwitchManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = InstantSwitchManager.swift; sourceTree = "<group>"; };
 		14AF3A24494438F790A5D77A /* SortPickerSheet.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SortPickerSheet.swift; sourceTree = "<group>"; };
 		TVSHUB002002002002002002 /* TVShowsHubView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TVShowsHubView.swift; sourceTree = "<group>"; };
@@ -178,9 +201,6 @@
 		F20000010000000000000058 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		F20000010000000000000059 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		F20000010000000000000060 /* OpenFlixColors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenFlixColors.swift; sourceTree = "<group>"; };
-		F20000010000000000000061 /* RemoteAccessDTOs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteAccessDTOs.swift; sourceTree = "<group>"; };
-		F20000010000000000000062 /* MultiviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MultiviewView.swift; sourceTree = "<group>"; };
-		F20000010000000000000063 /* MultiviewViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MultiviewViewModel.swift; sourceTree = "<group>"; };
 		F320CA143D4F275AFCF41847 /* EPGChannelCell.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Components/EPGChannelCell.swift; sourceTree = "<group>"; };
 		F51826684C34892071DD91B7 /* MovieFilterBar.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MovieFilterBar.swift; sourceTree = "<group>"; };
 		F95BBADA637A9FD02EB88E96 /* PlaylistsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Playlists/PlaylistsView.swift; sourceTree = "<group>"; };
@@ -205,6 +225,38 @@
 			name = Playlists;
 			sourceTree = "<group>";
 		};
+		STATS002001001001001001 /* Stats */ = {
+			isa = PBXGroup;
+			children = (
+				STATS001001001001001001 /* WatchStatsView.swift */,
+			);
+			path = Stats;
+			sourceTree = "<group>";
+		};
+		TMPSS002001001001001001 /* TeamPass */ = {
+			isa = PBXGroup;
+			children = (
+				TMPSS001001001001001001 /* TeamPassView.swift */,
+			);
+			path = TeamPass;
+			sourceTree = "<group>";
+		};
+		ONLTR002001001001001001 /* OnLater */ = {
+			isa = PBXGroup;
+			children = (
+				ONLTR001001001001001001 /* OnLaterView.swift */,
+			);
+			path = OnLater;
+			sourceTree = "<group>";
+		};
+		CATCH002001001001001001 /* Catchup */ = {
+			isa = PBXGroup;
+			children = (
+				CATCH001001001001001001 /* CatchupView.swift */,
+			);
+			path = Catchup;
+			sourceTree = "<group>";
+		};
 		5F41041B07B08D2D1955266D /* Theme */ = {
 			isa = PBXGroup;
 			children = (
@@ -220,6 +272,7 @@
 				62362FF3C7A381A8FBBB1A4C /* CategoryTabs.swift */,
 				D9EF07620D9D548C5EF29EB7 /* EPGTimeHeader.swift */,
 				420A255D329E1617486936E9 /* EPGProgramCell.swift */,
+				MODERN005001001001001001 /* EPGProgramCellModern.swift */,
 			);
 			name = Components;
 			sourceTree = "<group>";
@@ -313,7 +366,6 @@
 				F20000010000000000000011 /* MediaDTOs.swift */,
 				F20000010000000000000012 /* LiveTVDTOs.swift */,
 				F20000010000000000000013 /* MiscDTOs.swift */,
-				F20000010000000000000061 /* RemoteAccessDTOs.swift */,
 			);
 			path = DTOs;
 			sourceTree = "<group>";
@@ -365,7 +417,7 @@
 				021C5A5ADB9634BCCF40F46D /* InstantSwitchManager.swift */,
 				6B2CE0678DE709EB9183B51C /* MoviesViewModel.swift */,
 				TVSVM002002002002002002 /* TVShowsViewModel.swift */,
-				F20000010000000000000063 /* MultiviewViewModel.swift */,
+				MVVMW001001001001001001 /* MultiviewViewModel.swift */,
 			);
 			path = ViewModels;
 			sourceTree = "<group>";
@@ -384,6 +436,10 @@
 				F40000010000000000000023 /* Watchlist */,
 				F40000010000000000000024 /* Settings */,
 				5B238D720EEADBEF2C5845C6 /* Playlists */,
+				STATS002001001001001001 /* Stats */,
+				TMPSS002001001001001001 /* TeamPass */,
+				ONLTR002001001001001001 /* OnLater */,
+				CATCH002001001001001001 /* Catchup */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -423,6 +479,7 @@
 			isa = PBXGroup;
 			children = (
 				F20000010000000000000048 /* DiscoverView.swift */,
+				MODERN001001001001001001 /* DiscoverViewModern.swift */,
 			);
 			path = Home;
 			sourceTree = "<group>";
@@ -434,6 +491,8 @@
 				F20000010000000000000050 /* MediaDetailView.swift */,
 				F1F02715AFF7983496C923F7 /* SeasonView.swift */,
 				TVSHUB002002002002002002 /* TVShowsHubView.swift */,
+				MODERN002001001001001001 /* MoviesViewModern.swift */,
+				MODERN003001001001001001 /* TVShowsHubViewModern.swift */,
 			);
 			path = Media;
 			sourceTree = "<group>";
@@ -445,7 +504,10 @@
 				F20000010000000000000052 /* EPGGuideView.swift */,
 				6EA791837A6438C64CA5C8B4 /* Components */,
 				2F06418578FD320559B8F4E7 /* EPGGridView.swift */,
-				F20000010000000000000062 /* MultiviewView.swift */,
+				MODERN004001001001001001 /* EPGGridViewModern.swift */,
+				CHGRP001001001001001001 /* ChannelGroupsView.swift */,
+				MVPLR001001001001001001 /* MultiviewPlayerV2.swift */,
+				MVVIW001001001001001001 /* MultiviewView.swift */,
 			);
 			path = LiveTV;
 			sourceTree = "<group>";
@@ -582,9 +644,6 @@
 				F10000010000000000000011 /* MediaDTOs.swift in Sources */,
 				F10000010000000000000012 /* LiveTVDTOs.swift in Sources */,
 				F10000010000000000000013 /* MiscDTOs.swift in Sources */,
-				F10000010000000000000061 /* RemoteAccessDTOs.swift in Sources */,
-				F10000010000000000000062 /* MultiviewView.swift in Sources */,
-				F10000010000000000000063 /* MultiviewViewModel.swift in Sources */,
 				F10000010000000000000014 /* MediaItem.swift in Sources */,
 				F10000010000000000000015 /* Channel.swift in Sources */,
 				F10000010000000000000016 /* Program.swift in Sources */,
@@ -653,6 +712,13 @@
 				03111047A5312D603ADAD776 /* SortPickerSheet.swift in Sources */,
 				TVSHUB001001001001001001 /* TVShowsHubView.swift in Sources */,
 				TVSVM001001001001001001 /* TVShowsViewModel.swift in Sources */,
+				STATS011001001001001001 /* WatchStatsView.swift in Sources */,
+				TMPSS011001001001001001 /* TeamPassView.swift in Sources */,
+				ONLTR011001001001001001 /* OnLaterView.swift in Sources */,
+				CATCH011001001001001001 /* CatchupView.swift in Sources */,
+				CHGRP011001001001001001 /* ChannelGroupsView.swift in Sources */,
+				MVVIW011001001001001001 /* MultiviewView.swift in Sources */,
+				MVVMW011001001001001001 /* MultiviewViewModel.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

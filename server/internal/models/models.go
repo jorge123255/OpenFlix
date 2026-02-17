@@ -506,6 +506,13 @@ type Recording struct {
 	ChannelName     string     `gorm:"size:200" json:"channelName,omitempty"`    // Cached channel name
 	ChannelLogo     string     `gorm:"size:500" json:"channelLogo,omitempty"`    // Cached channel logo
 	ViewOffset      *int64     `json:"viewOffset,omitempty"`                     // Watch progress in ms
+	// Retry handling
+	RetryCount int    `gorm:"default:0" json:"retryCount"`
+	MaxRetries int    `gorm:"default:3" json:"maxRetries"`
+	LastError  string `gorm:"size:2000" json:"lastError,omitempty"`
+	// Quality preset
+	QualityPreset string `gorm:"size:20;default:original" json:"qualityPreset,omitempty"` // original, high, medium, low
+	TargetBitrate int    `gorm:"default:0" json:"targetBitrate,omitempty"`                // bps, 0 = copy
 	// Conflict handling
 	Priority        int        `gorm:"default:50" json:"priority"`               // 0-100, higher = more important
 	ConflictGroupID *uint      `gorm:"index" json:"conflictGroupId,omitempty"`   // Groups conflicting recordings
@@ -558,6 +565,15 @@ type CommercialSegment struct {
 	EndTime     float64 `json:"endTime"`    // seconds from beginning
 	Duration    float64 `json:"duration"`   // seconds
 	CreatedAt   time.Time
+}
+
+// RecordingWatchProgress tracks per-user watch progress for recordings
+type RecordingWatchProgress struct {
+	ID          uint      `gorm:"primaryKey" json:"id"`
+	UserID      uint      `gorm:"uniqueIndex:idx_user_recording" json:"userId"`
+	RecordingID uint      `gorm:"uniqueIndex:idx_user_recording" json:"recordingId"`
+	ViewOffset  int64     `json:"viewOffset"`  // Position in milliseconds
+	UpdatedAt   time.Time `json:"updatedAt"`
 }
 
 // ========== Archive/Catch-up Models ==========

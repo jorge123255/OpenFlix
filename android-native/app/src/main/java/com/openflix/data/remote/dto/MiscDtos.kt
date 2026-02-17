@@ -137,3 +137,59 @@ data class IntroMarkerDto(
     @SerializedName("end") val end: Long,
     @SerializedName("type") val type: String?  // intro, credits
 )
+
+// === Sports DTOs ===
+
+data class SportsScoresResponse(
+    @SerializedName("scores") val scores: List<SportsScoreDto>?
+)
+
+data class SportsScoreDto(
+    @SerializedName("game_id") val gameId: String,
+    @SerializedName("league") val league: String,
+    @SerializedName("home_team") val homeTeam: String,
+    @SerializedName("away_team") val awayTeam: String,
+    @SerializedName("home_score") val homeScore: Int?,
+    @SerializedName("away_score") val awayScore: Int?,
+    @SerializedName("status") val status: String,
+    @SerializedName("period") val period: String?,
+    @SerializedName("time_remaining") val timeRemaining: String?,
+    @SerializedName("start_time") val startTime: Long?
+)
+
+data class SportsOverlayDto(
+    @SerializedName("enabled") val enabled: Boolean,
+    @SerializedName("game") val game: SportsScoreDto?,
+    @SerializedName("channel_id") val channelId: String?
+)
+
+data class SportsFavoritesRequest(
+    @SerializedName("leagues") val leagues: List<String>?,
+    @SerializedName("teams") val teams: List<String>?
+)
+
+// === Commercial Skip DTOs ===
+
+data class CommercialsResponse(
+    @SerializedName("commercials") val commercials: List<CommercialMarkerDto>?,
+    @SerializedName("detection_status") val detectionStatus: String?
+)
+
+data class CommercialMarkerDto(
+    @SerializedName("id") val id: String,
+    @SerializedName("start_ms") val startMs: Long,
+    @SerializedName("end_ms") val endMs: Long,
+    @SerializedName("confidence") val confidence: Double?,
+    @SerializedName("source") val source: String?  // ai, manual
+)
+
+data class CommercialCheckResponse(
+    @SerializedName("in_commercial") val inCommercial: Boolean,
+    @SerializedName("commercial") val commercial: CommercialMarkerDto?,
+    @SerializedName("skip_to_ms") val skipToMs: Long?
+)
+
+data class MarkCommercialRequest(
+    @SerializedName("start_ms") val startMs: Long,
+    @SerializedName("end_ms") val endMs: Long
+)

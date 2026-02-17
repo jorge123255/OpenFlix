@@ -25,7 +25,6 @@ fun SettingsScreen(
     onNavigateToSubtitleStyling: () -> Unit,
     onNavigateToChannelLogoEditor: () -> Unit,
     onNavigateToRemoteMapping: () -> Unit,
-    onNavigateToRemoteStreaming: () -> Unit,
     onNavigateToAbout: () -> Unit,
     onNavigateToLogs: () -> Unit,
     onNavigateToSources: () -> Unit,
@@ -135,32 +134,6 @@ fun SettingsScreen(
                     title = "Remote Button Mapping",
                     subtitle = "Customize remote control actions",
                     onClick = onNavigateToRemoteMapping
-                )
-            }
-
-            item {
-                SettingsToggle(
-                    title = "Instant Channel Switch",
-                    subtitle = if (uiState.instantSwitchEnabled)
-                        "Pre-buffers nearby channels (${uiState.cachedStreamCount} cached)"
-                    else
-                        "Pre-buffer channels for instant switching",
-                    checked = uiState.instantSwitchEnabled,
-                    onCheckedChange = viewModel::setInstantSwitchEnabled
-                )
-            }
-
-            // Remote Streaming Section
-            item {
-                Spacer(modifier = Modifier.height(16.dp))
-                SettingsSectionHeader("Remote Access")
-            }
-
-            item {
-                SettingsItem(
-                    title = "Remote Streaming",
-                    subtitle = "Stream from anywhere via Tailscale",
-                    onClick = onNavigateToRemoteStreaming
                 )
             }
 

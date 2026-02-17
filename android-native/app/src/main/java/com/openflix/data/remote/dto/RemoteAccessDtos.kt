@@ -124,3 +124,22 @@ data class CachedStreamDto(
 data class InstantSwitchFavoritesRequest(
     @SerializedName("favorites") val favorites: List<String>
 )
+
+// Type aliases for API compatibility
+typealias RemoteAccessInstallInfoDto = TailscaleInstallInfoDto
+typealias RemoteAccessLoginUrlDto = TailscaleLoginUrlDto
+
+/**
+ * DTO for remote streaming quality response.
+ */
+data class RemoteStreamingQualityDto(
+    @SerializedName("quality") val quality: String,
+    @SerializedName("available_qualities") val availableQualities: List<String>?
+)
+
+/**
+ * Request to set remote streaming quality.
+ */
+data class SetStreamingQualityRequest(
+    @SerializedName("quality") val quality: String
+)

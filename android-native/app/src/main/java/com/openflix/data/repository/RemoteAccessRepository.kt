@@ -15,14 +15,17 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import timber.log.Timber
+import dagger.hilt.android.qualifiers.ApplicationContext
+import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
  * Repository for managing remote access and network connectivity.
  * Handles Tailscale integration and automatic network type detection.
  */
-class RemoteAccessRepository(
-    private val context: Context,
+@Singleton
+class RemoteAccessRepository @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val api: OpenFlixApi,
     private val preferencesManager: PreferencesManager
 ) {
@@ -220,24 +223,20 @@ class RemoteAccessRepository(
             val response = api.enableRemoteAccess()
             if (response.isSuccessful && response.body() != null) {
                 val dto = response.body()!!
-                if (dto.success && dto.status != null) {
-                    val status = RemoteAccessStatus(
-                        enabled = dto.status.enabled,
-                        connected = dto.status.connected,
-                        method = dto.status.method ?: "tailscale",
-                        tailscaleIp = dto.status.tailscaleIp,
-                        tailscaleHostname = dto.status.tailscaleHostname,
-                        magicDnsName = dto.status.magicDnsName,
-                        backendState = dto.status.backendState,
-                        loginUrl = dto.loginUrl ?: dto.status.loginUrl,
-                        lastSeen = dto.status.lastSeen,
-                        error = dto.status.error
-                    )
-                    _remoteAccessStatus.value = status
-                    Result.success(status)
-                } else {
-                    Result.failure(Exception(dto.message ?: "Failed to enable remote access"))
-                }
+                val status = RemoteAccessStatus(
+                    enabled = dto.enabled,
+                    connected = dto.connected,
+                    method = dto.method ?: "tailscale",
+                    tailscaleIp = dto.tailscaleIp,
+                    tailscaleHostname = dto.tailscaleHostname,
+                    magicDnsName = dto.magicDnsName,
+                    backendState = dto.backendState,
+                    loginUrl = dto.loginUrl,
+                    lastSeen = dto.lastSeen,
+                    error = dto.error
+                )
+                _remoteAccessStatus.value = status
+                Result.success(status)
             } else {
                 Result.failure(Exception("Failed to enable remote access: ${response.code()}"))
             }
@@ -253,26 +252,22 @@ class RemoteAccessRepository(
     suspend fun disableRemoteAccess(): Result<RemoteAccessStatus> {
         return try {
             val response = api.disableRemoteAccess()
-            if (response.isSuccessful && response.body() != null) {
-                val dto = response.body()!!
-                if (dto.success && dto.status != null) {
-                    val status = RemoteAccessStatus(
-                        enabled = dto.status.enabled,
-                        connected = dto.status.connected,
-                        method = dto.status.method ?: "tailscale",
-                        tailscaleIp = dto.status.tailscaleIp,
-                        tailscaleHostname = dto.status.tailscaleHostname,
-                        magicDnsName = dto.status.magicDnsName,
-                        backendState = dto.status.backendState,
-                        loginUrl = dto.status.loginUrl,
-                        lastSeen = dto.status.lastSeen,
-                        error = dto.status.error
-                    )
-                    _remoteAccessStatus.value = status
-                    Result.success(status)
-                } else {
-                    Result.failure(Exception(dto.message ?: "Failed to disable remote access"))
-                }
+            if (response.isSuccessful) {
+                // Disable returns Unit, create disabled status
+                val status = RemoteAccessStatus(
+                    enabled = false,
+                    connected = false,
+                    method = "tailscale",
+                    tailscaleIp = null,
+                    tailscaleHostname = null,
+                    magicDnsName = null,
+                    backendState = null,
+                    loginUrl = null,
+                    lastSeen = null,
+                    error = null
+                )
+                _remoteAccessStatus.value = status
+                Result.success(status)
             } else {
                 Result.failure(Exception("Failed to disable remote access: ${response.code()}"))
             }

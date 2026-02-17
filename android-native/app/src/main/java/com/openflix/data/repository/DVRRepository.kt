@@ -59,6 +59,10 @@ class DVRRepository @Inject constructor(
         endOffset: Int? = null
     ): Result<Recording> {
         return try {
+            // Use provided offsets, or fall back to user's padding preferences
+            val prePadding = startOffset ?: preferencesManager.dvrPrePadding.first()
+            val postPadding = endOffset ?: preferencesManager.dvrPostPadding.first()
+
             val request = RecordRequest(
                 channelId = channelId,
                 programId = programId,
@@ -66,8 +70,8 @@ class DVRRepository @Inject constructor(
                 endTime = endTime,
                 type = type,
                 seriesId = seriesId,
-                startOffset = startOffset,
-                endOffset = endOffset
+                startOffset = prePadding,
+                endOffset = postPadding
             )
             val response = api.scheduleRecording(request)
             if (response.isSuccessful && response.body() != null) {
@@ -182,6 +186,155 @@ class DVRRepository @Inject constructor(
         }
     }
 
+    suspend fun updateRecordingProgress(recordingId: String, positionMs: Long): Result<Unit> {
+        return try {
+            val request = UpdateRecordingProgressRequest(viewOffset = positionMs)
+            val response = api.updateRecordingProgress(recordingId, request)
+            if (response.isSuccessful) {
+                Result.success(Unit)
+            } else {
+                Result.failure(Exception("Failed to update progress"))
+            }
+        } catch (e: Exception) {
+            Timber.e(e, "Error updating recording progress")
+            Result.failure(e)
+        }
+    }
+
+    suspend fun recordFromProgram(
+        channelId: Int,
+        programId: Int,
+        seriesRecord: Boolean = false
+    ): Result<RecordFromProgramResponse> {
+        return try {
+            val request = RecordFromProgramRequest(
+                channelId = channelId,
+                programId = programId,
+                seriesRecord = seriesRecord
+            )
+            val response = api.recordFromProgram(request)
+            if (response.isSuccessful && response.body() != null) {
+                Result.success(response.body()!!)
+            } else {
+                Result.failure(Exception("Failed to schedule recording from program"))
+            }
+        } catch (e: Exception) {
+            Timber.e(e, "Error recording from program")
+            Result.failure(e)
+        }
+    }
+
+    // Series Rules
+    suspend fun getSeriesRules(): Result<List<SeriesRule>> {
+        return try {
+            val response = api.getSeriesRules()
+            if (response.isSuccessful && response.body() != null) {
+                val rules = response.body()!!.rules.map { it.toDomain() }
+                Result.success(rules)
+            } else {
+                Result.failure(Exception("Failed to get series rules"))
+            }
+        } catch (e: Exception) {
+            Timber.e(e, "Error getting series rules")
+            Result.failure(e)
+        }
+    }
+
+    suspend fun createSeriesRule(
+        title: String,
+        channelId: Long? = null,
+        keywords: String? = null,
+        keepCount: Int = 0,
+        prePadding: Int = 0,
+        postPadding: Int = 0
+    ): Result<SeriesRule> {
+        return try {
+            val request = CreateSeriesRuleRequest(
+                title = title,
+                channelId = channelId,
+                keywords = keywords,
+                keepCount = keepCount,
+                prePadding = prePadding,
+                postPadding = postPadding
+            )
+            val response = api.createSeriesRule(request)
+            if (response.isSuccessful && response.body() != null) {
+                Result.success(response.body()!!.toDomain())
+            } else {
+                Result.failure(Exception("Failed to create series rule"))
+            }
+        } catch (e: Exception) {
+            Timber.e(e, "Error creating series rule")
+            Result.failure(e)
+        }
+    }
+
+    suspend fun updateSeriesRule(
+        ruleId: Long,
+        enabled: Boolean? = null,
+        title: String? = null,
+        keepCount: Int? = null,
+        prePadding: Int? = null,
+        postPadding: Int? = null
+    ): Result<SeriesRule> {
+        return try {
+            val request = UpdateSeriesRuleRequest(
+                title = title,
+                keepCount = keepCount,
+                prePadding = prePadding,
+                postPadding = postPadding,
+                enabled = enabled
+            )
+            val response = api.updateSeriesRule(ruleId, request)
+            if (response.isSuccessful && response.body() != null) {
+                Result.success(response.body()!!.toDomain())
+            } else {
+                Result.failure(Exception("Failed to update series rule"))
+            }
+        } catch (e: Exception) {
+            Timber.e(e, "Error updating series rule")
+            Result.failure(e)
+        }
+    }
+
+    suspend fun deleteSeriesRule(ruleId: Long): Result<Unit> {
+        return try {
+            val response = api.deleteSeriesRule(ruleId)
+            if (response.isSuccessful) {
+                Result.success(Unit)
+            } else {
+                Result.failure(Exception("Failed to delete series rule"))
+            }
+        } catch (e: Exception) {
+            Timber.e(e, "Error deleting series rule")
+            Result.failure(e)
+        }
+    }
+
+    // Disk Usage
+    suspend fun getDiskUsage(): Result<DiskUsage> {
+        return try {
+            val response = api.getDiskUsage()
+            if (response.isSuccessful && response.body() != null) {
+                val data = response.body()!!
+                Result.success(DiskUsage(
+                    totalBytes = data.totalBytes,
+                    freeBytes = data.freeBytes,
+                    usedByDVR = data.usedByDVR,
+                    isLow = data.isLow,
+                    isCritical = data.isCritical,
+                    quotaGB = data.quotaGB,
+                    lowSpaceGB = data.lowSpaceGB
+                ))
+            } else {
+                Result.failure(Exception("Failed to get disk usage"))
+            }
+        } catch (e: Exception) {
+            Timber.e(e, "Error getting disk usage")
+            Result.failure(e)
+        }
+    }
+
     // Conversion extensions
     private fun RecordingDto.toDomain() = Recording(
         id = id.toString(),
@@ -250,5 +403,18 @@ class DVRRepository @Inject constructor(
         isHealthy = isHealthy,
         isFailed = isFailed,
         failureReason = failureReason
+    )
+
+    private fun SeriesRuleDto.toDomain() = SeriesRule(
+        id = id,
+        title = title,
+        channelId = channelId,
+        keywords = keywords,
+        timeSlot = timeSlot,
+        daysOfWeek = daysOfWeek,
+        keepCount = keepCount,
+        prePadding = prePadding,
+        postPadding = postPadding,
+        enabled = enabled
     )
 }

@@ -1,5 +1,7 @@
 package com.openflix.data.discovery
 
+import android.content.Context
+import android.net.wifi.WifiManager
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -14,6 +16,7 @@ import java.net.SocketTimeoutException
 import java.net.URL
 import javax.inject.Inject
 import javax.inject.Singleton
+import dagger.hilt.android.qualifiers.ApplicationContext
 
 /**
  * Service for discovering OpenFlix servers on the local network.
@@ -21,7 +24,9 @@ import javax.inject.Singleton
  * Also probes known addresses via HTTP for emulator compatibility.
  */
 @Singleton
-class ServerDiscoveryService @Inject constructor() {
+class ServerDiscoveryService @Inject constructor(
+    @ApplicationContext private val context: Context
+) {
 
     companion object {
         const val DISCOVERY_PORT = 32412  // Port to send discovery requests
@@ -30,7 +35,7 @@ class ServerDiscoveryService @Inject constructor() {
         const val RESPONSE_MAGIC = "OPENFLIX_SERVER"
         const val DISCOVERY_TIMEOUT = 3000  // 3 seconds
         const val BROADCAST_LISTEN_TIMEOUT = 5000  // 5 seconds
-        const val HTTP_TIMEOUT = 2000  // 2 seconds for HTTP probes
+        const val HTTP_TIMEOUT = 3000  // 3 seconds for HTTP probes
 
         // Known addresses to probe (for emulator and common setups)
         // Network IPs are prioritized over emulator localhost (10.0.2.2)
@@ -71,52 +76,72 @@ class ServerDiscoveryService @Inject constructor() {
         _isDiscovering.value = true
         val servers = mutableListOf<DiscoveredServer>()
 
-        // Try UDP broadcast first
+        // Acquire multicast lock for better UDP broadcast support on Android
+        val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as? WifiManager
+        val multicastLock = wifiManager?.createMulticastLock("openflix_discovery")
         try {
-            val socket = DatagramSocket()
-            socket.broadcast = true
-            socket.soTimeout = DISCOVERY_TIMEOUT
+            multicastLock?.setReferenceCounted(true)
+            multicastLock?.acquire()
 
-            val broadcastAddress = InetAddress.getByName("255.255.255.255")
-            val message = DISCOVERY_MAGIC.toByteArray()
-            val packet = DatagramPacket(
-                message,
-                message.size,
-                broadcastAddress,
-                DISCOVERY_PORT
-            )
+            // Try UDP broadcast first
+            try {
+                val socket = DatagramSocket()
+                socket.broadcast = true
+                socket.soTimeout = DISCOVERY_TIMEOUT
 
-            Timber.d("Sending discovery broadcast...")
-            socket.send(packet)
+                val broadcastAddress = InetAddress.getByName("255.255.255.255")
+                val message = DISCOVERY_MAGIC.toByteArray()
+                val packet = DatagramPacket(
+                    message,
+                    message.size,
+                    broadcastAddress,
+                    DISCOVERY_PORT
+                )
 
-            val buffer = ByteArray(4096)
-            val receivePacket = DatagramPacket(buffer, buffer.size)
+                Timber.d("Sending discovery broadcast...")
+                socket.send(packet)
 
-            val startTime = System.currentTimeMillis()
-            while (System.currentTimeMillis() - startTime < DISCOVERY_TIMEOUT) {
-                try {
-                    socket.receive(receivePacket)
-                    val response = String(buffer, 0, receivePacket.length)
+                val buffer = ByteArray(4096)
+                val receivePacket = DatagramPacket(buffer, buffer.size)
 
-                    parseServerResponse(response, receivePacket.address.hostAddress)?.let { server ->
-                        if (servers.none { it.machineId == server.machineId }) {
-                            servers.add(server)
-                            Timber.d("Discovered server via UDP: ${server.name} at ${server.host}:${server.port}")
+                val startTime = System.currentTimeMillis()
+                while (System.currentTimeMillis() - startTime < DISCOVERY_TIMEOUT) {
+                    try {
+                        socket.receive(receivePacket)
+                        val response = String(buffer, 0, receivePacket.length)
+
+                        parseServerResponse(response, receivePacket.address.hostAddress)?.let { server ->
+                            if (servers.none { it.machineId == server.machineId }) {
+                                servers.add(server)
+                                Timber.d("Discovered server via UDP: ${server.name} at ${server.host}:${server.port}")
+                            }
                         }
+                    } catch (e: SocketTimeoutException) {
+                        break
                     }
-                } catch (e: SocketTimeoutException) {
-                    break
                 }
-            }
 
-            socket.close()
-        } catch (e: Exception) {
-            Timber.e(e, "UDP discovery failed")
+                socket.close()
+            } catch (e: Exception) {
+                Timber.e(e, "UDP discovery failed")
+            }
+        } finally {
+            if (multicastLock?.isHeld == true) {
+                multicastLock.release()
+            }
         }
 
-        // Also probe known addresses via HTTP (for emulator compatibility)
-        Timber.d("Probing known addresses via HTTP...")
-        val probeJobs = PROBE_ADDRESSES.map { address ->
+        // Build probe list: known addresses + subnet scan of device's own IP
+        val probeAddresses = PROBE_ADDRESSES.toMutableList()
+        getDeviceSubnetAddresses()?.let { subnetAddrs ->
+            subnetAddrs.forEach { addr ->
+                if (addr !in probeAddresses) probeAddresses.add(addr)
+            }
+        }
+
+        // Probe addresses via HTTP
+        Timber.d("Probing ${probeAddresses.size} addresses via HTTP...")
+        val probeJobs = probeAddresses.map { address ->
             async {
                 probeServerHttp(address, DEFAULT_PORT)
             }
@@ -145,6 +170,39 @@ class ServerDiscoveryService @Inject constructor() {
         _discoveredServers.value = finalServers
         _isDiscovering.value = false
         finalServers
+    }
+
+    /**
+     * Get common addresses on the device's subnet to probe.
+     * Returns gateway + a few common server IPs on the same /24 subnet.
+     */
+    private fun getDeviceSubnetAddresses(): List<String>? {
+        return try {
+            val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as? WifiManager
+            val wifiInfo = wifiManager?.connectionInfo ?: return null
+            val ipAddress = wifiInfo.ipAddress
+            if (ipAddress == 0) return null
+
+            // Convert int IP to bytes (little-endian on Android)
+            val subnet = "${ipAddress and 0xFF}.${(ipAddress shr 8) and 0xFF}.${(ipAddress shr 16) and 0xFF}"
+            val deviceLastOctet = (ipAddress shr 24) and 0xFF
+
+            // Probe common server addresses on same subnet
+            val addresses = mutableListOf<String>()
+            // Gateway is often .1
+            addresses.add("$subnet.1")
+            // Common server IPs
+            for (i in listOf(2, 10, 50, 100, 150, 180, 185, 200, 250, 254)) {
+                if (i != deviceLastOctet) {
+                    addresses.add("$subnet.$i")
+                }
+            }
+            Timber.d("Device subnet: $subnet.x - will probe ${addresses.size} addresses")
+            addresses
+        } catch (e: Exception) {
+            Timber.w(e, "Failed to determine device subnet")
+            null
+        }
     }
 
     /**

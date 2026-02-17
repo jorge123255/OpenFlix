@@ -1,6 +1,7 @@
 package com.openflix.data.repository
 
 import com.openflix.data.remote.api.OpenFlixApi
+import com.openflix.data.remote.dto.MarkCommercialRequest
 import timber.log.Timber
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -55,17 +56,28 @@ class CommercialSkipRepository @Inject constructor(
             val response = api.getCommercials(recordingId)
             if (response.isSuccessful) {
                 val body = response.body()
-                val detected = body?.get("detected") as? Boolean ?: false
-                if (detected) {
-                    val dataMap = body?.get("data") as? Map<*, *>
-                    val data = parseCommercialData(dataMap)
-                    if (data != null) {
-                        commercialDataCache[recordingId] = data
-                    }
-                    Result.success(data)
-                } else {
-                    Result.success(null)
-                }
+                val commercials = body?.commercials?.map { dto ->
+                    CommercialBreak(
+                        startTime = dto.startMs / 1000.0,
+                        endTime = dto.endMs / 1000.0,
+                        duration = (dto.endMs - dto.startMs) / 1000.0,
+                        confidence = dto.confidence ?: 1.0,
+                        skipped = false,
+                        userMarked = dto.source == "manual"
+                    )
+                } ?: emptyList()
+                val totalDuration = commercials.sumOf { it.duration }
+                val avgConfidence = commercials.map { it.confidence }.average().takeIf { !it.isNaN() } ?: 0.0
+                val data = CommercialData(
+                    recordingId = recordingId,
+                    duration = totalDuration,
+                    commercials = commercials,
+                    method = body?.detectionStatus ?: "unknown",
+                    confidence = avgConfidence,
+                    userCorrected = commercials.any { it.userMarked }
+                )
+                commercialDataCache[recordingId] = data
+                Result.success(data)
             } else {
                 Result.failure(Exception("Failed to get commercials"))
             }
@@ -93,12 +105,13 @@ class CommercialSkipRepository @Inject constructor(
 
         // Check server
         return try {
-            val response = api.checkCommercialPosition(recordingId, position)
+            val positionMs = (position * 1000).toLong()
+            val response = api.checkCommercialPosition(recordingId, positionMs)
             if (response.isSuccessful) {
                 val body = response.body()
                 val result = SkipCheckResult(
-                    shouldSkip = body?.get("should_skip") as? Boolean ?: false,
-                    skipTo = (body?.get("skip_to") as? Number)?.toDouble() ?: 0.0,
+                    shouldSkip = body?.inCommercial ?: false,
+                    skipTo = (body?.skipToMs ?: 0L) / 1000.0,
                     position = position
                 )
                 Result.success(result)
@@ -111,12 +124,9 @@ class CommercialSkipRepository @Inject constructor(
         }
     }
 
-    suspend fun triggerDetection(recordingId: String, videoPath: String): Result<Unit> {
+    suspend fun triggerDetection(recordingId: String): Result<Unit> {
         return try {
-            val response = api.detectCommercials(mapOf(
-                "recording_id" to recordingId,
-                "video_path" to videoPath
-            ))
+            val response = api.detectCommercials(recordingId)
             if (response.isSuccessful) {
                 Result.success(Unit)
             } else {
@@ -130,11 +140,9 @@ class CommercialSkipRepository @Inject constructor(
 
     suspend fun markAsCommercial(recordingId: String, start: Double, end: Double): Result<Unit> {
         return try {
-            val response = api.markCommercial(mapOf(
-                "recording_id" to recordingId,
-                "start_time" to start,
-                "end_time" to end
-            ))
+            val startMs = (start * 1000).toLong()
+            val endMs = (end * 1000).toLong()
+            val response = api.markCommercial(recordingId, MarkCommercialRequest(startMs, endMs))
             if (response.isSuccessful) {
                 // Invalidate cache
                 commercialDataCache.remove(recordingId)
@@ -148,16 +156,12 @@ class CommercialSkipRepository @Inject constructor(
         }
     }
 
-    suspend fun unmarkCommercial(recordingId: String, start: Double, end: Double): Result<Unit> {
+    suspend fun unmarkCommercial(mediaId: String, commercialId: String): Result<Unit> {
         return try {
-            val response = api.unmarkCommercial(mapOf(
-                "recording_id" to recordingId,
-                "start_time" to start,
-                "end_time" to end
-            ))
+            val response = api.unmarkCommercial(mediaId, commercialId)
             if (response.isSuccessful) {
                 // Invalidate cache
-                commercialDataCache.remove(recordingId)
+                commercialDataCache.remove(mediaId)
                 Result.success(Unit)
             } else {
                 Result.failure(Exception("Failed to unmark commercial"))

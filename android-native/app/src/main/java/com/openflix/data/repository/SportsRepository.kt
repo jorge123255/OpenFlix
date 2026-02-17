@@ -1,6 +1,7 @@
 package com.openflix.data.repository
 
 import com.openflix.data.remote.api.OpenFlixApi
+import com.openflix.data.remote.dto.SportsFavoritesRequest
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -58,14 +59,45 @@ class SportsRepository @Inject constructor(
     private val _favoriteTeams = MutableStateFlow<List<String>>(emptyList())
     val favoriteTeams: StateFlow<List<String>> = _favoriteTeams.asStateFlow()
 
-    suspend fun fetchScores(sport: String = "all"): Result<List<LiveGame>> {
+    suspend fun fetchScores(league: String? = null, team: String? = null): Result<List<LiveGame>> {
         return try {
-            val response = api.getSportsScores(sport)
+            val response = api.getSportsScores(league, team)
             if (response.isSuccessful) {
                 val body = response.body()
-                val games = body?.get("games") as? List<*>
-                // Parse games from response
-                val parsedGames = parseGames(games)
+                val parsedGames = body?.scores?.map { dto ->
+                    LiveGame(
+                        id = dto.gameId,
+                        sport = dto.league,
+                        league = dto.league,
+                        status = dto.status,
+                        homeTeam = Team(
+                            code = dto.homeTeam,
+                            name = dto.homeTeam,
+                            fullName = dto.homeTeam,
+                            logo = null,
+                            record = null,
+                            rank = null,
+                            conference = null
+                        ),
+                        awayTeam = Team(
+                            code = dto.awayTeam,
+                            name = dto.awayTeam,
+                            fullName = dto.awayTeam,
+                            logo = null,
+                            record = null,
+                            rank = null,
+                            conference = null
+                        ),
+                        homeScore = dto.homeScore ?: 0,
+                        awayScore = dto.awayScore ?: 0,
+                        period = dto.period ?: "",
+                        clock = dto.timeRemaining ?: "",
+                        isClose = false,
+                        isRedZone = false,
+                        possession = null,
+                        broadcastInfo = null
+                    )
+                } ?: emptyList()
                 _games.value = parsedGames
                 Result.success(parsedGames)
             } else {
@@ -77,19 +109,50 @@ class SportsRepository @Inject constructor(
         }
     }
 
-    suspend fun fetchOverlay(maxGames: Int = 5): Result<OverlayData> {
+    suspend fun fetchOverlay(channelId: String): Result<OverlayData> {
         return try {
-            val response = api.getSportsOverlay(maxGames)
+            val response = api.getSportsOverlay(channelId)
             if (response.isSuccessful) {
                 val body = response.body()
-                val overlay = body?.get("overlay") as? Map<*, *>
-                val games = parseGames(overlay?.get("games") as? List<*>)
+                val game = body?.game?.let { dto ->
+                    LiveGame(
+                        id = dto.gameId,
+                        sport = dto.league,
+                        league = dto.league,
+                        status = dto.status,
+                        homeTeam = Team(
+                            code = dto.homeTeam,
+                            name = dto.homeTeam,
+                            fullName = dto.homeTeam,
+                            logo = null,
+                            record = null,
+                            rank = null,
+                            conference = null
+                        ),
+                        awayTeam = Team(
+                            code = dto.awayTeam,
+                            name = dto.awayTeam,
+                            fullName = dto.awayTeam,
+                            logo = null,
+                            record = null,
+                            rank = null,
+                            conference = null
+                        ),
+                        homeScore = dto.homeScore ?: 0,
+                        awayScore = dto.awayScore ?: 0,
+                        period = dto.period ?: "",
+                        clock = dto.timeRemaining ?: "",
+                        isClose = false,
+                        isRedZone = false,
+                        possession = null,
+                        broadcastInfo = null
+                    )
+                }
                 val data = OverlayData(
-                    games = games,
-                    lastUpdated = (overlay?.get("last_updated") as? Number)?.toLong(),
-                    favoriteCount = (overlay?.get("favorite_count") as? Number)?.toInt() ?: 0
+                    games = listOfNotNull(game),
+                    lastUpdated = System.currentTimeMillis(),
+                    favoriteCount = 0
                 )
-                _games.value = games
                 Result.success(data)
             } else {
                 Result.failure(Exception("Failed to fetch overlay"))
@@ -100,9 +163,9 @@ class SportsRepository @Inject constructor(
         }
     }
 
-    suspend fun setFavorites(teams: List<String>): Result<Unit> {
+    suspend fun setFavorites(teams: List<String>, leagues: List<String>? = null): Result<Unit> {
         return try {
-            val response = api.setSportsFavorites(mapOf("teams" to teams))
+            val response = api.setSportsFavorites(SportsFavoritesRequest(leagues, teams))
             if (response.isSuccessful) {
                 _favoriteTeams.value = teams
                 Result.success(Unit)

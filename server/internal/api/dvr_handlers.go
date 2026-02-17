@@ -5,11 +5,13 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/openflix/openflix-server/internal/dvr"
 	"github.com/openflix/openflix-server/internal/logger"
 	"github.com/openflix/openflix-server/internal/models"
 	"gorm.io/gorm"
@@ -46,7 +48,7 @@ func toRecordingResponse(r models.Recording) RecordingResponse {
 	}
 }
 
-// getRecordings returns all recordings for the user
+// getRecordings returns all recordings for the user with search/filter/pagination support
 func (s *Server) getRecordings(c *gin.Context) {
 	userID := c.GetUint("userID")
 	isAdmin := c.GetBool("isAdmin")
@@ -64,6 +66,63 @@ func (s *Server) getRecordings(c *gin.Context) {
 		query = query.Where("status = ?", status)
 	}
 
+	// Search by title (LIKE)
+	if search := c.Query("search"); search != "" {
+		query = query.Where("title LIKE ? OR description LIKE ?", "%"+search+"%", "%"+search+"%")
+	}
+
+	// Filter by date range
+	if after := c.Query("after"); after != "" {
+		if t, err := time.Parse(time.RFC3339, after); err == nil {
+			query = query.Where("start_time >= ?", t)
+		}
+	}
+	if before := c.Query("before"); before != "" {
+		if t, err := time.Parse(time.RFC3339, before); err == nil {
+			query = query.Where("start_time <= ?", t)
+		}
+	}
+
+	// Filter by channel
+	if channelID := c.Query("channelId"); channelID != "" {
+		if id, err := strconv.ParseUint(channelID, 10, 32); err == nil {
+			query = query.Where("channel_id = ?", id)
+		}
+	}
+
+	// Filter by category
+	if category := c.Query("category"); category != "" {
+		query = query.Where("category = ?", category)
+	}
+
+	// Filter series only
+	if c.Query("seriesOnly") == "true" {
+		query = query.Where("series_record = ? OR series_rule_id IS NOT NULL", true)
+	}
+
+	// Get total count before pagination
+	var totalCount int64
+	countQuery := *query
+	countQuery.Count(&totalCount)
+
+	// Pagination
+	page := 1
+	pageSize := 0 // 0 means no pagination (return all)
+	if ps := c.Query("pageSize"); ps != "" {
+		if v, err := strconv.Atoi(ps); err == nil && v > 0 {
+			pageSize = v
+		}
+	}
+	if p := c.Query("page"); p != "" {
+		if v, err := strconv.Atoi(p); err == nil && v > 0 {
+			page = v
+		}
+	}
+	if pageSize > 0 {
+		offset := (page - 1) * pageSize
+		query = query.Offset(offset).Limit(pageSize)
+	}
+
 	var recordings []models.Recording
 	if err := query.Preload("Commercials").Order("start_time DESC").Find(&recordings).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch recordings"})
@@ -76,7 +135,14 @@ func (s *Server) getRecordings(c *gin.Context) {
 		responses[i] = toRecordingResponse(r)
 	}
 
-	c.JSON(http.StatusOK, gin.H{"recordings": responses})
+	result := gin.H{"recordings": responses, "totalCount": totalCount}
+	if pageSize > 0 {
+		result["page"] = page
+		result["pageSize"] = pageSize
+		result["totalPages"] = (totalCount + int64(pageSize) - 1) / int64(pageSize)
+	}
+
+	c.JSON(http.StatusOK, result)
 }
 
 // scheduleRecording creates a new recording
@@ -84,15 +150,16 @@ func (s *Server) scheduleRecording(c *gin.Context) {
 	userID := c.GetUint("userID")
 
 	var req struct {
-		ChannelID   uint      `json:"channelId" binding:"required"`
-		ProgramID   *uint     `json:"programId"`
-		Title       string    `json:"title" binding:"required"`
-		Description string    `json:"description"`
-		StartTime   time.Time `json:"startTime" binding:"required"`
-		EndTime     time.Time `json:"endTime" binding:"required"`
-		Category    string    `json:"category"`
-		EpisodeNum  string    `json:"episodeNum"`
-		Priority    *int      `json:"priority"` // 0-100, higher = more important (default 50)
+		ChannelID     uint      `json:"channelId" binding:"required"`
+		ProgramID     *uint     `json:"programId"`
+		Title         string    `json:"title" binding:"required"`
+		Description   string    `json:"description"`
+		StartTime     time.Time `json:"startTime" binding:"required"`
+		EndTime       time.Time `json:"endTime" binding:"required"`
+		Category      string    `json:"category"`
+		EpisodeNum    string    `json:"episodeNum"`
+		Priority      *int      `json:"priority"`      // 0-100, higher = more important (default 50)
+		QualityPreset string    `json:"qualityPreset"` // original, high, medium, low
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -121,20 +188,30 @@ func (s *Server) scheduleRecording(c *gin.Context) {
 		priority = *req.Priority
 	}
 
+	qualityPreset := req.QualityPreset
+	if qualityPreset == "" {
+		qualityPreset = s.config.DVR.DefaultQuality
+		if qualityPreset == "" {
+			qualityPreset = "original"
+		}
+	}
+
 	recording := models.Recording{
-		UserID:      userID,
-		ChannelID:   req.ChannelID,
-		ProgramID:   req.ProgramID,
-		Title:       req.Title,
-		Description: req.Description,
-		StartTime:   req.StartTime,
-		EndTime:     req.EndTime,
-		Status:      "scheduled",
-		Category:    req.Category,
-		EpisodeNum:  req.EpisodeNum,
-		ChannelName: channel.Name,
-		ChannelLogo: channel.Logo,
-		Priority:    priority,
+		UserID:        userID,
+		ChannelID:     req.ChannelID,
+		ProgramID:     req.ProgramID,
+		Title:         req.Title,
+		Description:   req.Description,
+		StartTime:     req.StartTime,
+		EndTime:       req.EndTime,
+		Status:        "scheduled",
+		Category:      req.Category,
+		EpisodeNum:    req.EpisodeNum,
+		ChannelName:   channel.Name,
+		ChannelLogo:   channel.Logo,
+		Priority:      priority,
+		QualityPreset: qualityPreset,
+		MaxRetries:    3,
 	}
 
 	if err := s.db.Create(&recording).Error; err != nil {
@@ -372,6 +449,54 @@ func (s *Server) deleteRecording(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Recording deleted"})
+}
+
+// updateRecording updates a recording's metadata (title, description, category)
+func (s *Server) updateRecording(c *gin.Context) {
+	userID := c.GetUint("userID")
+	isAdmin := c.GetBool("isAdmin")
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid recording ID"})
+		return
+	}
+
+	var recording models.Recording
+	query := s.db.Where("id = ?", id)
+	if !isAdmin {
+		query = query.Where("user_id IN ?", []uint{userID, 0})
+	}
+	if err := query.First(&recording).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Recording not found"})
+		return
+	}
+
+	var req struct {
+		Title       *string `json:"title"`
+		Description *string `json:"description"`
+		Category    *string `json:"category"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if req.Title != nil {
+		recording.Title = *req.Title
+	}
+	if req.Description != nil {
+		recording.Description = *req.Description
+	}
+	if req.Category != nil {
+		recording.Category = *req.Category
+	}
+
+	if err := s.db.Save(&recording).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update recording"})
+		return
+	}
+
+	c.JSON(http.StatusOK, recording)
 }
 
 // updateRecordingPriority updates the priority of a scheduled recording
@@ -1234,6 +1359,51 @@ func (s *Server) resolveConflict(c *gin.Context) {
 	})
 }
 
+// getDiskUsage returns disk space information for DVR recordings
+func (s *Server) getDiskUsage(c *gin.Context) {
+	if s.recorder == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "DVR recorder not available"})
+		return
+	}
+
+	recordingsDir := s.config.DVR.RecordingDir
+	if recordingsDir == "" {
+		recordingsDir = filepath.Join(os.Getenv("HOME"), ".openflix", "recordings")
+	}
+
+	diskConfig := dvr.DiskSpaceConfig{
+		QuotaGB:    s.config.DVR.DiskQuotaGB,
+		LowSpaceGB: s.config.DVR.LowSpaceGB,
+	}
+
+	usage, err := dvr.GetDiskUsage(recordingsDir, diskConfig)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Failed to get disk usage: %v", err)})
+		return
+	}
+
+	c.JSON(http.StatusOK, usage)
+}
+
+// getQualityPresets returns available recording quality presets
+func (s *Server) getQualityPresets(c *gin.Context) {
+	presets := []gin.H{
+		{"id": "original", "name": "Original", "description": "Copy stream without re-encoding", "bitrate": "varies"},
+		{"id": "high", "name": "High", "description": "Re-encode at 8 Mbps", "bitrate": "8 Mbps"},
+		{"id": "medium", "name": "Medium", "description": "Re-encode at 4 Mbps", "bitrate": "4 Mbps"},
+		{"id": "low", "name": "Low", "description": "Re-encode at 2 Mbps", "bitrate": "2 Mbps"},
+	}
+	defaultQuality := s.config.DVR.DefaultQuality
+	if defaultQuality == "" {
+		defaultQuality = "original"
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"presets":        presets,
+		"defaultPreset":  defaultQuality,
+	})
+}
+
 // validateRecordingStream validates a channel's stream before scheduling a recording
 func (s *Server) validateRecordingStream(c *gin.Context) {
 	// Can validate by channel ID or direct URL
@@ -1276,7 +1446,7 @@ func (s *Server) validateRecordingStream(c *gin.Context) {
 	c.JSON(http.StatusOK, result)
 }
 
-// updateRecordingProgress updates the playback position of a recording
+// updateRecordingProgress updates the playback position of a recording (per-user)
 func (s *Server) updateRecordingProgress(c *gin.Context) {
 	userID := c.GetUint("userID")
 
@@ -1294,21 +1464,36 @@ func (s *Server) updateRecordingProgress(c *gin.Context) {
 		return
 	}
 
+	// Verify recording exists and user has access
 	var recording models.Recording
-	if err := s.db.Where("id = ? AND user_id = ?", id, userID).First(&recording).Error; err != nil {
+	if err := s.db.Where("id = ? AND user_id IN ?", id, []uint{userID, 0}).First(&recording).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Recording not found"})
 		return
 	}
 
-	// Update the view offset
-	recording.ViewOffset = &req.ViewOffset
-	if err := s.db.Save(&recording).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update recording"})
-		return
+	// Upsert per-user watch progress
+	progress := models.RecordingWatchProgress{
+		UserID:      userID,
+		RecordingID: uint(id),
+		ViewOffset:  req.ViewOffset,
 	}
+	result := s.db.Where("user_id = ? AND recording_id = ?", userID, id).First(&models.RecordingWatchProgress{})
+	if result.Error != nil {
+		// Create new
+		s.db.Create(&progress)
+	} else {
+		// Update existing
+		s.db.Model(&models.RecordingWatchProgress{}).
+			Where("user_id = ? AND recording_id = ?", userID, id).
+			Update("view_offset", req.ViewOffset)
+	}
+
+	// Also update the Recording.ViewOffset for backwards compatibility
+	recording.ViewOffset = &req.ViewOffset
+	s.db.Save(&recording)
 
 	c.JSON(http.StatusOK, gin.H{
 		"id":         recording.ID,
-		"viewOffset": recording.ViewOffset,
+		"viewOffset": req.ViewOffset,
 	})
 }

@@ -61,7 +61,9 @@ struct DiscoverView: View {
                             showDetail = true
                         },
                         onWatchlist: { item in
-                            // TODO: Add to watchlist
+                            Task {
+                                await viewModel.toggleWatchlist(for: item)
+                            }
                         }
                     )
                     .focusSection()

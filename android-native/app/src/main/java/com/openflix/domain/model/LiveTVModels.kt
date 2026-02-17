@@ -343,6 +343,52 @@ data class RecordingStatsData(
     }
 }
 
+// ============ Series Rules ============
+
+data class SeriesRule(
+    val id: Long,
+    val title: String,
+    val channelId: Long?,
+    val keywords: String?,
+    val timeSlot: String?,
+    val daysOfWeek: String?,
+    val keepCount: Int,
+    val prePadding: Int,
+    val postPadding: Int,
+    val enabled: Boolean
+)
+
+// ============ Disk Usage ============
+
+data class DiskUsage(
+    val totalBytes: Long,
+    val freeBytes: Long,
+    val usedByDVR: Long,
+    val isLow: Boolean,
+    val isCritical: Boolean,
+    val quotaGB: Double,
+    val lowSpaceGB: Double
+) {
+    val usedByDVRFormatted: String
+        get() = formatBytes(usedByDVR)
+    val freeBytesFormatted: String
+        get() = formatBytes(freeBytes)
+    val totalBytesFormatted: String
+        get() = formatBytes(totalBytes)
+
+    private fun formatBytes(bytes: Long): String {
+        if (bytes <= 0) return "0 B"
+        val units = arrayOf("B", "KB", "MB", "GB", "TB")
+        var value = bytes.toDouble()
+        var unitIndex = 0
+        while (value >= 1024 && unitIndex < units.size - 1) {
+            value /= 1024
+            unitIndex++
+        }
+        return "%.1f %s".format(value, units[unitIndex])
+    }
+}
+
 // ============ Time-Shift / Catch-Up TV Models ============
 
 data class CatchUpProgram(

@@ -465,6 +465,80 @@ data class ResolveConflictRequest(
     @SerializedName("cancelRecordingId") val cancelRecordingId: Long
 )
 
+// Update Recording Progress
+data class UpdateRecordingProgressRequest(
+    @SerializedName("viewOffset") val viewOffset: Long  // Position in milliseconds
+)
+
+// Record from Program
+data class RecordFromProgramRequest(
+    @SerializedName("channelId") val channelId: Int,
+    @SerializedName("programId") val programId: Int,
+    @SerializedName("seriesRecord") val seriesRecord: Boolean = false,
+    @SerializedName("priority") val priority: Int? = null
+)
+
+data class RecordFromProgramResponse(
+    @SerializedName("id") val id: Long,
+    @SerializedName("title") val title: String,
+    @SerializedName("status") val status: String,
+    @SerializedName("hasConflict") val hasConflict: Boolean,
+    @SerializedName("seriesRecord") val seriesRecord: Boolean?
+)
+
+// Series Rules
+data class SeriesRuleDto(
+    @SerializedName("id") val id: Long,
+    @SerializedName("userId") val userId: Long?,
+    @SerializedName("title") val title: String,
+    @SerializedName("channelId") val channelId: Long?,
+    @SerializedName("keywords") val keywords: String?,
+    @SerializedName("timeSlot") val timeSlot: String?,
+    @SerializedName("daysOfWeek") val daysOfWeek: String?,
+    @SerializedName("keepCount") val keepCount: Int,
+    @SerializedName("prePadding") val prePadding: Int,
+    @SerializedName("postPadding") val postPadding: Int,
+    @SerializedName("enabled") val enabled: Boolean,
+    @SerializedName("createdAt") val createdAt: String?,
+    @SerializedName("updatedAt") val updatedAt: String?
+)
+
+data class SeriesRulesResponse(
+    @SerializedName("rules") val rules: List<SeriesRuleDto>
+)
+
+data class CreateSeriesRuleRequest(
+    @SerializedName("title") val title: String,
+    @SerializedName("channelId") val channelId: Long? = null,
+    @SerializedName("keywords") val keywords: String? = null,
+    @SerializedName("timeSlot") val timeSlot: String? = null,
+    @SerializedName("daysOfWeek") val daysOfWeek: String? = null,
+    @SerializedName("keepCount") val keepCount: Int = 0,
+    @SerializedName("prePadding") val prePadding: Int = 0,
+    @SerializedName("postPadding") val postPadding: Int = 0
+)
+
+data class UpdateSeriesRuleRequest(
+    @SerializedName("title") val title: String? = null,
+    @SerializedName("channelId") val channelId: Long? = null,
+    @SerializedName("keywords") val keywords: String? = null,
+    @SerializedName("keepCount") val keepCount: Int? = null,
+    @SerializedName("prePadding") val prePadding: Int? = null,
+    @SerializedName("postPadding") val postPadding: Int? = null,
+    @SerializedName("enabled") val enabled: Boolean? = null
+)
+
+// Disk Usage
+data class DiskUsageResponse(
+    @SerializedName("totalBytes") val totalBytes: Long,
+    @SerializedName("freeBytes") val freeBytes: Long,
+    @SerializedName("usedByDVR") val usedByDVR: Long,
+    @SerializedName("isLow") val isLow: Boolean,
+    @SerializedName("isCritical") val isCritical: Boolean,
+    @SerializedName("quotaGB") val quotaGB: Double,
+    @SerializedName("lowSpaceGB") val lowSpaceGB: Double
+)
+
 // Live Recording Stats DTOs
 data class RecordingStatsResponse(
     @SerializedName("stats") val stats: List<RecordingStatsDto>,
