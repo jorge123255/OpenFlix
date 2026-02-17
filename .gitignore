@@ -116,6 +116,10 @@ android-native/*.jks
 *.keystore
 *.jks
 
+# Google Play service account key (secret)
+android-native/app/play-service-account.json
+**/play-service-account.json
+
 # Claude Code artifacts
 .claude/
 currentwork.txt

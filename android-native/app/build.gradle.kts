@@ -6,6 +6,7 @@ plugins {
     id("org.jetbrains.kotlin.plugin.serialization")
     id("com.google.dagger.hilt.android")
     id("com.google.devtools.ksp")
+    id("com.github.triplet.play")
 }
 
 // Load keystore properties
@@ -23,8 +24,8 @@ android {
         applicationId = "com.openflix.tv"
         minSdk = 26
         targetSdk = 35
-        versionCode = 3
-        versionName = "1.1.0"
+        versionCode = 4
+        versionName = "1.2.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -84,6 +85,16 @@ android {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
     }
+}
+
+play {
+    // Service account key for Google Play Developer API
+    serviceAccountCredentials.set(file("play-service-account.json"))
+    // Default to internal testing track (override with --track=production)
+    track.set("internal")
+    defaultToAppBundles.set(true)
+    // Automatically resolve version code conflicts
+    resolutionStrategy.set(com.github.triplet.gradle.androidpublisher.ResolutionStrategy.AUTO)
 }
 
 dependencies {
