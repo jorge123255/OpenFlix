@@ -527,6 +527,9 @@ func (s *Server) setupRouter() {
 		livetv.POST("/epg/overlaps/resolve", s.resolveOverlaps)
 		livetv.POST("/epg/cleanup", s.cleanupOldPrograms)
 
+		// Database maintenance
+		livetv.POST("/cleanup-database", s.cleanupDatabase)
+
 		// Multi-Source Fallback
 		livetv.GET("/epg/sources/health", s.getEPGSourceHealth)
 		livetv.POST("/epg/sources/fetch-fallback", s.fetchWithFallback)

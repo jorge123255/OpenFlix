@@ -154,8 +154,29 @@ func (s *Server) deleteLiveTVSource(c *gin.Context) {
 		return
 	}
 
-	// Delete channels first
-	s.db.Where("m3_u_source_id = ?", id).Delete(&models.Channel{})
+	// Collect channel IDs for program cleanup
+	var channelIDs []string
+	s.db.Model(&models.Channel{}).Where("m3_u_source_id = ?", id).Pluck("channel_id", &channelIDs)
+
+	// Delete programs for these channels
+	programsDeleted := int64(0)
+	if len(channelIDs) > 0 {
+		result := s.db.Where("channel_id IN ?", channelIDs).Delete(&models.Program{})
+		programsDeleted = result.RowsAffected
+	}
+
+	// Delete channels
+	channelResult := s.db.Where("m3_u_source_id = ?", id).Delete(&models.Channel{})
+
+	// Delete VOD media items and their files from this source
+	var mediaIDs []uint
+	s.db.Model(&models.MediaItem{}).Where("m3u_source_id = ?", id).Pluck("id", &mediaIDs)
+	mediaDeleted := int64(0)
+	if len(mediaIDs) > 0 {
+		s.db.Where("media_item_id IN ?", mediaIDs).Delete(&models.MediaFile{})
+		result := s.db.Where("m3u_source_id = ?", id).Delete(&models.MediaItem{})
+		mediaDeleted = result.RowsAffected
+	}
 
 	// Delete source
 	if err := s.db.Delete(&models.M3USource{}, id).Error; err != nil {
@@ -163,7 +184,13 @@ func (s *Server) deleteLiveTVSource(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Source deleted"})
+	log.Printf("Deleted M3U source %d: %d channels, %d programs, %d media items", id, channelResult.RowsAffected, programsDeleted, mediaDeleted)
+	c.JSON(http.StatusOK, gin.H{
+		"message":         "Source deleted",
+		"channelsDeleted": channelResult.RowsAffected,
+		"programsDeleted": programsDeleted,
+		"mediaDeleted":    mediaDeleted,
+	})
 }
 
 // refreshLiveTVSource refreshes channels from an M3U source
@@ -2640,24 +2667,26 @@ func (s *Server) deleteEPGSource(c *gin.Context) {
 		return
 	}
 
+	// Find channels linked to this EPG source and delete their programs
+	var channelIDs []string
+	s.db.Model(&models.Channel{}).Where("epg_source_id = ?", id).Pluck("channel_id", &channelIDs)
+
+	programsDeleted := int64(0)
+	if len(channelIDs) > 0 {
+		result := s.db.Where("channel_id IN ?", channelIDs).Delete(&models.Program{})
+		programsDeleted = result.RowsAffected
+	}
+
+	// Clear EPG source reference from channels (don't delete the channels themselves)
+	s.db.Model(&models.Channel{}).Where("epg_source_id = ?", id).Update("epg_source_id", nil)
+
 	// Delete the EPG source
 	if err := s.db.Delete(&models.EPGSource{}, id).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete EPG source"})
 		return
 	}
 
-	// Check if there are any remaining EPG sources
-	var remainingCount int64
-	s.db.Model(&models.EPGSource{}).Count(&remainingCount)
-
-	// If no EPG sources remain, delete all programs
-	programsDeleted := int64(0)
-	if remainingCount == 0 {
-		result := s.db.Delete(&models.Program{}, "1 = 1")
-		programsDeleted = result.RowsAffected
-		log.Printf("Deleted all %d programs (no EPG sources remaining)", programsDeleted)
-	}
-
+	log.Printf("Deleted EPG source %d: %d programs removed", id, programsDeleted)
 	c.JSON(http.StatusOK, gin.H{
 		"message":         "EPG source deleted",
 		"programsDeleted": programsDeleted,
@@ -3547,6 +3576,92 @@ func (s *Server) cleanupOldPrograms(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"deleted": deleted,
 		"cutoff":  fmt.Sprintf("%d hours ago", hours),
+	})
+}
+
+// cleanupDatabase removes all orphaned data from the database
+// POST /api/livetv/cleanup-database
+func (s *Server) cleanupDatabase(c *gin.Context) {
+	stats := make(map[string]int64)
+
+	// 1. Delete channels from non-existent M3U sources
+	var m3uSourceIDs []uint
+	s.db.Model(&models.M3USource{}).Pluck("id", &m3uSourceIDs)
+	if len(m3uSourceIDs) > 0 {
+		result := s.db.Where("m3_u_source_id NOT IN ?", m3uSourceIDs).Delete(&models.Channel{})
+		stats["orphanedM3UChannels"] = result.RowsAffected
+	} else {
+		result := s.db.Where("m3_u_source_id IS NOT NULL AND m3_u_source_id > 0").Delete(&models.Channel{})
+		stats["orphanedM3UChannels"] = result.RowsAffected
+	}
+
+	// 2. Delete channels from non-existent Xtream sources
+	var xtreamSourceIDs []uint
+	s.db.Model(&models.XtreamSource{}).Pluck("id", &xtreamSourceIDs)
+	if len(xtreamSourceIDs) > 0 {
+		result := s.db.Where("xtream_source_id IS NOT NULL AND xtream_source_id NOT IN ?", xtreamSourceIDs).Delete(&models.Channel{})
+		stats["orphanedXtreamChannels"] = result.RowsAffected
+	} else {
+		result := s.db.Where("xtream_source_id IS NOT NULL").Delete(&models.Channel{})
+		stats["orphanedXtreamChannels"] = result.RowsAffected
+	}
+
+	// 3. Delete programs not linked to any existing channel
+	var validChannelIDs []string
+	s.db.Model(&models.Channel{}).Where("channel_id != '' AND channel_id IS NOT NULL").Pluck("channel_id", &validChannelIDs)
+	if len(validChannelIDs) > 0 {
+		result := s.db.Where("channel_id NOT IN ?", validChannelIDs).Delete(&models.Program{})
+		stats["orphanedPrograms"] = result.RowsAffected
+	} else {
+		result := s.db.Where("1 = 1").Delete(&models.Program{})
+		stats["orphanedPrograms"] = result.RowsAffected
+	}
+
+	// 4. Delete media items from non-existent M3U sources
+	if len(m3uSourceIDs) > 0 {
+		result := s.db.Where("m3u_source_id IS NOT NULL AND m3u_source_id NOT IN ?", m3uSourceIDs).Delete(&models.MediaItem{})
+		stats["orphanedM3UMedia"] = result.RowsAffected
+	} else {
+		result := s.db.Where("m3u_source_id IS NOT NULL").Delete(&models.MediaItem{})
+		stats["orphanedM3UMedia"] = result.RowsAffected
+	}
+
+	// 5. Delete media items from non-existent Xtream sources
+	if len(xtreamSourceIDs) > 0 {
+		result := s.db.Where("provider_type = 'xtream' AND provider_source_id NOT IN ?", xtreamSourceIDs).Delete(&models.MediaItem{})
+		stats["orphanedXtreamMedia"] = result.RowsAffected
+	} else {
+		result := s.db.Where("provider_type = 'xtream'").Delete(&models.MediaItem{})
+		stats["orphanedXtreamMedia"] = result.RowsAffected
+	}
+
+	// 6. Delete orphaned media files
+	var validMediaIDs []uint
+	s.db.Model(&models.MediaItem{}).Pluck("id", &validMediaIDs)
+	if len(validMediaIDs) > 0 {
+		result := s.db.Where("media_item_id NOT IN ?", validMediaIDs).Delete(&models.MediaFile{})
+		stats["orphanedMediaFiles"] = result.RowsAffected
+	}
+
+	// 7. Delete EPG sources with no URL
+	result := s.db.Where("url = '' OR url IS NULL").Delete(&models.EPGSource{})
+	stats["deadEPGSources"] = result.RowsAffected
+
+	// Calculate total
+	total := int64(0)
+	for _, v := range stats {
+		total += v
+	}
+	stats["totalCleaned"] = total
+
+	if total > 0 && s.guideCache != nil {
+		s.guideCache.InvalidateAll()
+	}
+
+	log.Printf("Database cleanup: %+v", stats)
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Database cleanup complete",
+		"stats":   stats,
 	})
 }
 

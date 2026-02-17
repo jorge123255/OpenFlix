@@ -14,7 +14,8 @@ import javax.inject.Inject
 @HiltViewModel
 class AuthViewModel @Inject constructor(
     private val authRepository: AuthRepository,
-    private val discoveryService: ServerDiscoveryService
+    private val discoveryService: ServerDiscoveryService,
+    private val api: com.openflix.data.remote.api.OpenFlixApi
 ) : ViewModel() {
 
     val isAuthenticated: StateFlow<Boolean> = authRepository.isAuthenticated
@@ -147,7 +148,24 @@ class AuthViewModel @Inject constructor(
                     serverUrl
                 }
 
+                // Save server URL first so AuthInterceptor can use it
                 authRepository.setServerUrl(normalizedUrl)
+
+                // Validate the server is reachable
+                try {
+                    val healthResponse = api.healthCheck()
+                    if (!healthResponse.isSuccessful) {
+                        Timber.w("Server health check returned ${healthResponse.code()}")
+                    }
+                } catch (e: Exception) {
+                    Timber.e(e, "Server health check failed for $normalizedUrl")
+                    _uiState.update { it.copy(
+                        isLoading = false,
+                        error = "Cannot reach server at $normalizedUrl - check the address and try again"
+                    )}
+                    return@launch
+                }
+
                 _uiState.update { it.copy(
                     isLoading = false,
                     isServerConnected = true,

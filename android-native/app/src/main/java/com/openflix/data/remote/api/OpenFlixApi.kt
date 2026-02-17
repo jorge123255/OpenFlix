@@ -10,6 +10,11 @@ import retrofit2.http.*
  */
 interface OpenFlixApi {
 
+    // === Health Check ===
+
+    @GET("health")
+    suspend fun healthCheck(): Response<Map<String, Any>>
+
     // === Authentication ===
 
     @POST("auth/register")
