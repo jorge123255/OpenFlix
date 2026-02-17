@@ -10,17 +10,20 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/openflix/openflix-server/internal/auth"
+	"github.com/openflix/openflix-server/internal/commercial"
 	"github.com/openflix/openflix-server/internal/config"
 	"github.com/openflix/openflix-server/internal/dvr"
+	"github.com/openflix/openflix-server/internal/instant"
+	"github.com/openflix/openflix-server/internal/jobq"
 	"github.com/openflix/openflix-server/internal/library"
 	"github.com/openflix/openflix-server/internal/livetv"
 	"github.com/openflix/openflix-server/internal/logger"
 	"github.com/openflix/openflix-server/internal/metadata"
-	"github.com/openflix/openflix-server/internal/transcode"
-	"github.com/openflix/openflix-server/internal/instant"
 	"github.com/openflix/openflix-server/internal/multiview"
+	"github.com/openflix/openflix-server/internal/search"
 	"github.com/openflix/openflix-server/internal/sports"
-	"github.com/openflix/openflix-server/internal/commercial"
+	"github.com/openflix/openflix-server/internal/transcode"
+	"github.com/openflix/openflix-server/internal/updater"
 	limiter "github.com/ulule/limiter/v3"
 	mgin "github.com/ulule/limiter/v3/drivers/middleware/gin"
 	"github.com/ulule/limiter/v3/drivers/store/memory"
@@ -48,6 +51,9 @@ type Server struct {
 	remoteAccess       *livetv.RemoteAccessManager
 	prebuffer          *instant.PrebufferManager
 	multiviewManager   *multiview.MultiviewManager
+	searchEngine       *search.SearchEngine
+	updater            *updater.Updater
+	jobQueue           *jobq.JobQueue
 }
 
 // NewServer creates a new API server
@@ -159,6 +165,24 @@ func NewServer(cfg *config.Config, db *gorm.DB) *Server {
 	prebuffer := instant.NewPrebufferManager(6, 500, dataDir)
 	logger.Info("Instant Switch Prebuffer Manager initialized")
 
+	// Initialize full-text search engine
+	var searchEngine *search.SearchEngine
+	if se, err := search.NewSearchEngine(db, dataDir); err != nil {
+		logger.Warnf("Failed to initialize search engine: %v", err)
+	} else {
+		searchEngine = se
+		logger.Info("Full-text search engine initialized")
+	}
+
+	// Initialize background job queue
+	jobQueue := jobq.NewJobQueue()
+
+	// Initialize self-updater
+	appUpdater := updater.New(updater.Config{
+		DataDir:        dataDir,
+		CurrentVersion: "1.0.0", // Set at build time via ldflags
+	})
+
 	s := &Server{
 		config:            cfg,
 		db:                db,
@@ -177,6 +201,9 @@ func NewServer(cfg *config.Config, db *gorm.DB) *Server {
 		dvrEnricher:       dvrEnricher,
 		remoteAccess:      remoteAccess,
 		prebuffer:         prebuffer,
+		searchEngine:      searchEngine,
+		updater:           appUpdater,
+		jobQueue:          jobQueue,
 	}
 	s.setupRouter()
 
@@ -188,6 +215,21 @@ func NewServer(cfg *config.Config, db *gorm.DB) *Server {
 	// Start background EPG enrichment if TMDB is configured
 	if epgEnricher != nil {
 		epgEnricher.StartBackgroundEnrichment()
+	}
+
+	// Start background job queue
+	jobQueue.Start()
+
+	// Start self-updater background checker
+	appUpdater.Start()
+
+	// Kick off initial search index build in background
+	if searchEngine != nil {
+		go func() {
+			if err := searchEngine.RebuildIndex(); err != nil {
+				logger.Warnf("Initial search index build failed: %v", err)
+			}
+		}()
 	}
 
 	return s
@@ -310,6 +352,9 @@ func (s *Server) setupRouter() {
 	r.GET("/api/v2/home/users", s.authRequired(), s.getHomeUsers)
 	r.POST("/api/v2/home/users/:uuid/switch", s.authRequired(), s.switchUser)
 
+	// ============ Universal Search API ============
+	r.GET("/api/search", s.authRequired(), s.handleUniversalSearch)
+
 	// ============ Client Settings API (authenticated but not admin) ============
 	// This endpoint provides settings needed by client apps (TMDB API key for trailers, etc.)
 	r.GET("/api/client/settings", s.authRequired(), s.getClientSettings)
@@ -335,6 +380,22 @@ func (s *Server) setupRouter() {
 		// Server settings (admin only)
 		admin.GET("/settings", s.adminGetSettings)
 		admin.PUT("/settings", s.adminUpdateSettings)
+
+		// Database Backups (admin only)
+		admin.POST("/backups", s.createBackup)
+		admin.GET("/backups", s.listBackups)
+		admin.GET("/backups/:filename/download", s.downloadBackup)
+		admin.DELETE("/backups/:filename", s.deleteBackup)
+		admin.POST("/backups/:filename/restore", s.restoreBackup)
+
+		// Search Engine (admin only)
+		admin.POST("/search/reindex", s.handleSearchReindex)
+		admin.GET("/search/stats", s.handleSearchStats)
+
+		// Self-Update (admin only)
+		admin.GET("/updater/status", s.getUpdateStatus)
+		admin.POST("/updater/check", s.checkForUpdate)
+		admin.POST("/updater/apply", s.applyUpdate)
 
 		// Media management (admin only)
 		admin.GET("/media", s.adminGetMedia)
@@ -670,6 +731,18 @@ func (s *Server) setupRouter() {
 			dvrV2.DELETE("/collections/:id", s.deleteDVRCollection)
 			dvrV2.GET("/collections/:id/items", s.getDVRCollectionItems)
 
+			// Trash / Recycle Bin
+			dvrV2.GET("/trash", s.getTrash)
+			dvrV2.POST("/trash/:id/restore", s.restoreFromTrash)
+			dvrV2.DELETE("/trash", s.emptyTrash)
+			dvrV2.DELETE("/trash/:id", s.permanentlyDelete)
+
+			// File Upload / Import
+			dvrV2.POST("/files/upload", s.uploadFile)
+			dvrV2.POST("/files/import", s.importFromPath)
+			dvrV2.POST("/files/import/bulk", s.bulkImport)
+			dvrV2.GET("/files/upload/:id/progress", s.getUploadProgress)
+
 			// WebSocket event stream
 			dvrV2.GET("/events", s.dvrEvents)
 
@@ -814,6 +887,30 @@ func (s *Server) setupRouter() {
 
 	// ============ Watch Party API ============
 	s.RegisterWatchPartyRoutes(r)
+
+	// ============ Speed Test API ============
+	speedtestGroup := r.Group("/api/speedtest")
+	speedtestGroup.Use(s.authRequired())
+	{
+		speedtestGroup.GET("/ping", s.speedTestPing)
+		speedtestGroup.GET("/download", s.speedTestDownload)
+		speedtestGroup.POST("/upload", s.speedTestUpload)
+		speedtestGroup.GET("/results/:id", s.speedTestResults)
+	}
+
+	// ============ Tuner API (HDHR) ============
+	tunerGroup := r.Group("/api/tuners")
+	tunerGroup.Use(s.authRequired())
+	{
+		tunerGroup.GET("", s.getTuners)
+		tunerGroup.POST("", s.addTuner)
+		tunerGroup.POST("/discover", s.discoverTuners)
+		tunerGroup.DELETE("/:id", s.removeTuner)
+		tunerGroup.GET("/:id/lineup", s.getTunerLineup)
+		tunerGroup.GET("/:id/status", s.getTunerStatus)
+		tunerGroup.POST("/:id/import", s.importTunerChannels)
+		tunerGroup.POST("/:id/scan", s.scanTunerChannels)
+	}
 
 	// ============ Server Preferences ============
 	// Plex uses /:/prefs - we use /-/prefs
