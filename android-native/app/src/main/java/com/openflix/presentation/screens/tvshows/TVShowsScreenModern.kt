@@ -71,7 +71,7 @@ fun TVShowsScreenModern(
         // Ambient background blur from featured content
         if (uiState.featuredItems.isNotEmpty()) {
             AsyncImage(
-                model = uiState.featuredItems.first().backdropUrl(),
+                model = uiState.featuredItems.first().backdropUrl,
                 contentDescription = null,
                 modifier = Modifier
                     .fillMaxSize()
@@ -180,7 +180,7 @@ fun TVShowsScreenModern(
                     } else {
                         uiState.genreHubs
                     }
-
+                    
                     itemsIndexed(displayedGenres) { index, genreHub ->
                         ModernTVContentRow(
                             title = genreHub.genre,
@@ -211,7 +211,7 @@ private fun TVTheaterModeHeroModern(
 ) {
     var currentIndex by remember { mutableStateOf(0) }
     var isAutoPlaying by remember { mutableStateOf(true) }
-
+    
     val currentItem = items.getOrNull(currentIndex) ?: return
     val currentTrailer = trailers[currentItem.id]
 
@@ -230,11 +230,11 @@ private fun TVTheaterModeHeroModern(
     ) {
         // Background with parallax effect
         AsyncImage(
-            model = currentItem.backdropUrl(),
+            model = currentItem.backdropUrl,
             contentDescription = null,
             modifier = Modifier
                 .fillMaxSize()
-                .graphicsLayer {
+                .graphicsLayer { 
                     scaleX = 1.1f
                     scaleY = 1.1f
                 },
@@ -292,10 +292,10 @@ private fun TVTheaterModeHeroModern(
             // TV SERIES badge
             Surface(
                 shape = RoundedCornerShape(20.dp),
-                colors = SurfaceDefaults.colors(
+                colors = NonInteractiveSurfaceDefaults.colors(
                     containerColor = AccentTeal.copy(alpha = 0.2f)
                 ),
-                border = BorderStroke(1.dp, AccentTeal.copy(alpha = 0.5f))
+                border = Border(BorderStroke(1.dp, AccentTeal.copy(alpha = 0.5f)))
             ) {
                 Row(
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
@@ -405,12 +405,12 @@ private fun TVTheaterModeHeroModern(
                     targetValue = if (playFocused) 1.08f else 1f,
                     animationSpec = spring(dampingRatio = 0.7f, stiffness = 300f)
                 )
-
+                
                 Button(
                     onClick = { onPlayClick(currentItem) },
                     modifier = Modifier
                         .scale(playScale)
-                        .onFocusChanged {
+                        .onFocusChanged { 
                             playFocused = it.isFocused
                             if (it.isFocused) isAutoPlaying = false
                         },
@@ -418,7 +418,7 @@ private fun TVTheaterModeHeroModern(
                         containerColor = Color.White,
                         contentColor = Color.Black
                     ),
-                    shape = RoundedCornerShape(28.dp),
+                    shape = ButtonDefaults.shape(shape = RoundedCornerShape(28.dp)),
                     contentPadding = PaddingValues(horizontal = 32.dp, vertical = 16.dp)
                 ) {
                     Icon(
@@ -453,11 +453,11 @@ private fun TVTheaterModeHeroModern(
                         containerColor = Color.White.copy(alpha = 0.15f),
                         contentColor = Color.White
                     ),
-                    border = BorderStroke(
-                        width = if (episodesFocused) 2.dp else 1.dp,
-                        color = if (episodesFocused) Color.White else Color.White.copy(alpha = 0.5f)
+                    border = ButtonDefaults.border(
+                        border = Border(BorderStroke(1.dp, Color.White.copy(alpha = 0.5f))),
+                        focusedBorder = Border(BorderStroke(2.dp, Color.White))
                     ),
-                    shape = RoundedCornerShape(28.dp),
+                    shape = ButtonDefaults.shape(shape = RoundedCornerShape(28.dp)),
                     contentPadding = PaddingValues(horizontal = 24.dp, vertical = 16.dp)
                 ) {
                     Icon(
@@ -485,7 +485,7 @@ private fun TVTheaterModeHeroModern(
                         onClick = { onTrailerClick(trailer) },
                         modifier = Modifier
                             .scale(trailerScale)
-                            .onFocusChanged {
+                            .onFocusChanged { 
                                 trailerFocused = it.isFocused
                                 if (it.isFocused) isAutoPlaying = false
                             },
@@ -493,8 +493,10 @@ private fun TVTheaterModeHeroModern(
                             containerColor = Color.White.copy(alpha = 0.15f),
                             contentColor = Color.White
                         ),
-                        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.3f)),
-                        shape = RoundedCornerShape(28.dp),
+                        border = ButtonDefaults.border(
+                            border = Border(BorderStroke(1.dp, Color.White.copy(alpha = 0.3f)))
+                        ),
+                        shape = ButtonDefaults.shape(shape = RoundedCornerShape(28.dp)),
                         contentPadding = PaddingValues(horizontal = 20.dp, vertical = 16.dp)
                     ) {
                         Icon(
@@ -527,7 +529,7 @@ private fun TVTheaterModeHeroModern(
                                 .width(width)
                                 .clip(RoundedCornerShape(3.dp))
                                 .background(
-                                    if (index == currentIndex) AccentTeal
+                                    if (index == currentIndex) AccentTeal 
                                     else Color.White.copy(alpha = 0.4f)
                                 )
                         )
@@ -567,11 +569,13 @@ private fun TVGenreFilterBarModern(
                 modifier = Modifier
                     .scale(scale)
                     .onFocusChanged { focused = it.isFocused },
-                shape = RoundedCornerShape(24.dp),
-                colors = SurfaceDefaults.colors(
+                shape = ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(24.dp)),
+                colors = ClickableSurfaceDefaults.colors(
                     containerColor = AccentTeal.copy(alpha = 0.15f)
                 ),
-                border = BorderStroke(1.dp, AccentTeal.copy(alpha = 0.5f))
+                border = ClickableSurfaceDefaults.border(
+                    border = Border(BorderStroke(1.dp, AccentTeal.copy(alpha = 0.5f)))
+                )
             ) {
                 Row(
                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
@@ -633,19 +637,17 @@ private fun TVGenrePillModern(
         modifier = Modifier
             .scale(scale)
             .onFocusChanged { focused = it.isFocused },
-        shape = RoundedCornerShape(20.dp),
-        colors = SurfaceDefaults.colors(
+        shape = ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(20.dp)),
+        colors = ClickableSurfaceDefaults.colors(
             containerColor = when {
                 isSelected -> color.copy(alpha = 0.5f)
                 focused -> color.copy(alpha = 0.3f)
                 else -> Color.White.copy(alpha = 0.1f)
             }
         ),
-        border = when {
-            isSelected -> BorderStroke(2.dp, color)
-            focused -> BorderStroke(2.dp, Color.White)
-            else -> null
-        }
+        border = ClickableSurfaceDefaults.border(
+            focusedBorder = Border(BorderStroke(2.dp, Color.White))
+        )
     ) {
         Text(
             text = genre,
@@ -763,14 +765,15 @@ private fun ModernTVPosterCard(
             .height(240.dp)
             .scale(scale)
             .onFocusChanged { focused = it.isFocused },
-        shape = RoundedCornerShape(12.dp),
-        border = if (focused) BorderStroke(4.dp, AccentTeal) else null,
-        tonalElevation = if (focused) 16.dp else 0.dp
+        shape = ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(12.dp)),
+        border = ClickableSurfaceDefaults.border(
+            focusedBorder = Border(BorderStroke(4.dp, AccentTeal))
+        )
     ) {
         Box {
             // Poster image
             AsyncImage(
-                model = item.posterUrl(),
+                model = item.posterUrl,
                 contentDescription = item.title,
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop
@@ -851,13 +854,15 @@ private fun ModernTVContinueCard(
             .height(220.dp)
             .scale(scale)
             .onFocusChanged { focused = it.isFocused },
-        shape = RoundedCornerShape(16.dp),
-        border = if (focused) BorderStroke(4.dp, AccentTeal) else null
+        shape = ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(16.dp)),
+        border = ClickableSurfaceDefaults.border(
+            focusedBorder = Border(BorderStroke(4.dp, AccentTeal))
+        )
     ) {
         Box {
             // Background
             AsyncImage(
-                model = item.backdropUrl() ?: item.posterUrl(),
+                model = item.backdropUrl ?: item.posterUrl,
                 contentDescription = null,
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop
@@ -884,7 +889,7 @@ private fun ModernTVContinueCard(
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
-
+                    
                     // Episode title
                     Text(
                         text = item.title,
@@ -913,7 +918,7 @@ private fun ModernTVContinueCard(
                                 )
                             }
                         }
-
+                        
                         item.duration?.let { duration ->
                             item.viewOffset?.let { offset ->
                                 val remaining = (duration - offset) / 60000
@@ -980,8 +985,10 @@ private fun ModernTVEpisodeCard(
             .height(180.dp)
             .scale(scale)
             .onFocusChanged { focused = it.isFocused },
-        shape = RoundedCornerShape(14.dp),
-        border = if (focused) BorderStroke(3.dp, AccentTeal) else null
+        shape = ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(14.dp)),
+        border = ClickableSurfaceDefaults.border(
+            focusedBorder = Border(BorderStroke(3.dp, AccentTeal))
+        )
     ) {
         Row {
             // Thumbnail
@@ -991,7 +998,7 @@ private fun ModernTVEpisodeCard(
                     .fillMaxHeight()
             ) {
                 AsyncImage(
-                    model = item.posterUrl() ?: item.backdropUrl(),
+                    model = item.posterUrl ?: item.backdropUrl,
                     contentDescription = null,
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop
@@ -1031,7 +1038,7 @@ private fun ModernTVEpisodeCard(
                     item.index?.let { episode ->
                         Surface(
                             shape = RoundedCornerShape(12.dp),
-                            colors = SurfaceDefaults.colors(
+                            colors = NonInteractiveSurfaceDefaults.colors(
                                 containerColor = Color.White.copy(alpha = 0.15f)
                             )
                         ) {
@@ -1080,7 +1087,7 @@ private fun TVMetadataPillModern(
 ) {
     Surface(
         shape = RoundedCornerShape(16.dp),
-        colors = SurfaceDefaults.colors(
+        colors = NonInteractiveSurfaceDefaults.colors(
             containerColor = Color.White.copy(alpha = 0.15f)
         )
     ) {
@@ -1209,7 +1216,7 @@ private fun ModernTVErrorScreen(
                 colors = ButtonDefaults.colors(
                     containerColor = AccentTeal
                 ),
-                shape = RoundedCornerShape(24.dp)
+                shape = ButtonDefaults.shape(shape = RoundedCornerShape(24.dp))
             ) {
                 Text(
                     text = "Try Again",

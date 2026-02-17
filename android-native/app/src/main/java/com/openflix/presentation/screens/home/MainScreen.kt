@@ -37,7 +37,7 @@ import com.openflix.player.MpvPlayer
 import com.openflix.presentation.screens.catchup.CatchupScreen
 import com.openflix.presentation.screens.dvr.DVRScreen
 import com.openflix.presentation.screens.watchstats.WatchStatsScreen
-import com.openflix.presentation.screens.epg.EPGGuideScreenModern
+import com.openflix.presentation.screens.epg.EPGGuideScreen
 import com.openflix.presentation.screens.movies.MoviesScreen
 import com.openflix.presentation.screens.movies.MoviesScreenModern
 import com.openflix.presentation.screens.onlater.OnLaterScreen
@@ -127,7 +127,7 @@ fun MainScreen(
                     onPlayClick = onNavigateToPlayer,
                     onBrowseAll = { onNavigateToBrowseAll("all", "show") }
                 )
-                MainTab.GUIDE -> EPGGuideScreenModern(
+                MainTab.GUIDE -> EPGGuideScreen(
                     onBack = { selectedTab = MainTab.HOME },
                     onChannelSelected = onNavigateToLiveTVPlayer,
                     onArchivePlayback = { channelId, startTime ->
