@@ -559,6 +559,7 @@ struct MultiviewPlayerV2: View {
     
     // MARK: - Timer
 
+
     private func resetControlsTimer() {
         controlsTimer?.invalidate()
         showControls = true
@@ -567,5 +568,97 @@ struct MultiviewPlayerV2: View {
                 showControls = false
             }
         }
+    }
+}
+
+// MARK: - Supporting Types
+
+struct MultiviewSlot: Identifiable {
+    let id = UUID()
+    let channel: Channel
+    var player: AVPlayer?
+    var isMuted: Bool = true
+    var isTimeshifted: Bool = false
+}
+
+enum MultiviewLayout: CaseIterable {
+    case single, twoByOne, oneByTwo, threeGrid, twoByTwo
+
+    var displayName: String {
+        switch self {
+        case .single: return "1×1"
+        case .twoByOne: return "2×1"
+        case .oneByTwo: return "1×2"
+        case .threeGrid: return "2+1"
+        case .twoByTwo: return "2×2"
+        }
+    }
+}
+
+// MARK: - ViewModel
+
+@MainActor
+class MultiviewViewModel: ObservableObject {
+    @Published var slots: [MultiviewSlot] = []
+    @Published var allChannels: [Channel] = []
+    @Published var layout: MultiviewLayout = .twoByOne
+
+    func initialize(with channelIds: [String]) {
+        Task {
+        }
+    }
+
+    func setChannel(_ channel: Channel, forSlot index: Int) {
+        guard index < slots.count else { return }
+        var slot = slots[index]
+
+        slot.player?.pause()
+
+        if let streamUrl = channel.streamUrl, let url = URL(string: streamUrl) {
+            slot.player = AVPlayer(url: url)
+            slot.player?.play()
+            slot.player?.volume = slot.isMuted ? 0 : 1
+        }
+
+        slots[index] = MultiviewSlot(
+            channel: channel,
+            player: slot.player,
+            isMuted: slot.isMuted,
+            isTimeshifted: false
+        )
+    }
+
+    func swapSlots(_ source: Int, _ target: Int) {
+        guard source < slots.count && target < slots.count && source != target else { return }
+
+        let sourceChannel = slots[source].channel
+        let targetChannel = slots[target].channel
+
+        setChannel(targetChannel, forSlot: source)
+        setChannel(sourceChannel, forSlot: target)
+    }
+
+    func toggleAudio(forSlot index: Int) {
+        guard index < slots.count else { return }
+
+        for i in 0..<slots.count {
+            slots[i].isMuted = (i != index)
+            slots[i].player?.volume = (i == index) ? 1 : 0
+        }
+    }
+
+    func cycleLayout() {
+        let layouts = MultiviewLayout.allCases
+        guard let currentIndex = layouts.firstIndex(of: layout) else { return }
+        let nextIndex = (currentIndex + 1) % layouts.count
+        layout = layouts[nextIndex]
+    }
+}
+
+// MARK: - Safe Array Access
+
+extension Array {
+    subscript(safe index: Index) -> Element? {
+        indices.contains(index) ? self[index] : nil
     }
 }

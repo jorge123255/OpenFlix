@@ -1,12 +1,7 @@
 package com.openflix.presentation.screens.home
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.*
 import androidx.compose.animation.core.*
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.HorizontalPager
@@ -48,7 +43,7 @@ import kotlinx.coroutines.delay
  * Modern Discover Screen - Premium streaming service inspired
  * Features: Parallax hero, glass effects, smooth animations, Top 10 row
  */
-@OptIn(ExperimentalTvMaterial3Api::class, ExperimentalFoundationApi::class)
+@OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 fun DiscoverScreenModern(
     onMediaClick: (String) -> Unit,
@@ -61,15 +56,15 @@ fun DiscoverScreenModern(
     viewModel: DiscoverViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    
+
     // Hero auto-advance
     var heroIndex by remember { mutableIntStateOf(0) }
     val heroItems = uiState.hubs.flatMap { it.items }.take(5)
-    
+
     LaunchedEffect(Unit) {
         viewModel.loadHomeContent()
     }
-    
+
     // Auto-advance hero
     LaunchedEffect(heroItems) {
         while (heroItems.isNotEmpty()) {
@@ -77,7 +72,7 @@ fun DiscoverScreenModern(
             heroIndex = (heroIndex + 1) % heroItems.size
         }
     }
-    
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -87,7 +82,7 @@ fun DiscoverScreenModern(
         if (heroItems.isNotEmpty()) {
             AmbientBackground(item = heroItems.getOrNull(heroIndex))
         }
-        
+
         TvLazyColumn(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(bottom = 48.dp)
@@ -101,17 +96,17 @@ fun DiscoverScreenModern(
                         onIndexChange = { heroIndex = it },
                         onPlay = { onPlayClick(it.id.toString()) },
                         onDetails = { onMediaClick(it.id.toString()) },
-                        onWatchlist = onWatchlistToggle?.let { toggle -> 
+                        onWatchlist = onWatchlistToggle?.let { toggle ->
                             { item: MediaItem -> toggle(item.id.toString()) }
                         }
                     )
                 }
             }
-            
+
             // Quick Access Row (Live TV, Multiview, Guide, Sports)
             item {
                 QuickAccessRow(
-                    onLiveTVClick = { 
+                    onLiveTVClick = {
                         uiState.channels.firstOrNull()?.let { onNavigateToLiveTVPlayer?.invoke(it.id) }
                     },
                     onMultiviewClick = onNavigateToMultiview,
@@ -119,7 +114,7 @@ fun DiscoverScreenModern(
                     onSportsClick = onNavigateToSports
                 )
             }
-            
+
             // Continue Watching
             if (uiState.continueWatching.isNotEmpty()) {
                 item {
@@ -134,13 +129,13 @@ fun DiscoverScreenModern(
                     )
                 }
             }
-            
+
             // Top 10
             if (uiState.hubs.isNotEmpty()) {
                 val topItems = uiState.hubs.flatMap { it.items }
                     .sortedByDescending { it.audienceRating ?: 0.0 }
                     .take(10)
-                
+
                 if (topItems.size >= 5) {
                     item {
                         ModernTop10Row(
@@ -150,7 +145,7 @@ fun DiscoverScreenModern(
                     }
                 }
             }
-            
+
             // Hub rows
             items(uiState.hubs) { hub ->
                 ModernContentRow(
@@ -163,7 +158,7 @@ fun DiscoverScreenModern(
                     onItemClick = { onMediaClick(it.id.toString()) }
                 )
             }
-            
+
             // Live Now (if channels available)
             if (uiState.channels.isNotEmpty()) {
                 item {
@@ -201,7 +196,6 @@ private fun AmbientBackground(item: MediaItem?) {
 
 // MARK: - Modern Hero Banner
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun ModernHeroBanner(
     items: List<MediaItem>,
@@ -215,15 +209,15 @@ private fun ModernHeroBanner(
         initialPage = currentIndex,
         pageCount = { items.size }
     )
-    
+
     LaunchedEffect(currentIndex) {
         pagerState.animateScrollToPage(currentIndex)
     }
-    
+
     LaunchedEffect(pagerState.currentPage) {
         onIndexChange(pagerState.currentPage)
     }
-    
+
     Box(modifier = Modifier.height(600.dp)) {
         HorizontalPager(
             state = pagerState,
@@ -238,7 +232,7 @@ private fun ModernHeroBanner(
                 )
             }
         }
-        
+
         // Page indicators
         if (items.size > 1) {
             Row(
@@ -285,7 +279,7 @@ private fun ModernHeroItem(
     var playFocused by remember { mutableStateOf(false) }
     var infoFocused by remember { mutableStateOf(false) }
     var watchlistFocused by remember { mutableStateOf(false) }
-    
+
     Box(modifier = Modifier.fillMaxSize()) {
         // Background image
         AsyncImage(
@@ -294,7 +288,7 @@ private fun ModernHeroItem(
             modifier = Modifier.fillMaxSize(),
             contentScale = ContentScale.Crop
         )
-        
+
         // Gradient overlays
         Box(
             modifier = Modifier
@@ -310,7 +304,7 @@ private fun ModernHeroItem(
                     )
                 )
         )
-        
+
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -324,7 +318,7 @@ private fun ModernHeroItem(
                     )
                 )
         )
-        
+
         // Content
         Column(
             modifier = Modifier
@@ -342,9 +336,9 @@ private fun ModernHeroItem(
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
             )
-            
+
             Spacer(modifier = Modifier.height(12.dp))
-            
+
             // Tagline
             item.tagline?.let {
                 Text(
@@ -355,7 +349,7 @@ private fun ModernHeroItem(
                 )
                 Spacer(modifier = Modifier.height(16.dp))
             }
-            
+
             // Metadata
             Row(
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
@@ -381,7 +375,7 @@ private fun ModernHeroItem(
                         )
                     }
                 }
-                
+
                 // Year
                 item.year?.let {
                     Text(
@@ -390,7 +384,7 @@ private fun ModernHeroItem(
                         color = Color.White.copy(alpha = 0.8f)
                     )
                 }
-                
+
                 // Content rating
                 item.contentRating?.let {
                     Text(
@@ -406,7 +400,7 @@ private fun ModernHeroItem(
                             .padding(horizontal = 8.dp, vertical = 4.dp)
                     )
                 }
-                
+
                 // Duration
                 item.duration?.let { ms ->
                     val hours = ms / 3600000
@@ -418,7 +412,7 @@ private fun ModernHeroItem(
                         color = Color.White.copy(alpha = 0.8f)
                     )
                 }
-                
+
                 // Genres
                 if (item.genres.isNotEmpty()) {
                     Text(
@@ -428,9 +422,9 @@ private fun ModernHeroItem(
                     )
                 }
             }
-            
+
             Spacer(modifier = Modifier.height(24.dp))
-            
+
             // Action buttons
             Row(
                 horizontalArrangement = Arrangement.spacedBy(16.dp)
@@ -444,10 +438,9 @@ private fun ModernHeroItem(
                             scaleX = if (playFocused) 1.1f else 1f
                             scaleY = if (playFocused) 1.1f else 1f
                         },
-                    shape = ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(28.dp)),
-                    colors = ClickableSurfaceDefaults.colors(
-                        containerColor = Color.White,
-                        focusedContainerColor = Color.White
+                    shape = RoundedCornerShape(28.dp),
+                    colors = SurfaceDefaults.colors(
+                        containerColor = Color.White
                     )
                 ) {
                     Row(
@@ -479,20 +472,13 @@ private fun ModernHeroItem(
                             scaleX = if (infoFocused) 1.1f else 1f
                             scaleY = if (infoFocused) 1.1f else 1f
                         },
-                    shape = ClickableSurfaceDefaults.shape(shape = CircleShape),
-                    colors = ClickableSurfaceDefaults.colors(
-                        containerColor = Color.White.copy(alpha = 0.2f),
-                        focusedContainerColor = Color.White.copy(alpha = 0.3f)
+                    shape = CircleShape,
+                    colors = SurfaceDefaults.colors(
+                        containerColor = Color.White.copy(alpha = 0.2f)
                     ),
-                    border = ClickableSurfaceDefaults.border(
-                        border = Border(BorderStroke(
-                            width = 1.dp,
-                            color = Color.White.copy(alpha = 0.5f)
-                        )),
-                        focusedBorder = Border(BorderStroke(
-                            width = 2.dp,
-                            color = Color.White
-                        ))
+                    border = BorderStroke(
+                        width = if (infoFocused) 2.dp else 1.dp,
+                        color = if (infoFocused) Color.White else Color.White.copy(alpha = 0.5f)
                     )
                 ) {
                     Icon(
@@ -515,20 +501,13 @@ private fun ModernHeroItem(
                                 scaleX = if (watchlistFocused) 1.1f else 1f
                                 scaleY = if (watchlistFocused) 1.1f else 1f
                             },
-                        shape = ClickableSurfaceDefaults.shape(shape = CircleShape),
-                        colors = ClickableSurfaceDefaults.colors(
-                            containerColor = Color.White.copy(alpha = 0.2f),
-                            focusedContainerColor = Color.White.copy(alpha = 0.3f)
+                        shape = CircleShape,
+                        colors = SurfaceDefaults.colors(
+                            containerColor = Color.White.copy(alpha = 0.2f)
                         ),
-                        border = ClickableSurfaceDefaults.border(
-                            border = Border(BorderStroke(
-                                width = 1.dp,
-                                color = Color.White.copy(alpha = 0.5f)
-                            )),
-                            focusedBorder = Border(BorderStroke(
-                                width = 2.dp,
-                                color = Color(0xFF00D4AA)
-                            ))
+                        border = BorderStroke(
+                            width = if (watchlistFocused) 2.dp else 1.dp,
+                            color = if (watchlistFocused) Color(0xFF00D4AA) else Color.White.copy(alpha = 0.5f)
                         )
                     ) {
                         Icon(
@@ -586,7 +565,7 @@ private fun ModernContentRow(
                 tint = accentColor,
                 modifier = Modifier.size(24.dp)
             )
-            
+
             Column {
                 Text(
                     text = title,
@@ -594,7 +573,7 @@ private fun ModernContentRow(
                     fontWeight = FontWeight.Bold,
                     color = Color.White
                 )
-                
+
                 subtitle?.let {
                     Text(
                         text = it,
@@ -604,7 +583,7 @@ private fun ModernContentRow(
                 }
             }
         }
-        
+
         // Items
         TvLazyRow(
             contentPadding = PaddingValues(horizontal = 48.dp),
@@ -630,12 +609,12 @@ private fun ModernPosterCard(
     onClick: () -> Unit
 ) {
     var isFocused by remember { mutableStateOf(false) }
-    
+
     val scale by animateFloatAsState(
         targetValue = if (isFocused) 1.08f else 1f,
         animationSpec = spring(dampingRatio = 0.7f)
     )
-    
+
     Surface(
         onClick = onClick,
         modifier = Modifier
@@ -645,10 +624,8 @@ private fun ModernPosterCard(
                 scaleX = scale
                 scaleY = scale
             },
-        shape = ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(12.dp)),
-        border = ClickableSurfaceDefaults.border(
-            focusedBorder = Border(BorderStroke(3.dp, OpenFlixColors.Primary))
-        )
+        shape = RoundedCornerShape(12.dp),
+        border = if (isFocused) BorderStroke(3.dp, OpenFlixColors.Primary) else null
     ) {
         Column {
             Box {
@@ -660,9 +637,9 @@ private fun ModernPosterCard(
                         .fillMaxWidth(),
                     contentScale = ContentScale.Crop
                 )
-                
+
                 // Info overlay on focus
-                androidx.compose.animation.AnimatedVisibility(
+                AnimatedVisibility(
                     visible = isFocused,
                     enter = fadeIn(),
                     exit = fadeOut()
@@ -704,7 +681,7 @@ private fun ModernPosterCard(
                     }
                 }
             }
-            
+
             // Title
             Text(
                 text = item.title,
@@ -728,12 +705,12 @@ private fun ModernWideCard(
     onClick: () -> Unit
 ) {
     var isFocused by remember { mutableStateOf(false) }
-    
+
     val scale by animateFloatAsState(
         targetValue = if (isFocused) 1.05f else 1f,
         animationSpec = spring(dampingRatio = 0.7f)
     )
-    
+
     Surface(
         onClick = onClick,
         modifier = Modifier
@@ -743,10 +720,8 @@ private fun ModernWideCard(
                 scaleX = scale
                 scaleY = scale
             },
-        shape = ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(12.dp)),
-        border = ClickableSurfaceDefaults.border(
-            focusedBorder = Border(BorderStroke(3.dp, OpenFlixColors.Primary))
-        )
+        shape = RoundedCornerShape(12.dp),
+        border = if (isFocused) BorderStroke(3.dp, OpenFlixColors.Primary) else null
     ) {
         Box {
             AsyncImage(
@@ -757,7 +732,7 @@ private fun ModernWideCard(
                     .fillMaxWidth(),
                 contentScale = ContentScale.Crop
             )
-            
+
             // Gradient overlay
             Box(
                 modifier = Modifier
@@ -771,7 +746,7 @@ private fun ModernWideCard(
                         )
                     )
             )
-            
+
             // Info
             Column(
                 modifier = Modifier
@@ -786,7 +761,7 @@ private fun ModernWideCard(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-                
+
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically
@@ -798,7 +773,7 @@ private fun ModernWideCard(
                             color = Color.White.copy(alpha = 0.8f)
                         )
                     }
-                    
+
                     item.contentRating?.let {
                         Text(
                             text = it,
@@ -827,12 +802,12 @@ private fun ModernContinueCard(
     onClick: () -> Unit
 ) {
     var isFocused by remember { mutableStateOf(false) }
-    
+
     val scale by animateFloatAsState(
         targetValue = if (isFocused) 1.05f else 1f,
         animationSpec = spring(dampingRatio = 0.7f)
     )
-    
+
     Surface(
         onClick = onClick,
         modifier = Modifier
@@ -842,10 +817,8 @@ private fun ModernContinueCard(
                 scaleX = scale
                 scaleY = scale
             },
-        shape = ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(12.dp)),
-        border = ClickableSurfaceDefaults.border(
-            focusedBorder = Border(BorderStroke(3.dp, OpenFlixColors.Primary))
-        )
+        shape = RoundedCornerShape(12.dp),
+        border = if (isFocused) BorderStroke(3.dp, OpenFlixColors.Primary) else null
     ) {
         Column {
             Box {
@@ -857,16 +830,16 @@ private fun ModernContinueCard(
                         .fillMaxWidth(),
                     contentScale = ContentScale.Crop
                 )
-                
+
                 // Dark overlay
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
                         .background(Color.Black.copy(alpha = 0.3f))
                 )
-                
+
                 // Play icon on focus
-                androidx.compose.animation.AnimatedVisibility(
+                AnimatedVisibility(
                     visible = isFocused,
                     enter = scaleIn() + fadeIn(),
                     exit = scaleOut() + fadeOut(),
@@ -889,14 +862,14 @@ private fun ModernContinueCard(
                         )
                     }
                 }
-                
+
                 // Progress bar
                 val progress = item.viewOffset?.let { offset ->
                     item.duration?.let { duration ->
                         if (duration > 0) offset.toFloat() / duration.toFloat() else 0f
                     }
                 } ?: 0f
-                
+
                 Box(
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
@@ -916,7 +889,7 @@ private fun ModernContinueCard(
                     )
                 }
             }
-            
+
             // Info
             Column(modifier = Modifier.padding(12.dp)) {
                 Text(
@@ -927,13 +900,13 @@ private fun ModernContinueCard(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-                
+
                 val remainingMs = item.duration?.let { duration ->
                     item.viewOffset?.let { offset ->
                         duration - offset
                     }
                 }
-                
+
                 remainingMs?.let { ms ->
                     val minutes = ms / 60000
                     Text(
@@ -986,7 +959,7 @@ private fun ModernTop10Row(
                 color = Color.White.copy(alpha = 0.8f)
             )
         }
-        
+
         // Items
         TvLazyRow(
             contentPadding = PaddingValues(horizontal = 48.dp),
@@ -1013,12 +986,12 @@ private fun ModernTop10Card(
     onClick: () -> Unit
 ) {
     var isFocused by remember { mutableStateOf(false) }
-    
+
     val scale by animateFloatAsState(
         targetValue = if (isFocused) 1.08f else 1f,
         animationSpec = spring(dampingRatio = 0.7f)
     )
-    
+
     Surface(
         onClick = onClick,
         modifier = Modifier
@@ -1027,11 +1000,8 @@ private fun ModernTop10Card(
                 scaleX = scale
                 scaleY = scale
             },
-        shape = ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(0.dp)),
-        colors = ClickableSurfaceDefaults.colors(
-            containerColor = Color.Transparent,
-            focusedContainerColor = Color.Transparent
-        )
+        shape = RoundedCornerShape(0.dp),
+        colors = SurfaceDefaults.colors(containerColor = Color.Transparent)
     ) {
         Row(
             verticalAlignment = Alignment.Bottom
@@ -1088,7 +1058,7 @@ private fun QuickAccessRow(
             color = Color(0xFFE53935),
             onClick = onLiveTVClick
         )
-        
+
         // Multiview
         QuickAccessCard(
             icon = Icons.Default.GridView,
@@ -1097,7 +1067,7 @@ private fun QuickAccessRow(
             color = Color(0xFF00D4AA),
             onClick = onMultiviewClick
         )
-        
+
         // Guide
         QuickAccessCard(
             icon = Icons.Default.CalendarMonth,
@@ -1106,7 +1076,7 @@ private fun QuickAccessRow(
             color = Color(0xFF2196F3),
             onClick = onGuideClick
         )
-        
+
         // Sports
         QuickAccessCard(
             icon = Icons.Default.SportsFootball,
@@ -1143,15 +1113,12 @@ private fun RowScope.QuickAccessCard(
                 scaleX = scale
                 scaleY = scale
             },
-        shape = ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(16.dp)),
-        colors = ClickableSurfaceDefaults.colors(
-            containerColor = Color.White.copy(alpha = 0.1f),
+        shape = RoundedCornerShape(16.dp),
+        colors = SurfaceDefaults.colors(
+            containerColor = if (focused) color.copy(alpha = 0.3f) else Color.White.copy(alpha = 0.1f),
             focusedContainerColor = color.copy(alpha = 0.3f)
         ),
-        border = ClickableSurfaceDefaults.border(
-            border = Border(BorderStroke(1.dp, Color.White.copy(alpha = 0.1f))),
-            focusedBorder = Border(BorderStroke(2.dp, color))
-        )
+        border = if (focused) BorderStroke(2.dp, color) else BorderStroke(1.dp, Color.White.copy(alpha = 0.1f))
     ) {
         Row(
             modifier = Modifier
@@ -1174,7 +1141,7 @@ private fun RowScope.QuickAccessCard(
                     modifier = Modifier.size(28.dp)
                 )
             }
-            
+
             Column {
                 Text(
                     text = title,
@@ -1201,7 +1168,7 @@ private fun LiveNowRow(
     onChannelClick: (Channel) -> Unit
 ) {
     if (channels.isEmpty()) return
-    
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -1222,7 +1189,7 @@ private fun LiveNowRow(
                     .clip(CircleShape)
                     .background(Color.Red)
             )
-            
+
             Text(
                 text = "Live Now",
                 fontSize = 22.sp,
@@ -1230,7 +1197,7 @@ private fun LiveNowRow(
                 color = Color.White
             )
         }
-        
+
         // Channels
         TvLazyRow(
             contentPadding = PaddingValues(horizontal = 48.dp),
@@ -1255,7 +1222,7 @@ private fun LiveChannelCard(
     onClick: () -> Unit
 ) {
     var isFocused by remember { mutableStateOf(false) }
-    
+
     Surface(
         onClick = onClick,
         modifier = Modifier
@@ -1266,14 +1233,12 @@ private fun LiveChannelCard(
                 scaleX = scale
                 scaleY = scale
             },
-        shape = ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(12.dp)),
-        colors = ClickableSurfaceDefaults.colors(
-            containerColor = OpenFlixColors.Card,
-            focusedContainerColor = OpenFlixColors.Primary.copy(alpha = 0.2f)
+        shape = RoundedCornerShape(12.dp),
+        colors = SurfaceDefaults.colors(
+            containerColor = if (isFocused) OpenFlixColors.Primary.copy(alpha = 0.2f)
+                            else OpenFlixColors.Card
         ),
-        border = ClickableSurfaceDefaults.border(
-            focusedBorder = Border(BorderStroke(2.dp, OpenFlixColors.Primary))
-        )
+        border = if (isFocused) BorderStroke(2.dp, OpenFlixColors.Primary) else null
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
@@ -1302,7 +1267,7 @@ private fun LiveChannelCard(
                         color = Color.White
                     )
                 }
-                
+
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = channel.name,
@@ -1312,7 +1277,7 @@ private fun LiveChannelCard(
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
-                    
+
                     channel.nowPlaying?.let { program ->
                         Text(
                             text = program.title,
@@ -1323,7 +1288,7 @@ private fun LiveChannelCard(
                         )
                     }
                 }
-                
+
                 // LIVE badge
                 Text(
                     text = "LIVE",

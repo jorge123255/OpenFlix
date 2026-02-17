@@ -25,7 +25,7 @@ import com.openflix.presentation.screens.dvr.DVRPlayerScreen
 import com.openflix.presentation.screens.dvr.DVRScreen
 import com.openflix.presentation.screens.home.DiscoverScreen
 import com.openflix.presentation.screens.home.MainScreen
-import com.openflix.presentation.screens.epg.EPGGuideScreen
+import com.openflix.presentation.screens.epg.EPGGuideScreenModern
 import com.openflix.presentation.screens.livetv.ArchivePlayerScreen
 import com.openflix.presentation.screens.livetv.ChannelGroupsScreen
 import com.openflix.presentation.screens.livetv.ChannelLogoEditorScreen
@@ -250,7 +250,7 @@ fun OpenFlixNavHost(
 
         // === EPG Guide ===
         composable(NavRoutes.EPGGuide.route) {
-            EPGGuideScreen(
+            EPGGuideScreenModern(
                 onBack = { navController.popBackStack() },
                 onChannelSelected = { channelId ->
                     navController.navigate(NavRoutes.LiveTVPlayer.createRoute(channelId))
