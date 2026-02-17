@@ -22,8 +22,8 @@ RUN go mod download
 # Copy source code
 COPY . .
 
-# Copy built web assets from web-builder
-COPY --from=web-builder /app/web/dist ./web/dist
+# Copy built web assets from web-builder to the Go embed location
+COPY --from=web-builder /app/web/dist ./internal/api/web/dist
 
 # Build the binary with CGO for SQLite
 # Use CACHEBUST to force rebuild when needed
