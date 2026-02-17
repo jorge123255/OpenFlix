@@ -69,6 +69,13 @@ struct SettingsView: View {
                             Text("Playlists")
                         }
                     }
+                    
+                    NavigationLink(destination: WatchStatsView()) {
+                        HStack {
+                            Image(systemName: "chart.bar.xaxis")
+                            Text("Watch Stats")
+                        }
+                    }
                 }
 
                 // Sources Section
@@ -113,106 +120,6 @@ struct SettingsView: View {
                             Text("7 Days").tag(7)
                             Text("14 Days").tag(14)
                         }
-
-                        // Instant Switch
-                        if settingsViewModel.hasInstantSwitch {
-                            Toggle("Instant Channel Switch", isOn: Binding(
-                                get: { settingsViewModel.instantSwitchEnabled },
-                                set: { newValue in
-                                    Task { await settingsViewModel.setInstantSwitchEnabled(newValue) }
-                                }
-                            ))
-
-                            if settingsViewModel.instantSwitchEnabled {
-                                HStack {
-                                    Text("Cached Streams")
-                                    Spacer()
-                                    Text("\(settingsViewModel.cachedStreamCount)")
-                                        .foregroundColor(.secondary)
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // Remote Access Section
-                Section("Remote Access") {
-                    if settingsViewModel.isRemoteAccessLoading {
-                        HStack {
-                            ProgressView()
-                            Text("Loading...")
-                                .foregroundColor(.secondary)
-                        }
-                    } else if let status = settingsViewModel.remoteAccessStatus {
-                        HStack {
-                            Text("Status")
-                            Spacer()
-                            HStack(spacing: 6) {
-                                Circle()
-                                    .fill(status.connected ? Color.green : (status.enabled ? Color.orange : Color.gray))
-                                    .frame(width: 8, height: 8)
-                                Text(status.connected ? "Connected" : (status.enabled ? "Connecting..." : "Disabled"))
-                                    .foregroundColor(.secondary)
-                            }
-                        }
-
-                        if status.connected, let hostname = status.tailscaleHostname {
-                            HStack {
-                                Text("Hostname")
-                                Spacer()
-                                Text(hostname)
-                                    .foregroundColor(.secondary)
-                            }
-                        }
-
-                        if status.connected, let ip = status.tailscaleIp {
-                            HStack {
-                                Text("Remote IP")
-                                Spacer()
-                                Text(ip)
-                                    .foregroundColor(.secondary)
-                            }
-                        }
-
-                        if status.connected, let magicDns = status.magicDnsName {
-                            HStack {
-                                Text("Magic DNS")
-                                Spacer()
-                                Text(magicDns)
-                                    .foregroundColor(.secondary)
-                            }
-                        }
-
-                        if !status.connected && status.enabled {
-                            if let loginUrl = status.loginUrl {
-                                Text("Visit tailscale login URL to authenticate")
-                                    .font(.caption)
-                                    .foregroundColor(.orange)
-                            }
-                        }
-
-                        if status.enabled {
-                            Button("Disable Remote Access") {
-                                Task { try? await settingsViewModel.disableRemoteAccess() }
-                            }
-                            .foregroundColor(.red)
-                        } else {
-                            Button("Enable Remote Access") {
-                                Task {
-                                    do {
-                                        let response = try await settingsViewModel.enableRemoteAccess()
-                                        if let loginUrl = response.loginUrl {
-                                            // Show login URL to user
-                                        }
-                                    } catch {
-                                        // Handle error
-                                    }
-                                }
-                            }
-                        }
-                    } else {
-                        Text("Remote access not available")
-                            .foregroundColor(.secondary)
                     }
                 }
 
@@ -276,8 +183,6 @@ struct SettingsView: View {
         .task {
             await settingsViewModel.loadServerInfo()
             await settingsViewModel.loadSources()
-            await settingsViewModel.loadRemoteAccessStatus()
-            await settingsViewModel.loadInstantSwitchStatus()
         }
         .confirmationDialog("Sign Out", isPresented: $showLogoutConfirm) {
             Button("Sign Out", role: .destructive) {

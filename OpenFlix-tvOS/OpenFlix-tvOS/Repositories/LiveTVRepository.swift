@@ -201,12 +201,20 @@ class LiveTVRepository: ObservableObject {
         return channels.filter { $0.group == group }
     }
 
-    // MARK: - Start Over / Timeshift
+    // MARK: - Start Over / Timeshift (Stub)
 
     func getStartOverInfo(channelId: String) async throws -> StartOverInfo {
-        let response: StartOverInfoResponse = try await api.request(.getStartover(channelId: channelId))
-        return response.info
+        // Stub - Start Over requires server-side catchup/DVR support
+        return StartOverInfo(available: false, streamUrl: nil, programTitle: nil)
     }
+}
+
+// MARK: - Start Over Info
+
+struct StartOverInfo {
+    let available: Bool
+    let streamUrl: String?
+    let programTitle: String?
 }
 
 enum ChannelSortOption: String, CaseIterable {

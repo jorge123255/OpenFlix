@@ -2,6 +2,8 @@ package com.openflix.presentation.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
@@ -9,6 +11,8 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.TextStyle
@@ -40,6 +44,7 @@ fun FocusableTextField(
     keyboardActions: KeyboardActions = KeyboardActions.Default
 ) {
     var isFocused by remember { mutableStateOf(false) }
+    val innerFocusRequester = remember { FocusRequester() }
 
     Column(modifier = modifier) {
         // Label
@@ -52,10 +57,16 @@ fun FocusableTextField(
             )
         }
 
-        // Text Field Container
+        // Text Field Container - clickable for touch devices
         Box(
             modifier = Modifier
                 .fillMaxWidth()
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null
+                ) {
+                    innerFocusRequester.requestFocus()
+                }
                 .background(
                     color = if (isFocused) OpenFlixColors.FocusBackground else OpenFlixColors.SurfaceVariant,
                     shape = MaterialTheme.shapes.medium
@@ -72,6 +83,7 @@ fun FocusableTextField(
                 onValueChange = onValueChange,
                 modifier = Modifier
                     .fillMaxWidth()
+                    .focusRequester(innerFocusRequester)
                     .onFocusChanged { focusState ->
                         isFocused = focusState.isFocused
                     },

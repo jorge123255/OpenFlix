@@ -28,6 +28,8 @@ type Recorder struct {
 	schedulerStop    chan struct{}
 	comskip          *ComskipDetector
 	commercialDetect bool
+	diskConfig       DiskSpaceConfig
+	eventBus         *EventBus
 }
 
 // RecordingSession represents an active recording
@@ -46,6 +48,8 @@ type RecorderConfig struct {
 	ComskipPath      string
 	ComskipINIPath   string
 	CommercialDetect bool
+	DiskQuotaGB      float64
+	LowSpaceGB       float64
 }
 
 // NewRecorder creates a new DVR recorder
@@ -72,6 +76,11 @@ func NewRecorder(db *gorm.DB, config RecorderConfig) *Recorder {
 		schedulerStop:    make(chan struct{}),
 		comskip:          comskip,
 		commercialDetect: config.CommercialDetect && comskip.IsEnabled(),
+		diskConfig: DiskSpaceConfig{
+			QuotaGB:    config.DiskQuotaGB,
+			LowSpaceGB: config.LowSpaceGB,
+		},
+		eventBus: NewEventBus(),
 	}
 
 	// Start scheduler
@@ -125,6 +134,9 @@ func (r *Recorder) checkScheduledRecordings() {
 	// Use UTC for database queries since times are stored in UTC
 	now := time.Now().UTC()
 
+	// Auto-retry failed recordings still within their time window
+	r.retryFailedRecordings(now)
+
 	var recordings []models.Recording
 	r.db.Where("status = ? AND start_time <= ?", "scheduled", now).Find(&recordings)
 
@@ -134,6 +146,7 @@ func (r *Recorder) checkScheduledRecordings() {
 		if rec.EndTime.Before(now) {
 			// Recording window passed, mark as failed
 			rec.Status = "failed"
+			rec.LastError = "recording window passed before recording could start"
 			r.db.Save(&rec)
 			continue
 		}
@@ -355,8 +368,95 @@ func (r *Recorder) processTeamPassesForUser(userID uint) int {
 	return scheduledCount
 }
 
+// getFailoverURLs returns stream URLs for a channel, including ChannelGroup members sorted by priority.
+// The primary channel URL is always first, followed by group members.
+func (r *Recorder) getFailoverURLs(channelID uint) []string {
+	var channel models.Channel
+	if err := r.db.First(&channel, channelID).Error; err != nil {
+		return nil
+	}
+
+	urls := []string{channel.StreamURL}
+
+	// Check if this channel belongs to any ChannelGroup
+	var members []models.ChannelGroupMember
+	r.db.Where("channel_id = ?", channelID).Find(&members)
+
+	for _, member := range members {
+		// Get all members of the same group, sorted by priority
+		var groupMembers []models.ChannelGroupMember
+		r.db.Where("channel_group_id = ? AND channel_id != ?", member.ChannelGroupID, channelID).
+			Order("priority ASC").Find(&groupMembers)
+
+		for _, gm := range groupMembers {
+			var ch models.Channel
+			if r.db.First(&ch, gm.ChannelID).Error == nil && ch.StreamURL != "" {
+				urls = append(urls, ch.StreamURL)
+			}
+		}
+	}
+
+	return urls
+}
+
+// buildFFmpegArgs builds FFmpeg command arguments based on recording quality preset
+func (r *Recorder) buildFFmpegArgs(streamURL string, duration time.Duration, outputPath string, recording *models.Recording) []string {
+	args := []string{
+		"-y",
+		"-hide_banner",
+		"-loglevel", "warning",
+		"-i", streamURL,
+		"-t", fmt.Sprintf("%d", int(duration.Seconds())),
+	}
+
+	preset := recording.QualityPreset
+	if preset == "" {
+		preset = "original"
+	}
+
+	switch preset {
+	case "high":
+		args = append(args, "-c:v", "libx264", "-preset", "veryfast", "-b:v", "8M", "-c:a", "aac", "-b:a", "192k")
+	case "medium":
+		args = append(args, "-c:v", "libx264", "-preset", "veryfast", "-b:v", "4M", "-c:a", "aac", "-b:a", "128k")
+	case "low":
+		args = append(args, "-c:v", "libx264", "-preset", "veryfast", "-b:v", "2M", "-c:a", "aac", "-b:a", "96k")
+	default: // "original"
+		args = append(args, "-c", "copy")
+	}
+
+	args = append(args, outputPath)
+	return args
+}
+
+// GetEventBus returns the event bus for WebSocket subscriptions
+func (r *Recorder) GetEventBus() *EventBus {
+	return r.eventBus
+}
+
 // startRecording starts a recording
 func (r *Recorder) startRecording(recording *models.Recording) error {
+	// Check disk space before starting
+	canRecord, reason := CanStartRecording(r.recordingsDir, r.diskConfig)
+	if !canRecord {
+		recording.Status = "failed"
+		recording.LastError = reason
+		r.db.Save(recording)
+		logger.Log.WithFields(map[string]interface{}{
+			"recording_id": recording.ID,
+			"reason":       reason,
+		}).Error("Cannot start recording: insufficient disk space")
+		if r.eventBus != nil {
+			r.eventBus.Publish(DVREvent{
+				Type:        EventDiskSpaceLow,
+				RecordingID: recording.ID,
+				Title:       recording.Title,
+				Message:     reason,
+			})
+		}
+		return fmt.Errorf("insufficient disk space: %s", reason)
+	}
+
 	r.mutex.Lock()
 
 	// Check if already recording
@@ -370,6 +470,7 @@ func (r *Recorder) startRecording(recording *models.Recording) error {
 	if err := r.db.First(&channel, recording.ChannelID).Error; err != nil {
 		r.mutex.Unlock()
 		recording.Status = "failed"
+		recording.LastError = fmt.Sprintf("channel not found: %v", err)
 		r.db.Save(recording)
 		return fmt.Errorf("channel not found: %w", err)
 	}
@@ -377,14 +478,39 @@ func (r *Recorder) startRecording(recording *models.Recording) error {
 	// Verify/refresh EPG metadata at actual recording start time
 	r.verifyRecordingMetadata(recording, &channel)
 
-	// Validate stream before starting
-	r.mutex.Unlock() // Release lock during validation (network I/O)
-	validation := r.ValidateStream(channel.StreamURL)
+	// Get failover URLs (primary + group members)
+	r.mutex.Unlock() // Release lock during network I/O
+	failoverURLs := r.getFailoverURLs(recording.ChannelID)
+	if len(failoverURLs) == 0 {
+		failoverURLs = []string{channel.StreamURL}
+	}
+
+	// Validate the primary stream first
+	validation := r.ValidateStream(failoverURLs[0])
 	r.mutex.Lock()
+
+	// If primary fails, try failover URLs
+	activeStreamURL := failoverURLs[0]
+	if !validation.Valid && len(failoverURLs) > 1 {
+		r.mutex.Unlock()
+		for _, url := range failoverURLs[1:] {
+			validation = r.ValidateStream(url)
+			if validation.Valid {
+				activeStreamURL = url
+				logger.Log.WithFields(map[string]interface{}{
+					"recording_id":   recording.ID,
+					"failover_url":   url,
+				}).Info("Using failover stream URL for recording")
+				break
+			}
+		}
+		r.mutex.Lock()
+	}
 
 	if !validation.Valid {
 		r.mutex.Unlock()
 		recording.Status = "failed"
+		recording.LastError = fmt.Sprintf("all stream URLs failed validation: %s", validation.Error)
 		r.db.Save(recording)
 		logger.Log.WithFields(map[string]interface{}{
 			"recording_id": recording.ID,
@@ -413,21 +539,13 @@ func (r *Recorder) startRecording(recording *models.Recording) error {
 	if duration <= 0 {
 		r.mutex.Unlock()
 		recording.Status = "failed"
+		recording.LastError = "recording end time already passed"
 		r.db.Save(recording)
 		return fmt.Errorf("recording end time already passed")
 	}
 
-	// Build FFmpeg command
-	args := []string{
-		"-y",
-		"-hide_banner",
-		"-loglevel", "warning",
-		"-i", channel.StreamURL,
-		"-t", fmt.Sprintf("%d", int(duration.Seconds())),
-		"-c", "copy", // Copy streams without re-encoding
-		outputPath,
-	}
-
+	// Build FFmpeg command with quality preset support
+	args := r.buildFFmpegArgs(activeStreamURL, duration, outputPath, recording)
 	cmd := exec.Command(r.ffmpegPath, args...)
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
@@ -447,8 +565,7 @@ func (r *Recorder) startRecording(recording *models.Recording) error {
 	r.db.Save(recording)
 
 	// Start FFmpeg with retry logic for transient stream errors
-	// Capture values needed in goroutine
-	streamURL := channel.StreamURL
+	// Use failover URLs for retries
 	ffmpegPath := r.ffmpegPath
 
 	go func() {
@@ -456,6 +573,14 @@ func (r *Recorder) startRecording(recording *models.Recording) error {
 
 		maxRetries := 3
 		retryDelay := 5 * time.Second
+		urlIndex := 0
+		// Find which URL we started with
+		for i, u := range failoverURLs {
+			if u == activeStreamURL {
+				urlIndex = i
+				break
+			}
+		}
 
 		for attempt := 1; attempt <= maxRetries; attempt++ {
 			session.Error = session.Process.Run()
@@ -497,6 +622,16 @@ func (r *Recorder) startRecording(recording *models.Recording) error {
 			// Wait before retry
 			time.Sleep(retryDelay)
 
+			// Try next failover URL on each retry
+			urlIndex = (urlIndex + 1) % len(failoverURLs)
+			retryURL := failoverURLs[urlIndex]
+
+			logger.Log.WithFields(map[string]interface{}{
+				"recording_id": recording.ID,
+				"retry_url":    retryURL,
+				"url_index":    urlIndex,
+			}).Info("Retrying with failover URL")
+
 			// Recreate FFmpeg command for retry with updated duration
 			stderr.Reset()
 			newDuration := recording.EndTime.Sub(time.Now())
@@ -505,15 +640,7 @@ func (r *Recorder) startRecording(recording *models.Recording) error {
 				break
 			}
 
-			retryArgs := []string{
-				"-y",
-				"-hide_banner",
-				"-loglevel", "warning",
-				"-i", streamURL,
-				"-t", fmt.Sprintf("%d", int(newDuration.Seconds())),
-				"-c", "copy",
-				outputPath,
-			}
+			retryArgs := r.buildFFmpegArgs(retryURL, newDuration, outputPath, recording)
 			cmd := exec.Command(ffmpegPath, retryArgs...)
 			cmd.Stderr = &stderr
 			session.Process = cmd
@@ -565,6 +692,11 @@ func (r *Recorder) onRecordingComplete(recordingID uint) {
 
 	if session != nil && session.Error != nil {
 		recording.Status = "failed"
+		errMsg := session.Error.Error()
+		if session.ErrorOutput != "" {
+			errMsg = session.ErrorOutput
+		}
+		recording.LastError = errMsg
 	} else {
 		recording.Status = "completed"
 		// Get file size
@@ -578,6 +710,27 @@ func (r *Recorder) onRecordingComplete(recordingID uint) {
 	// Post-process recording to fix A/V sync, then run commercial detection
 	if recording.Status == "completed" {
 		go r.postProcessRecording(&recording)
+	}
+}
+
+// retryFailedRecordings finds failed recordings still within their time window and retries them
+func (r *Recorder) retryFailedRecordings(now time.Time) {
+	var failedRecordings []models.Recording
+	r.db.Where("status = ? AND end_time > ? AND retry_count < max_retries", "failed", now).
+		Find(&failedRecordings)
+
+	for _, rec := range failedRecordings {
+		rec.RetryCount++
+		rec.Status = "scheduled"
+		r.db.Save(&rec)
+
+		logger.Log.WithFields(map[string]interface{}{
+			"recording_id": rec.ID,
+			"title":        rec.Title,
+			"retry_count":  rec.RetryCount,
+			"max_retries":  rec.MaxRetries,
+			"last_error":   rec.LastError,
+		}).Info("Auto-retrying failed recording")
 	}
 }
 

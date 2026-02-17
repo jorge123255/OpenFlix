@@ -29,11 +29,17 @@ class DiscoverViewModel @Inject constructor(
             // Load library hubs and streaming services in parallel
             val hubsResult = mediaRepository.getHomeHubs()
             val streamingResult = mediaRepository.getStreamingServiceHubs()
+            val channelsResult = liveTVRepository.getChannels()
 
             hubsResult.fold(
                 onSuccess = { hubs ->
                     // Get streaming services
                     val streamingHubs = streamingResult.getOrDefault(emptyList())
+                    val channels = channelsResult.getOrDefault(emptyList()).filter { !it.hidden }
+
+                    // Extract continue watching from on-deck hub if available
+                    val continueWatching = hubs.find { it.title.equals("On Deck", ignoreCase = true) ||
+                            it.title.equals("Continue Watching", ignoreCase = true) }?.items ?: emptyList()
 
                     // Find a featured item from the first hub or promoted hub
                     val featuredItem = hubs
@@ -46,7 +52,9 @@ class DiscoverViewModel @Inject constructor(
                             isLoading = false,
                             hubs = hubs,
                             streamingServiceHubs = streamingHubs,
-                            featuredItem = featuredItem
+                            featuredItem = featuredItem,
+                            continueWatching = continueWatching,
+                            channels = channels
                         )
                     }
                     Timber.d("Loaded ${hubs.size} hubs and ${streamingHubs.size} streaming service hubs")
@@ -92,5 +100,7 @@ data class DiscoverUiState(
     val hubs: List<Hub> = emptyList(),
     val streamingServiceHubs: List<Hub> = emptyList(),
     val featuredItem: MediaItem? = null,
+    val continueWatching: List<MediaItem> = emptyList(),
+    val channels: List<Channel> = emptyList(),
     val error: String? = null
 )

@@ -19,7 +19,7 @@ interface OpenFlixApi {
     suspend fun login(@Body request: LoginRequest): Response<AuthResponse>
 
     @POST("auth/logout")
-    suspend fun logout(): Response<Unit>
+    suspend fun logout(): Response<Void>
 
     @GET("auth/user")
     suspend fun getCurrentUser(): Response<UserDto>
@@ -28,7 +28,7 @@ interface OpenFlixApi {
     suspend fun updateUser(@Body request: UpdateUserRequest): Response<UserDto>
 
     @PUT("auth/user/password")
-    suspend fun changePassword(@Body request: ChangePasswordRequest): Response<Unit>
+    suspend fun changePassword(@Body request: ChangePasswordRequest): Response<Void>
 
     // === Profiles / Home Users ===
 
@@ -110,15 +110,15 @@ interface OpenFlixApi {
     ): Response<PlaybackResponse>
 
     @PUT(":/progress")
-    suspend fun updateProgress(@Body request: ProgressUpdateRequest): Response<Unit>
+    suspend fun updateProgress(@Body request: ProgressUpdateRequest): Response<Void>
 
     // Mark content as watched (scrobble)
     @GET("scrobble")
-    suspend fun scrobble(@Query("key") mediaId: String): Response<Unit>
+    suspend fun scrobble(@Query("key") mediaId: String): Response<Void>
 
     // Mark content as unwatched (unscrobble)
     @GET("unscrobble")
-    suspend fun unscrobble(@Query("key") mediaId: String): Response<Unit>
+    suspend fun unscrobble(@Query("key") mediaId: String): Response<Void>
 
     // Update playback timeline (progress with state)
     @POST("timeline")
@@ -127,7 +127,7 @@ interface OpenFlixApi {
         @Query("time") time: Long,
         @Query("duration") duration: Long? = null,
         @Query("state") state: String = "playing"
-    ): Response<Unit>
+    ): Response<Void>
 
     // === Live TV ===
 
@@ -211,10 +211,10 @@ interface OpenFlixApi {
     ): Response<M3USourceDto>
 
     @DELETE("livetv/sources/{id}")
-    suspend fun deleteM3USource(@Path("id") id: Int): Response<Unit>
+    suspend fun deleteM3USource(@Path("id") id: Int): Response<Void>
 
     @POST("livetv/sources/{id}/refresh")
-    suspend fun refreshM3USource(@Path("id") id: Int): Response<Unit>
+    suspend fun refreshM3USource(@Path("id") id: Int): Response<Void>
 
     @POST("livetv/sources/{id}/import-vod")
     suspend fun importM3UVOD(@Path("id") id: Int): Response<ImportResultDto>
@@ -240,13 +240,13 @@ interface OpenFlixApi {
     ): Response<XtreamSourceDto>
 
     @DELETE("livetv/xtream/sources/{id}")
-    suspend fun deleteXtreamSource(@Path("id") id: Int): Response<Unit>
+    suspend fun deleteXtreamSource(@Path("id") id: Int): Response<Void>
 
     @POST("livetv/xtream/sources/{id}/test")
     suspend fun testXtreamSource(@Path("id") id: Int): Response<TestSourceResponse>
 
     @POST("livetv/xtream/sources/{id}/refresh")
-    suspend fun refreshXtreamSource(@Path("id") id: Int): Response<Unit>
+    suspend fun refreshXtreamSource(@Path("id") id: Int): Response<Void>
 
     @POST("livetv/xtream/sources/{id}/import-vod")
     suspend fun importXtreamVOD(@Path("id") id: Int): Response<ImportResultDto>
@@ -269,7 +269,7 @@ interface OpenFlixApi {
     ): Response<ChannelGroupDto>
 
     @DELETE("livetv/channel-groups/{id}")
-    suspend fun deleteChannelGroup(@Path("id") groupId: Int): Response<Unit>
+    suspend fun deleteChannelGroup(@Path("id") groupId: Int): Response<Void>
 
     @POST("livetv/channel-groups/{id}/members")
     suspend fun addChannelToGroup(
@@ -288,7 +288,7 @@ interface OpenFlixApi {
     suspend fun removeChannelFromGroup(
         @Path("id") groupId: Int,
         @Path("channelId") channelId: Int
-    ): Response<Unit>
+    ): Response<Void>
 
     @POST("livetv/channel-groups/auto-detect")
     suspend fun autoDetectDuplicates(): Response<AutoDetectDuplicatesResponse>
@@ -308,7 +308,7 @@ interface OpenFlixApi {
     suspend fun scheduleRecording(@Body request: RecordRequest): Response<RecordingDto>
 
     @DELETE("dvr/recordings/{id}")
-    suspend fun deleteRecording(@Path("id") recordingId: String): Response<Unit>
+    suspend fun deleteRecording(@Path("id") recordingId: String): Response<Void>
 
     @GET("dvr/stream/{id}")
     suspend fun getRecordingStreamUrl(@Path("id") recordingId: String): Response<StreamResponse>
@@ -317,10 +317,39 @@ interface OpenFlixApi {
     suspend fun getRecordingConflicts(): Response<ConflictsResponse>
 
     @POST("dvr/conflicts/resolve")
-    suspend fun resolveConflict(@Body request: ResolveConflictRequest): Response<Unit>
+    suspend fun resolveConflict(@Body request: ResolveConflictRequest): Response<Void>
 
     @GET("dvr/recordings/stats")
     suspend fun getRecordingStats(): Response<RecordingStatsResponse>
+
+    @PUT("dvr/recordings/{id}/progress")
+    suspend fun updateRecordingProgress(
+        @Path("id") recordingId: String,
+        @Body request: UpdateRecordingProgressRequest
+    ): Response<Void>
+
+    @POST("dvr/recordings/from-program")
+    suspend fun recordFromProgram(@Body request: RecordFromProgramRequest): Response<RecordFromProgramResponse>
+
+    // Series Rules
+    @GET("dvr/rules")
+    suspend fun getSeriesRules(): Response<SeriesRulesResponse>
+
+    @POST("dvr/rules")
+    suspend fun createSeriesRule(@Body request: CreateSeriesRuleRequest): Response<SeriesRuleDto>
+
+    @PUT("dvr/rules/{id}")
+    suspend fun updateSeriesRule(
+        @Path("id") ruleId: Long,
+        @Body request: UpdateSeriesRuleRequest
+    ): Response<SeriesRuleDto>
+
+    @DELETE("dvr/rules/{id}")
+    suspend fun deleteSeriesRule(@Path("id") ruleId: Long): Response<Void>
+
+    // Disk Usage
+    @GET("dvr/disk-usage")
+    suspend fun getDiskUsage(): Response<DiskUsageResponse>
 
     // === Search ===
 
@@ -347,15 +376,15 @@ interface OpenFlixApi {
     suspend fun getWatchlist(): Response<MediaContainerResponse>
 
     @POST("watchlist/{mediaId}")
-    suspend fun addToWatchlist(@Path("mediaId") mediaId: String): Response<Unit>
+    suspend fun addToWatchlist(@Path("mediaId") mediaId: String): Response<Void>
 
     @DELETE("watchlist/{mediaId}")
-    suspend fun removeFromWatchlist(@Path("mediaId") mediaId: String): Response<Unit>
+    suspend fun removeFromWatchlist(@Path("mediaId") mediaId: String): Response<Void>
 
     // === Client Logs ===
 
     @POST("api/client-logs")
-    suspend fun submitClientLogs(@Body logs: List<ClientLogEntry>): Response<Unit>
+    suspend fun submitClientLogs(@Body logs: List<ClientLogEntry>): Response<Void>
 
     @GET("api/client-logs")
     suspend fun getClientLogs(): Response<List<ClientLogEntry>>
@@ -437,7 +466,7 @@ interface OpenFlixApi {
     ): Response<TeamPassDto>
 
     @DELETE("api/teampass/{id}")
-    suspend fun deleteTeamPass(@Path("id") id: Long): Response<Unit>
+    suspend fun deleteTeamPass(@Path("id") id: Long): Response<Void>
 
     @GET("api/teampass/{id}/upcoming")
     suspend fun getTeamPassUpcoming(@Path("id") id: Long): Response<TeamPassWithGamesResponse>
@@ -458,91 +487,74 @@ interface OpenFlixApi {
     suspend fun getLeagueTeams(@Path("league") league: String): Response<LeagueTeamsResponse>
 
     @POST("api/teampass/process")
-    suspend fun processTeamPasses(): Response<Unit>
-
-    // === Remote Access (Tailscale) ===
-
-    @GET("remote-access/connection-info")
-    suspend fun getConnectionInfo(): Response<ConnectionInfoDto>
-
-    @GET("remote-access/status")
-    suspend fun getRemoteAccessStatus(): Response<RemoteAccessStatusDto>
-
-    @POST("remote-access/enable")
-    suspend fun enableRemoteAccess(): Response<RemoteAccessActionResponse>
-
-    @POST("remote-access/disable")
-    suspend fun disableRemoteAccess(): Response<RemoteAccessActionResponse>
-
-    @GET("remote-access/health")
-    suspend fun getRemoteAccessHealth(): Response<RemoteAccessHealthDto>
-
-    @GET("remote-access/install-info")
-    suspend fun getRemoteAccessInstallInfo(): Response<TailscaleInstallInfoDto>
-
-    @GET("remote-access/login-url")
-    suspend fun getRemoteAccessLoginUrl(): Response<TailscaleLoginUrlDto>
-
-    // === Instant Switch ===
-
-    @GET("api/instant/status")
-    suspend fun getInstantSwitchStatus(): Response<InstantSwitchStatusDto>
-
-    @POST("api/instant/enabled")
-    suspend fun setInstantSwitchEnabled(@Body request: InstantSwitchEnabledRequest): Response<InstantSwitchEnabledResponse>
-
-    @GET("api/instant/cached")
-    suspend fun getCachedStreams(): Response<CachedStreamsDto>
-
-    @POST("api/instant/favorites")
-    suspend fun setInstantSwitchFavorites(@Body request: InstantSwitchFavoritesRequest): Response<Unit>
+    suspend fun processTeamPasses(): Response<Void>
 
     // === Sports Scores ===
 
     @GET("api/sports/scores")
-    suspend fun getSportsScores(@Query("sport") sport: String = "all"): Response<Map<String, Any>>
+    suspend fun getSportsScores(
+        @Query("league") league: String? = null,
+        @Query("team") team: String? = null
+    ): Response<SportsScoresResponse>
 
-    @GET("api/sports/overlay")
-    suspend fun getSportsOverlay(@Query("max") max: Int = 5): Response<Map<String, Any>>
+    @GET("api/sports/overlay/{channelId}")
+    suspend fun getSportsOverlay(@Path("channelId") channelId: String): Response<SportsOverlayDto>
 
-    @GET("api/sports/favorites")
-    suspend fun getSportsFavorites(): Response<Map<String, Any>>
-
-    @POST("api/sports/favorites")
-    suspend fun setSportsFavorites(@Body request: Map<String, List<String>>): Response<Map<String, Any>>
-
-    @POST("api/sports/alerts")
-    suspend fun addSportsAlert(@Body request: Map<String, Any>): Response<Map<String, Any>>
-
-    @GET("api/sports/stats")
-    suspend fun getSportsStats(): Response<Map<String, Any>>
+    @PUT("api/sports/favorites")
+    suspend fun setSportsFavorites(@Body request: SportsFavoritesRequest): Response<Void>
 
     // === Commercial Skip ===
 
-    @GET("api/commercial/get")
-    suspend fun getCommercials(@Query("recording_id") recordingId: String): Response<Map<String, Any>>
+    @GET("api/commercials/{mediaId}")
+    suspend fun getCommercials(@Path("mediaId") mediaId: String): Response<CommercialsResponse>
 
-    @GET("api/commercial/check")
+    @GET("api/commercials/{mediaId}/check")
     suspend fun checkCommercialPosition(
-        @Query("recording_id") recordingId: String,
-        @Query("position") position: Double
-    ): Response<Map<String, Any>>
+        @Path("mediaId") mediaId: String,
+        @Query("position") positionMs: Long
+    ): Response<CommercialCheckResponse>
 
-    @POST("api/commercial/detect")
-    suspend fun detectCommercials(@Body request: Map<String, String>): Response<Map<String, Any>>
+    @POST("api/commercials/{mediaId}/detect")
+    suspend fun detectCommercials(@Path("mediaId") mediaId: String): Response<CommercialsResponse>
 
-    @POST("api/commercial/mark")
-    suspend fun markCommercial(@Body request: Map<String, Any>): Response<Map<String, Any>>
+    @POST("api/commercials/{mediaId}/mark")
+    suspend fun markCommercial(
+        @Path("mediaId") mediaId: String,
+        @Body request: MarkCommercialRequest
+    ): Response<CommercialDto>
 
-    @POST("api/commercial/unmark")
-    suspend fun unmarkCommercial(@Body request: Map<String, Any>): Response<Map<String, Any>>
+    @DELETE("api/commercials/{mediaId}/{commercialId}")
+    suspend fun unmarkCommercial(
+        @Path("mediaId") mediaId: String,
+        @Path("commercialId") commercialId: String
+    ): Response<Void>
 
-    @GET("api/commercial/config")
-    suspend fun getCommercialConfig(): Response<Map<String, Any>>
+    // === Remote Access ===
 
-    @POST("api/commercial/config")
-    suspend fun setCommercialConfig(@Body request: Map<String, Any>): Response<Map<String, Any>>
+    @GET("api/remote/connection")
+    suspend fun getConnectionInfo(): Response<ConnectionInfoDto>
 
-    @GET("api/commercial/stats")
-    suspend fun getCommercialStats(): Response<Map<String, Any>>
+    @GET("api/remote/status")
+    suspend fun getRemoteAccessStatus(): Response<RemoteAccessStatusDto>
+
+    @POST("api/remote/enable")
+    suspend fun enableRemoteAccess(): Response<RemoteAccessStatusDto>
+
+    @POST("api/remote/disable")
+    suspend fun disableRemoteAccess(): Response<Void>
+
+    @GET("api/remote/health")
+    suspend fun getRemoteAccessHealth(): Response<RemoteAccessHealthDto>
+
+    @GET("api/remote/install-info")
+    suspend fun getRemoteAccessInstallInfo(): Response<RemoteAccessInstallInfoDto>
+
+    @GET("api/remote/login-url")
+    suspend fun getRemoteAccessLoginUrl(): Response<RemoteAccessLoginUrlDto>
+
+    @GET("api/remote/streaming-quality")
+    suspend fun remoteStreamingQuality(): Response<RemoteStreamingQualityDto>
+
+    @PUT("api/remote/streaming-quality")
+    suspend fun setRemoteStreamingQuality(@Body request: SetStreamingQualityRequest): Response<Void>
 }

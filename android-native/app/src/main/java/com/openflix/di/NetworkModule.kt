@@ -7,9 +7,6 @@ import com.openflix.data.repository.AuthRepository
 import com.openflix.data.repository.DVRRepository
 import com.openflix.data.repository.LiveTVRepository
 import com.openflix.data.repository.MediaRepository
-import com.openflix.data.repository.RemoteAccessRepository
-import android.content.Context
-import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -109,15 +106,5 @@ object NetworkModule {
         preferencesManager: PreferencesManager
     ): DVRRepository {
         return DVRRepository(api, preferencesManager)
-    }
-
-    @Provides
-    @Singleton
-    fun provideRemoteAccessRepository(
-        @ApplicationContext context: Context,
-        api: OpenFlixApi,
-        preferencesManager: PreferencesManager
-    ): RemoteAccessRepository {
-        return RemoteAccessRepository(context, api, preferencesManager)
     }
 }

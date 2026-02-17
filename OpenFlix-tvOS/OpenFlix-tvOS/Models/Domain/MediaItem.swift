@@ -87,6 +87,16 @@ struct MediaItem: Identifiable, Hashable {
         return Double(offset) / Double(duration)
     }
 
+    var progress: Double {
+        progressPercent
+    }
+
+    var remainingDuration: Int? {
+        guard let duration = duration else { return nil }
+        let offset = viewOffset ?? 0
+        return max(0, duration - offset)
+    }
+
     var isWatched: Bool {
         (viewCount ?? 0) > 0
     }

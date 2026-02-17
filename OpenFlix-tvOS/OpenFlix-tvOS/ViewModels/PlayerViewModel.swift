@@ -5,14 +5,6 @@ import os.log
 
 private let logger = Logger(subsystem: "com.openflix.tvos", category: "Player")
 
-// MARK: - Safe Array Subscript
-
-extension Array {
-    subscript(safe index: Int) -> Element? {
-        indices.contains(index) ? self[index] : nil
-    }
-}
-
 // MARK: - Stream Info (matching Android)
 
 struct StreamInfo {

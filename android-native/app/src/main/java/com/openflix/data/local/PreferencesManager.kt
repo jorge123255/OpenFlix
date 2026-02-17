@@ -184,11 +184,6 @@ class PreferencesManager @Inject constructor(
         .catch { e -> handleError(e) }
         .map { it[PreferencesKeys.TMDB_API_KEY] }
 
-    // === Remote Streaming ===
-    val remoteStreamingQuality: Flow<String> = dataStore.data
-        .catch { e -> handleError(e) }
-        .map { it[PreferencesKeys.REMOTE_STREAMING_QUALITY] ?: "AUTO" }
-
     // === Advanced ===
     val debugLogging: Flow<Boolean> = dataStore.data
         .catch { e -> handleError(e) }
@@ -372,12 +367,6 @@ class PreferencesManager @Inject constructor(
         }
     }
 
-    suspend fun setRemoteStreamingQuality(quality: String) {
-        dataStore.edit { prefs ->
-            prefs[PreferencesKeys.REMOTE_STREAMING_QUALITY] = quality
-        }
-    }
-
     suspend fun clearAll() {
         dataStore.edit { prefs ->
             prefs.clear()
@@ -453,11 +442,15 @@ class PreferencesManager @Inject constructor(
         // TMDB
         val TMDB_API_KEY = stringPreferencesKey("tmdb_api_key")
 
-        // Remote Streaming
-        val REMOTE_STREAMING_QUALITY = stringPreferencesKey("remote_streaming_quality")
-
         // Live TV
         val FAVORITE_CHANNEL_IDS = stringPreferencesKey("favorite_channel_ids")
+
+        // Remote Access
+        val REMOTE_STREAMING_QUALITY = stringPreferencesKey("remote_streaming_quality")
+
+        // DVR
+        val DVR_PRE_PADDING = intPreferencesKey("dvr_pre_padding")
+        val DVR_POST_PADDING = intPreferencesKey("dvr_post_padding")
 
         // Remote Button Mappings
         val BUTTON_RED = stringPreferencesKey("button_red")
@@ -467,6 +460,27 @@ class PreferencesManager @Inject constructor(
         val BUTTON_MENU = stringPreferencesKey("button_menu")
         val BUTTON_INFO = stringPreferencesKey("button_info")
         val BUTTON_RECORD = stringPreferencesKey("button_record")
+    }
+
+    // === DVR Settings ===
+    val dvrPrePadding: Flow<Int> = dataStore.data
+        .catch { e -> handleError(e) }
+        .map { it[PreferencesKeys.DVR_PRE_PADDING] ?: 2 }  // Default 2 minutes before
+
+    val dvrPostPadding: Flow<Int> = dataStore.data
+        .catch { e -> handleError(e) }
+        .map { it[PreferencesKeys.DVR_POST_PADDING] ?: 5 }  // Default 5 minutes after
+
+    suspend fun setDvrPrePadding(minutes: Int) {
+        dataStore.edit { prefs ->
+            prefs[PreferencesKeys.DVR_PRE_PADDING] = minutes.coerceIn(0, 30)
+        }
+    }
+
+    suspend fun setDvrPostPadding(minutes: Int) {
+        dataStore.edit { prefs ->
+            prefs[PreferencesKeys.DVR_POST_PADDING] = minutes.coerceIn(0, 60)
+        }
     }
 
     // === Live TV Favorites ===
@@ -503,6 +517,17 @@ class PreferencesManager @Inject constructor(
             ?.split(",")
             ?.contains(channelId)
             ?: false
+    }
+
+    // === Remote Streaming Quality ===
+    val remoteStreamingQuality: Flow<String> = dataStore.data
+        .catch { e -> handleError(e) }
+        .map { it[PreferencesKeys.REMOTE_STREAMING_QUALITY] ?: "AUTO" }
+
+    suspend fun setRemoteStreamingQuality(quality: String) {
+        dataStore.edit { prefs ->
+            prefs[PreferencesKeys.REMOTE_STREAMING_QUALITY] = quality
+        }
     }
 
     // === Remote Button Mappings ===

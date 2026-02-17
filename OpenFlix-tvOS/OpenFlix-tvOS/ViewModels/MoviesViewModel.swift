@@ -19,6 +19,8 @@ class MoviesViewModel: ObservableObject {
     @Published var genreHubs: [(genre: String, items: [MediaItem])] = []
     @Published var allMovies: [MediaItem] = []
     @Published var availableGenres: [String] = []
+    @Published var collections: [MovieCollection] = []
+    @Published var studioCollections: [(studio: String, items: [MediaItem])] = []
     @Published var isLoading = false
     @Published var error: String?
 
@@ -457,8 +459,20 @@ class MoviesViewModel: ObservableObject {
         !genreHubs.isEmpty
     }
 
+    var genreCollections: [(genre: String, items: [MediaItem])] {
+        genreHubs
+    }
+
     var filteredItems: [MediaItem] {
         guard let genre = selectedGenre else { return allMovies }
         return allMovies.filter { getGenresForItem($0).contains(genre) }
     }
+}
+
+// MARK: - Movie Collection
+
+struct MovieCollection: Identifiable {
+    let id: String
+    let name: String
+    let items: [MediaItem]
 }

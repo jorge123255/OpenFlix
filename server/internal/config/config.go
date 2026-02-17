@@ -80,13 +80,17 @@ type LiveTVConfig struct {
 
 // DVRConfig holds DVR recording settings
 type DVRConfig struct {
-	Enabled          bool   `yaml:"enabled"`
-	RecordingDir     string `yaml:"recording_dir"`
-	PrePadding       int    `yaml:"pre_padding"`        // minutes before show
-	PostPadding      int    `yaml:"post_padding"`       // minutes after show
-	CommercialDetect bool   `yaml:"commercial_detect"`  // enable Comskip commercial detection
-	ComskipPath      string `yaml:"comskip_path"`       // path to comskip binary
-	ComskipINIPath   string `yaml:"comskip_ini_path"`   // path to comskip INI config
+	Enabled          bool    `yaml:"enabled"`
+	RecordingDir     string  `yaml:"recording_dir"`
+	PrePadding       int     `yaml:"pre_padding"`        // minutes before show
+	PostPadding      int     `yaml:"post_padding"`       // minutes after show
+	CommercialDetect bool    `yaml:"commercial_detect"`  // enable Comskip commercial detection
+	ComskipPath      string  `yaml:"comskip_path"`       // path to comskip binary
+	ComskipINIPath   string  `yaml:"comskip_ini_path"`   // path to comskip INI config
+	DiskQuotaGB      float64 `yaml:"disk_quota_gb"`      // 0 = unlimited
+	LowSpaceGB       float64 `yaml:"low_space_gb"`       // threshold for low space warning (default 5GB)
+	DefaultQuality   string  `yaml:"default_quality"`    // original, high, medium, low
+	HWAccel          string  `yaml:"hw_accel"`           // vaapi, nvenc, qsv, or empty
 }
 
 // VODConfig holds VOD (Video On Demand) download settings

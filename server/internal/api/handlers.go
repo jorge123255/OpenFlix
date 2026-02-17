@@ -59,6 +59,7 @@ func (s *Server) getServerIdentity(c *gin.Context) {
 			"size":              0,
 			"machineIdentifier": machineIdentifier,
 			"version":           serverVersion,
+			"friendlyName":      serverName,
 		},
 	})
 }

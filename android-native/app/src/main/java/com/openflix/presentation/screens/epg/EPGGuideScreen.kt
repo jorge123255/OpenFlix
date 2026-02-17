@@ -116,6 +116,15 @@ fun EPGGuideScreen(
         }
     }
 
+    // Recording result snackbar
+    val snackbarHostState = remember { SnackbarHostState() }
+    LaunchedEffect(uiState.recordingResult) {
+        uiState.recordingResult?.let { msg ->
+            snackbarHostState.showSnackbar(msg, duration = SnackbarDuration.Short)
+            viewModel.clearRecordingResult()
+        }
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -387,10 +396,8 @@ fun EPGGuideScreen(
             RecordReminderDialog(
                 program = uiState.selectedProgramForAction!!,
                 isRecord = true,
-                onConfirm = {
-                    // TODO: Implement recording
-                    viewModel.dismissDialogs()
-                },
+                onConfirm = { viewModel.recordProgram(seriesRecord = false) },
+                onConfirmSeries = { viewModel.recordProgram(seriesRecord = true) },
                 onDismiss = { viewModel.dismissDialogs() }
             )
         }
@@ -407,6 +414,12 @@ fun EPGGuideScreen(
                 onDismiss = { viewModel.dismissDialogs() }
             )
         }
+
+        // Snackbar for recording results
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier.align(Alignment.BottomCenter)
+        )
     }
 }
 
@@ -441,6 +454,7 @@ private fun RecordReminderDialog(
     program: Program,
     isRecord: Boolean,
     onConfirm: () -> Unit,
+    onConfirmSeries: (() -> Unit)? = null,
     onDismiss: () -> Unit
 ) {
     val timeFormat = SimpleDateFormat("h:mm a", Locale.getDefault())
@@ -487,11 +501,18 @@ private fun RecordReminderDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = onConfirm) {
-                Text(
-                    text = if (isRecord) "Record" else "Set Reminder",
-                    color = if (isRecord) Color.Red else Color(0xFF10B981)
-                )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (isRecord && onConfirmSeries != null) {
+                    TextButton(onClick = onConfirmSeries) {
+                        Text(text = "Record Series", color = Color(0xFFF97316))
+                    }
+                }
+                TextButton(onClick = onConfirm) {
+                    Text(
+                        text = if (isRecord) "Record" else "Set Reminder",
+                        color = if (isRecord) Color.Red else Color(0xFF10B981)
+                    )
+                }
             }
         },
         dismissButton = {

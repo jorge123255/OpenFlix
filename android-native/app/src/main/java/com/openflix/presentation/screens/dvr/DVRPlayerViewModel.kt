@@ -113,9 +113,14 @@ class DVRPlayerViewModel @Inject constructor(
 
         // Save progress to server
         viewModelScope.launch {
-            // TODO: Implement updateViewOffset in DVRRepository when API supports it
-            // For now, we'll just log it
-            Timber.d("Would save progress for $recordingId: ${positionMs}ms")
+            dvrRepository.updateRecordingProgress(recordingId, positionMs).fold(
+                onSuccess = {
+                    Timber.d("Saved progress for $recordingId: ${positionMs}ms")
+                },
+                onFailure = { error ->
+                    Timber.w(error, "Failed to save progress for $recordingId")
+                }
+            )
         }
     }
 
@@ -170,6 +175,44 @@ class DVRPlayerViewModel @Inject constructor(
      */
     fun resetSkippedCommercials() {
         skippedCommercials.clear()
+    }
+
+    /**
+     * Get chapter boundaries from commercial breaks.
+     * Chapters are the content segments between commercials.
+     * Returns list of start positions (ms) for each chapter.
+     */
+    fun getChapterBoundaries(): List<Long> {
+        val commercials = _uiState.value.recording?.commercials ?: return emptyList()
+        if (commercials.isEmpty()) return emptyList()
+
+        val boundaries = mutableListOf(0L) // Start of recording
+        for (commercial in commercials) {
+            boundaries.add(commercial.end) // Start of content after each commercial
+        }
+        return boundaries
+    }
+
+    /**
+     * Jump to the next chapter (content segment after next commercial).
+     * Returns the position to seek to, or null if already at the last chapter.
+     */
+    fun getNextChapterPosition(currentPositionMs: Long): Long? {
+        val boundaries = getChapterBoundaries()
+        if (boundaries.isEmpty()) return null
+        return boundaries.firstOrNull { it > currentPositionMs + 1000 } // 1s tolerance
+    }
+
+    /**
+     * Jump to the previous chapter (start of current or previous content segment).
+     * Returns the position to seek to, or null if at the beginning.
+     */
+    fun getPreviousChapterPosition(currentPositionMs: Long): Long? {
+        val boundaries = getChapterBoundaries()
+        if (boundaries.isEmpty()) return null
+        // If we're more than 3 seconds into a chapter, go to its start
+        // Otherwise, go to the previous chapter
+        return boundaries.lastOrNull { it < currentPositionMs - 3000 }
     }
 
     override fun onCleared() {

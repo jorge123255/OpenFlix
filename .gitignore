@@ -59,6 +59,7 @@ maestro/**/*.png
 # Binary
 server/server
 server/openflix-server
+server/openflix-server-*
 
 # Go build artifacts
 *.exe
@@ -95,10 +96,25 @@ recordings/
 /transcode/
 server/transcode/
 
-# APK files (too large for GitHub)
+# APK/AAB files (too large for GitHub)
 *.apk
-server/downloads/*.apk
+*.aab
+server/downloads/
 android-native/app/build/
+android-native/.gradle/
+
+# Android build reports
+android-native/build/
+
+# tvOS build artifacts
+OpenFlix-tvOS/build/
+
+# Android signing (secrets)
+android-native/keystore.properties
+android-native/*.keystore
+android-native/*.jks
+*.keystore
+*.jks
 
 # Claude Code artifacts
 .claude/

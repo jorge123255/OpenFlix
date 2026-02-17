@@ -128,6 +128,18 @@ fun DVRPlayerScreen(
         }
     }
 
+    // Periodic progress save every 30 seconds
+    LaunchedEffect(isPlaying) {
+        if (isPlaying && !uiState.isLiveRecording) {
+            while (true) {
+                delay(30_000)
+                if (position > 0) {
+                    viewModel.saveProgress(position)
+                }
+            }
+        }
+    }
+
     // Request focus on launch
     LaunchedEffect(Unit) {
         focusRequester.requestFocus()
@@ -195,6 +207,36 @@ fun DVRPlayerScreen(
                         }
                         Key.MediaFastForward -> {
                             mpvPlayer.seekRelative(30)
+                            true
+                        }
+                        // Chapter navigation (PageUp/PageDown or ChannelUp/Down)
+                        Key.PageUp, Key(android.view.KeyEvent.KEYCODE_CHANNEL_UP.toLong()) -> {
+                            viewModel.getNextChapterPosition(position)?.let { nextPos ->
+                                viewModel.resetSkippedCommercials()
+                                mpvPlayer.seekTo(nextPos)
+                            }
+                            true
+                        }
+                        Key.PageDown, Key(android.view.KeyEvent.KEYCODE_CHANNEL_DOWN.toLong()) -> {
+                            viewModel.getPreviousChapterPosition(position)?.let { prevPos ->
+                                viewModel.resetSkippedCommercials()
+                                mpvPlayer.seekTo(prevPos)
+                            }
+                            true
+                        }
+                        // Skip next/previous for chapter nav
+                        Key.MediaSkipForward, Key.MediaNext -> {
+                            viewModel.getNextChapterPosition(position)?.let { nextPos ->
+                                viewModel.resetSkippedCommercials()
+                                mpvPlayer.seekTo(nextPos)
+                            }
+                            true
+                        }
+                        Key.MediaSkipBackward, Key.MediaPrevious -> {
+                            viewModel.getPreviousChapterPosition(position)?.let { prevPos ->
+                                viewModel.resetSkippedCommercials()
+                                mpvPlayer.seekTo(prevPos)
+                            }
                             true
                         }
                         Key.MediaStop -> {
@@ -335,10 +377,23 @@ fun DVRPlayerScreen(
                 isPlaying = isPlaying,
                 isLiveRecording = uiState.isLiveRecording,
                 autoSkipEnabled = uiState.autoSkipEnabled,
+                hasChapters = viewModel.getChapterBoundaries().size > 1,
                 onPlayPause = { mpvPlayer.togglePlayPause() },
                 onSeek = {
                     viewModel.resetSkippedCommercials()
                     mpvPlayer.seekTo(it)
+                },
+                onNextChapter = {
+                    viewModel.getNextChapterPosition(position)?.let { nextPos ->
+                        viewModel.resetSkippedCommercials()
+                        mpvPlayer.seekTo(nextPos)
+                    }
+                },
+                onPrevChapter = {
+                    viewModel.getPreviousChapterPosition(position)?.let { prevPos ->
+                        viewModel.resetSkippedCommercials()
+                        mpvPlayer.seekTo(prevPos)
+                    }
                 },
                 onJumpToLive = {
                     // Jump to near the end (live edge)
@@ -396,8 +451,11 @@ private fun DVRPlayerOverlay(
     isPlaying: Boolean,
     isLiveRecording: Boolean,
     autoSkipEnabled: Boolean,
+    hasChapters: Boolean = false,
     onPlayPause: () -> Unit,
     onSeek: (Long) -> Unit,
+    onNextChapter: () -> Unit = {},
+    onPrevChapter: () -> Unit = {},
     onJumpToLive: () -> Unit,
     onToggleAutoSkip: () -> Unit,
     onBack: () -> Unit
@@ -567,6 +625,19 @@ private fun DVRPlayerOverlay(
                     horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    // Previous chapter
+                    if (hasChapters) {
+                        Button(
+                            onClick = onPrevChapter,
+                            colors = ButtonDefaults.colors(
+                                containerColor = OpenFlixColors.SurfaceVariant.copy(alpha = 0.8f)
+                            )
+                        ) {
+                            Text("|<")
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                    }
+
                     // Rewind 10s
                     Button(
                         onClick = { onSeek(maxOf(0, position - 10000)) },
@@ -599,6 +670,19 @@ private fun DVRPlayerOverlay(
                         )
                     ) {
                         Text("+10s")
+                    }
+
+                    // Next chapter
+                    if (hasChapters) {
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Button(
+                            onClick = onNextChapter,
+                            colors = ButtonDefaults.colors(
+                                containerColor = OpenFlixColors.SurfaceVariant.copy(alpha = 0.8f)
+                            )
+                        ) {
+                            Text(">|")
+                        }
                     }
 
                     // Jump to Live button (only for active recordings)
