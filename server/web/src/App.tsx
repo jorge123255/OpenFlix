@@ -17,6 +17,23 @@ import { TranscodePage } from './pages/Transcode'
 import { LogsPage } from './pages/Logs'
 import { SettingsPage } from './pages/Settings'
 import { DownloadsPage } from './pages/Downloads'
+import { TunersPage } from './pages/Tuners'
+import { ChannelCollectionsPage } from './pages/ChannelCollections'
+import { ArtworkManagerPage } from './pages/ArtworkManager'
+import { CollectionsPage } from './pages/Collections'
+import { FileUploadPage } from './pages/FileUpload'
+import { ClientConnectionsPage } from './pages/ClientConnections'
+import { DiagnosticsPage } from './pages/Diagnostics'
+import { SpeedTestPage } from './pages/SpeedTest'
+import { JobQueuePage } from './pages/JobQueue'
+import { VirtualChannelsPage } from './pages/VirtualChannels'
+import { SegmentDetectionPage } from './pages/SegmentDetection'
+import { SearchPage } from './pages/Search'
+import { UpdaterPage } from './pages/Updater'
+import { ComskipSettingsPage } from './pages/ComskipSettings'
+import { SetupWizardPage } from './pages/SetupWizard'
+import { BackupsPage } from './pages/Backups'
+import { TrashPage } from './pages/Trash'
 import { api } from './api/client'
 
 const queryClient = new QueryClient({
@@ -64,6 +81,23 @@ function App() {
             <Route path="logs" element={<LogsPage />} />
             <Route path="settings" element={<SettingsPage />} />
             <Route path="downloads" element={<DownloadsPage />} />
+            <Route path="tuners" element={<TunersPage />} />
+            <Route path="channel-collections" element={<ChannelCollectionsPage />} />
+            <Route path="artwork" element={<ArtworkManagerPage />} />
+            <Route path="collections" element={<CollectionsPage />} />
+            <Route path="upload" element={<FileUploadPage />} />
+            <Route path="connections" element={<ClientConnectionsPage />} />
+            <Route path="diagnostics" element={<DiagnosticsPage />} />
+            <Route path="speedtest" element={<SpeedTestPage />} />
+            <Route path="jobs" element={<JobQueuePage />} />
+            <Route path="virtual-channels" element={<VirtualChannelsPage />} />
+            <Route path="segments" element={<SegmentDetectionPage />} />
+            <Route path="search" element={<SearchPage />} />
+            <Route path="updater" element={<UpdaterPage />} />
+            <Route path="comskip" element={<ComskipSettingsPage />} />
+            <Route path="setup" element={<SetupWizardPage />} />
+            <Route path="backups" element={<BackupsPage />} />
+            <Route path="trash" element={<TrashPage />} />
           </Route>
           <Route path="*" element={<Navigate to="/ui" replace />} />
         </Routes>
