@@ -368,10 +368,28 @@ func (s *Server) deleteXtreamSource(c *gin.Context) {
 		return
 	}
 
+	// Collect channel IDs for program cleanup
+	var channelIDs []string
+	s.db.Model(&models.Channel{}).Where("xtream_source_id = ?", id).Pluck("channel_id", &channelIDs)
+
+	// Delete programs for these channels
+	programsDeleted := int64(0)
+	if len(channelIDs) > 0 {
+		result := s.db.Where("channel_id IN ?", channelIDs).Delete(&models.Program{})
+		programsDeleted = result.RowsAffected
+	}
+
 	// Delete associated channels
-	if err := s.db.Where("xtream_source_id = ?", id).Delete(&models.Channel{}).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete associated channels"})
-		return
+	channelResult := s.db.Where("xtream_source_id = ?", id).Delete(&models.Channel{})
+
+	// Delete VOD media items and their files from this source
+	var mediaIDs []uint
+	s.db.Model(&models.MediaItem{}).Where("provider_type = ? AND provider_source_id = ?", "xtream", id).Pluck("id", &mediaIDs)
+	mediaDeleted := int64(0)
+	if len(mediaIDs) > 0 {
+		s.db.Where("media_item_id IN ?", mediaIDs).Delete(&models.MediaFile{})
+		result := s.db.Where("provider_type = ? AND provider_source_id = ?", "xtream", id).Delete(&models.MediaItem{})
+		mediaDeleted = result.RowsAffected
 	}
 
 	// Delete the source
@@ -380,7 +398,13 @@ func (s *Server) deleteXtreamSource(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Source deleted"})
+	log.Printf("Deleted Xtream source %d: %d channels, %d programs, %d media items", id, channelResult.RowsAffected, programsDeleted, mediaDeleted)
+	c.JSON(http.StatusOK, gin.H{
+		"message":         "Source deleted",
+		"channelsDeleted": channelResult.RowsAffected,
+		"programsDeleted": programsDeleted,
+		"mediaDeleted":    mediaDeleted,
+	})
 }
 
 // testXtreamSource tests an Xtream source connection

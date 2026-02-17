@@ -41,6 +41,10 @@ class AuthRepository @Inject constructor(
 
             if (response.isSuccessful && response.body() != null) {
                 val authResponse = response.body()!!
+                if (authResponse.token.isBlank()) {
+                    Timber.e("Login response missing auth token")
+                    return Result.failure(Exception("Server returned empty auth token"))
+                }
                 saveAuthData(authResponse)
                 Timber.d("Login successful for user: $username")
                 Result.success(authResponse.user.toDomain())
