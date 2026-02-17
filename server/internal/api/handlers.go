@@ -2802,28 +2802,6 @@ func (s *Server) deletePlaylist(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"status": "ok"})
 }
 
-// ============ Collection Handlers ============
-
-func (s *Server) getCollectionItems(c *gin.Context) {
-	s.respondWithMediaContainer(c, []gin.H{}, 0, 0, 0)
-}
-
-func (s *Server) createCollection(c *gin.Context) {
-	c.JSON(http.StatusCreated, gin.H{"ratingKey": "1"})
-}
-
-func (s *Server) addToCollection(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{"status": "ok"})
-}
-
-func (s *Server) removeFromCollection(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{"status": "ok"})
-}
-
-func (s *Server) deleteCollection(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{"status": "ok"})
-}
-
 // ============ Watchlist Handlers ============
 
 func (s *Server) getWatchlist(c *gin.Context) {
@@ -2932,40 +2910,6 @@ func (s *Server) removeFromWatchlist(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"status": "ok"})
-}
-
-// ============ Play Queue Handlers ============
-
-func (s *Server) createPlayQueue(c *gin.Context) {
-	c.JSON(http.StatusCreated, gin.H{
-		"MediaContainer": gin.H{
-			"playQueueID":       1,
-			"playQueueVersion":  1,
-			"playQueueShuffled": false,
-			"size":              0,
-			"Metadata":          []gin.H{},
-		},
-	})
-}
-
-func (s *Server) getPlayQueue(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{
-		"MediaContainer": gin.H{
-			"playQueueID":       c.Param("id"),
-			"playQueueVersion":  1,
-			"playQueueShuffled": false,
-			"size":              0,
-			"Metadata":          []gin.H{},
-		},
-	})
-}
-
-func (s *Server) shufflePlayQueue(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{"status": "ok"})
-}
-
-func (s *Server) clearPlayQueue(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"status": "ok"})
 }
 

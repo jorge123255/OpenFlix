@@ -12,18 +12,45 @@ import (
 type DVREventType string
 
 const (
-	EventRecordingStarting  DVREventType = "recording_starting"   // 5 min before
+	// Legacy recording events
+	EventRecordingStarting  DVREventType = "recording_starting" // 5 min before
 	EventRecordingStarted   DVREventType = "recording_started"
 	EventRecordingCompleted DVREventType = "recording_completed"
 	EventRecordingFailed    DVREventType = "recording_failed"
 	EventDiskSpaceLow       DVREventType = "disk_space_low"
 	EventConflictDetected   DVREventType = "conflict_detected"
+
+	// V2 Job events
+	EventJobCreated  DVREventType = "job_created"
+	EventJobUpdated  DVREventType = "job_updated"
+	EventJobDeleted  DVREventType = "job_deleted"
+	EventJobStarted  DVREventType = "job_started"
+	EventJobFailed   DVREventType = "job_failed"
+	EventJobComplete DVREventType = "job_complete"
+
+	// V2 File events
+	EventFileCreated DVREventType = "file_created"
+	EventFileUpdated DVREventType = "file_updated"
+	EventFileDeleted DVREventType = "file_deleted"
+
+	// V2 Group events
+	EventGroupCreated DVREventType = "group_created"
+	EventGroupUpdated DVREventType = "group_updated"
+
+	// V2 Rule events
+	EventRuleTriggered  DVREventType = "rule_triggered"
+	EventProcessorDone  DVREventType = "processor_done"
+	EventScannerDone    DVREventType = "scanner_done"
 )
 
 // DVREvent represents a DVR system event
 type DVREvent struct {
 	Type        DVREventType   `json:"type"`
 	RecordingID uint           `json:"recordingId,omitempty"`
+	JobID       uint           `json:"jobId,omitempty"`
+	FileID      uint           `json:"fileId,omitempty"`
+	GroupID     uint           `json:"groupId,omitempty"`
+	RuleID      uint           `json:"ruleId,omitempty"`
 	Title       string         `json:"title,omitempty"`
 	ChannelName string         `json:"channelName,omitempty"`
 	StartTime   *time.Time     `json:"startTime,omitempty"`

@@ -180,6 +180,11 @@ func NewServer(cfg *config.Config, db *gorm.DB) *Server {
 	}
 	s.setupRouter()
 
+	// Wire enricher/grouper/upnext into recorder for post-processing
+	if recorder != nil && dvrEnricher != nil {
+		recorder.SetEnricher(dvrEnricher)
+	}
+
 	// Start background EPG enrichment if TMDB is configured
 	if epgEnricher != nil {
 		epgEnricher.StartBackgroundEnrichment()
@@ -365,12 +370,6 @@ func (s *Server) setupRouter() {
 		libraryGroup.GET("/recentlyAdded", s.getRecentlyAdded)
 		libraryGroup.GET("/onDeck", s.getOnDeck)
 
-		// Collections
-		libraryGroup.GET("/collections/:id/children", s.getCollectionItems)
-		libraryGroup.POST("/collections", s.createCollection)
-		libraryGroup.PUT("/collections/:id/items", s.addToCollection)
-		libraryGroup.DELETE("/collections/:id/items/:itemId", s.removeFromCollection)
-		libraryGroup.DELETE("/collections/:id", s.deleteCollection)
 	}
 
 	// ============ Hubs API (Recommendations) ============
@@ -436,16 +435,6 @@ func (s *Server) setupRouter() {
 		watchlist.GET("", s.getWatchlist)
 		watchlist.POST("/:mediaId", s.addToWatchlist)
 		watchlist.DELETE("/:mediaId", s.removeFromWatchlist)
-	}
-
-	// ============ Play Queues API ============
-	playQueues := r.Group("/playQueues")
-	playQueues.Use(s.authRequired())
-	{
-		playQueues.POST("", s.createPlayQueue)
-		playQueues.GET("/:id", s.getPlayQueue)
-		playQueues.PUT("/:id/shuffle", s.shufflePlayQueue)
-		playQueues.DELETE("/:id/items", s.clearPlayQueue)
 	}
 
 	// ============ Live TV API ============
@@ -623,6 +612,75 @@ func (s *Server) setupRouter() {
 		// DVR Settings
 		dvrGroup.GET("/settings", s.getDVRSettings)
 		dvrGroup.PUT("/settings", s.updateDVRSettings)
+
+		// DVR V2 (Channels DVR-style)
+		dvrV2 := dvrGroup.Group("/v2")
+		{
+			// Jobs
+			dvrV2.GET("/jobs", s.getJobs)
+			dvrV2.GET("/jobs/:id", s.getJob)
+			dvrV2.POST("/jobs", s.createJob)
+			dvrV2.PUT("/jobs/:id", s.updateJob)
+			dvrV2.DELETE("/jobs/:id", s.deleteJob)
+			dvrV2.POST("/jobs/:id/cancel", s.cancelJob)
+
+			// Files
+			dvrV2.GET("/files", s.getFiles)
+			dvrV2.GET("/files/:id", s.getFile)
+			dvrV2.PUT("/files/:id", s.updateFile)
+			dvrV2.DELETE("/files/:id", s.deleteFile)
+			dvrV2.GET("/files/:id/stream", s.streamFile)
+			dvrV2.PUT("/files/:id/state", s.updateFileState)
+
+			// Groups
+			dvrV2.GET("/groups", s.getGroups)
+			dvrV2.GET("/groups/:id", s.getGroup)
+			dvrV2.DELETE("/groups/:id", s.deleteGroup)
+			dvrV2.PUT("/groups/:id/state", s.updateGroupState)
+			dvrV2.POST("/groups/regroup", s.groupUngroupedFiles)
+
+			// Rules
+			dvrV2.GET("/rules", s.getRules)
+			dvrV2.GET("/rules/:id", s.getRule)
+			dvrV2.POST("/rules", s.createRule)
+			dvrV2.PUT("/rules/:id", s.updateRule)
+			dvrV2.DELETE("/rules/:id", s.deleteRule)
+			dvrV2.POST("/rules/preview", s.previewRule)
+			dvrV2.GET("/rules/:id/preview", s.previewExistingRule)
+
+			// Watch state
+			dvrV2.GET("/upnext", s.getUpNext)
+
+			// File management
+			dvrV2.POST("/files/:id/regroup", s.regroupFile)
+
+			// Virtual Stations
+			dvrV2.GET("/virtual-stations", s.getVirtualStations)
+			dvrV2.GET("/virtual-stations/:id", s.getVirtualStation)
+			dvrV2.POST("/virtual-stations", s.createVirtualStation)
+			dvrV2.PUT("/virtual-stations/:id", s.updateVirtualStation)
+			dvrV2.DELETE("/virtual-stations/:id", s.deleteVirtualStation)
+			dvrV2.GET("/virtual-stations/:id/stream.m3u8", s.streamVirtualStation)
+
+			// Collections (smart playlists)
+			dvrV2.GET("/collections", s.getDVRCollections)
+			dvrV2.GET("/collections/:id", s.getDVRCollection)
+			dvrV2.POST("/collections", s.createDVRCollection)
+			dvrV2.PUT("/collections/:id", s.updateDVRCollection)
+			dvrV2.DELETE("/collections/:id", s.deleteDVRCollection)
+			dvrV2.GET("/collections/:id/items", s.getDVRCollectionItems)
+
+			// WebSocket event stream
+			dvrV2.GET("/events", s.dvrEvents)
+
+			// Channel Collections (custom lineups)
+			dvrV2.GET("/channel-collections", s.getChannelCollections)
+			dvrV2.GET("/channel-collections/:id", s.getChannelCollection)
+			dvrV2.POST("/channel-collections", s.createChannelCollection)
+			dvrV2.PUT("/channel-collections/:id", s.updateChannelCollection)
+			dvrV2.DELETE("/channel-collections/:id", s.deleteChannelCollection)
+			dvrV2.GET("/channel-collections/:id/export.m3u", s.exportChannelCollectionM3U)
+		}
 	}
 
 	// ============ VOD API (Video On Demand Downloads) ============
