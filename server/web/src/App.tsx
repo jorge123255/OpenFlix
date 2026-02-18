@@ -37,6 +37,8 @@ import { TrashPage } from './pages/Trash'
 import { NotificationsPage } from './pages/Notifications'
 import { SubtitlesPage } from './pages/Subtitles'
 import { SchedulerPage } from './pages/Scheduler'
+import { DeviceManagerPage } from './pages/DeviceManager'
+import { OfflineDownloadsPage } from './pages/OfflineDownloads'
 import { api } from './api/client'
 
 const queryClient = new QueryClient({
@@ -104,6 +106,8 @@ function App() {
             <Route path="notifications" element={<NotificationsPage />} />
             <Route path="subtitles" element={<SubtitlesPage />} />
             <Route path="scheduler" element={<SchedulerPage />} />
+            <Route path="devices" element={<DeviceManagerPage />} />
+            <Route path="offline" element={<OfflineDownloadsPage />} />
           </Route>
           <Route path="*" element={<Navigate to="/ui" replace />} />
         </Routes>

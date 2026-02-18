@@ -1164,6 +1164,20 @@ func (s *Server) setupRouter() {
 		clipGroup.GET("/:id/stream", s.streamClip)
 	}
 
+	// ============ Offline Downloads API ============
+	offline := r.Group("/api/offline")
+	offline.Use(s.authRequired())
+	{
+		offline.POST("/request", s.requestOfflineDownload)
+		offline.GET("/downloads", s.listOfflineDownloads)
+		offline.GET("/:id/stream", s.streamOfflineDownload)
+		offline.PUT("/:id/progress", s.updateOfflineProgress)
+		offline.PUT("/:id/watch-state", s.syncOfflineWatchState)
+		offline.DELETE("/:id", s.deleteOfflineDownload)
+		offline.GET("/settings", s.getOfflineSettings)
+		offline.PUT("/settings", s.adminRequired(), s.updateOfflineSettings)
+	}
+
 	// ============ Server Preferences ============
 	// Plex uses /:/prefs - we use /-/prefs
 	plex.GET("/prefs", s.getServerPrefs)
@@ -1229,6 +1243,17 @@ func (s *Server) setupRouter() {
 		playbackAPI.PUT("/:id/tracks/select", s.selectMediaTracks)
 		playbackAPI.GET("/track-preferences", s.getTrackPreferences)
 		playbackAPI.PUT("/track-preferences", s.updateTrackPreferences)
+
+		// Playback speed
+		playbackAPI.GET("/speed-presets", s.getSpeedPresets)
+		playbackAPI.PUT("/speed", s.setPlaybackSpeed)
+		playbackAPI.GET("/sessions/:sessionId/speed", s.getSessionSpeed)
+		playbackAPI.PUT("/sessions/:sessionId/speed", s.setSessionSpeed)
+
+		// Frame rate matching
+		playbackAPI.GET("/:id/framerate", s.getMediaFrameRate)
+		playbackAPI.GET("/framerate-settings", s.getFrameRateSettings)
+		playbackAPI.PUT("/framerate-settings", s.adminRequired(), s.updateFrameRateSettings)
 	}
 
 	// ============ Scheduled Tasks API (admin only) ============
@@ -1252,6 +1277,24 @@ func (s *Server) setupRouter() {
 		subtitleGroup.PUT("/config", s.adminRequired(), s.updateSubtitleConfig)
 		subtitleGroup.GET("/:mediaId", s.getSubtitlesForMedia)
 		subtitleGroup.DELETE("/:mediaId/:lang", s.deleteSubtitle)
+	}
+
+	// ============ Device Management API ============
+	// Authenticated (any user) endpoints
+	devices := r.Group("/api/devices")
+	devices.Use(s.authRequired())
+	{
+		devices.POST("/register", s.registerDevice)
+		devices.GET("/my-settings", s.getMyDeviceSettings)
+	}
+	// Admin-only endpoints
+	adminDevices := r.Group("/api/devices")
+	adminDevices.Use(s.authRequired(), s.adminRequired())
+	{
+		adminDevices.GET("", s.listDevices)
+		adminDevices.GET("/:id", s.getDevice)
+		adminDevices.PUT("/:id", s.updateDevice)
+		adminDevices.DELETE("/:id", s.deleteDevice)
 	}
 
 	// Images - support both /thumb/:id and /thumb (simple)
@@ -1292,7 +1335,7 @@ func (s *Server) corsMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.Header("Access-Control-Allow-Origin", "*")
 		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-		c.Header("Access-Control-Allow-Headers", "Origin, Content-Type, Accept, Authorization, X-Plex-Token, X-Plex-Client-Identifier, X-Plex-Product, X-Plex-Version, X-Plex-Platform, Range")
+		c.Header("Access-Control-Allow-Headers", "Origin, Content-Type, Accept, Authorization, X-Plex-Token, X-Plex-Client-Identifier, X-Plex-Product, X-Plex-Version, X-Plex-Platform, X-Device-ID, Range")
 		c.Header("Access-Control-Expose-Headers", "Content-Range, Content-Length, Content-Type")
 
 		if c.Request.Method == "OPTIONS" {

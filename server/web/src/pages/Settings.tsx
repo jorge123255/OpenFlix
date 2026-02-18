@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { Save, CheckCircle, XCircle, Loader, Download, Upload, AlertCircle } from 'lucide-react'
+import { Save, CheckCircle, XCircle, Loader, Download, Upload, AlertCircle, Server, Cpu, Tv, HardDrive, Globe, Play } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api, type ServerSettings, type DVRSettings, type ImportResult, type ConfigStats } from '../api/client'
 
@@ -11,10 +11,13 @@ function useServerConfig() {
   })
 }
 
-function SettingSection({ title, children }: { title: string; children: React.ReactNode }) {
+function SettingSection({ title, icon, children }: { title: string; icon?: React.ReactNode; children: React.ReactNode }) {
   return (
     <div className="bg-gray-800 rounded-xl p-6 mb-6">
-      <h2 className="text-lg font-semibold text-white mb-4">{title}</h2>
+      <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+        {icon}
+        {title}
+      </h2>
       <div className="space-y-4">{children}</div>
     </div>
   )
@@ -35,6 +38,35 @@ function SettingField({
       {description && <p className="text-xs text-gray-500 mb-2">{description}</p>}
       {children}
     </div>
+  )
+}
+
+function ToggleSwitch({
+  checked,
+  onChange,
+  label,
+}: {
+  checked: boolean
+  onChange: (checked: boolean) => void
+  label?: string
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      onClick={() => onChange(!checked)}
+      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+        checked ? 'bg-indigo-600' : 'bg-gray-600'
+      }`}
+    >
+      <span
+        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+          checked ? 'translate-x-6' : 'translate-x-1'
+        }`}
+      />
+      {label && <span className="sr-only">{label}</span>}
+    </button>
   )
 }
 
@@ -512,6 +544,11 @@ function ConfigBackupSection() {
   )
 }
 
+const inputClass = "w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
+const selectClass = "w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
+const numberInputClass = "w-32 px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
+const readOnlyClass = "w-full px-4 py-2 bg-gray-900 border border-gray-700 rounded-lg text-gray-400 cursor-not-allowed"
+
 export function SettingsPage() {
   const { data: config, isLoading, error } = useServerConfig()
   const queryClient = useQueryClient()
@@ -614,13 +651,57 @@ transcode:
         </button>
       </div>
 
+      {/* 1. Server Settings */}
+      <SettingSection title="Server Settings" icon={<Server className="h-5 w-5 text-indigo-400" />}>
+        <SettingField label="Server Name" description="Friendly name shown to clients on your network">
+          <input
+            type="text"
+            value={formData.server_name || ''}
+            onChange={(e) => updateField('server_name', e.target.value)}
+            className={inputClass}
+            placeholder="OpenFlix Server"
+          />
+        </SettingField>
+        <SettingField label="Server Port" description="Port the server listens on. Requires restart to take effect.">
+          <input
+            type="number"
+            min="1"
+            max="65535"
+            value={formData.server_port || 32400}
+            onChange={(e) => updateField('server_port', Number(e.target.value))}
+            className={numberInputClass}
+          />
+        </SettingField>
+        <SettingField label="Log Level" description="Controls the verbosity of server logs">
+          <select
+            value={formData.log_level || 'info'}
+            onChange={(e) => updateField('log_level', e.target.value)}
+            className={selectClass}
+          >
+            <option value="debug">Debug</option>
+            <option value="info">Info</option>
+            <option value="warn">Warning</option>
+            <option value="error">Error</option>
+          </select>
+        </SettingField>
+        <SettingField label="Data Directory" description="Where OpenFlix stores its database, cache, and media files">
+          <input
+            type="text"
+            value={formData.data_dir || ''}
+            readOnly
+            className={readOnlyClass}
+          />
+        </SettingField>
+      </SettingSection>
+
+      {/* Metadata (existing) */}
       <SettingSection title="Metadata">
         <SettingField label="TMDB API Key" description="For movie and TV show metadata (get yours at themoviedb.org)">
           <input
             type="password"
             value={formData.tmdb_api_key || ''}
             onChange={(e) => updateField('tmdb_api_key', e.target.value)}
-            className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
+            className={inputClass}
             placeholder="Enter your TMDB API key"
           />
         </SettingField>
@@ -629,7 +710,7 @@ transcode:
             type="password"
             value={formData.tvdb_api_key || ''}
             onChange={(e) => updateField('tvdb_api_key', e.target.value)}
-            className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
+            className={inputClass}
             placeholder="Enter your TVDB API key"
           />
         </SettingField>
@@ -637,7 +718,7 @@ transcode:
           <select
             value={formData.metadata_lang || 'en'}
             onChange={(e) => updateField('metadata_lang', e.target.value)}
-            className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
+            className={selectClass}
           >
             <option value="en">English</option>
             <option value="es">Spanish</option>
@@ -655,29 +736,347 @@ transcode:
             type="number"
             value={formData.scan_interval || 60}
             onChange={(e) => updateField('scan_interval', Number(e.target.value))}
-            className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
+            className={numberInputClass}
           />
         </SettingField>
       </SettingSection>
 
+      {/* 2. Transcoding */}
+      <SettingSection title="Transcoding" icon={<Cpu className="h-5 w-5 text-orange-400" />}>
+        <SettingField label="Hardware Acceleration" description="GPU-accelerated encoding/decoding. 'auto' will detect the best option.">
+          <select
+            value={formData.hardware_accel || 'auto'}
+            onChange={(e) => updateField('hardware_accel', e.target.value)}
+            className={selectClass}
+          >
+            <option value="auto">Auto-detect</option>
+            <option value="nvidia">NVIDIA (NVENC)</option>
+            <option value="amd">AMD (AMF)</option>
+            <option value="intel_qsv">Intel Quick Sync (QSV)</option>
+            <option value="videotoolbox">Apple VideoToolbox</option>
+            <option value="software">Software (CPU only)</option>
+          </select>
+        </SettingField>
+        <SettingField label="Max Concurrent Transcode Sessions" description="Limit simultaneous transcodes to prevent CPU/GPU overload">
+          <div className="flex items-center gap-3">
+            <input
+              type="number"
+              min="1"
+              max="20"
+              value={formData.max_transcode_sessions || 3}
+              onChange={(e) => updateField('max_transcode_sessions', Number(e.target.value))}
+              className={numberInputClass}
+            />
+            <span className="text-gray-400 text-sm">sessions</span>
+          </div>
+        </SettingField>
+        <SettingField label="Transcode Temp Directory" description="Temporary directory for transcode output files">
+          <input
+            type="text"
+            value={formData.transcode_temp_dir || ''}
+            onChange={(e) => updateField('transcode_temp_dir', e.target.value)}
+            className={inputClass}
+            placeholder="~/.openflix/transcode"
+          />
+        </SettingField>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <SettingField label="Default Video Codec" description="Preferred output video codec for transcoding">
+            <select
+              value={formData.default_video_codec || 'h264'}
+              onChange={(e) => updateField('default_video_codec', e.target.value)}
+              className={selectClass}
+            >
+              <option value="h264">H.264 (AVC)</option>
+              <option value="hevc">H.265 (HEVC)</option>
+              <option value="copy">Copy (no re-encode)</option>
+            </select>
+          </SettingField>
+          <SettingField label="Default Audio Codec" description="Preferred output audio codec for transcoding">
+            <select
+              value={formData.default_audio_codec || 'aac'}
+              onChange={(e) => updateField('default_audio_codec', e.target.value)}
+              className={selectClass}
+            >
+              <option value="aac">AAC</option>
+              <option value="ac3">AC3 (Dolby Digital)</option>
+              <option value="copy">Copy (no re-encode)</option>
+            </select>
+          </SettingField>
+        </div>
+      </SettingSection>
+
+      {/* 3. Live TV */}
+      <SettingSection title="Live TV" icon={<Tv className="h-5 w-5 text-blue-400" />}>
+        <SettingField label="Max Concurrent Streams" description="Maximum number of simultaneous live TV streams. 0 = unlimited.">
+          <div className="flex items-center gap-3">
+            <input
+              type="number"
+              min="0"
+              value={formData.livetv_max_streams ?? 0}
+              onChange={(e) => updateField('livetv_max_streams', Number(e.target.value))}
+              className={numberInputClass}
+            />
+            <span className="text-gray-400 text-sm">
+              {(formData.livetv_max_streams ?? 0) === 0 ? '(Unlimited)' : `streams`}
+            </span>
+          </div>
+        </SettingField>
+        <SettingField label="Timeshift Buffer Duration" description="Hours of live TV kept for pause/rewind. Higher values use more disk space.">
+          <div className="flex items-center gap-3">
+            <input
+              type="number"
+              min="1"
+              max="72"
+              value={formData.timeshift_buffer_hrs || 4}
+              onChange={(e) => updateField('timeshift_buffer_hrs', Number(e.target.value))}
+              className={numberInputClass}
+            />
+            <span className="text-gray-400 text-sm">hours</span>
+          </div>
+        </SettingField>
+        <SettingField label="EPG Refresh Interval" description="How often to fetch updated program guide data">
+          <div className="flex items-center gap-3">
+            <input
+              type="number"
+              min="1"
+              max="48"
+              value={formData.epg_refresh_interval || 4}
+              onChange={(e) => updateField('epg_refresh_interval', Number(e.target.value))}
+              className={numberInputClass}
+            />
+            <span className="text-gray-400 text-sm">hours</span>
+          </div>
+        </SettingField>
+        <SettingField label="Channel Switch Buffer Size" description="Seconds of buffer to maintain for faster channel switching">
+          <div className="flex items-center gap-3">
+            <input
+              type="number"
+              min="1"
+              max="30"
+              value={formData.channel_switch_buffer || 3}
+              onChange={(e) => updateField('channel_switch_buffer', Number(e.target.value))}
+              className={numberInputClass}
+            />
+            <span className="text-gray-400 text-sm">seconds</span>
+          </div>
+        </SettingField>
+        <div className="flex items-center justify-between pt-2">
+          <SettingField label="Tuner Sharing" description="Allow multiple clients to share the same tuner when watching the same channel">
+            <span />
+          </SettingField>
+          <ToggleSwitch
+            checked={formData.tuner_sharing ?? true}
+            onChange={(checked) => updateField('tuner_sharing', checked)}
+            label="Tuner Sharing"
+          />
+        </div>
+      </SettingSection>
+
+      {/* 4. DVR Settings (expanded) */}
+      <SettingSection title="DVR" icon={<HardDrive className="h-5 w-5 text-red-400" />}>
+        <SettingField label="Recording Directory" description="Where DVR recordings are saved">
+          <input
+            type="text"
+            value={formData.recording_dir || ''}
+            onChange={(e) => updateField('recording_dir', e.target.value)}
+            className={inputClass}
+            placeholder="~/.openflix/recordings"
+          />
+        </SettingField>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <SettingField label="Pre-Padding Default" description="Minutes to start recording before scheduled time">
+            <div className="flex items-center gap-3">
+              <input
+                type="number"
+                min="0"
+                max="60"
+                value={formData.pre_padding ?? 2}
+                onChange={(e) => updateField('pre_padding', Number(e.target.value))}
+                className={numberInputClass}
+              />
+              <span className="text-gray-400 text-sm">minutes</span>
+            </div>
+          </SettingField>
+          <SettingField label="Post-Padding Default" description="Minutes to continue recording after scheduled end">
+            <div className="flex items-center gap-3">
+              <input
+                type="number"
+                min="0"
+                max="120"
+                value={formData.post_padding ?? 5}
+                onChange={(e) => updateField('post_padding', Number(e.target.value))}
+                className={numberInputClass}
+              />
+              <span className="text-gray-400 text-sm">minutes</span>
+            </div>
+          </SettingField>
+        </div>
+        <div className="flex items-center justify-between pt-2">
+          <SettingField label="Auto Commercial Detection" description="Run commercial detection on completed recordings using Comskip">
+            <span />
+          </SettingField>
+          <ToggleSwitch
+            checked={formData.commercial_detect ?? true}
+            onChange={(checked) => updateField('commercial_detect', checked)}
+            label="Auto Commercial Detection"
+          />
+        </div>
+        <SettingField label="Auto-Delete After" description="Automatically delete recordings after this many days. 0 = never auto-delete.">
+          <div className="flex items-center gap-3">
+            <input
+              type="number"
+              min="0"
+              value={formData.auto_delete_days ?? 0}
+              onChange={(e) => updateField('auto_delete_days', Number(e.target.value))}
+              className={numberInputClass}
+            />
+            <span className="text-gray-400 text-sm">
+              {(formData.auto_delete_days ?? 0) === 0 ? 'days (never)' : 'days'}
+            </span>
+          </div>
+        </SettingField>
+        <SettingField label="Max Recording Quality" description="Maximum quality for new recordings">
+          <select
+            value={formData.max_record_quality || 'original'}
+            onChange={(e) => updateField('max_record_quality', e.target.value)}
+            className={selectClass}
+          >
+            <option value="original">Original (no re-encode)</option>
+            <option value="high">High (1080p)</option>
+            <option value="medium">Medium (720p)</option>
+            <option value="low">Low (480p)</option>
+          </select>
+        </SettingField>
+      </SettingSection>
+
+      {/* Existing DVR concurrent recordings section */}
       <DVRSettingsSection />
 
+      {/* 5. Remote Access */}
+      <SettingSection title="Remote Access" icon={<Globe className="h-5 w-5 text-green-400" />}>
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-sm font-medium text-gray-300">Tailscale Status</h3>
+            <p className="text-xs text-gray-500 mt-1">
+              Tailscale provides secure remote access to your server via WireGuard VPN
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            {formData.tailscale_status === 'connected' ? (
+              <>
+                <CheckCircle className="h-4 w-4 text-green-400" />
+                <span className="text-sm text-green-400">Connected</span>
+              </>
+            ) : (
+              <>
+                <XCircle className="h-4 w-4 text-gray-500" />
+                <span className="text-sm text-gray-500 capitalize">{formData.tailscale_status || 'Disconnected'}</span>
+              </>
+            )}
+          </div>
+        </div>
+        <div className="flex items-center justify-between pt-2">
+          <SettingField label="Remote Access" description="Enable access to your server from outside your local network">
+            <span />
+          </SettingField>
+          <ToggleSwitch
+            checked={formData.remote_access_enabled ?? false}
+            onChange={(checked) => updateField('remote_access_enabled', checked)}
+            label="Remote Access"
+          />
+        </div>
+        <SettingField label="External URL" description="The external URL clients use to reach your server (optional, auto-detected via Tailscale)">
+          <input
+            type="text"
+            value={formData.external_url || ''}
+            onChange={(e) => updateField('external_url', e.target.value)}
+            className={inputClass}
+            placeholder="https://openflix.your-tailnet.ts.net"
+          />
+        </SettingField>
+      </SettingSection>
+
+      {/* 6. Playback Defaults */}
+      <SettingSection title="Playback Defaults" icon={<Play className="h-5 w-5 text-purple-400" />}>
+        <SettingField label="Default Playback Speed" description="Default speed for video playback">
+          <select
+            value={formData.default_playback_speed || '1.0'}
+            onChange={(e) => updateField('default_playback_speed', e.target.value)}
+            className={selectClass}
+          >
+            <option value="0.5">0.5x</option>
+            <option value="0.75">0.75x</option>
+            <option value="1.0">1.0x (Normal)</option>
+            <option value="1.25">1.25x</option>
+            <option value="1.5">1.5x</option>
+            <option value="1.75">1.75x</option>
+            <option value="2.0">2.0x</option>
+          </select>
+        </SettingField>
+        <SettingField label="Frame Rate Matching" description="Match display refresh rate to content frame rate">
+          <select
+            value={formData.frame_rate_match_mode || 'auto'}
+            onChange={(e) => updateField('frame_rate_match_mode', e.target.value)}
+            className={selectClass}
+          >
+            <option value="auto">Auto</option>
+            <option value="always">Always</option>
+            <option value="never">Never</option>
+          </select>
+        </SettingField>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <SettingField label="Default Subtitle Language" description="Preferred language for subtitles">
+            <select
+              value={formData.default_subtitle_language || ''}
+              onChange={(e) => updateField('default_subtitle_language', e.target.value)}
+              className={selectClass}
+            >
+              <option value="">None (Off)</option>
+              <option value="en">English</option>
+              <option value="es">Spanish</option>
+              <option value="fr">French</option>
+              <option value="de">German</option>
+              <option value="it">Italian</option>
+              <option value="pt">Portuguese</option>
+              <option value="ja">Japanese</option>
+              <option value="ko">Korean</option>
+              <option value="zh">Chinese</option>
+              <option value="ar">Arabic</option>
+              <option value="ru">Russian</option>
+              <option value="hi">Hindi</option>
+            </select>
+          </SettingField>
+          <SettingField label="Default Audio Language" description="Preferred language for audio tracks">
+            <select
+              value={formData.default_audio_language || 'en'}
+              onChange={(e) => updateField('default_audio_language', e.target.value)}
+              className={selectClass}
+            >
+              <option value="en">English</option>
+              <option value="es">Spanish</option>
+              <option value="fr">French</option>
+              <option value="de">German</option>
+              <option value="it">Italian</option>
+              <option value="pt">Portuguese</option>
+              <option value="ja">Japanese</option>
+              <option value="ko">Korean</option>
+              <option value="zh">Chinese</option>
+              <option value="ar">Arabic</option>
+              <option value="ru">Russian</option>
+              <option value="hi">Hindi</option>
+            </select>
+          </SettingField>
+        </div>
+      </SettingSection>
+
+      {/* VOD (existing) */}
       <VODSettingsSection
         vodApiUrl={formData.vod_api_url || ''}
         onUrlChange={(url) => updateField('vod_api_url', url)}
       />
 
+      {/* Config Backup (existing) */}
       <ConfigBackupSection />
-
-      <div className="bg-gray-800 rounded-xl p-6">
-        <h2 className="text-lg font-semibold text-white mb-4">Other Settings</h2>
-        <p className="text-gray-400 text-sm">
-          Additional server settings (Live TV, Transcoding) can be configured via the <code className="bg-gray-700 px-2 py-1 rounded">config.yaml</code> file.
-        </p>
-        <p className="text-gray-500 text-sm mt-2">
-          Location: <code className="bg-gray-700 px-2 py-1 rounded">~/.openflix/config.yaml</code>
-        </p>
-      </div>
     </div>
   )
 }
