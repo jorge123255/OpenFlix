@@ -94,6 +94,7 @@ func Migrate(db *gorm.DB) error {
 		&models.DVRJob{},
 		&models.DVRFile{},
 		&models.DetectedSegment{},
+		&models.SkipEvent{},
 		&models.DVRGroup{},
 		&models.FileState{},
 		&models.GroupState{},

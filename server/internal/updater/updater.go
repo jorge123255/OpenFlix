@@ -21,6 +21,34 @@ import (
 	"github.com/openflix/openflix-server/internal/logger"
 )
 
+// AutoUpdateConfig holds the configuration for automatic background updates.
+type AutoUpdateConfig struct {
+	// CheckInterval is how often the auto-checker polls for updates.
+	CheckInterval time.Duration `json:"check_interval"`
+
+	// AutoApply controls whether discovered updates are automatically
+	// downloaded and applied (with a restart) rather than just downloaded.
+	AutoApply bool `json:"auto_apply"`
+
+	// MaintenanceWindow restricts auto-apply to a specific hour range
+	// (using 24-hour clock). A zero-value window (0,0) means no restriction.
+	MaintenanceWindow MaintenanceWindow `json:"maintenance_window"`
+
+	// LastAutoCheck records the last time the automatic checker ran.
+	LastAutoCheck time.Time `json:"last_auto_check"`
+
+	// NextScheduledCheck is the projected time of the next automatic check.
+	NextScheduledCheck time.Time `json:"next_scheduled_check"`
+}
+
+// MaintenanceWindow defines a daily hour range during which auto-apply is
+// permitted. StartHour and EndHour use 24-hour notation. If both are 0 the
+// window is treated as disabled (auto-apply any time).
+type MaintenanceWindow struct {
+	StartHour int `json:"start_hour"` // 0-23
+	EndHour   int `json:"end_hour"`   // 0-23
+}
+
 // UpdateInfo describes an available update fetched from the version endpoint.
 type UpdateInfo struct {
 	Version      string `json:"version"`
@@ -79,6 +107,12 @@ type Updater struct {
 	status   UpdateStatus
 	stopChan chan struct{}
 	running  bool
+
+	// autoMu protects autoConfig and autoStop.
+	autoMu     sync.RWMutex
+	autoConfig AutoUpdateConfig
+	autoStop   chan struct{}
+	autoRunning bool
 
 	// httpClient is reused across requests so callers can inject a custom
 	// transport in tests.
@@ -782,6 +816,201 @@ func (u *Updater) LatestDownloadedBinary() string {
 	}
 
 	return ""
+}
+
+// ---------------------------------------------------------------------------
+// Auto-Update Background Checker
+// ---------------------------------------------------------------------------
+
+// StartAutoCheck launches a dedicated background goroutine that periodically
+// checks for updates at the given interval. If an update is found and AutoApply
+// is enabled (and the current time falls inside the maintenance window, if
+// configured), the update is automatically downloaded and applied.
+//
+// Calling StartAutoCheck while the auto-checker is already running is a no-op.
+// Pass 0 for interval to use the default of 6 hours.
+func (u *Updater) StartAutoCheck(interval time.Duration) {
+	if interval <= 0 {
+		interval = 6 * time.Hour
+	}
+
+	u.autoMu.Lock()
+	if u.autoRunning {
+		u.autoMu.Unlock()
+		return
+	}
+	u.autoConfig.CheckInterval = interval
+	u.autoConfig.NextScheduledCheck = time.Now().Add(interval)
+	u.autoStop = make(chan struct{})
+	u.autoRunning = true
+	u.autoMu.Unlock()
+
+	logger.Infof("Auto-update checker started (interval=%s)", interval)
+	go u.autoLoop(interval)
+}
+
+// StopAutoCheck stops the background auto-update goroutine. It is safe to
+// call even if the auto-checker is not running.
+func (u *Updater) StopAutoCheck() {
+	u.autoMu.Lock()
+	defer u.autoMu.Unlock()
+
+	if !u.autoRunning {
+		return
+	}
+	close(u.autoStop)
+	u.autoRunning = false
+	logger.Info("Auto-update checker stopped")
+}
+
+// SetAutoApply enables or disables automatic application of discovered
+// updates. When enabled, the auto-checker will download the update and call
+// ApplyUpdate (which triggers a restart) as soon as a newer version is found
+// and the maintenance window allows it.
+func (u *Updater) SetAutoApply(enabled bool) {
+	u.autoMu.Lock()
+	defer u.autoMu.Unlock()
+	u.autoConfig.AutoApply = enabled
+	logger.Infof("Auto-apply set to %v", enabled)
+}
+
+// SetMaintenanceWindow restricts automatic update application to a specific
+// daily hour range (24-hour clock). For example, SetMaintenanceWindow(2, 5)
+// means auto-apply only between 02:00 and 05:00. Setting both to 0 disables
+// the window (auto-apply at any time).
+func (u *Updater) SetMaintenanceWindow(startHour, endHour int) {
+	if startHour < 0 {
+		startHour = 0
+	}
+	if startHour > 23 {
+		startHour = 23
+	}
+	if endHour < 0 {
+		endHour = 0
+	}
+	if endHour > 23 {
+		endHour = 23
+	}
+
+	u.autoMu.Lock()
+	defer u.autoMu.Unlock()
+	u.autoConfig.MaintenanceWindow = MaintenanceWindow{
+		StartHour: startHour,
+		EndHour:   endHour,
+	}
+	logger.Infof("Maintenance window set to %02d:00 - %02d:00", startHour, endHour)
+}
+
+// GetAutoUpdateConfig returns a snapshot of the current auto-update
+// configuration. It is safe to call from any goroutine.
+func (u *Updater) GetAutoUpdateConfig() AutoUpdateConfig {
+	u.autoMu.RLock()
+	defer u.autoMu.RUnlock()
+	return u.autoConfig
+}
+
+// SetAutoUpdateConfig replaces the entire auto-update configuration. If the
+// auto-checker is running and the interval changed, it will take effect on the
+// next tick (a restart of the auto-checker is not required).
+func (u *Updater) SetAutoUpdateConfig(cfg AutoUpdateConfig) {
+	u.autoMu.Lock()
+	defer u.autoMu.Unlock()
+	u.autoConfig = cfg
+}
+
+// IsAutoCheckRunning reports whether the auto-update background goroutine is
+// currently active.
+func (u *Updater) IsAutoCheckRunning() bool {
+	u.autoMu.RLock()
+	defer u.autoMu.RUnlock()
+	return u.autoRunning
+}
+
+// autoLoop is the ticker goroutine for the auto-update checker.
+func (u *Updater) autoLoop(interval time.Duration) {
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			u.autoCheckAndApply()
+
+			// Update next scheduled check.
+			u.autoMu.Lock()
+			u.autoConfig.NextScheduledCheck = time.Now().Add(interval)
+			u.autoMu.Unlock()
+
+		case <-u.autoStop:
+			return
+		}
+	}
+}
+
+// autoCheckAndApply performs a single auto-update cycle: check for an update,
+// download it, and optionally apply it if AutoApply is enabled and the
+// maintenance window permits.
+func (u *Updater) autoCheckAndApply() {
+	now := time.Now()
+
+	u.autoMu.Lock()
+	u.autoConfig.LastAutoCheck = now
+	autoApply := u.autoConfig.AutoApply
+	window := u.autoConfig.MaintenanceWindow
+	u.autoMu.Unlock()
+
+	info, err := u.CheckForUpdate()
+	if err != nil {
+		logger.Warnf("Auto-update check failed: %v", err)
+		return
+	}
+	if info == nil {
+		logger.Debugf("Auto-update: no update available")
+		return
+	}
+
+	logger.Infof("Auto-update: update available %s -> %s", u.cfg.CurrentVersion, info.Version)
+
+	binPath, err := u.DownloadUpdate(*info)
+	if err != nil {
+		logger.Errorf("Auto-update: download failed: %v", err)
+		return
+	}
+	logger.Infof("Auto-update: downloaded %s to %s", info.Version, binPath)
+
+	if !autoApply {
+		logger.Info("Auto-update: auto-apply is disabled, update downloaded but not applied")
+		return
+	}
+
+	if !u.isInMaintenanceWindow(now, window) {
+		logger.Infof("Auto-update: outside maintenance window (%02d:00-%02d:00), deferring apply",
+			window.StartHour, window.EndHour)
+		return
+	}
+
+	logger.Infof("Auto-update: applying update %s", info.Version)
+	if err := u.ApplyUpdate(binPath); err != nil {
+		logger.Errorf("Auto-update: apply failed: %v", err)
+	}
+}
+
+// isInMaintenanceWindow returns true if the given time falls within the
+// maintenance window. A zero-value window (0,0) means "always allowed".
+func (u *Updater) isInMaintenanceWindow(t time.Time, w MaintenanceWindow) bool {
+	// Window disabled -- always allowed.
+	if w.StartHour == 0 && w.EndHour == 0 {
+		return true
+	}
+
+	hour := t.Hour()
+
+	if w.StartHour <= w.EndHour {
+		// Simple range, e.g. 2-5 means 02:00..04:59
+		return hour >= w.StartHour && hour < w.EndHour
+	}
+	// Wrapping range, e.g. 22-4 means 22:00..03:59
+	return hour >= w.StartHour || hour < w.EndHour
 }
 
 // ---------------------------------------------------------------------------

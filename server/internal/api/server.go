@@ -12,6 +12,7 @@ import (
 	"github.com/openflix/openflix-server/internal/auth"
 	"github.com/openflix/openflix-server/internal/commercial"
 	"github.com/openflix/openflix-server/internal/config"
+	"github.com/openflix/openflix-server/internal/ddns"
 	"github.com/openflix/openflix-server/internal/dvr"
 	"github.com/openflix/openflix-server/internal/instant"
 	"github.com/openflix/openflix-server/internal/jobq"
@@ -55,6 +56,8 @@ type Server struct {
 	updater            *updater.Updater
 	jobQueue           *jobq.JobQueue
 	clipManager        *dvr.ClipManager
+	bandwidthManager   *transcode.BandwidthManager
+	ddnsClient         *ddns.Client
 }
 
 // NewServer creates a new API server
@@ -183,6 +186,14 @@ func NewServer(cfg *config.Config, db *gorm.DB) *Server {
 	clipManager := dvr.NewClipManager(db, clipsDir)
 	logger.Info("Clip manager initialized")
 
+	// Initialize bandwidth manager for adaptive bitrate streaming
+	bandwidthManager := transcode.NewBandwidthManager()
+	logger.Info("Bandwidth manager initialized")
+
+	// Initialize DDNS client
+	ddnsClient := ddns.New()
+	logger.Info("DDNS client initialized")
+
 	// Initialize self-updater
 	appUpdater := updater.New(updater.Config{
 		DataDir:        dataDir,
@@ -210,7 +221,9 @@ func NewServer(cfg *config.Config, db *gorm.DB) *Server {
 		searchEngine:      searchEngine,
 		updater:           appUpdater,
 		jobQueue:          jobQueue,
-		clipManager:       clipManager,
+		clipManager:        clipManager,
+		bandwidthManager:   bandwidthManager,
+		ddnsClient:         ddnsClient,
 	}
 	s.setupRouter()
 
@@ -229,6 +242,12 @@ func NewServer(cfg *config.Config, db *gorm.DB) *Server {
 
 	// Start self-updater background checker
 	appUpdater.Start()
+
+	// Restore persisted auto-update configuration (if any)
+	s.restoreAutoUpdateConfig()
+
+	// Restore persisted DDNS configuration (if any)
+	s.loadDDNSConfig()
 
 	// Kick off initial search index build in background
 	if searchEngine != nil {
@@ -351,6 +370,16 @@ func (s *Server) setupRouter() {
 		profiles.POST("/:id/switch", s.switchProfile)
 	}
 
+	// ============ Parental Controls API ============
+	parentalGroup := r.Group("/api/parental")
+	parentalGroup.Use(s.authRequired())
+	{
+		parentalGroup.PUT("/pin", s.setParentalPIN)
+		parentalGroup.POST("/verify", s.verifyParentalPIN)
+		parentalGroup.GET("/settings", s.getParentalSettings)
+		parentalGroup.PUT("/settings", s.updateParentalSettings)
+	}
+
 	// Plex-compatible auth endpoints (for client compatibility)
 	r.POST("/api/v2/pins", s.createPin)
 	r.GET("/api/v2/pins/:id", s.checkPin)
@@ -413,9 +442,19 @@ func (s *Server) setupRouter() {
 		admin.POST("/media/:id/match", s.adminApplyMediaMatch)
 	}
 
+	// ============ Auto-Update API (admin only) ============
+	updatesGroup := r.Group("/api/updates")
+	updatesGroup.Use(s.authRequired(), s.adminRequired())
+	{
+		updatesGroup.GET("/auto-config", s.getAutoUpdateConfig)
+		updatesGroup.PUT("/auto-config", s.putAutoUpdateConfig)
+		updatesGroup.GET("/schedule", s.getAutoUpdateSchedule)
+		updatesGroup.POST("/check-now", s.triggerAutoUpdateCheck)
+	}
+
 	// ============ Library API ============
 	libraryGroup := r.Group("/library")
-	libraryGroup.Use(s.authRequired())
+	libraryGroup.Use(s.authRequired(), s.parentalControlMiddleware())
 	{
 		// Sections
 		libraryGroup.GET("/sections", s.getLibrarySections)
@@ -720,6 +759,12 @@ func (s *Server) setupRouter() {
 			dvrV2.POST("/rules/preview", s.previewRule)
 			dvrV2.GET("/rules/:id/preview", s.previewExistingRule)
 
+			// Duplicate Detection
+			dvrV2.GET("/duplicates", s.getDuplicates)
+			dvrV2.GET("/duplicates/check", s.checkDuplicate)
+			dvrV2.GET("/duplicates/stats", s.getDuplicateStats)
+			dvrV2.POST("/duplicates/:jobId/override", s.overrideDuplicate)
+
 			// Watch state
 			dvrV2.GET("/upnext", s.getUpNext)
 
@@ -769,6 +814,12 @@ func (s *Server) setupRouter() {
 			dvrV2.PUT("/channel-collections/:id", s.updateChannelCollection)
 			dvrV2.DELETE("/channel-collections/:id", s.deleteChannelCollection)
 			dvrV2.GET("/channel-collections/:id/export.m3u", s.exportChannelCollectionM3U)
+
+			// Conflict Resolution
+			dvrV2.GET("/conflicts", s.getV2Conflicts)
+			dvrV2.GET("/conflicts/:jobId/alternatives", s.getV2ConflictAlternatives)
+			dvrV2.POST("/conflicts/:jobId/resolve", s.resolveV2Conflict)
+			dvrV2.POST("/conflicts/auto-resolve", s.autoResolveV2Conflicts)
 		}
 	}
 
@@ -855,6 +906,17 @@ func (s *Server) setupRouter() {
 		remoteAccess.GET("/health", s.adminRequired(), s.getRemoteAccessHealth)
 		remoteAccess.GET("/install-info", s.adminRequired(), s.getRemoteAccessInstallInfo)
 		remoteAccess.GET("/login-url", s.adminRequired(), s.getRemoteAccessLoginUrl)
+	}
+
+	// ============ Dynamic DNS API ============
+	ddnsGroup := r.Group("/api/ddns")
+	ddnsGroup.Use(s.authRequired(), s.adminRequired())
+	{
+		ddnsGroup.GET("/status", s.getDDNSStatus)
+		ddnsGroup.PUT("/configure", s.configureDDNS)
+		ddnsGroup.POST("/test", s.testDDNS)
+		ddnsGroup.POST("/update", s.forceUpdateDDNS)
+		ddnsGroup.DELETE("/disable", s.disableDDNS)
 	}
 
 	// ============ Instant Switch API ============
@@ -995,6 +1057,26 @@ func (s *Server) setupRouter() {
 		playbackAPI.GET("/decide/:fileId", s.getPlaybackDecision)
 		playbackAPI.POST("/decide/:fileId", s.getPlaybackDecision) // POST with capabilities in body
 		playbackAPI.GET("/options/:mediaId", s.getMediaPlaybackOptions)
+
+		// Bandwidth management (adaptive bitrate)
+		playbackAPI.POST("/bandwidth", s.reportBandwidth)
+		playbackAPI.GET("/bandwidth/server", s.adminRequired(), s.getServerBandwidth)
+		playbackAPI.PUT("/bandwidth/server/limit", s.adminRequired(), s.setServerBandwidthLimit)
+		playbackAPI.GET("/bandwidth/:clientId", s.getClientBandwidth)
+		playbackAPI.PUT("/bandwidth/:clientId/cap", s.setClientBandwidthCap)
+
+		// Skip markers and settings
+		playbackAPI.GET("/:fileId/markers", s.getSkipMarkers)
+		playbackAPI.GET("/:mediaId/markers/library", s.getLibrarySkipMarkers)
+		playbackAPI.POST("/:fileId/skip", s.reportSkip)
+		playbackAPI.GET("/skip-settings", s.getSkipSettings)
+		playbackAPI.PUT("/skip-settings", s.updateSkipSettings)
+
+		// Audio/Subtitle track selection
+		playbackAPI.GET("/:mediaId/tracks", s.getMediaTracks)
+		playbackAPI.PUT("/:mediaId/tracks/select", s.selectMediaTracks)
+		playbackAPI.GET("/track-preferences", s.getTrackPreferences)
+		playbackAPI.PUT("/track-preferences", s.updateTrackPreferences)
 	}
 
 	// Images - support both /thumb/:id and /thumb (simple)

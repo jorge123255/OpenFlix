@@ -33,6 +33,7 @@ type Recorder struct {
 	enricher         *Enricher
 	grouper          *Grouper
 	upnext           *UpNextManager
+	dedup            *DuplicateDetector
 }
 
 // RecordingSession represents an active recording
@@ -84,6 +85,7 @@ func NewRecorder(db *gorm.DB, config RecorderConfig) *Recorder {
 			LowSpaceGB: config.LowSpaceGB,
 		},
 		eventBus: NewEventBus(),
+		dedup:    NewDuplicateDetector(db),
 	}
 
 	// Start scheduler
@@ -528,13 +530,32 @@ func (r *Recorder) processRules() {
 				continue
 			}
 
-			// Check duplicates policy
-			if rule.Duplicates == "skip" {
-				var dup models.DVRJob
-				if r.db.Where("user_id = ? AND title = ? AND status = ?",
-					rule.UserID, prog.Title, "completed").
-					First(&dup).Error == nil {
-					continue // Already recorded this title
+			// Cross-source duplicate detection
+			if r.dedup != nil {
+				policy := r.dedup.GetDuplicatePolicy(rule.ID)
+				if policy == "skip" {
+					syntheticJob := models.DVRJob{
+						UserID:     rule.UserID,
+						ProgramID:  &prog.ID,
+						Title:      prog.Title,
+						Subtitle:   prog.Subtitle,
+						StartTime:  prog.Start,
+						EndTime:    prog.End,
+						EpisodeNum: prog.EpisodeNum,
+					}
+					isDup, match := r.dedup.IsDuplicate(syntheticJob)
+					if isDup {
+						matchInfo := "unknown"
+						if match != nil {
+							matchInfo = match.MatchType
+						}
+						logger.Log.WithFields(map[string]interface{}{
+							"rule_id":    rule.ID,
+							"program":    prog.Title,
+							"match_type": matchInfo,
+						}).Debug("Skipping duplicate recording")
+						continue
+					}
 				}
 			}
 
@@ -597,6 +618,18 @@ func (r *Recorder) processRules() {
 				EpisodeNum:  prog.EpisodeNum,
 				IsMovie:     prog.IsMovie,
 				IsSports:    prog.IsSports,
+			}
+
+			// Flag as duplicate if the rule policy is "record" but a duplicate exists
+			if r.dedup != nil && rule.Duplicates == "record" {
+				isDup, match := r.dedup.IsDuplicate(job)
+				if isDup {
+					job.IsDuplicate = true
+					if match != nil && match.MatchedJob != nil {
+						dupID := match.MatchedJob.ID
+						job.DuplicateOfID = &dupID
+					}
+				}
 			}
 
 			if err := r.db.Create(&job).Error; err != nil {
@@ -953,6 +986,11 @@ func (r *Recorder) buildFFmpegArgs(streamURL string, duration time.Duration, out
 // GetEventBus returns the event bus for WebSocket subscriptions
 func (r *Recorder) GetEventBus() *EventBus {
 	return r.eventBus
+}
+
+// GetDuplicateDetector returns the duplicate detector for API use
+func (r *Recorder) GetDuplicateDetector() *DuplicateDetector {
+	return r.dedup
 }
 
 // startRecording starts a recording
@@ -2102,8 +2140,8 @@ func (r *Recorder) RefreshChannelEPGMapping(channelID uint) error {
 	return nil
 }
 
-// ConflictInfo represents information about a recording conflict
-type ConflictInfo struct {
+// RecordingConflictInfo represents information about a recording conflict
+type RecordingConflictInfo struct {
 	Recording        *models.Recording   `json:"recording"`
 	ConflictingWith  []*models.Recording `json:"conflictingWith"`
 	WillBeRecorded   bool                `json:"willBeRecorded"`
@@ -2152,12 +2190,12 @@ func (r *Recorder) FindConflictsForNewRecording(userID uint, startTime, endTime 
 }
 
 // GetAllConflicts returns all scheduled recordings that have conflicts
-func (r *Recorder) GetAllConflicts(userID uint) []ConflictInfo {
+func (r *Recorder) GetAllConflicts(userID uint) []RecordingConflictInfo {
 	var scheduled []models.Recording
 	r.db.Where("user_id = ? AND status = ?", userID, "scheduled").
 		Order("start_time ASC").Find(&scheduled)
 
-	var conflictInfos []ConflictInfo
+	var conflictInfos []RecordingConflictInfo
 	processedPairs := make(map[string]bool)
 
 	for i := range scheduled {
@@ -2189,7 +2227,7 @@ func (r *Recorder) GetAllConflicts(userID uint) []ConflictInfo {
 			}
 		}
 
-		conflictInfos = append(conflictInfos, ConflictInfo{
+		conflictInfos = append(conflictInfos, RecordingConflictInfo{
 			Recording:       recording,
 			ConflictingWith: conflicts,
 			WillBeRecorded:  willBeRecorded,
