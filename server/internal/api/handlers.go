@@ -4119,6 +4119,26 @@ type ServerSettings struct {
 	FrameRateMatchMode      string `json:"frame_rate_match_mode,omitempty"`
 	DefaultSubtitleLanguage string `json:"default_subtitle_language,omitempty"`
 	DefaultAudioLanguage    string `json:"default_audio_language,omitempty"`
+
+	// Advanced: Transcoder
+	TranscoderType      string `json:"transcoder_type,omitempty"`
+	DeinterlacerMode    string `json:"deinterlacer_mode,omitempty"`
+	LiveTVBufferSecs    int    `json:"livetv_buffer_secs,omitempty"`
+
+	// Advanced: Web Player
+	PlaybackQuality     string `json:"playback_quality,omitempty"`
+	ClientBufferSecs    int    `json:"client_buffer_secs,omitempty"`
+
+	// Advanced: Integrations
+	EDLExport           bool   `json:"edl_export"`
+	M3UChannelIDs       bool   `json:"m3u_channel_ids"`
+	VLCLinks            bool   `json:"vlc_links"`
+	HTTPLogging         bool   `json:"http_logging"`
+
+	// Advanced: Experimental
+	ExperimentalHDR     bool   `json:"experimental_hdr"`
+	ExperimentalLowLatency bool `json:"experimental_low_latency"`
+	ExperimentalAIMetadata bool `json:"experimental_ai_metadata"`
 }
 
 // getSettingStr reads a string setting from the database
@@ -4197,6 +4217,26 @@ func (s *Server) buildFullSettings() ServerSettings {
 		FrameRateMatchMode:      s.getSettingStr("playback_frame_rate_match", "auto"),
 		DefaultSubtitleLanguage: s.getSettingStr("playback_default_subtitle_lang", ""),
 		DefaultAudioLanguage:    s.getSettingStr("playback_default_audio_lang", "en"),
+
+		// Advanced: Transcoder
+		TranscoderType:   s.getSettingStr("advanced_transcoder_type", "software"),
+		DeinterlacerMode: s.getSettingStr("advanced_deinterlacer_mode", "blend"),
+		LiveTVBufferSecs: s.getSettingInt("advanced_livetv_buffer_secs", 8),
+
+		// Advanced: Web Player
+		PlaybackQuality:  s.getSettingStr("advanced_playback_quality", "original"),
+		ClientBufferSecs: s.getSettingInt("advanced_client_buffer_secs", 5),
+
+		// Advanced: Integrations
+		EDLExport:     s.getSettingBool("advanced_edl_export", false),
+		M3UChannelIDs: s.getSettingBool("advanced_m3u_channel_ids", false),
+		VLCLinks:      s.getSettingBool("advanced_vlc_links", false),
+		HTTPLogging:   s.getSettingBool("advanced_http_logging", false),
+
+		// Advanced: Experimental
+		ExperimentalHDR:        s.getSettingBool("advanced_experimental_hdr", false),
+		ExperimentalLowLatency: s.getSettingBool("advanced_experimental_low_latency", false),
+		ExperimentalAIMetadata: s.getSettingBool("advanced_experimental_ai_metadata", false),
 	}
 }
 
@@ -4327,6 +4367,36 @@ func (s *Server) adminUpdateSettings(c *gin.Context) {
 	if input.DefaultAudioLanguage != "" {
 		s.setSetting("playback_default_audio_lang", input.DefaultAudioLanguage)
 	}
+
+	// ---- Advanced: Transcoder ----
+	if input.TranscoderType != "" {
+		s.setSetting("advanced_transcoder_type", input.TranscoderType)
+	}
+	if input.DeinterlacerMode != "" {
+		s.setSetting("advanced_deinterlacer_mode", input.DeinterlacerMode)
+	}
+	if input.LiveTVBufferSecs > 0 {
+		s.setSetting("advanced_livetv_buffer_secs", fmt.Sprintf("%d", input.LiveTVBufferSecs))
+	}
+
+	// ---- Advanced: Web Player ----
+	if input.PlaybackQuality != "" {
+		s.setSetting("advanced_playback_quality", input.PlaybackQuality)
+	}
+	if input.ClientBufferSecs > 0 {
+		s.setSetting("advanced_client_buffer_secs", fmt.Sprintf("%d", input.ClientBufferSecs))
+	}
+
+	// ---- Advanced: Integrations ----
+	s.setSetting("advanced_edl_export", fmt.Sprintf("%t", input.EDLExport))
+	s.setSetting("advanced_m3u_channel_ids", fmt.Sprintf("%t", input.M3UChannelIDs))
+	s.setSetting("advanced_vlc_links", fmt.Sprintf("%t", input.VLCLinks))
+	s.setSetting("advanced_http_logging", fmt.Sprintf("%t", input.HTTPLogging))
+
+	// ---- Advanced: Experimental ----
+	s.setSetting("advanced_experimental_hdr", fmt.Sprintf("%t", input.ExperimentalHDR))
+	s.setSetting("advanced_experimental_low_latency", fmt.Sprintf("%t", input.ExperimentalLowLatency))
+	s.setSetting("advanced_experimental_ai_metadata", fmt.Sprintf("%t", input.ExperimentalAIMetadata))
 
 	c.JSON(http.StatusOK, gin.H{
 		"message":  "Settings updated successfully",

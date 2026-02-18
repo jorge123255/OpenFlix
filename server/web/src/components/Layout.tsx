@@ -18,6 +18,7 @@ import {
   Trophy,
   CloudDownload,
   Radio,
+  MonitorPlay,
   Layers,
   Image,
   FolderHeart,
@@ -38,6 +39,8 @@ import {
   Timer,
   Smartphone,
   ChevronDown,
+  ListFilter,
+  CalendarRange,
   type LucideIcon,
 } from 'lucide-react'
 import { useState } from 'react'
@@ -76,6 +79,7 @@ const navGroups: NavGroup[] = [
     items: [
       { name: 'Live TV', href: '/ui/livetv', icon: Tv },
       { name: 'TV Guide', href: '/ui/tvguide', icon: CalendarDays },
+      { name: 'On Now', href: '/ui/onnow', icon: MonitorPlay },
       { name: 'Tuners', href: '/ui/tuners', icon: Radio },
       { name: 'Channel Collections', href: '/ui/channel-collections', icon: Layers },
       { name: 'Virtual Channels', href: '/ui/virtual-channels', icon: TvMinimal },
@@ -85,6 +89,9 @@ const navGroups: NavGroup[] = [
     label: 'DVR & Recording',
     items: [
       { name: 'DVR', href: '/ui/dvr', icon: Video },
+      { name: 'Passes', href: '/ui/dvr/passes', icon: ListFilter },
+      { name: 'Schedule', href: '/ui/dvr/schedule', icon: CalendarDays },
+      { name: 'Calendar', href: '/ui/dvr/calendar', icon: CalendarRange },
       { name: 'On Later', href: '/ui/onlater', icon: Clock },
       { name: 'Team Pass', href: '/ui/teampass', icon: Trophy },
       { name: 'Comskip', href: '/ui/comskip', icon: SlidersHorizontal },

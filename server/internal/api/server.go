@@ -447,6 +447,7 @@ func (s *Server) setupRouter() {
 	r.GET("/", s.getServerInfo)
 	r.GET("/identity", s.getServerIdentity)
 	r.GET("/api/status", s.authRequired(), s.getServerStatus)
+	r.GET("/api/dashboard", s.authRequired(), s.getDashboardData)
 
 	// Logs API (admin only)
 	r.GET("/api/logs", s.authRequired(), s.adminRequired(), s.getLogs)
@@ -841,6 +842,13 @@ func (s *Server) setupRouter() {
 		// DVR Settings
 		dvrGroup.GET("/settings", s.getDVRSettings)
 		dvrGroup.PUT("/settings", s.updateDVRSettings)
+
+		// DVR Management (Passes, Schedule, Calendar)
+		dvrGroup.GET("/passes", s.getDVRPasses)
+		dvrGroup.PUT("/passes/:id/pause", s.pauseDVRPass)
+		dvrGroup.PUT("/passes/:id/resume", s.resumeDVRPass)
+		dvrGroup.GET("/schedule", s.getDVRSchedule)
+		dvrGroup.GET("/calendar", s.getDVRCalendar)
 
 		// DVR V2 (Channels DVR-style)
 		dvrV2 := dvrGroup.Group("/v2")
