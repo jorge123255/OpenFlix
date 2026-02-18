@@ -36,6 +36,7 @@ import {
   Bell,
   Captions,
   Timer,
+  Smartphone,
   ChevronDown,
   type LucideIcon,
 } from 'lucide-react'
@@ -95,6 +96,7 @@ const navGroups: NavGroup[] = [
     items: [
       { name: 'VOD', href: '/ui/vod', icon: CloudDownload },
       { name: 'Downloads', href: '/ui/downloads', icon: Download },
+      { name: 'Offline', href: '/ui/offline', icon: Smartphone },
       { name: 'Upload', href: '/ui/upload', icon: Upload },
     ],
   },
@@ -115,6 +117,7 @@ const navGroups: NavGroup[] = [
       { name: 'Notifications', href: '/ui/notifications', icon: Bell },
       { name: 'Subtitles', href: '/ui/subtitles', icon: Captions },
       { name: 'Scheduler', href: '/ui/scheduler', icon: Timer },
+      { name: 'Devices', href: '/ui/devices', icon: Smartphone },
     ],
   },
 ]

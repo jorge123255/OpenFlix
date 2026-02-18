@@ -4074,23 +4074,134 @@ func sortFileEntries(entries []FileSystemEntry) {
 
 // ServerSettings represents configurable server settings
 type ServerSettings struct {
+	// Metadata
 	TMDBApiKey   string `json:"tmdb_api_key,omitempty"`
 	TVDBApiKey   string `json:"tvdb_api_key,omitempty"`
 	MetadataLang string `json:"metadata_lang,omitempty"`
 	ScanInterval int    `json:"scan_interval,omitempty"`
 	VODAPIURL    string `json:"vod_api_url,omitempty"`
+
+	// Server
+	ServerName string `json:"server_name,omitempty"`
+	ServerPort int    `json:"server_port,omitempty"`
+	LogLevel   string `json:"log_level,omitempty"`
+	DataDir    string `json:"data_dir,omitempty"`
+
+	// Transcoding
+	HardwareAccel    string `json:"hardware_accel,omitempty"`
+	MaxTranscode     int    `json:"max_transcode_sessions,omitempty"`
+	TranscodeTempDir string `json:"transcode_temp_dir,omitempty"`
+	DefaultVideoCodec string `json:"default_video_codec,omitempty"`
+	DefaultAudioCodec string `json:"default_audio_codec,omitempty"`
+
+	// Live TV
+	LiveTVMaxStreams    int  `json:"livetv_max_streams,omitempty"`
+	TimeshiftBufferHrs int  `json:"timeshift_buffer_hrs,omitempty"`
+	EPGRefreshInterval int  `json:"epg_refresh_interval,omitempty"`
+	ChannelSwitchBuffer int `json:"channel_switch_buffer,omitempty"`
+	TunerSharing       bool `json:"tuner_sharing"`
+
+	// DVR (extended)
+	RecordingDir      string `json:"recording_dir,omitempty"`
+	PrePadding        int    `json:"pre_padding,omitempty"`
+	PostPadding       int    `json:"post_padding,omitempty"`
+	CommercialDetect  bool   `json:"commercial_detect"`
+	AutoDeleteDays    int    `json:"auto_delete_days,omitempty"`
+	MaxRecordQuality  string `json:"max_record_quality,omitempty"`
+
+	// Remote Access
+	RemoteAccessEnabled bool   `json:"remote_access_enabled"`
+	TailscaleStatus     string `json:"tailscale_status,omitempty"`
+	ExternalURL         string `json:"external_url,omitempty"`
+
+	// Playback Defaults
+	DefaultPlaybackSpeed    string `json:"default_playback_speed,omitempty"`
+	FrameRateMatchMode      string `json:"frame_rate_match_mode,omitempty"`
+	DefaultSubtitleLanguage string `json:"default_subtitle_language,omitempty"`
+	DefaultAudioLanguage    string `json:"default_audio_language,omitempty"`
 }
 
-func (s *Server) adminGetSettings(c *gin.Context) {
-	// Return current settings (mask API keys partially for security)
-	settings := ServerSettings{
+// getSettingStr reads a string setting from the database
+func (s *Server) getSettingStr(key, defaultVal string) string {
+	var setting models.Setting
+	if err := s.db.Where("key = ?", key).First(&setting).Error; err != nil {
+		return defaultVal
+	}
+	return setting.Value
+}
+
+// getSettingBool reads a boolean setting from the database
+func (s *Server) getSettingBool(key string, defaultVal bool) bool {
+	val := s.getSettingStr(key, "")
+	if val == "" {
+		return defaultVal
+	}
+	return val == "true" || val == "1"
+}
+
+func (s *Server) buildFullSettings() ServerSettings {
+	// Determine tailscale status
+	tailscaleStatus := "disconnected"
+	if s.remoteAccess != nil {
+		status := s.remoteAccess.GetStatus()
+		if status.Status == "connected" {
+			tailscaleStatus = "connected"
+		} else if status.Status != "" {
+			tailscaleStatus = status.Status
+		}
+	}
+
+	return ServerSettings{
+		// Metadata
 		TMDBApiKey:   maskAPIKey(s.config.Library.TMDBApiKey),
 		TVDBApiKey:   maskAPIKey(s.config.Library.TVDBApiKey),
 		MetadataLang: s.config.Library.MetadataLang,
 		ScanInterval: s.config.Library.ScanInterval,
 		VODAPIURL:    s.config.VOD.APIURL,
-	}
 
+		// Server
+		ServerName: s.config.Server.Name,
+		ServerPort: s.config.Server.Port,
+		LogLevel:   s.config.Logging.Level,
+		DataDir:    s.config.GetDataDir(),
+
+		// Transcoding
+		HardwareAccel:     s.config.Transcode.HardwareAccel,
+		MaxTranscode:      s.config.Transcode.MaxSessions,
+		TranscodeTempDir:  s.config.Transcode.TempDir,
+		DefaultVideoCodec: s.getSettingStr("transcode_default_video_codec", "h264"),
+		DefaultAudioCodec: s.getSettingStr("transcode_default_audio_codec", "aac"),
+
+		// Live TV
+		LiveTVMaxStreams:     s.getSettingInt("livetv_max_streams", 0),
+		TimeshiftBufferHrs:  s.getSettingInt("livetv_timeshift_buffer_hrs", 4),
+		EPGRefreshInterval:  s.config.LiveTV.EPGInterval,
+		ChannelSwitchBuffer: s.getSettingInt("livetv_channel_switch_buffer", 3),
+		TunerSharing:        s.getSettingBool("livetv_tuner_sharing", true),
+
+		// DVR (extended)
+		RecordingDir:     s.config.DVR.RecordingDir,
+		PrePadding:       s.config.DVR.PrePadding,
+		PostPadding:      s.config.DVR.PostPadding,
+		CommercialDetect: s.config.DVR.CommercialDetect,
+		AutoDeleteDays:   s.getSettingInt("dvr_auto_delete_days", 0),
+		MaxRecordQuality: s.getSettingStr("dvr_max_record_quality", "original"),
+
+		// Remote Access
+		RemoteAccessEnabled: s.getSettingBool("remote_access_enabled", false),
+		TailscaleStatus:     tailscaleStatus,
+		ExternalURL:         s.getSettingStr("remote_external_url", ""),
+
+		// Playback Defaults
+		DefaultPlaybackSpeed:    s.getSettingStr("playback_default_speed", "1.0"),
+		FrameRateMatchMode:      s.getSettingStr("playback_frame_rate_match", "auto"),
+		DefaultSubtitleLanguage: s.getSettingStr("playback_default_subtitle_lang", ""),
+		DefaultAudioLanguage:    s.getSettingStr("playback_default_audio_lang", "en"),
+	}
+}
+
+func (s *Server) adminGetSettings(c *gin.Context) {
+	settings := s.buildFullSettings()
 	c.JSON(http.StatusOK, gin.H{
 		"settings": settings,
 	})
@@ -4116,10 +4227,9 @@ func (s *Server) adminUpdateSettings(c *gin.Context) {
 		return
 	}
 
-	// Update config in memory
+	// ---- Metadata ----
 	if input.TMDBApiKey != "" && !strings.HasPrefix(input.TMDBApiKey, "****") {
 		s.config.Library.TMDBApiKey = input.TMDBApiKey
-		// Re-initialize TMDB agent with new key
 		s.reinitializeTMDBAgent()
 	}
 	if input.TVDBApiKey != "" && !strings.HasPrefix(input.TVDBApiKey, "****") {
@@ -4131,21 +4241,96 @@ func (s *Server) adminUpdateSettings(c *gin.Context) {
 	if input.ScanInterval > 0 {
 		s.config.Library.ScanInterval = input.ScanInterval
 	}
-	// VOD API URL can be set to empty string to disable, so we check differently
 	if input.VODAPIURL != "" || c.Request.ContentLength > 0 {
-		// Allow setting VOD API URL (including clearing it)
 		s.config.VOD.APIURL = input.VODAPIURL
 	}
 
+	// ---- Server ----
+	if input.ServerName != "" {
+		s.config.Server.Name = input.ServerName
+	}
+	if input.ServerPort > 0 {
+		s.config.Server.Port = input.ServerPort
+	}
+	if input.LogLevel != "" {
+		s.config.Logging.Level = input.LogLevel
+		logger.SetLevel(input.LogLevel)
+	}
+
+	// ---- Transcoding ----
+	if input.HardwareAccel != "" {
+		s.config.Transcode.HardwareAccel = input.HardwareAccel
+	}
+	if input.MaxTranscode > 0 {
+		s.config.Transcode.MaxSessions = input.MaxTranscode
+	}
+	if input.TranscodeTempDir != "" {
+		s.config.Transcode.TempDir = input.TranscodeTempDir
+	}
+	if input.DefaultVideoCodec != "" {
+		s.setSetting("transcode_default_video_codec", input.DefaultVideoCodec)
+	}
+	if input.DefaultAudioCodec != "" {
+		s.setSetting("transcode_default_audio_codec", input.DefaultAudioCodec)
+	}
+
+	// ---- Live TV ----
+	if input.LiveTVMaxStreams >= 0 {
+		s.setSetting("livetv_max_streams", fmt.Sprintf("%d", input.LiveTVMaxStreams))
+	}
+	if input.TimeshiftBufferHrs > 0 {
+		s.setSetting("livetv_timeshift_buffer_hrs", fmt.Sprintf("%d", input.TimeshiftBufferHrs))
+	}
+	if input.EPGRefreshInterval > 0 {
+		s.config.LiveTV.EPGInterval = input.EPGRefreshInterval
+	}
+	if input.ChannelSwitchBuffer > 0 {
+		s.setSetting("livetv_channel_switch_buffer", fmt.Sprintf("%d", input.ChannelSwitchBuffer))
+	}
+	// Tuner sharing is a bool, always persist
+	s.setSetting("livetv_tuner_sharing", fmt.Sprintf("%t", input.TunerSharing))
+
+	// ---- DVR (extended) ----
+	if input.RecordingDir != "" {
+		s.config.DVR.RecordingDir = input.RecordingDir
+	}
+	if input.PrePadding >= 0 {
+		s.config.DVR.PrePadding = input.PrePadding
+	}
+	if input.PostPadding >= 0 {
+		s.config.DVR.PostPadding = input.PostPadding
+	}
+	s.config.DVR.CommercialDetect = input.CommercialDetect
+	if input.AutoDeleteDays >= 0 {
+		s.setSetting("dvr_auto_delete_days", fmt.Sprintf("%d", input.AutoDeleteDays))
+	}
+	if input.MaxRecordQuality != "" {
+		s.setSetting("dvr_max_record_quality", input.MaxRecordQuality)
+	}
+
+	// ---- Remote Access ----
+	s.setSetting("remote_access_enabled", fmt.Sprintf("%t", input.RemoteAccessEnabled))
+	if input.ExternalURL != "" {
+		s.setSetting("remote_external_url", input.ExternalURL)
+	}
+
+	// ---- Playback Defaults ----
+	if input.DefaultPlaybackSpeed != "" {
+		s.setSetting("playback_default_speed", input.DefaultPlaybackSpeed)
+	}
+	if input.FrameRateMatchMode != "" {
+		s.setSetting("playback_frame_rate_match", input.FrameRateMatchMode)
+	}
+	if input.DefaultSubtitleLanguage != "" {
+		s.setSetting("playback_default_subtitle_lang", input.DefaultSubtitleLanguage)
+	}
+	if input.DefaultAudioLanguage != "" {
+		s.setSetting("playback_default_audio_lang", input.DefaultAudioLanguage)
+	}
+
 	c.JSON(http.StatusOK, gin.H{
-		"message": "Settings updated successfully",
-		"settings": ServerSettings{
-			TMDBApiKey:   maskAPIKey(s.config.Library.TMDBApiKey),
-			TVDBApiKey:   maskAPIKey(s.config.Library.TVDBApiKey),
-			MetadataLang: s.config.Library.MetadataLang,
-			ScanInterval: s.config.Library.ScanInterval,
-			VODAPIURL:    s.config.VOD.APIURL,
-		},
+		"message":  "Settings updated successfully",
+		"settings": s.buildFullSettings(),
 	})
 }
 

@@ -122,6 +122,12 @@ func Migrate(db *gorm.DB) error {
 
 		// Settings
 		&models.Setting{},
+
+		// Client Devices
+		&models.ClientDevice{},
+
+		// Offline Downloads
+		&models.OfflineDownload{},
 	)
 	if err != nil {
 		return err

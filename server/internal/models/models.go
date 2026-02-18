@@ -649,6 +649,7 @@ type PlaybackSession struct {
 	Transcoding     bool      `json:"transcoding"`
 	TranscodeSession string   `gorm:"size:100" json:"transcodeSession,omitempty"`
 	Quality         string    `gorm:"size:20" json:"quality,omitempty"`
+	PlaybackSpeed   float64   `json:"playbackSpeed" gorm:"default:1.0"`
 	ClientName      string    `gorm:"size:100" json:"player,omitempty"`
 	ClientPlatform  string    `gorm:"size:50" json:"platform,omitempty"`
 	ClientAddress   string    `gorm:"size:50" json:"address,omitempty"`
@@ -668,4 +669,64 @@ type Setting struct {
 	Value     string `gorm:"type:text" json:"value"`
 	CreatedAt time.Time
 	UpdatedAt time.Time
+}
+
+// ========== Offline Download Models ==========
+
+// OfflineDownload tracks a media item downloaded to a client device for offline viewing
+type OfflineDownload struct {
+	ID          uint      `json:"id" gorm:"primaryKey"`
+	UserID      uint      `json:"userId" gorm:"index"`
+	DeviceID    string    `json:"deviceId" gorm:"index"`  // client device identifier
+	MediaItemID uint      `json:"mediaItemId"`
+	MediaFileID uint      `json:"mediaFileId"`
+
+	Title       string    `json:"title"`
+	Quality     string    `json:"quality"`     // original, high, medium, low
+	FileSize    int64     `json:"fileSize"`    // estimated size in bytes
+
+	Status      string    `json:"status" gorm:"default:'pending'"` // pending, downloading, completed, expired, deleted
+	Progress    float64   `json:"progress"`    // 0.0 - 1.0
+	ExpiresAt   time.Time `json:"expiresAt"`   // when the download expires (e.g., 30 days)
+
+	// Watch state sync
+	WatchedPosition int64 `json:"watchedPosition"` // ms position synced back from device
+	Watched         bool  `json:"watched"`
+
+	CreatedAt time.Time `json:"createdAt"`
+	UpdatedAt time.Time `json:"updatedAt"`
+}
+
+// ========== Client Device Management ==========
+
+// ClientDevice represents a registered client device with server-managed settings
+type ClientDevice struct {
+	ID          uint      `json:"id" gorm:"primaryKey"`
+	DeviceID    string    `json:"deviceId" gorm:"uniqueIndex;not null"` // unique device identifier from client
+	DisplayName string    `json:"displayName"`                          // user-friendly name (e.g., "Living Room Apple TV")
+	Platform    string    `json:"platform"`                             // apple_tv, android_tv, fire_tv, ios, android, web
+	LastSeen    time.Time `json:"lastSeen"`
+	IPAddress   string    `json:"ipAddress"`
+	AppVersion  string    `json:"appVersion"`
+
+	// Server-controlled settings
+	KioskMode    bool   `json:"kioskMode"`    // hide settings/admin on this device
+	KidsOnlyMode bool   `json:"kidsOnlyMode"` // restrict to kids-rated content only
+	MaxRating    string `json:"maxRating"`     // max content rating (G, PG, PG-13, R, etc.) - overrides user profile
+
+	// Playback defaults for this device
+	DefaultQuality string `json:"defaultQuality"` // original, high, medium, low
+	MaxBitrate     int    `json:"maxBitrate"`      // max bitrate in kbps (0 = unlimited)
+
+	// Display preferences
+	StartupSection string `json:"startupSection"` // what section to show on launch (home, livetv, dvr, kids, sports)
+	Theme          string `json:"theme"`           // dark, light, auto
+
+	// Feature toggles
+	EnableDVR       bool `json:"enableDVR" gorm:"default:true"`
+	EnableLiveTV    bool `json:"enableLiveTV" gorm:"default:true"`
+	EnableDownloads bool `json:"enableDownloads" gorm:"default:true"`
+
+	CreatedAt time.Time `json:"createdAt"`
+	UpdatedAt time.Time `json:"updatedAt"`
 }

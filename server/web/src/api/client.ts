@@ -632,11 +632,51 @@ class ApiClient {
 
 // Server settings (from /admin/settings endpoint)
 export interface ServerSettings {
+  // Metadata
   tmdb_api_key?: string
   tvdb_api_key?: string
   metadata_lang?: string
   scan_interval?: number
   vod_api_url?: string
+
+  // Server
+  server_name?: string
+  server_port?: number
+  log_level?: string
+  data_dir?: string
+
+  // Transcoding
+  hardware_accel?: string
+  max_transcode_sessions?: number
+  transcode_temp_dir?: string
+  default_video_codec?: string
+  default_audio_codec?: string
+
+  // Live TV
+  livetv_max_streams?: number
+  timeshift_buffer_hrs?: number
+  epg_refresh_interval?: number
+  channel_switch_buffer?: number
+  tuner_sharing?: boolean
+
+  // DVR (extended)
+  recording_dir?: string
+  pre_padding?: number
+  post_padding?: number
+  commercial_detect?: boolean
+  auto_delete_days?: number
+  max_record_quality?: string
+
+  // Remote Access
+  remote_access_enabled?: boolean
+  tailscale_status?: string
+  external_url?: string
+
+  // Playback Defaults
+  default_playback_speed?: string
+  frame_rate_match_mode?: string
+  default_subtitle_language?: string
+  default_audio_language?: string
 }
 
 // Provider discovery types
