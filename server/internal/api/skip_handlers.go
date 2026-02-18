@@ -44,7 +44,7 @@ var validSkipBehaviors = map[string]bool{
 // getSkipMarkers returns all skip markers (intro/outro/credits) for a DVR file.
 // GET /api/playback/:fileId/markers
 func (s *Server) getSkipMarkers(c *gin.Context) {
-	fileIDStr := c.Param("fileId")
+	fileIDStr := c.Param("id")
 	fileID, err := strconv.ParseUint(fileIDStr, 10, 64)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid file ID"})
@@ -96,7 +96,7 @@ func (s *Server) getSkipMarkers(c *gin.Context) {
 // GET /api/playback/:mediaId/markers/library
 // Looks up MediaFile -> finds associated DVRFile -> checks for detected segments.
 func (s *Server) getLibrarySkipMarkers(c *gin.Context) {
-	mediaIDStr := c.Param("mediaId")
+	mediaIDStr := c.Param("id")
 	mediaID, err := strconv.ParseUint(mediaIDStr, 10, 64)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid media ID"})
@@ -163,9 +163,9 @@ func (s *Server) getLibrarySkipMarkers(c *gin.Context) {
 }
 
 // reportSkip records that a user skipped a segment (for analytics/tuning).
-// POST /api/playback/:fileId/skip
+// POST /api/playback/:id/skip
 func (s *Server) reportSkip(c *gin.Context) {
-	fileIDStr := c.Param("fileId")
+	fileIDStr := c.Param("id")
 	fileID, err := strconv.ParseUint(fileIDStr, 10, 64)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid file ID"})

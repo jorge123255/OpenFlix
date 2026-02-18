@@ -1218,15 +1218,15 @@ func (s *Server) setupRouter() {
 		playbackAPI.PUT("/bandwidth/:clientId/cap", s.setClientBandwidthCap)
 
 		// Skip markers and settings
-		playbackAPI.GET("/:fileId/markers", s.getSkipMarkers)
-		playbackAPI.GET("/:mediaId/markers/library", s.getLibrarySkipMarkers)
-		playbackAPI.POST("/:fileId/skip", s.reportSkip)
+		playbackAPI.GET("/:id/markers", s.getSkipMarkers)
+		playbackAPI.GET("/:id/markers/library", s.getLibrarySkipMarkers)
+		playbackAPI.POST("/:id/skip", s.reportSkip)
 		playbackAPI.GET("/skip-settings", s.getSkipSettings)
 		playbackAPI.PUT("/skip-settings", s.updateSkipSettings)
 
 		// Audio/Subtitle track selection
-		playbackAPI.GET("/:mediaId/tracks", s.getMediaTracks)
-		playbackAPI.PUT("/:mediaId/tracks/select", s.selectMediaTracks)
+		playbackAPI.GET("/:id/tracks", s.getMediaTracks)
+		playbackAPI.PUT("/:id/tracks/select", s.selectMediaTracks)
 		playbackAPI.GET("/track-preferences", s.getTrackPreferences)
 		playbackAPI.PUT("/track-preferences", s.updateTrackPreferences)
 	}

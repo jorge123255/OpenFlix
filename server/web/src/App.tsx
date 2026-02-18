@@ -34,6 +34,9 @@ import { ComskipSettingsPage } from './pages/ComskipSettings'
 import { SetupWizardPage } from './pages/SetupWizard'
 import { BackupsPage } from './pages/Backups'
 import { TrashPage } from './pages/Trash'
+import { NotificationsPage } from './pages/Notifications'
+import { SubtitlesPage } from './pages/Subtitles'
+import { SchedulerPage } from './pages/Scheduler'
 import { api } from './api/client'
 
 const queryClient = new QueryClient({
@@ -98,6 +101,9 @@ function App() {
             <Route path="setup" element={<SetupWizardPage />} />
             <Route path="backups" element={<BackupsPage />} />
             <Route path="trash" element={<TrashPage />} />
+            <Route path="notifications" element={<NotificationsPage />} />
+            <Route path="subtitles" element={<SubtitlesPage />} />
+            <Route path="scheduler" element={<SchedulerPage />} />
           </Route>
           <Route path="*" element={<Navigate to="/ui" replace />} />
         </Routes>

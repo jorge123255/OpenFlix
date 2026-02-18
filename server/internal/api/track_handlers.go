@@ -61,7 +61,7 @@ type trackPreferencesDTO struct {
 // getMediaTracks probes the underlying file and returns all available tracks.
 // GET /api/playback/:mediaId/tracks
 func (s *Server) getMediaTracks(c *gin.Context) {
-	mediaID, err := strconv.ParseUint(c.Param("mediaId"), 10, 64)
+	mediaID, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid media ID"})
 		return
@@ -103,7 +103,7 @@ func (s *Server) getMediaTracks(c *gin.Context) {
 // selectMediaTracks updates the selected audio/subtitle tracks for a media file.
 // PUT /api/playback/:mediaId/tracks/select
 func (s *Server) selectMediaTracks(c *gin.Context) {
-	mediaID, err := strconv.ParseUint(c.Param("mediaId"), 10, 64)
+	mediaID, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid media ID"})
 		return
