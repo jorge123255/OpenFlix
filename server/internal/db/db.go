@@ -110,6 +110,9 @@ func Migrate(db *gorm.DB) error {
 		&models.Bookmark{},
 		&models.Clip{},
 
+		// Chapter Markers
+		&models.ChapterMarker{},
+
 		// Play Queues
 		&models.PlayQueue{},
 		&models.PlayQueueItem{},
