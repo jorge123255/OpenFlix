@@ -50,6 +50,11 @@ type DVRJob struct {
 	SeriesRecord   bool  `gorm:"default:false" json:"seriesRecord"`
 	SeriesParentID *uint `gorm:"index" json:"seriesParentId,omitempty"`
 
+	// Duplicate detection
+	IsDuplicate        bool  `gorm:"default:false" json:"isDuplicate"`
+	DuplicateOfID      *uint `gorm:"index" json:"duplicateOfId,omitempty"`
+	AcceptedDuplicate  bool  `gorm:"default:false" json:"acceptedDuplicate"`
+
 	// Conflict grouping
 	ConflictGroupID *uint `gorm:"index" json:"conflictGroupId,omitempty"`
 
@@ -146,6 +151,17 @@ type DetectedSegment struct {
 	EndTime   float64 `json:"endTime"`                   // seconds from beginning
 	CreatedAt time.Time
 }
+
+// SkipEvent records when a user skips a segment (for analytics/tuning)
+type SkipEvent struct {
+	ID          uint      `gorm:"primaryKey" json:"id"`
+	UserID      uint      `gorm:"index" json:"userId"`
+	FileID      uint      `gorm:"index" json:"fileId"`
+	SegmentType string    `gorm:"size:20;index" json:"segmentType"` // intro, outro, credits, commercial
+	SkippedAt   time.Time `gorm:"index" json:"skippedAt"`
+}
+
+func (SkipEvent) TableName() string { return "skip_events" }
 
 // DVRGroup represents a show/series grouping of recordings (equivalent to Channels DVR's Group)
 type DVRGroup struct {

@@ -179,6 +179,23 @@ func (s *Server) getPlaybackDecision(c *gin.Context) {
 		response["dashUrl"] = buildDASHPlaybackUrl(file.ID, decision.SuggestedResolution)
 	}
 
+	// Include bandwidth-based quality recommendation if available
+	if deviceID != "" && s.bandwidthManager != nil {
+		estimatedBW := s.bandwidthManager.GetEstimatedBandwidth(deviceID)
+		if estimatedBW > 0 {
+			response["estimatedBandwidth"] = estimatedBW
+			response["recommendedQuality"] = s.bandwidthManager.GetRecommendedQuality(deviceID)
+		}
+	}
+
+	// Include skip markers if available for this file
+	userID, _ := c.Get("userID")
+	if markers := s.getSkipMarkersForFile(file.ID, userID); len(markers) > 0 {
+		settings := s.getUserSkipSettings(userID)
+		response["markers"] = markers
+		response["skipButtonDuration"] = settings.SkipButtonDuration
+	}
+
 	c.JSON(http.StatusOK, response)
 }
 
