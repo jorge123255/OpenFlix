@@ -373,3 +373,19 @@ type Clip struct {
 	CreatedAt   time.Time `json:"createdAt"`
 	UpdatedAt   time.Time `json:"updatedAt"`
 }
+
+// ChapterMarker represents a chapter point within a DVR recording file.
+// Chapters can be auto-detected via scene change analysis, merged from
+// existing commercial/skip markers, or manually added by users.
+type ChapterMarker struct {
+	gorm.Model
+	FileID       uint    `gorm:"index" json:"fileId"`
+	Title        string  `json:"title"`
+	StartTime    float64 `json:"startTime"`              // seconds
+	EndTime      float64 `json:"endTime"`                // seconds
+	Type         string  `json:"type"`                   // "scene", "commercial", "intro", "outro", "credits", "manual"
+	Thumbnail    string  `json:"thumbnail,omitempty"`     // optional thumbnail path
+	AutoDetected bool    `json:"autoDetected"`
+}
+
+func (ChapterMarker) TableName() string { return "chapter_markers" }

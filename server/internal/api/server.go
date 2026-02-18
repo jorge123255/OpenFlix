@@ -1,8 +1,10 @@
 package api
 
 import (
+	"context"
 	"fmt"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -14,15 +16,20 @@ import (
 	"github.com/openflix/openflix-server/internal/config"
 	"github.com/openflix/openflix-server/internal/ddns"
 	"github.com/openflix/openflix-server/internal/dvr"
+	"github.com/openflix/openflix-server/internal/health"
 	"github.com/openflix/openflix-server/internal/instant"
 	"github.com/openflix/openflix-server/internal/jobq"
 	"github.com/openflix/openflix-server/internal/library"
 	"github.com/openflix/openflix-server/internal/livetv"
 	"github.com/openflix/openflix-server/internal/logger"
 	"github.com/openflix/openflix-server/internal/metadata"
+	"github.com/openflix/openflix-server/internal/models"
 	"github.com/openflix/openflix-server/internal/multiview"
+	"github.com/openflix/openflix-server/internal/notify"
+	"github.com/openflix/openflix-server/internal/scheduler"
 	"github.com/openflix/openflix-server/internal/search"
 	"github.com/openflix/openflix-server/internal/sports"
+	"github.com/openflix/openflix-server/internal/subtitles"
 	"github.com/openflix/openflix-server/internal/transcode"
 	"github.com/openflix/openflix-server/internal/updater"
 	limiter "github.com/ulule/limiter/v3"
@@ -58,6 +65,10 @@ type Server struct {
 	clipManager        *dvr.ClipManager
 	bandwidthManager   *transcode.BandwidthManager
 	ddnsClient         *ddns.Client
+	notifyManager      *notify.NotificationManager
+	healthMonitor      *health.StreamHealthMonitor
+	taskScheduler      *scheduler.TaskScheduler
+	subtitleManager    *subtitles.SubtitleManager
 }
 
 // NewServer creates a new API server
@@ -190,6 +201,20 @@ func NewServer(cfg *config.Config, db *gorm.DB) *Server {
 	bandwidthManager := transcode.NewBandwidthManager()
 	logger.Info("Bandwidth manager initialized")
 
+	// Initialize notification manager (subscribes to DVR event bus)
+	var notifyManager *notify.NotificationManager
+	if recorder != nil {
+		if eb := recorder.GetEventBus(); eb != nil {
+			notifyManager = notify.NewNotificationManager(eb)
+			notifyManager.Start()
+			logger.Info("Notification manager initialized")
+		}
+	}
+
+	// Initialize stream health monitor
+	healthMonitor := health.NewStreamHealthMonitor()
+	healthMonitor.StartBackgroundTasks()
+
 	// Initialize DDNS client
 	ddnsClient := ddns.New()
 	logger.Info("DDNS client initialized")
@@ -198,6 +223,87 @@ func NewServer(cfg *config.Config, db *gorm.DB) *Server {
 	appUpdater := updater.New(updater.Config{
 		DataDir:        dataDir,
 		CurrentVersion: "1.0.0", // Set at build time via ldflags
+	})
+
+	// Initialize task scheduler with default tasks
+	taskSched := scheduler.NewTaskScheduler()
+	taskSched.RegisterTask("epg_refresh", "EPG Refresh", "Refresh EPG data from all sources", "0 */6 * * *", 30*time.Minute, func(ctx context.Context) error {
+		logger.Info("[scheduler:epg_refresh] refreshing EPG data")
+		// Trigger EPG refresh via the EPG scheduler
+		if epgScheduler != nil {
+			epgScheduler.ForceRefresh()
+		}
+		return nil
+	})
+	taskSched.RegisterTask("library_scan", "Library Scan", "Scan library paths for new media", "0 * * * *", 30*time.Minute, func(ctx context.Context) error {
+		logger.Info("[scheduler:library_scan] scanning libraries for new media")
+		var libs []models.Library
+		db.Preload("Paths").Find(&libs)
+		for i := range libs {
+			if _, err := scanner.ScanLibrary(&libs[i]); err != nil {
+				logger.Warnf("[scheduler:library_scan] failed to scan library %d: %v", libs[i].ID, err)
+			}
+		}
+		return nil
+	})
+	taskSched.RegisterTask("backup_db", "Database Backup", "Create a backup of the database", "0 3 * * *", 10*time.Minute, func(ctx context.Context) error {
+		logger.Info("[scheduler:backup_db] creating database backup")
+		backupDir := filepath.Join(dataDir, "backups")
+		if err := os.MkdirAll(backupDir, 0755); err != nil {
+			return fmt.Errorf("failed to create backup dir: %w", err)
+		}
+		timestamp := time.Now().Format("20060102-150405")
+		backupPath := filepath.Join(backupDir, fmt.Sprintf("openflix-auto-%s.db", timestamp))
+		sqlDB, err := db.DB()
+		if err != nil {
+			return fmt.Errorf("failed to get db connection: %w", err)
+		}
+		vacuumSQL := fmt.Sprintf("VACUUM INTO '%s'", backupPath)
+		if _, err := sqlDB.Exec(vacuumSQL); err != nil {
+			return fmt.Errorf("VACUUM INTO failed: %w", err)
+		}
+		logger.Infof("[scheduler:backup_db] backup created: %s", backupPath)
+		return nil
+	})
+	taskSched.RegisterTask("prune_recordings", "Prune Recordings", "Clean up old recordings per retention rules", "0 4 * * *", 15*time.Minute, func(ctx context.Context) error {
+		logger.Info("[scheduler:prune_recordings] checking recordings for cleanup")
+		// Delete recordings that are failed and older than 7 days
+		cutoff := time.Now().AddDate(0, 0, -7)
+		result := db.Where("status = ? AND updated_at < ?", "failed", cutoff).Delete(&models.Recording{})
+		if result.RowsAffected > 0 {
+			logger.Infof("[scheduler:prune_recordings] cleaned up %d failed recordings", result.RowsAffected)
+		}
+		return nil
+	})
+	taskSched.RegisterTask("subtitle_search", "Subtitle Search", "Search subtitles for media missing them", "0 2 * * *", 30*time.Minute, func(ctx context.Context) error {
+		logger.Info("[scheduler:subtitle_search] checking for media missing subtitles")
+		// Placeholder: count media without subtitles
+		var count int64
+		db.Model(&models.MediaItem{}).Where("type IN ? AND subtitle_path = ''", []string{"movie", "episode"}).Count(&count)
+		if count > 0 {
+			logger.Infof("[scheduler:subtitle_search] found %d items without subtitles", count)
+		}
+		return nil
+	})
+	taskSched.RegisterTask("cleanup_sessions", "Cleanup Sessions", "Clean expired playback sessions", "*/30 * * * *", 5*time.Minute, func(ctx context.Context) error {
+		// Delete sessions not updated in the last 2 hours
+		cutoff := time.Now().Add(-2 * time.Hour)
+		result := db.Where("updated_at < ?", cutoff).Delete(&models.PlaybackSession{})
+		if result.RowsAffected > 0 {
+			logger.Infof("[scheduler:cleanup_sessions] cleaned up %d stale sessions", result.RowsAffected)
+		}
+		return nil
+	})
+	taskSched.RegisterTask("health_check", "Health Check", "System health check", "*/5 * * * *", 2*time.Minute, func(ctx context.Context) error {
+		// Check database connectivity
+		sqlDB, err := db.DB()
+		if err != nil {
+			return fmt.Errorf("database connection error: %w", err)
+		}
+		if err := sqlDB.PingContext(ctx); err != nil {
+			return fmt.Errorf("database ping failed: %w", err)
+		}
+		return nil
 	})
 
 	s := &Server{
@@ -224,6 +330,9 @@ func NewServer(cfg *config.Config, db *gorm.DB) *Server {
 		clipManager:        clipManager,
 		bandwidthManager:   bandwidthManager,
 		ddnsClient:         ddnsClient,
+		notifyManager:      notifyManager,
+		healthMonitor:      healthMonitor,
+		taskScheduler:      taskSched,
 	}
 	s.setupRouter()
 
@@ -248,6 +357,17 @@ func NewServer(cfg *config.Config, db *gorm.DB) *Server {
 
 	// Restore persisted DDNS configuration (if any)
 	s.loadDDNSConfig()
+
+	// Restore persisted notification configuration (if any)
+	s.loadNotificationConfig()
+
+	// Load persisted scheduler configuration and start scheduler
+	s.loadSchedulerConfig()
+	taskSched.Start()
+	logger.Info("Task scheduler started")
+
+	// Load subtitle configuration and initialize SubtitleManager
+	s.loadSubtitleConfig()
 
 	// Kick off initial search index build in background
 	if searchEngine != nil {
@@ -820,6 +940,13 @@ func (s *Server) setupRouter() {
 			dvrV2.GET("/conflicts/:jobId/alternatives", s.getV2ConflictAlternatives)
 			dvrV2.POST("/conflicts/:jobId/resolve", s.resolveV2Conflict)
 			dvrV2.POST("/conflicts/auto-resolve", s.autoResolveV2Conflicts)
+
+			// Chapter Markers
+			dvrV2.GET("/files/:id/chapters", s.getFileChapters)
+			dvrV2.POST("/files/:id/chapters", s.addFileChapter)
+			dvrV2.PUT("/files/:id/chapters/:chapterId", s.updateFileChapter)
+			dvrV2.DELETE("/files/:id/chapters/:chapterId", s.deleteFileChapter)
+			dvrV2.POST("/files/:id/chapters/detect", s.detectFileChapters)
 		}
 	}
 
@@ -908,6 +1035,16 @@ func (s *Server) setupRouter() {
 		remoteAccess.GET("/login-url", s.adminRequired(), s.getRemoteAccessLoginUrl)
 	}
 
+	// ============ Notifications API ============
+	notifyGroup := r.Group("/api/notifications")
+	notifyGroup.Use(s.authRequired(), s.adminRequired())
+	{
+		notifyGroup.GET("/config", s.getNotificationConfig)
+		notifyGroup.PUT("/config", s.putNotificationConfig)
+		notifyGroup.POST("/test", s.testNotification)
+		notifyGroup.GET("/history", s.getNotificationHistory)
+	}
+
 	// ============ Dynamic DNS API ============
 	ddnsGroup := r.Group("/api/ddns")
 	ddnsGroup.Use(s.authRequired(), s.adminRequired())
@@ -974,6 +1111,21 @@ func (s *Server) setupRouter() {
 		speedtestGroup.GET("/download", s.speedTestDownload)
 		speedtestGroup.POST("/upload", s.speedTestUpload)
 		speedtestGroup.GET("/results/:id", s.speedTestResults)
+	}
+
+	// ============ Stream Health Monitoring API ============
+	healthGroup := r.Group("/api/health")
+	healthGroup.Use(s.authRequired())
+	{
+		healthGroup.GET("/streams", s.getHealthStreams)
+		healthGroup.GET("/streams/:id", s.getHealthStream)
+		healthGroup.POST("/streams/:id/report", s.reportStreamHealth)
+		healthGroup.GET("/channels", s.getHealthChannels)
+		healthGroup.GET("/channels/:id/history", s.getHealthChannelHistory)
+
+		// Admin-only endpoints
+		healthGroup.GET("/alerts", s.adminRequired(), s.getHealthAlerts)
+		healthGroup.GET("/summary", s.adminRequired(), s.getHealthSummary)
 	}
 
 	// ============ Tuner API (HDHR) ============
@@ -1079,11 +1231,37 @@ func (s *Server) setupRouter() {
 		playbackAPI.PUT("/track-preferences", s.updateTrackPreferences)
 	}
 
+	// ============ Scheduled Tasks API (admin only) ============
+	schedulerGroup := r.Group("/api/scheduler")
+	schedulerGroup.Use(s.authRequired(), s.adminRequired())
+	{
+		schedulerGroup.GET("/tasks", s.listScheduledTasks)
+		schedulerGroup.GET("/tasks/:id", s.getScheduledTask)
+		schedulerGroup.PUT("/tasks/:id", s.updateScheduledTask)
+		schedulerGroup.POST("/tasks/:id/run", s.triggerScheduledTask)
+		schedulerGroup.GET("/history", s.getSchedulerHistory)
+	}
+
+	// ============ Subtitles API (OpenSubtitles) ============
+	subtitleGroup := r.Group("/api/subtitles")
+	subtitleGroup.Use(s.authRequired())
+	{
+		subtitleGroup.GET("/search", s.searchSubtitles)
+		subtitleGroup.POST("/download", s.downloadSubtitle)
+		subtitleGroup.GET("/config", s.getSubtitleConfig)
+		subtitleGroup.PUT("/config", s.adminRequired(), s.updateSubtitleConfig)
+		subtitleGroup.GET("/:mediaId", s.getSubtitlesForMedia)
+		subtitleGroup.DELETE("/:mediaId/:lang", s.deleteSubtitle)
+	}
+
 	// Images - support both /thumb/:id and /thumb (simple)
 	r.GET("/library/metadata/:key/thumb/:thumbId", s.getThumb)
 	r.GET("/library/metadata/:key/thumb", s.getThumbSimple)
 	r.GET("/library/metadata/:key/art/:artId", s.getArt)
 	r.GET("/library/metadata/:key/art", s.getArtSimple)
+
+	// ============ API Documentation ============
+	s.registerSwaggerRoutes(r)
 
 	s.router = r
 }
