@@ -667,10 +667,22 @@ transcode:
           Sources
         </Link>
         <Link
+          to="/ui/settings/livetv-dvr"
+          className="px-4 py-2 rounded-md text-sm font-medium text-gray-400 hover:text-white hover:bg-gray-700 transition-colors"
+        >
+          Live TV & DVR
+        </Link>
+        <Link
           to="/ui/settings/advanced"
           className="px-4 py-2 rounded-md text-sm font-medium text-gray-400 hover:text-white hover:bg-gray-700 transition-colors"
         >
           Advanced
+        </Link>
+        <Link
+          to="/ui/settings/status"
+          className="px-4 py-2 rounded-md text-sm font-medium text-gray-400 hover:text-white hover:bg-gray-700 transition-colors"
+        >
+          Status
         </Link>
       </div>
 

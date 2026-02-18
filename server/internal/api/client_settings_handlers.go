@@ -54,17 +54,19 @@ func (s *Server) updateDevice(c *gin.Context) {
 	}
 
 	var req struct {
-		DisplayName    *string `json:"displayName"`
-		KioskMode      *bool   `json:"kioskMode"`
-		KidsOnlyMode   *bool   `json:"kidsOnlyMode"`
-		MaxRating      *string `json:"maxRating"`
-		DefaultQuality *string `json:"defaultQuality"`
-		MaxBitrate     *int    `json:"maxBitrate"`
-		StartupSection *string `json:"startupSection"`
-		Theme          *string `json:"theme"`
-		EnableDVR      *bool   `json:"enableDVR"`
-		EnableLiveTV   *bool   `json:"enableLiveTV"`
-		EnableDownloads *bool  `json:"enableDownloads"`
+		DisplayName         *string `json:"displayName"`
+		KioskMode           *bool   `json:"kioskMode"`
+		KidsOnlyMode        *bool   `json:"kidsOnlyMode"`
+		MaxRating           *string `json:"maxRating"`
+		DefaultQuality      *string `json:"defaultQuality"`
+		MaxBitrate          *int    `json:"maxBitrate"`
+		StartupSection      *string `json:"startupSection"`
+		Theme               *string `json:"theme"`
+		EnableDVR           *bool   `json:"enableDVR"`
+		EnableLiveTV        *bool   `json:"enableLiveTV"`
+		EnableDownloads     *bool   `json:"enableDownloads"`
+		ChannelCollectionID *uint   `json:"channelCollectionId"`
+		SidebarSections     *string `json:"sidebarSections"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -106,6 +108,12 @@ func (s *Server) updateDevice(c *gin.Context) {
 	if req.EnableDownloads != nil {
 		device.EnableDownloads = *req.EnableDownloads
 	}
+	if req.ChannelCollectionID != nil {
+		device.ChannelCollectionID = *req.ChannelCollectionID
+	}
+	if req.SidebarSections != nil {
+		device.SidebarSections = *req.SidebarSections
+	}
 
 	if err := s.db.Save(&device).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update device"})
@@ -139,14 +147,22 @@ func (s *Server) deleteDevice(c *gin.Context) {
 // registerDevice registers or updates a client device heartbeat (any authenticated user)
 func (s *Server) registerDevice(c *gin.Context) {
 	var req struct {
-		DeviceID   string `json:"deviceId" binding:"required"`
-		Platform   string `json:"platform"`
-		AppVersion string `json:"appVersion"`
+		DeviceID    string `json:"deviceId" binding:"required"`
+		Platform    string `json:"platform"`
+		AppVersion  string `json:"appVersion"`
+		DeviceModel string `json:"deviceModel"`
+		OSVersion   string `json:"osVersion"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "deviceId is required"})
 		return
+	}
+
+	// Determine connection type from request headers
+	connectionType := "local"
+	if c.GetHeader("X-Forwarded-For") != "" || c.GetHeader("Via") != "" {
+		connectionType = "remote"
 	}
 
 	var device models.ClientDevice
@@ -155,21 +171,25 @@ func (s *Server) registerDevice(c *gin.Context) {
 	if result.Error != nil {
 		// Device does not exist, create with sensible defaults
 		device = models.ClientDevice{
-			DeviceID:       req.DeviceID,
-			DisplayName:    req.Platform + " Device",
-			Platform:       req.Platform,
-			LastSeen:       time.Now(),
-			IPAddress:      c.ClientIP(),
-			AppVersion:     req.AppVersion,
-			KioskMode:      false,
-			KidsOnlyMode:   false,
-			MaxRating:      "",
-			DefaultQuality: "original",
-			MaxBitrate:     0,
-			StartupSection: "home",
-			Theme:          "dark",
-			EnableDVR:      true,
-			EnableLiveTV:   true,
+			DeviceID:        req.DeviceID,
+			DisplayName:     req.Platform + " Device",
+			Platform:        req.Platform,
+			LastSeen:        time.Now(),
+			IPAddress:       c.ClientIP(),
+			AppVersion:      req.AppVersion,
+			DeviceModel:     req.DeviceModel,
+			OSVersion:       req.OSVersion,
+			ConnectionType:  connectionType,
+			KioskMode:       false,
+			KidsOnlyMode:    false,
+			MaxRating:       "",
+			DefaultQuality:  "original",
+			MaxBitrate:      0,
+			StartupSection:  "home",
+			Theme:           "dark",
+			SidebarSections: "home,livetv,dvr,movies,shows,kids,sports,search",
+			EnableDVR:       true,
+			EnableLiveTV:    true,
 			EnableDownloads: true,
 		}
 
@@ -185,11 +205,18 @@ func (s *Server) registerDevice(c *gin.Context) {
 		// Update heartbeat fields
 		device.LastSeen = time.Now()
 		device.IPAddress = c.ClientIP()
+		device.ConnectionType = connectionType
 		if req.AppVersion != "" {
 			device.AppVersion = req.AppVersion
 		}
 		if req.Platform != "" {
 			device.Platform = req.Platform
+		}
+		if req.DeviceModel != "" {
+			device.DeviceModel = req.DeviceModel
+		}
+		if req.OSVersion != "" {
+			device.OSVersion = req.OSVersion
 		}
 
 		if err := s.db.Save(&device).Error; err != nil {

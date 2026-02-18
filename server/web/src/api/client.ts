@@ -524,6 +524,58 @@ class ApiClient {
     await this.client.put(`/dvr/recordings/${recordingId}/progress`, { viewOffset })
   }
 
+  // Recordings Manager endpoints
+  async getRecordingsManager(params?: {
+    contentType?: string
+    sortBy?: string
+    sortDir?: string
+    search?: string
+    watched?: string
+    favorite?: string
+    contentRating?: string
+    showTitle?: string
+    status?: string
+  }): Promise<RecordingsManagerResponse> {
+    const response = await this.client.get<RecordingsManagerResponse>('/dvr/recordings/manager', { params })
+    return response.data
+  }
+
+  async toggleRecordingWatched(id: number, watched?: boolean): Promise<{ id: number; isWatched: boolean }> {
+    const response = await this.client.put<{ id: number; isWatched: boolean }>(
+      `/dvr/recordings/${id}/watched`,
+      watched !== undefined ? { watched } : {}
+    )
+    return response.data
+  }
+
+  async toggleRecordingFavorite(id: number, favorite?: boolean): Promise<{ id: number; isFavorite: boolean }> {
+    const response = await this.client.put<{ id: number; isFavorite: boolean }>(
+      `/dvr/recordings/${id}/favorite`,
+      favorite !== undefined ? { favorite } : {}
+    )
+    return response.data
+  }
+
+  async toggleRecordingKeep(id: number, keepForever?: boolean): Promise<{ id: number; keepForever: boolean }> {
+    const response = await this.client.put<{ id: number; keepForever: boolean }>(
+      `/dvr/recordings/${id}/keep`,
+      keepForever !== undefined ? { keepForever } : {}
+    )
+    return response.data
+  }
+
+  async trashRecording(id: number): Promise<void> {
+    await this.client.delete(`/dvr/recordings/${id}/trash`)
+  }
+
+  async bulkRecordingAction(ids: number[], action: string): Promise<{ action: string; affected: number }> {
+    const response = await this.client.post<{ action: string; affected: number }>(
+      '/dvr/recordings/bulk',
+      { ids, action }
+    )
+    return response.data
+  }
+
   // DVR Management (Passes, Schedule, Calendar)
   async getDVRPasses(): Promise<DVRPass[]> {
     const response = await this.client.get<{ passes: DVRPass[] }>('/dvr/passes')
@@ -572,6 +624,17 @@ class ApiClient {
     return response.data
   }
 
+  // Diagnostics & System Status
+  async runHealthChecks(): Promise<HealthCheckResponse> {
+    const response = await this.client.get<HealthCheckResponse>('/api/diagnostics/health-check')
+    return response.data
+  }
+
+  async getSystemStatus(): Promise<SystemStatusResponse> {
+    const response = await this.client.get<SystemStatusResponse>('/api/system/status')
+    return response.data
+  }
+
   async getServerConfig(): Promise<ServerSettings> {
     const response = await this.client.get<{ settings: ServerSettings }>('/admin/settings')
     return response.data.settings
@@ -580,6 +643,31 @@ class ApiClient {
   async updateServerConfig(data: Partial<ServerSettings>): Promise<ServerSettings> {
     const response = await this.client.put<{ settings: ServerSettings }>('/admin/settings', data)
     return response.data.settings
+  }
+
+  // Guide data management
+  async refreshGuideData(): Promise<{ message: string; status: string }> {
+    const response = await this.client.post<{ message: string; status: string }>('/api/guide/refresh')
+    return response.data
+  }
+
+  async rebuildGuideData(): Promise<{ message: string; status: string }> {
+    const response = await this.client.post<{ message: string; status: string }>('/api/guide/rebuild')
+    return response.data
+  }
+
+  // Global client settings overrides
+  async getGlobalClientSettings(): Promise<Record<string, string>> {
+    const response = await this.client.get<{ overrides: Record<string, string> }>('/api/client-settings')
+    return response.data.overrides || {}
+  }
+
+  async updateGlobalClientSetting(key: string, value: string): Promise<void> {
+    await this.client.put('/api/client-settings', { key, value })
+  }
+
+  async deleteGlobalClientSetting(key: string): Promise<void> {
+    await this.client.delete(`/api/client-settings/${key}`)
   }
 
   // Media management endpoints
@@ -664,6 +752,182 @@ class ApiClient {
       await this.client.delete(`/api/vod/queue/${id}`)
     },
   }
+
+  // ============ Admin Playlists API ============
+
+  async getAdminPlaylists(): Promise<AdminPlaylist[]> {
+    const response = await this.client.get<{ playlists: AdminPlaylist[] }>('/api/playlists')
+    return response.data.playlists || []
+  }
+
+  async createAdminPlaylist(data: { name: string; description: string }): Promise<AdminPlaylist> {
+    const response = await this.client.post<AdminPlaylist>('/api/playlists', data)
+    return response.data
+  }
+
+  async getAdminPlaylist(id: number): Promise<AdminPlaylistDetail> {
+    const response = await this.client.get<AdminPlaylistDetail>(`/api/playlists/${id}`)
+    return response.data
+  }
+
+  async updateAdminPlaylist(id: number, data: { name?: string; description?: string }): Promise<AdminPlaylist> {
+    const response = await this.client.put<AdminPlaylist>(`/api/playlists/${id}`, data)
+    return response.data
+  }
+
+  async deleteAdminPlaylist(id: number): Promise<void> {
+    await this.client.delete(`/api/playlists/${id}`)
+  }
+
+  async addItemsToAdminPlaylist(id: number, mediaIds: number[]): Promise<{ added: number }> {
+    const response = await this.client.post<{ added: number }>(`/api/playlists/${id}/items`, { mediaIds })
+    return response.data
+  }
+
+  async removeItemFromAdminPlaylist(playlistId: number, itemId: number): Promise<void> {
+    await this.client.delete(`/api/playlists/${playlistId}/items/${itemId}`)
+  }
+
+  async reorderAdminPlaylistItems(playlistId: number, itemIds: number[]): Promise<void> {
+    await this.client.put(`/api/playlists/${playlistId}/items/reorder`, { itemIds })
+  }
+
+  // ============ Personal Sections API ============
+
+  async getPersonalSections(): Promise<PersonalSection[]> {
+    const response = await this.client.get<{ sections: PersonalSection[] }>('/api/sections')
+    return response.data.sections || []
+  }
+
+  async createPersonalSection(data: {
+    name: string
+    description: string
+    sectionType: string
+    smartFilter?: string
+  }): Promise<PersonalSection> {
+    const response = await this.client.post<PersonalSection>('/api/sections', data)
+    return response.data
+  }
+
+  async getPersonalSection(id: number): Promise<PersonalSectionDetail> {
+    const response = await this.client.get<PersonalSectionDetail>(`/api/sections/${id}`)
+    return response.data
+  }
+
+  async updatePersonalSection(id: number, data: {
+    name?: string
+    description?: string
+    smartFilter?: string
+  }): Promise<PersonalSection> {
+    const response = await this.client.put<PersonalSection>(`/api/sections/${id}`, data)
+    return response.data
+  }
+
+  async deletePersonalSection(id: number): Promise<void> {
+    await this.client.delete(`/api/sections/${id}`)
+  }
+
+  async addItemsToPersonalSection(sectionId: number, mediaIds: number[]): Promise<{ added: number }> {
+    const response = await this.client.post<{ added: number }>(`/api/sections/${sectionId}/items`, { mediaIds })
+    return response.data
+  }
+
+  async removeItemFromPersonalSection(sectionId: number, itemId: number): Promise<void> {
+    await this.client.delete(`/api/sections/${sectionId}/items/${itemId}`)
+  }
+
+  async reorderPersonalSectionItems(sectionId: number, itemIds: number[]): Promise<void> {
+    await this.client.put(`/api/sections/${sectionId}/reorder`, { itemIds })
+  }
+
+  async previewSmartFilter(smartFilter: string, limit?: number): Promise<SmartFilterPreview> {
+    const response = await this.client.post<SmartFilterPreview>('/api/sections/preview', {
+      smartFilter,
+      limit: limit || 50,
+    })
+    return response.data
+  }
+
+  async getAvailableGenres(): Promise<string[]> {
+    const response = await this.client.get<{ genres: string[] }>('/api/sections/genres')
+    return response.data.genres || []
+  }
+}
+
+// Admin Playlist types
+export interface AdminPlaylist {
+  ID: number
+  guid: string
+  userId: number
+  title: string
+  summary: string
+  playlistType: string
+  smart: boolean
+  leafCount: number
+  duration: number
+  addedAt: string
+  updatedAt: string
+}
+
+export interface AdminPlaylistItem {
+  id: number
+  playlistId: number
+  mediaId: number
+  position: number
+  title: string
+  type: string
+  year?: number
+  thumb?: string
+  duration?: number
+  summary?: string
+}
+
+export interface AdminPlaylistDetail {
+  playlist: AdminPlaylist
+  items: AdminPlaylistItem[]
+}
+
+// Personal Section types
+export interface PersonalSection {
+  id: number
+  userId: number
+  name: string
+  description: string
+  sectionType: string
+  smartFilter: string
+  position: number
+  itemCount: number
+  createdAt: string
+  updatedAt: string
+}
+
+export interface PersonalSectionItem {
+  id: number
+  mediaId: number
+  position: number
+  title: string
+  type: string
+  year?: number
+  thumb?: string
+  duration?: number
+  summary?: string
+}
+
+export interface PersonalSectionDetail {
+  section: PersonalSection
+  items: PersonalSectionItem[]
+}
+
+export interface SmartFilterPreview {
+  items: Array<{
+    id: number
+    title: string
+    type: string
+    year?: number
+    thumb?: string
+    duration?: number
+  }>
+  total: number
 }
 
 // Server settings (from /admin/settings endpoint)
@@ -702,6 +966,20 @@ export interface ServerSettings {
   commercial_detect?: boolean
   auto_delete_days?: number
   max_record_quality?: string
+
+  // Live TV & DVR (dedicated settings page)
+  recording_pre_padding?: number
+  recording_post_padding?: number
+  recording_quality?: string
+  keep_rule?: string
+  auto_delete_watched?: boolean
+  commercial_detection_enabled?: boolean
+  commercial_detection_mode?: string
+  auto_skip_commercials?: boolean
+  guide_refresh_interval?: number
+  guide_data_source?: string
+  deinterlacing_mode?: string
+  livetv_buffer_size?: string
 
   // Remote Access
   remote_access_enabled?: boolean
@@ -1102,6 +1380,84 @@ export interface DashboardData {
   recentShows: DashboardRecentShow[]
   recentMovies: DashboardRecentMovie[]
   recentRecordings: DashboardRecentRecording[]
+}
+
+// Recordings Manager types
+export interface RecordingsManagerResponse {
+  recordings: Recording[]
+  totalCount: number
+  showTitles: string[]
+  contentRatings: string[]
+}
+
+// Health Check types
+export interface HealthCheckResult {
+  name: string
+  status: 'ok' | 'warning' | 'error'
+  message: string
+  details?: string
+}
+
+export interface HealthCheckResponse {
+  timestamp: string
+  duration: string
+  summary: string
+  checks: HealthCheckResult[]
+}
+
+// System Status types
+export interface SystemStatusServer {
+  version: string
+  uptime: string
+  uptimeSec: number
+  startedAt: string
+  os: string
+  arch: string
+  goVersion: string
+  hostname: string
+}
+
+export interface DiskUsageInfo {
+  path: string
+  label: string
+  total: number
+  used: number
+  free: number
+  percent: number
+}
+
+export interface SystemStatusResources {
+  cpuCores: number
+  memUsedMB: number
+  memTotalMB: number
+  memPercent: number
+  goroutines: number
+  diskUsage: DiskUsageInfo[]
+}
+
+export interface SystemStatusDatabase {
+  sizeMB: number
+  libraries: number
+  channels: number
+  recordings: number
+  passes: number
+  users: number
+  mediaItems: number
+  programs: number
+}
+
+export interface SystemStatusComponents {
+  ffmpegVersion: string
+  chromeVersion: string
+  comskipAvailable: boolean
+  transcodeHW: string
+}
+
+export interface SystemStatusResponse {
+  server: SystemStatusServer
+  resources: SystemStatusResources
+  database: SystemStatusDatabase
+  components: SystemStatusComponents
 }
 
 export const api = new ApiClient()

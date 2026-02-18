@@ -449,6 +449,10 @@ func (s *Server) setupRouter() {
 	r.GET("/api/status", s.authRequired(), s.getServerStatus)
 	r.GET("/api/dashboard", s.authRequired(), s.getDashboardData)
 
+	// Diagnostics & System Status API (admin only)
+	r.GET("/api/diagnostics/health-check", s.authRequired(), s.adminRequired(), s.runHealthChecks)
+	r.GET("/api/system/status", s.authRequired(), s.adminRequired(), s.getSystemStatus)
+
 	// Logs API (admin only)
 	r.GET("/api/logs", s.authRequired(), s.adminRequired(), s.getLogs)
 	r.DELETE("/api/logs", s.authRequired(), s.adminRequired(), s.clearLogs)
@@ -656,6 +660,36 @@ func (s *Server) setupRouter() {
 		playlists.DELETE("/:id", s.deletePlaylist)
 	}
 
+	// ============ Admin Playlists API (Web UI) ============
+	adminPlaylists := r.Group("/api/playlists")
+	adminPlaylists.Use(s.authRequired())
+	{
+		adminPlaylists.GET("", s.getAdminPlaylists)
+		adminPlaylists.POST("", s.createAdminPlaylist)
+		adminPlaylists.GET("/:id", s.getAdminPlaylist)
+		adminPlaylists.PUT("/:id", s.updateAdminPlaylist)
+		adminPlaylists.DELETE("/:id", s.deleteAdminPlaylist)
+		adminPlaylists.POST("/:id/items", s.addItemsToAdminPlaylist)
+		adminPlaylists.DELETE("/:id/items/:itemId", s.removeItemFromAdminPlaylist)
+		adminPlaylists.PUT("/:id/items/reorder", s.reorderAdminPlaylistItems)
+	}
+
+	// ============ Personal Sections API ============
+	personalSections := r.Group("/api/sections")
+	personalSections.Use(s.authRequired())
+	{
+		personalSections.GET("", s.getPersonalSections)
+		personalSections.POST("", s.createPersonalSection)
+		personalSections.POST("/preview", s.previewSmartFilter)  // Must be before /:id
+		personalSections.GET("/genres", s.getAvailableGenres)    // Must be before /:id
+		personalSections.GET("/:id", s.getPersonalSection)
+		personalSections.PUT("/:id", s.updatePersonalSection)
+		personalSections.DELETE("/:id", s.deletePersonalSection)
+		personalSections.POST("/:id/items", s.addItemsToPersonalSection)
+		personalSections.DELETE("/:id/items/:itemId", s.removeItemFromPersonalSection)
+		personalSections.PUT("/:id/reorder", s.reorderPersonalSectionItems)
+	}
+
 	// ============ Watchlist API ============
 	watchlist := r.Group("/watchlist")
 	watchlist.Use(s.authRequired())
@@ -801,6 +835,8 @@ func (s *Server) setupRouter() {
 		dvrGroup.POST("/recordings", s.scheduleRecording)
 		dvrGroup.POST("/recordings/from-program", s.recordFromProgram)
 		dvrGroup.GET("/recordings/stats", s.getActiveRecordingStats) // Must be before :id route
+		dvrGroup.GET("/recordings/manager", s.getRecordingsManager)  // Must be before :id route
+		dvrGroup.POST("/recordings/bulk", s.bulkRecordingAction)     // Must be before :id route
 		dvrGroup.GET("/recordings/:id", s.getRecording)
 		dvrGroup.PUT("/recordings/:id", s.updateRecording)
 		dvrGroup.DELETE("/recordings/:id", s.deleteRecording)
@@ -826,6 +862,12 @@ func (s *Server) setupRouter() {
 		dvrGroup.GET("/recordings/:id/dash/manifest.mpd", s.getRecordingDASHManifest)
 		dvrGroup.GET("/recordings/:id/dash/:segment", s.getRecordingDASHSegment)
 		dvrGroup.PUT("/recordings/:id/progress", s.updateRecordingProgress)
+
+		// Recordings Manager (file browser UI) - :id routes
+		dvrGroup.PUT("/recordings/:id/watched", s.toggleRecordingWatched)
+		dvrGroup.PUT("/recordings/:id/favorite", s.toggleRecordingFavorite)
+		dvrGroup.PUT("/recordings/:id/keep", s.toggleRecordingKeep)
+		dvrGroup.DELETE("/recordings/:id/trash", s.trashRecording)
 
 		// Stream Validation (validates stream before scheduling)
 		dvrGroup.GET("/validate-stream", s.validateRecordingStream)
@@ -1285,6 +1327,23 @@ func (s *Server) setupRouter() {
 		subtitleGroup.PUT("/config", s.adminRequired(), s.updateSubtitleConfig)
 		subtitleGroup.GET("/:mediaId", s.getSubtitlesForMedia)
 		subtitleGroup.DELETE("/:mediaId/:lang", s.deleteSubtitle)
+	}
+
+	// ============ Guide Data API (admin only) ============
+	guideAdmin := r.Group("/api/guide")
+	guideAdmin.Use(s.authRequired(), s.adminRequired())
+	{
+		guideAdmin.POST("/refresh", s.refreshGuideData)
+		guideAdmin.POST("/rebuild", s.rebuildGuideData)
+	}
+
+	// ============ Global Client Settings API (admin only) ============
+	clientSettingsAdmin := r.Group("/api/client-settings")
+	clientSettingsAdmin.Use(s.authRequired(), s.adminRequired())
+	{
+		clientSettingsAdmin.GET("", s.getGlobalClientSettings)
+		clientSettingsAdmin.PUT("", s.updateGlobalClientSettings)
+		clientSettingsAdmin.DELETE("/:key", s.deleteGlobalClientSetting)
 	}
 
 	// ============ Device Management API ============

@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Clock, Calendar, Video, Circle, X, ChevronLeft, ChevronRight, Link2, Search, Wand2, RefreshCw, Volume2, VolumeX, Maximize, Loader, Play, Pause, SkipBack, SkipForward } from 'lucide-react'
+import { Clock, Calendar, Video, Circle, X, ChevronLeft, ChevronRight, Link2, Search, Wand2, RefreshCw, Volume2, VolumeX, Maximize, Loader, Play, Pause, SkipBack, SkipForward, Filter, List, LayoutGrid, ChevronDown } from 'lucide-react'
 import { api } from '../api/client'
 import Hls from 'hls.js'
 import mpegts from 'mpegts.js'
@@ -87,23 +87,46 @@ interface AutoDetectResponse {
 }
 
 // Constants for grid layout
-const CHANNEL_WIDTH = 220
-const ROW_HEIGHT = 70
-const TIME_HEADER_HEIGHT = 50
-const PIXELS_PER_MINUTE = 3 // 3px per minute = 180px per hour
+const CHANNEL_WIDTH = 200
+const ROW_HEIGHT = 64
+const TIME_HEADER_HEIGHT = 44
+const PIXELS_PER_MINUTE = 4 // 4px per minute = 240px per hour = 120px per 30min
 
-// Category colors
+// Category colors - more distinct palette
 const categoryColors: { [key: string]: string } = {
-  Movies: 'bg-purple-600',
-  TVShow: 'bg-blue-600',
-  Sports: 'bg-green-600',
-  News: 'bg-red-600',
-  Kids: 'bg-orange-500',
-  Documentary: 'bg-teal-600',
+  Movies: 'bg-purple-700/90',
+  TVShow: 'bg-blue-700/90',
+  Sports: 'bg-green-700/90',
+  News: 'bg-red-700/90',
+  Kids: 'bg-orange-600/90',
+  Documentary: 'bg-teal-700/90',
+}
+
+// Category border colors for left accent
+const categoryBorderColors: { [key: string]: string } = {
+  Movies: 'border-l-purple-400',
+  TVShow: 'border-l-blue-400',
+  Sports: 'border-l-green-400',
+  News: 'border-l-red-400',
+  Kids: 'border-l-orange-400',
+  Documentary: 'border-l-teal-400',
 }
 
 function formatTime(date: Date): string {
   return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+}
+
+function formatDateLabel(date: Date): string {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const target = new Date(date)
+  target.setHours(0, 0, 0, 0)
+  const diffDays = Math.round((target.getTime() - today.getTime()) / (24 * 60 * 60 * 1000))
+
+  if (diffDays === 0) return 'Today'
+  if (diffDays === 1) return 'Tomorrow'
+  if (diffDays === -1) return 'Yesterday'
+  return date.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })
 }
 
 function ProgramBlock({
@@ -123,18 +146,19 @@ function ProgramBlock({
   isScheduled?: boolean
   isRecording?: boolean
 }) {
-  const categoryColor = categoryColors[program.category || ''] || 'bg-gray-600'
-  const minWidth = 60
+  const categoryColor = categoryColors[program.category || ''] || 'bg-gray-700/90'
+  const borderColor = categoryBorderColors[program.category || ''] || 'border-l-gray-500'
+  const minWidth = 50
 
-  if (width < 20) return null
+  if (width < 16) return null
 
   return (
     <div
       onClick={onClick}
-      className={`absolute top-1 bottom-1 rounded-md cursor-pointer overflow-hidden transition-all hover:z-20 hover:ring-2 hover:ring-white/80 hover:brightness-110 ${categoryColor} ${isNow ? 'ring-1 ring-yellow-400/70 shadow-[0_0_4px_rgba(250,204,21,0.3)]' : ''}`}
+      className={`absolute top-[3px] bottom-[3px] rounded cursor-pointer overflow-hidden transition-all hover:z-20 hover:ring-2 hover:ring-white/60 hover:brightness-110 border-l-[3px] ${borderColor} ${categoryColor} ${isNow ? 'ring-1 ring-yellow-400/50' : ''}`}
       style={{
         left: `${startOffset}px`,
-        width: `${Math.max(width - 4, minWidth)}px`,
+        width: `${Math.max(width - 2, minWidth)}px`,
       }}
       title={`${program.title}\n${formatTime(new Date(program.start))} - ${formatTime(new Date(program.end))}${isScheduled ? '\n🔴 Scheduled to record' : ''}`}
     >
@@ -148,41 +172,40 @@ function ProgramBlock({
       )}
       {/* NEW/PREMIERE/FINALE/LIVE badges */}
       {(() => {
-        // For sports, only show NEW if it's also marked as LIVE (actual live broadcast, not replay)
         const isSportsReplay = program.isSports && !program.isLive
         const showNew = program.isNew && !isSportsReplay
         const showPremiere = program.isPremiere && !isSportsReplay
         const showLive = program.isLive
         const showFinale = program.isFinale
-        
+
         if (!showNew && !showPremiere && !showFinale && !showLive) return null
-        
+
         return (
-          <div className="absolute top-1 left-1 z-10 flex gap-1">
+          <div className="absolute top-1 left-1 z-10 flex gap-0.5">
             {showLive && (
-              <span className="px-1 py-0.5 bg-red-500 text-white text-[9px] font-bold rounded uppercase animate-pulse">Live</span>
+              <span className="px-1 py-0.5 bg-red-500 text-white text-[8px] font-bold rounded uppercase animate-pulse leading-none">Live</span>
             )}
             {showPremiere && (
-              <span className="px-1 py-0.5 bg-yellow-500 text-black text-[9px] font-bold rounded uppercase">Premiere</span>
+              <span className="px-1 py-0.5 bg-yellow-500 text-black text-[8px] font-bold rounded uppercase leading-none">Premiere</span>
             )}
             {showNew && !showPremiere && (
-              <span className="px-1 py-0.5 bg-green-500 text-white text-[9px] font-bold rounded uppercase">New</span>
+              <span className="px-1 py-0.5 bg-green-500 text-white text-[8px] font-bold rounded uppercase leading-none">New</span>
             )}
             {showFinale && (
-              <span className="px-1 py-0.5 bg-purple-500 text-white text-[9px] font-bold rounded uppercase">Finale</span>
+              <span className="px-1 py-0.5 bg-purple-500 text-white text-[8px] font-bold rounded uppercase leading-none">Finale</span>
             )}
           </div>
         )
       })()}
-      <div className="p-2 h-full flex flex-col justify-center">
-        <div className="font-semibold text-white text-sm leading-tight truncate">{program.title}</div>
-        {width > 120 && (
-          <div className="text-xs text-white/80 mt-1 truncate">
+      <div className="px-2 py-1 h-full flex flex-col justify-center">
+        <div className="font-semibold text-white text-xs leading-tight truncate">{program.title}</div>
+        {width > 100 && (
+          <div className="text-[10px] text-white/70 mt-0.5 truncate">
             {formatTime(new Date(program.start))} - {formatTime(new Date(program.end))}
           </div>
         )}
         {width > 200 && program.description && (
-          <div className="text-xs text-white/60 mt-1 line-clamp-1">
+          <div className="text-[10px] text-white/50 mt-0.5 line-clamp-1">
             {program.description}
           </div>
         )}
@@ -248,7 +271,7 @@ function ProgramModal({
             <h2 className="text-xl font-bold text-white drop-shadow-lg">{program.title}</h2>
             {channel && (
               <p className="text-white/90 text-sm mt-1">
-                Ch {channel.number} • {channel.name}
+                Ch {channel.number} - {channel.name}
               </p>
             )}
           </div>
@@ -269,7 +292,7 @@ function ProgramModal({
                 {program.category}
               </span>
             )}
-            {/* NEW/PREMIERE/FINALE badges - for sports, only show NEW if also LIVE (not a replay) */}
+            {/* NEW/PREMIERE/FINALE badges */}
             {(() => {
               const isSportsReplay = program.isSports && !program.isLive
               return (
@@ -431,9 +454,9 @@ function LiveTVPlayer({
         autoCleanupSourceBuffer: true,
         autoCleanupMaxBackwardDuration: 60,
         autoCleanupMinBackwardDuration: 30,
-        stashInitialSize: 512 * 1024, // Larger buffer to reduce stuttering
+        stashInitialSize: 512 * 1024,
         enableStashBuffer: true,
-        liveBufferLatencyChasing: false, // Disable latency chasing to reduce stuttering
+        liveBufferLatencyChasing: false,
         liveBufferLatencyMaxLatency: 10,
         liveBufferLatencyMinRemain: 3,
       })
@@ -444,7 +467,6 @@ function LiveTVPlayer({
       player.on(mpegts.Events.MEDIA_INFO, () => {
         console.log('[LiveTVPlayer] mpegts media info received - stream is MPEG-TS')
         mpegtsWorked = true
-        // Clear timeout since loading succeeded
         if (loadingTimeoutRef.current) {
           clearTimeout(loadingTimeoutRef.current)
           loadingTimeoutRef.current = null
@@ -456,7 +478,6 @@ function LiveTVPlayer({
       player.on(mpegts.Events.ERROR, (errorType: string, errorDetail: string) => {
         console.error('[LiveTVPlayer] mpegts error:', errorType, errorDetail)
         if (!mpegtsWorked) {
-          // mpegts failed, try HLS
           console.log('[LiveTVPlayer] mpegts failed, trying HLS.js...')
           player.destroy()
           mpegtsRef.current = null
@@ -493,13 +514,11 @@ function LiveTVPlayer({
             setIsLoading(false)
           }
         } else {
-          // Stream was working but errored - show error
           setError(`Stream error: ${errorType} - ${errorDetail}`)
           setIsLoading(false)
         }
       })
     } else if (Hls.isSupported()) {
-      // Fallback to HLS if mpegts not supported
       console.log('[LiveTVPlayer] Using HLS.js (mpegts not supported)')
       const hls = new Hls({
         enableWorker: true,
@@ -528,7 +547,6 @@ function LiveTVPlayer({
       hls.loadSource(proxyUrl)
       hls.attachMedia(video)
     } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-      // Safari native HLS support
       console.log('[LiveTVPlayer] Using native HLS (Safari)')
       video.src = proxyUrl
       video.addEventListener('loadedmetadata', () => {
@@ -550,8 +568,6 @@ function LiveTVPlayer({
       setIsLoading(false)
     }
 
-    // Add a loading timeout in case neither HLS nor mpegts can load
-    // Using 30 seconds since some streams take time to start
     loadingTimeoutRef.current = window.setTimeout(() => {
       console.error('[LiveTVPlayer] Loading timeout - stream failed to load within 30 seconds')
       setError('Stream failed to load. Please check if the channel is available.')
@@ -740,35 +756,124 @@ function LiveTVPlayer({
   )
 }
 
+// ============================================================
+// Date picker dropdown component
+// ============================================================
+function DatePickerDropdown({
+  selectedDate,
+  onSelectDate,
+}: {
+  selectedDate: Date
+  onSelectDate: (date: Date) => void
+}) {
+  const [isOpen, setIsOpen] = useState(false)
+  const dropdownRef = useRef<HTMLDivElement>(null)
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setIsOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  // Generate dates: yesterday through +6 days
+  const dates = useMemo(() => {
+    const result: Date[] = []
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    for (let i = -1; i <= 6; i++) {
+      const d = new Date(today)
+      d.setDate(d.getDate() + i)
+      result.push(d)
+    }
+    return result
+  }, [])
+
+  return (
+    <div className="relative" ref={dropdownRef}>
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex items-center gap-2 px-3 py-2 bg-gray-700 hover:bg-gray-600 text-white text-sm rounded-lg transition-colors border border-gray-600"
+      >
+        <Calendar className="h-4 w-4 text-gray-400" />
+        <span>{formatDateLabel(selectedDate)}</span>
+        <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+      </button>
+      {isOpen && (
+        <div className="absolute top-full mt-1 left-0 bg-gray-800 border border-gray-600 rounded-lg shadow-xl z-30 py-1 min-w-[180px]">
+          {dates.map((date, idx) => {
+            const isSelected = date.toDateString() === selectedDate.toDateString()
+            return (
+              <button
+                key={idx}
+                onClick={() => {
+                  onSelectDate(date)
+                  setIsOpen(false)
+                }}
+                className={`w-full text-left px-4 py-2 text-sm transition-colors ${
+                  isSelected
+                    ? 'bg-indigo-600 text-white'
+                    : 'text-gray-300 hover:bg-gray-700'
+                }`}
+              >
+                <span className="font-medium">{formatDateLabel(date)}</span>
+                <span className="text-gray-400 ml-2 text-xs">
+                  {date.toLocaleDateString([], { month: 'short', day: 'numeric' })}
+                </span>
+              </button>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
+
+// ============================================================
+// Main TV Guide Page
+// ============================================================
 export function TVGuidePage() {
   const queryClient = useQueryClient()
-  const gridScrollRef = useRef<HTMLDivElement>(null)
-  const channelScrollRef = useRef<HTMLDivElement>(null)
+  const gridContainerRef = useRef<HTMLDivElement>(null)
+  const timeHeaderRef = useRef<HTMLDivElement>(null)
+  const channelColumnRef = useRef<HTMLDivElement>(null)
   const [selectedProgram, setSelectedProgram] = useState<{ program: Program; channel?: Channel } | null>(null)
   const [watchingChannel, setWatchingChannel] = useState<{ channel: Channel; program?: Program } | null>(null)
-  const [timeOffset, setTimeOffset] = useState(0) // hours offset from now
-  const [selectedGroup, setSelectedGroup] = useState<string>('all') // provider/group filter
-  const [showOnlyUnmapped, setShowOnlyUnmapped] = useState(false) // filter to show only channels without EPG
+  const [selectedGroup, setSelectedGroup] = useState<string>('all')
+  const [selectedSource, setSelectedSource] = useState<string>('all')
+  const [showOnlyUnmapped, setShowOnlyUnmapped] = useState(false)
+  const [channelSearch, setChannelSearch] = useState('')
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
+
+  // Date-based navigation
+  const [selectedDate, setSelectedDate] = useState<Date>(() => {
+    const d = new Date()
+    d.setHours(0, 0, 0, 0)
+    return d
+  })
+  const [hoursWindow] = useState(24) // total hours of data to show
 
   // EPG Mapping modal state
   const [mappingChannel, setMappingChannel] = useState<Channel | null>(null)
   const [mappingEpgSourceId, setMappingEpgSourceId] = useState<number | null>(null)
   const [mappingSearchQuery, setMappingSearchQuery] = useState('')
 
-  // Calculate time range based on offset
+  // Calculate time range based on selected date
   const { startTime, endTime } = useMemo(() => {
-    const now = new Date()
-    const start = new Date(now)
-    start.setMinutes(0, 0, 0)
-    start.setHours(start.getHours() + timeOffset - 1) // 1 hour before current view
-
+    const start = new Date(selectedDate)
+    // Start from the beginning of the day
+    start.setHours(0, 0, 0, 0)
     const end = new Date(start)
-    end.setHours(end.getHours() + 6) // 6 hour window
-
+    end.setHours(end.getHours() + hoursWindow)
     return { startTime: start, endTime: end }
-  }, [timeOffset])
+  }, [selectedDate, hoursWindow])
 
-  const now = new Date()
+  const now = useMemo(() => new Date(), [])
 
   // Generate time slots (every 30 minutes)
   const timeSlots = useMemo(() => {
@@ -795,18 +900,27 @@ export function TVGuidePage() {
     },
   })
 
-  // Fetch guide data (channels + programs for current time window)
+  // Fetch guide data for the selected date window
   const { data: guideData, isLoading: loadingPrograms } = useQuery({
-    queryKey: ['guide'],
-    queryFn: () => api.getGuide(),
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    queryKey: ['guide', startTime.toISOString(), endTime.toISOString()],
+    queryFn: async () => {
+      const params = new URLSearchParams({
+        start: startTime.toISOString(),
+        end: endTime.toISOString(),
+      })
+      const response = await fetch(`/livetv/guide?${params}`, {
+        headers: { 'X-Plex-Token': api.getToken() || '' },
+      })
+      return response.json()
+    },
+    staleTime: 5 * 60 * 1000,
   })
 
   // Fetch scheduled recordings to show badges on EPG
   const { data: scheduledRecordings } = useQuery({
     queryKey: ['scheduled-recordings'],
     queryFn: () => api.getRecordings(),
-    staleTime: 30 * 1000, // 30 seconds
+    staleTime: 30 * 1000,
   })
 
   // Create a map of scheduled recordings by channel+time for quick lookup
@@ -817,32 +931,29 @@ export function TVGuidePage() {
     scheduledRecordings
       .filter(r => r.status === 'scheduled' || r.status === 'recording')
       .forEach(rec => {
-        // Key by channelId + startTime
         const key = `${rec.channelId}-${rec.startTime}`
         map.set(key, { status: rec.status as 'scheduled' | 'recording', recordingId: rec.id })
       })
     return map
   }, [scheduledRecordings])
 
-  // Helper to check if a program is scheduled
   const getProgramRecordingStatus = useCallback((channelId: number, startTime: string): 'scheduled' | 'recording' | null => {
     const key = `${channelId}-${startTime}`
     return scheduledProgramsMap.get(key)?.status || null
   }, [scheduledProgramsMap])
 
-  // Helper to get recording ID for a program
   const getProgramRecordingId = useCallback((channelId: number, startTime: string): number | null => {
     const key = `${channelId}-${startTime}`
     return scheduledProgramsMap.get(key)?.recordingId || null
   }, [scheduledProgramsMap])
 
-  // Programs are already grouped by channelId in the guide response
+  // Programs grouped by channelId
   const programsByChannel = useMemo(() => {
     if (!guideData?.programs) return {}
     return guideData.programs
   }, [guideData])
 
-  // Get unique groups/providers from channels
+  // Get unique groups from channels
   const channelGroups = useMemo(() => {
     if (!channelsData) return []
     const groups = new Set<string>()
@@ -852,36 +963,47 @@ export function TVGuidePage() {
     return Array.from(groups).sort()
   }, [channelsData])
 
-  // Check if a channel has EPG programs - use channelId for matching (matches program.channelId from Gracenote)
+  // Get unique sources from channels
+  const channelSources = useMemo(() => {
+    if (!channelsData) return []
+    const sources = new Map<string, number>()
+    channelsData.forEach(ch => {
+      if (ch.sourceName) {
+        sources.set(ch.sourceName, (sources.get(ch.sourceName) || 0) + 1)
+      }
+    })
+    return Array.from(sources.entries()).sort((a, b) => a[0].localeCompare(b[0]))
+  }, [channelsData])
+
   const channelHasEPG = useCallback((channel: Channel): boolean => {
     const programs = programsByChannel[channel.channelId] || []
     return programs.length > 0
   }, [programsByChannel])
 
-  // Get current program for a channel
   const getCurrentProgram = useCallback((channel: Channel): Program | undefined => {
     const programs = programsByChannel[channel.channelId] || []
     const now = new Date()
-    return programs.find(p => new Date(p.start) <= now && new Date(p.end) > now)
+    return programs.find((p: Program) => new Date(p.start) <= now && new Date(p.end) > now)
   }, [programsByChannel])
 
-  // Filter channels by group and EPG status
+  // Filter channels
   const filteredChannels = useMemo(() => {
     if (!channelsData) return []
     return channelsData.filter(ch => {
-      // Filter by group
-      if (selectedGroup !== 'all' && ch.group !== selectedGroup) {
-        return false
-      }
-      // Filter by EPG status
-      if (showOnlyUnmapped && channelHasEPG(ch)) {
-        return false
+      if (selectedGroup !== 'all' && ch.group !== selectedGroup) return false
+      if (selectedSource !== 'all' && ch.sourceName !== selectedSource) return false
+      if (showOnlyUnmapped && channelHasEPG(ch)) return false
+      if (channelSearch.trim()) {
+        const q = channelSearch.toLowerCase()
+        const matchesName = ch.name.toLowerCase().includes(q)
+        const matchesNumber = String(ch.number).includes(q)
+        const matchesGroup = ch.group?.toLowerCase().includes(q)
+        if (!matchesName && !matchesNumber && !matchesGroup) return false
       }
       return true
     })
-  }, [channelsData, selectedGroup, showOnlyUnmapped, channelHasEPG])
+  }, [channelsData, selectedGroup, selectedSource, showOnlyUnmapped, channelHasEPG, channelSearch])
 
-  // Count channels without EPG per group
   const unmappedCountByGroup = useMemo(() => {
     if (!channelsData) return {}
     const counts: Record<string, number> = { all: 0 }
@@ -982,7 +1104,6 @@ export function TVGuidePage() {
       return response.json()
     },
     onSuccess: async () => {
-      // Force immediate refetch of both channels and programs data
       await queryClient.refetchQueries({ queryKey: ['channels'] })
       await queryClient.refetchQueries({ queryKey: ['guide'] })
       setMappingChannel(null)
@@ -1003,7 +1124,6 @@ export function TVGuidePage() {
       return response.json()
     },
     onSuccess: async () => {
-      // Force immediate refetch
       await queryClient.refetchQueries({ queryKey: ['channels'] })
       await queryClient.refetchQueries({ queryKey: ['guide'] })
       setMappingChannel(null)
@@ -1013,7 +1133,6 @@ export function TVGuidePage() {
   // Auto-detect state
   const [autoDetectResult, setAutoDetectResult] = useState<AutoDetectResponse | null>(null)
 
-  // Auto-detect EPG mutation
   const autoDetectEPG = useMutation({
     mutationFn: async () => {
       const response = await fetch('/livetv/channels/auto-detect?apply=true&unmappedOnly=true', {
@@ -1026,7 +1145,6 @@ export function TVGuidePage() {
       return response.json() as Promise<AutoDetectResponse>
     },
     onSuccess: async (data) => {
-      // Force immediate refetch after auto-detect
       await queryClient.refetchQueries({ queryKey: ['channels'] })
       await queryClient.refetchQueries({ queryKey: ['guide'] })
       setAutoDetectResult(data)
@@ -1040,25 +1158,54 @@ export function TVGuidePage() {
     }
   }, [mappingChannel, epgSources, mappingEpgSourceId])
 
-  // Sync scroll between channel list and grid
+  // ============================================================
+  // Scroll synchronization: time header + channel column + grid
+  // ============================================================
   const handleGridScroll = useCallback(() => {
-    if (gridScrollRef.current && channelScrollRef.current) {
-      channelScrollRef.current.scrollTop = gridScrollRef.current.scrollTop
+    const grid = gridContainerRef.current
+    if (!grid) return
+    // Sync time header horizontal scroll
+    if (timeHeaderRef.current) {
+      timeHeaderRef.current.scrollLeft = grid.scrollLeft
+    }
+    // Sync channel column vertical scroll
+    if (channelColumnRef.current) {
+      channelColumnRef.current.scrollTop = grid.scrollTop
     }
   }, [])
 
-  // Scroll to current time on mount
-  useEffect(() => {
-    if (gridScrollRef.current && timeOffset === 0) {
-      const minutesFromStart = (now.getTime() - startTime.getTime()) / 60000
-      const scrollPosition = minutesFromStart * PIXELS_PER_MINUTE - 100
-      gridScrollRef.current.scrollLeft = Math.max(0, scrollPosition)
+  // Scroll to current time on mount / date change
+  const scrollToNow = useCallback(() => {
+    const grid = gridContainerRef.current
+    if (!grid) return
+    const nowMs = Date.now()
+    const minutesFromStart = (nowMs - startTime.getTime()) / 60000
+    if (minutesFromStart >= 0 && minutesFromStart <= (hoursWindow * 60)) {
+      const scrollPosition = minutesFromStart * PIXELS_PER_MINUTE - grid.clientWidth / 3
+      grid.scrollLeft = Math.max(0, scrollPosition)
+      // Also sync header
+      if (timeHeaderRef.current) {
+        timeHeaderRef.current.scrollLeft = grid.scrollLeft
+      }
+    } else {
+      // If "now" is not in the window, scroll to the start
+      grid.scrollLeft = 0
+      if (timeHeaderRef.current) {
+        timeHeaderRef.current.scrollLeft = 0
+      }
     }
-  }, [startTime, timeOffset])
+  }, [startTime, hoursWindow])
+
+  useEffect(() => {
+    // Small delay to ensure DOM is rendered
+    const timer = setTimeout(scrollToNow, 100)
+    return () => clearTimeout(timer)
+  }, [scrollToNow, guideData])
 
   // Calculate grid dimensions
   const gridWidth = ((endTime.getTime() - startTime.getTime()) / 60000) * PIXELS_PER_MINUTE
   const currentTimeOffset = ((now.getTime() - startTime.getTime()) / 60000) * PIXELS_PER_MINUTE
+  const isCurrentTimeVisible = currentTimeOffset > 0 && currentTimeOffset < gridWidth
 
   const channels = filteredChannels
   const isLoading = loadingChannels || loadingPrograms
@@ -1074,19 +1221,380 @@ export function TVGuidePage() {
     }
   }
 
-  const goToPrevious = () => setTimeOffset(prev => prev - 3)
-  const goToNext = () => setTimeOffset(prev => prev + 3)
-  const goToNow = () => setTimeOffset(0)
+  // Navigate days
+  const goToPreviousDay = () => {
+    const d = new Date(selectedDate)
+    d.setDate(d.getDate() - 1)
+    setSelectedDate(d)
+  }
+  const goToNextDay = () => {
+    const d = new Date(selectedDate)
+    d.setDate(d.getDate() + 1)
+    setSelectedDate(d)
+  }
+  const goToToday = () => {
+    const d = new Date()
+    d.setHours(0, 0, 0, 0)
+    setSelectedDate(d)
+  }
+
+  // ============================================================
+  // List view: shows what's on now per channel
+  // ============================================================
+  const renderListView = () => {
+    return (
+      <div className="flex-1 bg-gray-800 rounded-xl overflow-auto">
+        <table className="w-full">
+          <thead className="sticky top-0 bg-gray-900 z-10">
+            <tr>
+              <th className="text-left text-xs text-gray-400 font-medium px-4 py-3 w-12">#</th>
+              <th className="text-left text-xs text-gray-400 font-medium px-4 py-3 w-16">Logo</th>
+              <th className="text-left text-xs text-gray-400 font-medium px-4 py-3">Channel</th>
+              <th className="text-left text-xs text-gray-400 font-medium px-4 py-3">Now Playing</th>
+              <th className="text-left text-xs text-gray-400 font-medium px-4 py-3 w-32">Time</th>
+              <th className="text-left text-xs text-gray-400 font-medium px-4 py-3 w-24">Category</th>
+              <th className="text-left text-xs text-gray-400 font-medium px-4 py-3 w-20">EPG</th>
+              <th className="text-left text-xs text-gray-400 font-medium px-4 py-3 w-20"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {channels.map((channel) => {
+              const currentProg = getCurrentProgram(channel)
+              const hasEPG = channelHasEPG(channel)
+              const categoryColor = currentProg ? (categoryColors[currentProg.category || ''] || 'bg-gray-600') : ''
+              return (
+                <tr
+                  key={channel.id}
+                  className={`border-b border-gray-700/30 hover:bg-gray-700/30 transition-colors ${!hasEPG ? 'bg-red-900/10' : ''}`}
+                >
+                  <td className="px-4 py-3 text-gray-500 text-sm">{channel.number}</td>
+                  <td className="px-4 py-3">
+                    {channel.logo ? (
+                      <img
+                        src={channel.logo}
+                        alt={channel.name}
+                        className="w-10 h-7 object-contain bg-gray-700 rounded"
+                        onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+                      />
+                    ) : (
+                      <div className="w-10 h-7 bg-gray-700 rounded flex items-center justify-center text-xs text-gray-400">
+                        TV
+                      </div>
+                    )}
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="text-sm font-medium text-white">{channel.name}</div>
+                    {channel.sourceName && (
+                      <div className="text-xs text-gray-500">{channel.sourceName}</div>
+                    )}
+                  </td>
+                  <td className="px-4 py-3">
+                    {currentProg ? (
+                      <button
+                        onClick={() => setSelectedProgram({ program: currentProg, channel })}
+                        className="text-left hover:text-indigo-400 transition-colors"
+                      >
+                        <div className="text-sm font-medium text-white">{currentProg.title}</div>
+                        {currentProg.description && (
+                          <div className="text-xs text-gray-500 line-clamp-1 max-w-md">{currentProg.description}</div>
+                        )}
+                      </button>
+                    ) : (
+                      <span className="text-xs text-gray-600">No program info</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 text-xs text-gray-400">
+                    {currentProg && (
+                      <>
+                        {formatTime(new Date(currentProg.start))} - {formatTime(new Date(currentProg.end))}
+                      </>
+                    )}
+                  </td>
+                  <td className="px-4 py-3">
+                    {currentProg?.category && (
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-semibold text-white ${categoryColor}`}>
+                        {currentProg.category}
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3">
+                    {hasEPG ? (
+                      <span className="text-green-400 text-xs">Mapped</span>
+                    ) : (
+                      <button
+                        onClick={() => setMappingChannel(channel)}
+                        className="flex items-center gap-1 px-2 py-1 bg-indigo-600 hover:bg-indigo-700 text-white text-xs rounded transition-colors"
+                      >
+                        <Link2 className="h-3 w-3" />
+                        Map
+                      </button>
+                    )}
+                  </td>
+                  <td className="px-4 py-3">
+                    {channel.streamUrl && (
+                      <button
+                        onClick={() => setWatchingChannel({ channel, program: currentProg })}
+                        className="p-1.5 bg-green-600 hover:bg-green-500 text-white rounded-full transition-colors"
+                        title="Watch"
+                      >
+                        <Play className="h-3 w-3" />
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
+    )
+  }
+
+  // ============================================================
+  // Grid view
+  // ============================================================
+  const renderGridView = () => {
+    return (
+      <div className="flex-1 bg-gray-900 rounded-xl overflow-hidden flex flex-col min-h-0">
+        {/* Top row: corner spacer + time header */}
+        <div className="flex flex-shrink-0 border-b border-gray-700/50">
+          {/* Corner spacer - fixed */}
+          <div
+            className="flex-shrink-0 bg-gray-900 border-r border-gray-700/50 flex items-center justify-center"
+            style={{ width: CHANNEL_WIDTH, height: TIME_HEADER_HEIGHT }}
+          >
+            <span className="text-xs font-medium text-gray-500">
+              {channels.length} / {totalChannels}
+            </span>
+          </div>
+
+          {/* Time header - synced horizontal scroll with grid */}
+          <div
+            ref={timeHeaderRef}
+            className="flex-1 overflow-hidden"
+            style={{ scrollbarWidth: 'none' }}
+          >
+            <div
+              className="relative bg-gray-900"
+              style={{ width: gridWidth, height: TIME_HEADER_HEIGHT }}
+            >
+              {timeSlots.map((time, idx) => {
+                const isHour = time.getMinutes() === 0
+                const left = ((time.getTime() - startTime.getTime()) / 60000) * PIXELS_PER_MINUTE
+                return (
+                  <div
+                    key={idx}
+                    className={`absolute top-0 bottom-0 flex items-center px-2 ${isHour ? 'border-l border-gray-600' : 'border-l border-gray-700/40'}`}
+                    style={{ left }}
+                  >
+                    <span className={`text-xs whitespace-nowrap ${isHour ? 'font-semibold text-gray-200' : 'font-normal text-gray-500'}`}>
+                      {formatTime(time)}
+                    </span>
+                  </div>
+                )
+              })}
+
+              {/* Current time marker in header */}
+              {isCurrentTimeVisible && (
+                <div
+                  className="absolute top-0 bottom-0 w-0.5 bg-red-500 z-20"
+                  style={{ left: currentTimeOffset }}
+                >
+                  <div className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[5px] border-r-[5px] border-t-[6px] border-l-transparent border-r-transparent border-t-red-500" />
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Main content area: channel column + program grid */}
+        <div className="flex flex-1 min-h-0">
+          {/* Channel column - synced vertical scroll with grid */}
+          <div
+            ref={channelColumnRef}
+            className="flex-shrink-0 overflow-hidden border-r border-gray-700/50 bg-gray-900/80"
+            style={{ width: CHANNEL_WIDTH, scrollbarWidth: 'none' }}
+          >
+            <div>
+              {channels.map((channel) => {
+                const hasEPG = channelHasEPG(channel)
+                return (
+                  <div
+                    key={channel.id}
+                    className={`flex items-center gap-2 px-2 border-b border-gray-800/80 hover:bg-gray-800 cursor-pointer group ${
+                      hasEPG ? '' : 'bg-red-950/20'
+                    }`}
+                    style={{ height: ROW_HEIGHT }}
+                    onClick={() => {
+                      if (channel.streamUrl) {
+                        setWatchingChannel({ channel, program: getCurrentProgram(channel) })
+                      }
+                    }}
+                  >
+                    {/* Channel logo */}
+                    {channel.logo ? (
+                      <img
+                        src={channel.logo}
+                        alt={channel.name}
+                        className="w-9 h-6 object-contain bg-gray-800 rounded flex-shrink-0"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).style.display = 'none'
+                        }}
+                      />
+                    ) : (
+                      <div className="w-9 h-6 bg-gray-800 rounded flex items-center justify-center text-[10px] text-gray-500 flex-shrink-0">
+                        {channel.number}
+                      </div>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <div className="text-xs font-medium text-gray-200 truncate leading-tight">{channel.name}</div>
+                      <div className="text-[10px] text-gray-500 flex items-center gap-1 flex-wrap leading-tight">
+                        <span>{channel.number}</span>
+                        {!hasEPG && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setMappingChannel(channel)
+                            }}
+                            className="ml-0.5 px-1 py-0 bg-indigo-600 hover:bg-indigo-700 text-white text-[9px] rounded transition-colors flex items-center gap-0.5"
+                            title="Map to EPG channel"
+                          >
+                            <Link2 className="h-2.5 w-2.5" />
+                            Map
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                    {/* Play indicator on hover */}
+                    {channel.streamUrl && (
+                      <div className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+                        <Play className="h-3.5 w-3.5 text-green-400" />
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Program grid - main scrollable area */}
+          <div
+            ref={gridContainerRef}
+            className="flex-1 overflow-auto"
+            onScroll={handleGridScroll}
+          >
+            <div className="relative" style={{ width: gridWidth, minWidth: '100%' }}>
+              {/* Current time line spanning all rows */}
+              {isCurrentTimeVisible && (
+                <div
+                  className="absolute w-0.5 bg-red-500/80 z-10 pointer-events-none"
+                  style={{
+                    left: currentTimeOffset,
+                    top: 0,
+                    height: channels.length * ROW_HEIGHT,
+                  }}
+                />
+              )}
+
+              {/* Channel rows */}
+              {channels.map((channel) => {
+                const channelPrograms: Program[] = programsByChannel[channel.channelId] || []
+
+                return (
+                  <div
+                    key={channel.id}
+                    className="relative border-b border-gray-800/60"
+                    style={{ height: ROW_HEIGHT }}
+                  >
+                    {/* Hour grid lines (subtle) */}
+                    {timeSlots.map((time, idx) => {
+                      const isHour = time.getMinutes() === 0
+                      return (
+                        <div
+                          key={idx}
+                          className={`absolute top-0 bottom-0 ${isHour ? 'border-l border-gray-700/40' : 'border-l border-gray-800/40'}`}
+                          style={{ left: ((time.getTime() - startTime.getTime()) / 60000) * PIXELS_PER_MINUTE }}
+                        />
+                      )
+                    })}
+
+                    {/* Programs */}
+                    {channelPrograms.map((program) => {
+                      const programStart = new Date(program.start)
+                      const programEnd = new Date(program.end)
+
+                      // Skip if completely outside visible range
+                      if (programEnd <= startTime || programStart >= endTime) return null
+
+                      // Calculate visible portion
+                      const visibleStart = programStart < startTime ? startTime : programStart
+                      const visibleEnd = programEnd > endTime ? endTime : programEnd
+                      const startOffset = ((visibleStart.getTime() - startTime.getTime()) / 60000) * PIXELS_PER_MINUTE
+                      const width = ((visibleEnd.getTime() - visibleStart.getTime()) / 60000) * PIXELS_PER_MINUTE
+
+                      const isNow = now >= programStart && now < programEnd
+                      const recordingStatus = getProgramRecordingStatus(channel.id, program.start)
+
+                      return (
+                        <ProgramBlock
+                          key={program.id}
+                          program={program}
+                          startOffset={startOffset}
+                          width={width}
+                          isNow={isNow}
+                          isScheduled={recordingStatus === 'scheduled'}
+                          isRecording={recordingStatus === 'recording'}
+                          onClick={() => setSelectedProgram({ program, channel })}
+                        />
+                      )
+                    })}
+
+                    {/* Empty state for channels with no programs */}
+                    {channelPrograms.filter((p: Program) => {
+                      const ps = new Date(p.start)
+                      const pe = new Date(p.end)
+                      return !(pe <= startTime || ps >= endTime)
+                    }).length === 0 && (
+                      <div className="absolute inset-1 flex items-center justify-center">
+                        <span className="text-[10px] text-gray-700">No program data</span>
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="h-full flex flex-col">
-      <div className="mb-4 flex items-center justify-between">
-        <div>
+      {/* Header bar */}
+      <div className="mb-3 flex items-center justify-between flex-wrap gap-2">
+        <div className="flex items-center gap-4">
           <h1 className="text-2xl font-bold text-white">TV Guide</h1>
-          <p className="text-gray-400 mt-1">Browse the program schedule and record shows</p>
+          {/* View mode toggle */}
+          <div className="flex items-center bg-gray-800 rounded-lg p-0.5">
+            <button
+              onClick={() => setViewMode('grid')}
+              className={`p-1.5 rounded transition-colors ${viewMode === 'grid' ? 'bg-indigo-600 text-white' : 'text-gray-400 hover:text-white'}`}
+              title="Grid View"
+            >
+              <LayoutGrid className="h-4 w-4" />
+            </button>
+            <button
+              onClick={() => setViewMode('list')}
+              className={`p-1.5 rounded transition-colors ${viewMode === 'list' ? 'bg-indigo-600 text-white' : 'text-gray-400 hover:text-white'}`}
+              title="List View"
+            >
+              <List className="h-4 w-4" />
+            </button>
+          </div>
         </div>
 
-        {/* Time navigation */}
+        {/* Time / date navigation */}
         <div className="flex items-center gap-2">
           <button
             onClick={() => {
@@ -1096,92 +1604,139 @@ export function TVGuidePage() {
             className="p-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
             title="Refresh EPG data"
           >
-            <RefreshCw className={`h-5 w-5 ${loadingChannels || loadingPrograms ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`h-4 w-4 ${loadingChannels || loadingPrograms ? 'animate-spin' : ''}`} />
           </button>
-          <div className="h-6 w-px bg-gray-600" />
+          <div className="h-5 w-px bg-gray-600" />
           <button
-            onClick={goToPrevious}
+            onClick={goToPreviousDay}
             className="p-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
+            title="Previous day"
           >
-            <ChevronLeft className="h-5 w-5" />
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+          <DatePickerDropdown
+            selectedDate={selectedDate}
+            onSelectDate={setSelectedDate}
+          />
+          <button
+            onClick={goToNextDay}
+            className="p-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
+            title="Next day"
+          >
+            <ChevronRight className="h-4 w-4" />
           </button>
           <button
-            onClick={goToNow}
-            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition-colors"
+            onClick={() => {
+              goToToday()
+              // After switching to today, scroll to now
+              setTimeout(scrollToNow, 200)
+            }}
+            className="px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition-colors"
           >
             Now
-          </button>
-          <button
-            onClick={goToNext}
-            className="p-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
-          >
-            <ChevronRight className="h-5 w-5" />
           </button>
         </div>
       </div>
 
-      {/* Filters and Legend */}
-      <div className="flex flex-wrap items-center gap-4 mb-4">
-        {/* Provider/Group filter */}
-        <div className="flex items-center gap-2">
-          <label className="text-sm text-gray-400">Provider:</label>
+      {/* Filter bar */}
+      <div className="flex flex-wrap items-center gap-3 mb-3">
+        {/* Source filter */}
+        {channelSources.length > 1 && (
+          <div className="flex items-center gap-1.5">
+            <Filter className="h-3.5 w-3.5 text-gray-500" />
+            <select
+              value={selectedSource}
+              onChange={(e) => setSelectedSource(e.target.value)}
+              className="px-2 py-1.5 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm min-w-[140px]"
+            >
+              <option value="all">All Sources</option>
+              {channelSources.map(([name, count]) => (
+                <option key={name} value={name}>
+                  {name} ({count})
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        {/* Group filter */}
+        {channelGroups.length > 0 && (
           <select
             value={selectedGroup}
             onChange={(e) => setSelectedGroup(e.target.value)}
-            className="px-3 py-1.5 bg-gray-700 border border-gray-600 rounded text-white text-sm min-w-[180px]"
+            className="px-2 py-1.5 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm min-w-[140px]"
           >
-            <option value="all">
-              All Groups ({totalChannels} channels)
-            </option>
+            <option value="all">All Groups ({totalChannels})</option>
             {channelGroups.map(group => (
               <option key={group} value={group}>
                 {group} ({channelsData?.filter(ch => ch.group === group).length || 0})
-                {unmappedCountByGroup[group] > 0 && ` - ${unmappedCountByGroup[group]} need EPG`}
               </option>
             ))}
           </select>
+        )}
+
+        {/* Channel search */}
+        <div className="relative">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-500" />
+          <input
+            type="text"
+            placeholder="Search channels..."
+            value={channelSearch}
+            onChange={(e) => setChannelSearch(e.target.value)}
+            className="pl-8 pr-3 py-1.5 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-500 text-sm w-48"
+          />
+          {channelSearch && (
+            <button
+              onClick={() => setChannelSearch('')}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
         </div>
 
-        {/* Show only unmapped toggle */}
-        <label className="flex items-center gap-2 cursor-pointer">
+        {/* Show unmapped toggle */}
+        <label className="flex items-center gap-1.5 cursor-pointer">
           <input
             type="checkbox"
             checked={showOnlyUnmapped}
             onChange={(e) => setShowOnlyUnmapped(e.target.checked)}
-            className="w-4 h-4 rounded border-gray-500 bg-gray-600 text-red-600 focus:ring-red-500"
+            className="w-3.5 h-3.5 rounded border-gray-500 bg-gray-600 text-red-600 focus:ring-red-500"
           />
-          <span className="text-sm text-gray-400">
-            Show only channels without EPG
+          <span className="text-xs text-gray-400">
+            No EPG only
             {unmappedCountByGroup.all > 0 && (
               <span className="ml-1 text-red-400">({unmappedCountByGroup.all})</span>
             )}
           </span>
         </label>
 
-        {/* Auto-Detect EPG button */}
+        {/* Auto-Detect EPG */}
         {unmappedCountByGroup.all > 0 && (
           <button
             onClick={() => autoDetectEPG.mutate()}
             disabled={autoDetectEPG.isPending}
-            className="flex items-center gap-2 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-xs font-medium rounded-lg transition-colors"
           >
-            <Wand2 className={`h-4 w-4 ${autoDetectEPG.isPending ? 'animate-spin' : ''}`} />
-            {autoDetectEPG.isPending ? 'Detecting...' : 'Auto-Detect EPG'}
+            <Wand2 className={`h-3.5 w-3.5 ${autoDetectEPG.isPending ? 'animate-spin' : ''}`} />
+            {autoDetectEPG.isPending ? 'Detecting...' : 'Auto-Detect'}
           </button>
         )}
 
-        {/* Separator */}
-        <div className="h-6 w-px bg-gray-700" />
+        <div className="flex-1" />
 
-        {/* Legend */}
-        {Object.entries(categoryColors).map(([category, color]) => (
-          <div key={category} className="flex items-center gap-2">
-            <div className={`w-4 h-4 rounded ${color}`} />
-            <span className="text-sm text-gray-400">{category}</span>
-          </div>
-        ))}
+        {/* Legend - compact */}
+        <div className="flex items-center gap-2">
+          {Object.entries(categoryColors).map(([category, color]) => (
+            <div key={category} className="flex items-center gap-1">
+              <div className={`w-2.5 h-2.5 rounded-sm ${color}`} />
+              <span className="text-[10px] text-gray-500">{category}</span>
+            </div>
+          ))}
+        </div>
       </div>
 
+      {/* Main content */}
       {isLoading ? (
         <div className="flex-1 flex items-center justify-center bg-gray-800 rounded-xl">
           <div className="text-center">
@@ -1189,238 +1744,10 @@ export function TVGuidePage() {
             <p className="text-gray-400">Loading TV Guide...</p>
           </div>
         </div>
+      ) : viewMode === 'grid' ? (
+        renderGridView()
       ) : (
-        <div className="flex-1 bg-gray-800 rounded-xl overflow-hidden flex flex-col min-h-0">
-          {/* Header row */}
-          <div className="flex flex-shrink-0 border-b border-gray-700">
-            {/* Corner spacer */}
-            <div
-              className="flex-shrink-0 bg-gray-900 border-r border-gray-700 flex items-center justify-center flex-col"
-              style={{ width: CHANNEL_WIDTH, height: TIME_HEADER_HEIGHT }}
-            >
-              <span className="text-sm font-semibold text-gray-400">
-                {channels.length} Channels
-              </span>
-              {channels.length !== totalChannels && (
-                <span className="text-xs text-gray-500">of {totalChannels}</span>
-              )}
-            </div>
-
-            {/* Time header (scrolls with grid) */}
-            <div className="flex-1 overflow-hidden">
-              <div
-                className="relative bg-gray-900"
-                style={{ width: gridWidth, height: TIME_HEADER_HEIGHT }}
-              >
-                {timeSlots.map((time, idx) => (
-                  <div
-                    key={idx}
-                    className="absolute top-0 bottom-0 border-l border-gray-700 flex items-center px-3"
-                    style={{ left: ((time.getTime() - startTime.getTime()) / 60000) * PIXELS_PER_MINUTE }}
-                  >
-                    <span className="text-sm font-medium text-gray-300">{formatTime(time)}</span>
-                  </div>
-                ))}
-
-                {/* Current time indicator in header */}
-                {currentTimeOffset > 0 && currentTimeOffset < gridWidth && (
-                  <div
-                    className="absolute top-0 bottom-0 w-0.5 bg-red-500 z-20"
-                    style={{ left: currentTimeOffset }}
-                  >
-                    <div className="absolute -top-0 left-1/2 -translate-x-1/2 w-3 h-3 bg-red-500 rounded-full" />
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Main content area */}
-          <div className="flex flex-1 min-h-0">
-            {/* Channel column (synced scroll) */}
-            <div
-              ref={channelScrollRef}
-              className="flex-shrink-0 overflow-hidden border-r border-gray-700"
-              style={{ width: CHANNEL_WIDTH }}
-            >
-              <div>
-                {channels.map((channel) => {
-                  const hasEPG = channelHasEPG(channel)
-                  return (
-                    <div
-                      key={channel.id}
-                      className={`flex items-center gap-2 px-3 border-b border-gray-700/50 hover:bg-gray-750 cursor-pointer group ${
-                        hasEPG ? 'bg-gray-800' : 'bg-red-900/20'
-                      }`}
-                      style={{ height: ROW_HEIGHT }}
-                      onClick={() => {
-                        if (channel.streamUrl) {
-                          setWatchingChannel({ channel, program: getCurrentProgram(channel) })
-                        }
-                      }}
-                    >
-                      {/* Play button */}
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          if (channel.streamUrl) {
-                            setWatchingChannel({ channel, program: getCurrentProgram(channel) })
-                          }
-                        }}
-                        className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-all ${
-                          channel.streamUrl
-                            ? 'bg-green-600 hover:bg-green-500 text-white opacity-70 group-hover:opacity-100'
-                            : 'bg-gray-700 text-gray-500 cursor-not-allowed'
-                        }`}
-                        title={channel.streamUrl ? 'Watch Now' : 'No stream available'}
-                        disabled={!channel.streamUrl}
-                      >
-                        <Play className="h-4 w-4 ml-0.5" />
-                      </button>
-                      {channel.logo ? (
-                        <img
-                          src={channel.logo}
-                          alt={channel.name}
-                          className="w-10 h-7 object-contain bg-gray-700 rounded flex-shrink-0"
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).style.display = 'none'
-                          }}
-                        />
-                      ) : (
-                        <div className="w-10 h-7 bg-gray-700 rounded flex items-center justify-center text-xs text-gray-400 flex-shrink-0">
-                          {channel.number}
-                        </div>
-                      )}
-                      <div className="min-w-0 flex-1">
-                        <div className="text-sm font-medium text-white truncate">{channel.name}</div>
-                        <div className="text-xs text-gray-500 flex items-center gap-1 flex-wrap">
-                          Ch {channel.number}
-                          {channel.sourceName && (
-                            <span className="text-indigo-400">• {channel.sourceName}</span>
-                          )}
-                          {!hasEPG ? (
-                            <>
-                              <span className="text-red-400 font-medium">• No EPG</span>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  setMappingChannel(channel)
-                                }}
-                                className="ml-1 px-1.5 py-0.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs rounded transition-colors flex items-center gap-0.5"
-                                title="Map to EPG channel"
-                              >
-                                <Link2 className="h-3 w-3" />
-                                Map
-                              </button>
-                            </>
-                          ) : (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                setMappingChannel(channel)
-                              }}
-                              className="ml-1 px-1.5 py-0.5 bg-gray-600 hover:bg-gray-500 text-white text-xs rounded transition-colors flex items-center gap-0.5 opacity-60 hover:opacity-100"
-                              title="Change EPG mapping"
-                            >
-                              <Link2 className="h-3 w-3" />
-                              Re-map
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-
-            {/* Program grid (scrollable) */}
-            <div
-              ref={gridScrollRef}
-              className="flex-1 overflow-auto"
-              onScroll={handleGridScroll}
-            >
-              <div className="relative" style={{ width: gridWidth, minWidth: '100%' }}>
-                {/* Current time line */}
-                {currentTimeOffset > 0 && currentTimeOffset < gridWidth && (
-                  <div
-                    className="absolute w-0.5 bg-red-500 z-10 pointer-events-none"
-                    style={{
-                      left: currentTimeOffset,
-                      top: 0,
-                      height: channels.length * ROW_HEIGHT
-                    }}
-                  />
-                )}
-
-                {/* Channel rows */}
-                {channels.map((channel) => {
-                  // Use channelId for EPG matching (matches program.channelId from Gracenote)
-                  const channelPrograms: Program[] = programsByChannel[channel.channelId] || []
-
-                  return (
-                    <div
-                      key={channel.id}
-                      className="relative border-b border-gray-700/50"
-                      style={{ height: ROW_HEIGHT }}
-                    >
-                      {/* Time slot grid lines */}
-                      {timeSlots.map((time, idx) => (
-                        <div
-                          key={idx}
-                          className="absolute top-0 bottom-0 border-l border-gray-700/30"
-                          style={{ left: ((time.getTime() - startTime.getTime()) / 60000) * PIXELS_PER_MINUTE }}
-                        />
-                      ))}
-
-                      {/* Programs */}
-                      {channelPrograms.map((program) => {
-                        const programStart = new Date(program.start)
-                        const programEnd = new Date(program.end)
-
-                        // Skip if completely outside visible range
-                        if (programEnd <= startTime || programStart >= endTime) return null
-
-                        // Calculate visible portion
-                        const visibleStart = programStart < startTime ? startTime : programStart
-                        const visibleEnd = programEnd > endTime ? endTime : programEnd
-                        const startOffset = ((visibleStart.getTime() - startTime.getTime()) / 60000) * PIXELS_PER_MINUTE
-                        const width = ((visibleEnd.getTime() - visibleStart.getTime()) / 60000) * PIXELS_PER_MINUTE
-
-                        const isNow = now >= programStart && now < programEnd
-                        const recordingStatus = getProgramRecordingStatus(channel.id, program.start)
-
-                        return (
-                          <ProgramBlock
-                            key={program.id}
-                            program={program}
-                            startOffset={startOffset}
-                            width={width}
-                            isNow={isNow}
-                            isScheduled={recordingStatus === 'scheduled'}
-                            isRecording={recordingStatus === 'recording'}
-                            onClick={() => setSelectedProgram({ program, channel })}
-                          />
-                        )
-                      })}
-
-                      {/* Empty state for channels with no programs */}
-                      {channelPrograms.filter((p: Program) => {
-                        const ps = new Date(p.start)
-                        const pe = new Date(p.end)
-                        return !(pe <= startTime || ps >= endTime)
-                      }).length === 0 && (
-                        <div className="absolute inset-1 flex items-center justify-center">
-                          <span className="text-xs text-gray-600">No program info</span>
-                        </div>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-          </div>
-        </div>
+        renderListView()
       )}
 
       {/* Program details modal */}
@@ -1478,7 +1805,6 @@ export function TVGuidePage() {
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
-                  {/* Remove Mapping button - only show if channel has EPG */}
                   {channelHasEPG(mappingChannel) && (
                     <button
                       onClick={() => unmapChannel.mutate(mappingChannel.id)}
@@ -1498,7 +1824,6 @@ export function TVGuidePage() {
                 </div>
               </div>
 
-              {/* EPG Source selector */}
               {epgSources && epgSources.length > 0 && (
                 <div className="mt-3">
                   <label className="text-sm text-gray-400 mb-1 block">EPG Source:</label>
@@ -1519,7 +1844,6 @@ export function TVGuidePage() {
                 </div>
               )}
 
-              {/* Search input */}
               <div className="relative mt-3">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <input
@@ -1598,7 +1922,6 @@ export function TVGuidePage() {
       {autoDetectResult && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4" onClick={() => setAutoDetectResult(null)}>
           <div className="bg-gray-800 rounded-xl w-full max-w-2xl max-h-[80vh] overflow-hidden shadow-2xl flex flex-col" onClick={e => e.stopPropagation()}>
-            {/* Header */}
             <div className="p-4 border-b border-gray-700 flex-shrink-0">
               <div className="flex items-center justify-between">
                 <div>
@@ -1618,7 +1941,6 @@ export function TVGuidePage() {
                 </button>
               </div>
 
-              {/* Summary stats */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4">
                 <div className="bg-gray-700/50 rounded-lg p-3 text-center">
                   <div className="text-2xl font-bold text-white">{autoDetectResult.summary.totalChannels}</div>
@@ -1639,7 +1961,6 @@ export function TVGuidePage() {
               </div>
             </div>
 
-            {/* Results list */}
             <div className="flex-1 overflow-y-auto p-4">
               {autoDetectResult.results.filter(r => r.autoMapped).length > 0 && (
                 <>
@@ -1652,13 +1973,13 @@ export function TVGuidePage() {
                             <span className="text-white font-medium">{result.channelName}</span>
                             {result.bestMatch && (
                               <span className="text-green-400 ml-2">
-                                → {result.bestMatch.epgCallSign || result.bestMatch.epgName}
+                                {result.bestMatch.epgCallSign || result.bestMatch.epgName}
                               </span>
                             )}
                           </div>
                           {result.bestMatch && (
                             <span className="text-xs bg-green-600/30 text-green-300 px-2 py-1 rounded">
-                              {Math.round(result.bestMatch.confidence * 100)}% • {result.bestMatch.matchStrategy}
+                              {Math.round(result.bestMatch.confidence * 100)}%
                             </span>
                           )}
                         </div>
@@ -1699,7 +2020,6 @@ export function TVGuidePage() {
               )}
             </div>
 
-            {/* Footer */}
             <div className="p-4 border-t border-gray-700 flex-shrink-0">
               <button
                 onClick={() => setAutoDetectResult(null)}

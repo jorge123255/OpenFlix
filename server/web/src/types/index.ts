@@ -299,6 +299,19 @@ export interface Recording {
   isMovie?: boolean
   isLive?: boolean
   viewOffset?: number  // milliseconds - for resume playback
+  // Recordings manager fields
+  isWatched?: boolean
+  isFavorite?: boolean
+  keepForever?: boolean
+  isDeleted?: boolean
+  deletedAt?: string
+  contentType?: string
+  videoCodec?: string
+  audioCodec?: string
+  videoResolution?: string
+  hasCC?: boolean
+  hasDVS?: boolean
+  subtitle?: string
 }
 
 export interface CommercialSegment {

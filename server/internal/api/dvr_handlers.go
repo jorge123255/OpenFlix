@@ -1497,3 +1497,306 @@ func (s *Server) updateRecordingProgress(c *gin.Context) {
 		"viewOffset": req.ViewOffset,
 	})
 }
+
+// ============ Recordings Manager Endpoints ============
+
+// getRecordingsManager returns recordings formatted for the file-browser UI
+func (s *Server) getRecordingsManager(c *gin.Context) {
+	isAdmin := c.GetBool("isAdmin")
+	userID := c.GetUint("userID")
+
+	var query *gorm.DB
+	if isAdmin {
+		query = s.db.Model(&models.Recording{})
+	} else {
+		query = s.db.Where("user_id IN ?", []uint{userID, 0})
+	}
+
+	// Exclude soft-deleted recordings by default
+	includeDeleted := c.Query("includeDeleted") == "true"
+	if !includeDeleted {
+		query = query.Where("is_deleted = ? OR is_deleted IS NULL", false)
+	}
+
+	// Filter by content type (show, movie, video, image, unmatched)
+	if contentType := c.Query("contentType"); contentType != "" {
+		switch contentType {
+		case "show":
+			query = query.Where("is_movie = ? AND (content_type = ? OR content_type = '' OR content_type IS NULL)", false, "show")
+		case "movie":
+			query = query.Where("is_movie = ? OR content_type = ?", true, "movie")
+		case "video":
+			query = query.Where("content_type = ?", "video")
+		case "image":
+			query = query.Where("content_type = ?", "image")
+		case "unmatched":
+			query = query.Where("content_type = ? OR (tmdb_id IS NULL AND thumb = '' AND art = '')", "unmatched")
+		}
+	}
+
+	// Only completed recordings for the file browser
+	if status := c.Query("status"); status != "" {
+		query = query.Where("status = ?", status)
+	} else {
+		query = query.Where("status = ?", "completed")
+	}
+
+	// Filter by watched state
+	if watched := c.Query("watched"); watched != "" {
+		if watched == "true" {
+			query = query.Where("is_watched = ?", true)
+		} else {
+			query = query.Where("is_watched = ? OR is_watched IS NULL", false)
+		}
+	}
+
+	// Filter by favorite
+	if favorite := c.Query("favorite"); favorite != "" {
+		if favorite == "true" {
+			query = query.Where("is_favorite = ?", true)
+		}
+	}
+
+	// Filter by content rating
+	if rating := c.Query("contentRating"); rating != "" {
+		query = query.Where("content_rating = ?", rating)
+	}
+
+	// Search by title
+	if search := c.Query("search"); search != "" {
+		query = query.Where("title LIKE ? OR subtitle LIKE ? OR description LIKE ?",
+			"%"+search+"%", "%"+search+"%", "%"+search+"%")
+	}
+
+	// Filter by show title (for "All Shows" dropdown)
+	if showTitle := c.Query("showTitle"); showTitle != "" {
+		query = query.Where("title = ?", showTitle)
+	}
+
+	// Sorting
+	sortBy := c.DefaultQuery("sortBy", "date_added")
+	sortDir := c.DefaultQuery("sortDir", "desc")
+	if sortDir != "asc" && sortDir != "desc" {
+		sortDir = "desc"
+	}
+	switch sortBy {
+	case "name":
+		query = query.Order("title " + sortDir)
+	case "duration":
+		query = query.Order("duration " + sortDir)
+	case "size":
+		query = query.Order("file_size " + sortDir)
+	default: // date_added
+		query = query.Order("created_at " + sortDir)
+	}
+
+	var recordings []models.Recording
+	if err := query.Preload("Commercials").Find(&recordings).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch recordings"})
+		return
+	}
+
+	// Convert to response format
+	responses := make([]RecordingResponse, len(recordings))
+	for i, r := range recordings {
+		responses[i] = toRecordingResponse(r)
+	}
+
+	// Get distinct show titles for filter dropdown
+	var showTitles []string
+	s.db.Model(&models.Recording{}).
+		Where("status = ? AND (is_deleted = ? OR is_deleted IS NULL) AND is_movie = ?", "completed", false, false).
+		Distinct("title").Pluck("title", &showTitles)
+
+	// Get distinct content ratings
+	var contentRatings []string
+	s.db.Model(&models.Recording{}).
+		Where("status = ? AND (is_deleted = ? OR is_deleted IS NULL) AND content_rating != ''", "completed", false).
+		Distinct("content_rating").Pluck("content_rating", &contentRatings)
+
+	c.JSON(http.StatusOK, gin.H{
+		"recordings":     responses,
+		"totalCount":     len(responses),
+		"showTitles":     showTitles,
+		"contentRatings": contentRatings,
+	})
+}
+
+// toggleRecordingWatched toggles the watched state of a recording
+func (s *Server) toggleRecordingWatched(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid recording ID"})
+		return
+	}
+
+	var recording models.Recording
+	if err := s.db.First(&recording, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Recording not found"})
+		return
+	}
+
+	// Toggle or set explicit value
+	var req struct {
+		Watched *bool `json:"watched"`
+	}
+	if err := c.ShouldBindJSON(&req); err == nil && req.Watched != nil {
+		recording.IsWatched = *req.Watched
+	} else {
+		recording.IsWatched = !recording.IsWatched
+	}
+
+	if err := s.db.Save(&recording).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update recording"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"id":        recording.ID,
+		"isWatched": recording.IsWatched,
+	})
+}
+
+// toggleRecordingFavorite toggles the favorite state of a recording
+func (s *Server) toggleRecordingFavorite(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid recording ID"})
+		return
+	}
+
+	var recording models.Recording
+	if err := s.db.First(&recording, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Recording not found"})
+		return
+	}
+
+	var req struct {
+		Favorite *bool `json:"favorite"`
+	}
+	if err := c.ShouldBindJSON(&req); err == nil && req.Favorite != nil {
+		recording.IsFavorite = *req.Favorite
+	} else {
+		recording.IsFavorite = !recording.IsFavorite
+	}
+
+	if err := s.db.Save(&recording).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update recording"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"id":         recording.ID,
+		"isFavorite": recording.IsFavorite,
+	})
+}
+
+// toggleRecordingKeep toggles the keep-forever state of a recording
+func (s *Server) toggleRecordingKeep(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid recording ID"})
+		return
+	}
+
+	var recording models.Recording
+	if err := s.db.First(&recording, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Recording not found"})
+		return
+	}
+
+	var req struct {
+		KeepForever *bool `json:"keepForever"`
+	}
+	if err := c.ShouldBindJSON(&req); err == nil && req.KeepForever != nil {
+		recording.KeepForever = *req.KeepForever
+	} else {
+		recording.KeepForever = !recording.KeepForever
+	}
+
+	if err := s.db.Save(&recording).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update recording"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"id":          recording.ID,
+		"keepForever": recording.KeepForever,
+	})
+}
+
+// trashRecording soft-deletes a recording (move to trash)
+func (s *Server) trashRecording(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid recording ID"})
+		return
+	}
+
+	var recording models.Recording
+	if err := s.db.First(&recording, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Recording not found"})
+		return
+	}
+
+	now := time.Now()
+	recording.IsDeleted = true
+	recording.DeletedAt = &now
+
+	if err := s.db.Save(&recording).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to trash recording"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"id":      recording.ID,
+		"message": "Recording moved to trash",
+	})
+}
+
+// bulkRecordingAction performs bulk actions on multiple recordings
+func (s *Server) bulkRecordingAction(c *gin.Context) {
+	var req struct {
+		IDs    []uint `json:"ids" binding:"required"`
+		Action string `json:"action" binding:"required"` // delete, watched, unwatched, keep_forever
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if len(req.IDs) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "No recording IDs provided"})
+		return
+	}
+
+	var affected int64
+	switch req.Action {
+	case "delete":
+		now := time.Now()
+		result := s.db.Model(&models.Recording{}).Where("id IN ?", req.IDs).
+			Updates(map[string]interface{}{"is_deleted": true, "deleted_at": now})
+		affected = result.RowsAffected
+	case "watched":
+		result := s.db.Model(&models.Recording{}).Where("id IN ?", req.IDs).
+			Update("is_watched", true)
+		affected = result.RowsAffected
+	case "unwatched":
+		result := s.db.Model(&models.Recording{}).Where("id IN ?", req.IDs).
+			Update("is_watched", false)
+		affected = result.RowsAffected
+	case "keep_forever":
+		result := s.db.Model(&models.Recording{}).Where("id IN ?", req.IDs).
+			Update("keep_forever", true)
+		affected = result.RowsAffected
+	default:
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid action: " + req.Action})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"action":   req.Action,
+		"affected": affected,
+		"message":  fmt.Sprintf("%d recordings updated", affected),
+	})
+}

@@ -22,11 +22,13 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../api/client'
 import type { M3USource, XtreamSource, Library } from '../types'
 
-function SettingsTabNav({ active }: { active: 'general' | 'sources' | 'advanced' }) {
+function SettingsTabNav({ active }: { active: 'general' | 'sources' | 'livetv-dvr' | 'advanced' | 'status' }) {
   const tabs = [
     { id: 'general' as const, label: 'General', path: '/ui/settings' },
     { id: 'sources' as const, label: 'Sources', path: '/ui/settings/sources' },
+    { id: 'livetv-dvr' as const, label: 'Live TV & DVR', path: '/ui/settings/livetv-dvr' },
     { id: 'advanced' as const, label: 'Advanced', path: '/ui/settings/advanced' },
+    { id: 'status' as const, label: 'Status', path: '/ui/settings/status' },
   ]
 
   return (
