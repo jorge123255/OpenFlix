@@ -128,6 +128,10 @@ func Migrate(db *gorm.DB) error {
 
 		// Offline Downloads
 		&models.OfflineDownload{},
+
+		// Personal Sections
+		&models.PersonalSection{},
+		&models.PersonalSectionItem{},
 	)
 	if err != nil {
 		return err

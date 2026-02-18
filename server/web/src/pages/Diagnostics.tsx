@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import {
   Activity,
   Cpu,
@@ -15,9 +16,13 @@ import {
   Zap,
   MemoryStick,
   Layers,
+  Stethoscope,
+  ChevronDown,
+  ChevronRight,
 } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '../api/client'
+import type { HealthCheckResult } from '../api/client'
 
 interface HealthResponse {
   status: string
@@ -110,6 +115,168 @@ function HealthIndicator({ health }: { health?: HealthResponse; isLoading: boole
   )
 }
 
+function CheckStatusIcon({ status }: { status: string }) {
+  if (status === 'ok') {
+    return <CheckCircle className="h-5 w-5 text-green-400 flex-shrink-0" />
+  }
+  if (status === 'warning') {
+    return <AlertTriangle className="h-5 w-5 text-yellow-400 flex-shrink-0" />
+  }
+  return <XCircle className="h-5 w-5 text-red-400 flex-shrink-0" />
+}
+
+function HealthCheckItem({ check }: { check: HealthCheckResult }) {
+  const [expanded, setExpanded] = useState(false)
+  const hasDetails = !!check.details
+
+  return (
+    <div
+      className={`border rounded-lg p-4 transition-colors ${
+        check.status === 'ok'
+          ? 'border-green-500/20 bg-green-500/5'
+          : check.status === 'warning'
+          ? 'border-yellow-500/20 bg-yellow-500/5'
+          : 'border-red-500/20 bg-red-500/5'
+      }`}
+    >
+      <div
+        className={`flex items-start gap-3 ${hasDetails ? 'cursor-pointer' : ''}`}
+        onClick={() => hasDetails && setExpanded(!expanded)}
+      >
+        <CheckStatusIcon status={check.status} />
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-semibold text-white">{check.name}</span>
+            <span className={`text-xs px-1.5 py-0.5 rounded uppercase font-medium ${
+              check.status === 'ok'
+                ? 'bg-green-500/20 text-green-400'
+                : check.status === 'warning'
+                ? 'bg-yellow-500/20 text-yellow-400'
+                : 'bg-red-500/20 text-red-400'
+            }`}>
+              {check.status}
+            </span>
+          </div>
+          <p className="text-sm text-gray-400 mt-0.5">{check.message}</p>
+        </div>
+        {hasDetails && (
+          <div className="text-gray-500">
+            {expanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+          </div>
+        )}
+      </div>
+      {expanded && check.details && (
+        <div className="mt-3 ml-8 p-3 bg-gray-900/50 rounded-lg">
+          <p className="text-xs text-gray-400 font-mono whitespace-pre-wrap break-all">{check.details}</p>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function TroubleshootingSection() {
+  const {
+    data: healthCheck,
+    isLoading,
+    isFetching,
+    error,
+    refetch,
+  } = useQuery({
+    queryKey: ['diagnosticsHealthCheck'],
+    queryFn: () => api.runHealthChecks(),
+    retry: 1,
+    staleTime: 60000,
+  })
+
+  return (
+    <div className="bg-gray-800 rounded-xl p-6 mb-8">
+      <div className="flex items-center justify-between mb-2">
+        <div>
+          <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+            <Stethoscope className="h-5 w-5 text-indigo-400" />
+            General Troubleshooting
+          </h2>
+          <p className="text-sm text-gray-400 mt-1">
+            Ensure common systems are operating properly
+          </p>
+        </div>
+        <button
+          onClick={() => refetch()}
+          disabled={isFetching}
+          className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-800 text-white rounded-lg text-sm font-medium transition-colors"
+        >
+          {isFetching ? (
+            <Loader className="h-4 w-4 animate-spin" />
+          ) : (
+            <RefreshCw className="h-4 w-4" />
+          )}
+          {isFetching ? 'Running...' : 'Re-Run Tests'}
+        </button>
+      </div>
+
+      {/* Summary bar */}
+      {healthCheck && !isLoading && (
+        <div className={`flex items-center gap-3 px-4 py-2.5 rounded-lg mb-4 mt-4 ${
+          healthCheck.summary.includes('error')
+            ? 'bg-red-500/10 border border-red-500/30'
+            : healthCheck.summary.includes('warning')
+            ? 'bg-yellow-500/10 border border-yellow-500/30'
+            : 'bg-green-500/10 border border-green-500/30'
+        }`}>
+          {healthCheck.summary.includes('error') ? (
+            <XCircle className="h-5 w-5 text-red-400" />
+          ) : healthCheck.summary.includes('warning') ? (
+            <AlertTriangle className="h-5 w-5 text-yellow-400" />
+          ) : (
+            <CheckCircle className="h-5 w-5 text-green-400" />
+          )}
+          <span className={`text-sm font-medium ${
+            healthCheck.summary.includes('error')
+              ? 'text-red-400'
+              : healthCheck.summary.includes('warning')
+              ? 'text-yellow-400'
+              : 'text-green-400'
+          }`}>
+            {healthCheck.summary}
+          </span>
+          <span className="text-xs text-gray-500 ml-auto">
+            Completed in {healthCheck.duration}
+          </span>
+        </div>
+      )}
+
+      {/* Loading state */}
+      {isLoading && (
+        <div className="flex items-center justify-center py-12">
+          <div className="flex items-center gap-3">
+            <Loader className="h-6 w-6 text-indigo-400 animate-spin" />
+            <span className="text-gray-400">Running health checks...</span>
+          </div>
+        </div>
+      )}
+
+      {/* Error state */}
+      {error && !isLoading && (
+        <div className="flex items-center gap-3 p-4 bg-red-500/10 border border-red-500/30 rounded-lg mt-4">
+          <XCircle className="h-5 w-5 text-red-400" />
+          <span className="text-sm text-red-400">
+            Failed to run health checks: {(error as Error).message}
+          </span>
+        </div>
+      )}
+
+      {/* Check results */}
+      {healthCheck && !isLoading && (
+        <div className="space-y-3">
+          {healthCheck.checks.map((check, i) => (
+            <HealthCheckItem key={i} check={check} />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export function DiagnosticsPage() {
   const { data: status, isLoading: statusLoading, error: statusError, refetch: refetchStatus } = useQuery({
     queryKey: ['serverStatus'],
@@ -174,6 +341,9 @@ export function DiagnosticsPage() {
           </button>
         </div>
       </div>
+
+      {/* General Troubleshooting Section */}
+      <TroubleshootingSection />
 
       {/* Server Info Banner */}
       {status && (

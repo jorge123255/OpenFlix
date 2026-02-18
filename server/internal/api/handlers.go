@@ -4109,6 +4109,20 @@ type ServerSettings struct {
 	AutoDeleteDays    int    `json:"auto_delete_days,omitempty"`
 	MaxRecordQuality  string `json:"max_record_quality,omitempty"`
 
+	// Live TV & DVR (dedicated settings page)
+	RecordingPrePadding  int    `json:"recording_pre_padding"`
+	RecordingPostPadding int    `json:"recording_post_padding"`
+	RecordingQuality     string `json:"recording_quality,omitempty"`
+	KeepRule             string `json:"keep_rule,omitempty"`
+	AutoDeleteWatched    bool   `json:"auto_delete_watched"`
+	CommercialDetectionEnabled bool   `json:"commercial_detection_enabled"`
+	CommercialDetectionMode    string `json:"commercial_detection_mode,omitempty"`
+	AutoSkipCommercials        bool   `json:"auto_skip_commercials"`
+	GuideRefreshInterval       int    `json:"guide_refresh_interval,omitempty"`
+	GuideDataSource            string `json:"guide_data_source,omitempty"`
+	DeinterlacingMode          string `json:"deinterlacing_mode,omitempty"`
+	LiveTVBufferSize           string `json:"livetv_buffer_size,omitempty"`
+
 	// Remote Access
 	RemoteAccessEnabled bool   `json:"remote_access_enabled"`
 	TailscaleStatus     string `json:"tailscale_status,omitempty"`
@@ -4206,6 +4220,20 @@ func (s *Server) buildFullSettings() ServerSettings {
 		CommercialDetect: s.config.DVR.CommercialDetect,
 		AutoDeleteDays:   s.getSettingInt("dvr_auto_delete_days", 0),
 		MaxRecordQuality: s.getSettingStr("dvr_max_record_quality", "original"),
+
+		// Live TV & DVR (dedicated page)
+		RecordingPrePadding:        s.getSettingInt("recording_pre_padding", 2),
+		RecordingPostPadding:       s.getSettingInt("recording_post_padding", 5),
+		RecordingQuality:           s.getSettingStr("recording_quality", "original"),
+		KeepRule:                   s.getSettingStr("keep_rule", "all"),
+		AutoDeleteWatched:          s.getSettingBool("auto_delete_watched", false),
+		CommercialDetectionEnabled: s.getSettingBool("commercial_detection_enabled", false),
+		CommercialDetectionMode:    s.getSettingStr("commercial_detection_mode", "comskip"),
+		AutoSkipCommercials:        s.getSettingBool("auto_skip_commercials", false),
+		GuideRefreshInterval:       s.getSettingInt("guide_refresh_interval", 12),
+		GuideDataSource:            s.getSettingStr("guide_data_source", "xmltv"),
+		DeinterlacingMode:          s.getSettingStr("deinterlacing_mode", "blend"),
+		LiveTVBufferSize:           s.getSettingStr("livetv_buffer_size", "1min"),
 
 		// Remote Access
 		RemoteAccessEnabled: s.getSettingBool("remote_access_enabled", false),
@@ -4348,6 +4376,31 @@ func (s *Server) adminUpdateSettings(c *gin.Context) {
 		s.setSetting("dvr_max_record_quality", input.MaxRecordQuality)
 	}
 
+	// ---- Live TV & DVR (dedicated page) ----
+	s.setSetting("recording_pre_padding", fmt.Sprintf("%d", input.RecordingPrePadding))
+	s.setSetting("recording_post_padding", fmt.Sprintf("%d", input.RecordingPostPadding))
+	if input.RecordingQuality != "" {
+		s.setSetting("recording_quality", input.RecordingQuality)
+	}
+	if input.KeepRule != "" {
+		s.setSetting("keep_rule", input.KeepRule)
+	}
+	s.setSetting("auto_delete_watched", fmt.Sprintf("%t", input.AutoDeleteWatched))
+	s.setSetting("commercial_detection_enabled", fmt.Sprintf("%t", input.CommercialDetectionEnabled))
+	if input.CommercialDetectionMode != "" {
+		s.setSetting("commercial_detection_mode", input.CommercialDetectionMode)
+	}
+	s.setSetting("auto_skip_commercials", fmt.Sprintf("%t", input.AutoSkipCommercials))
+	if input.GuideRefreshInterval > 0 {
+		s.setSetting("guide_refresh_interval", fmt.Sprintf("%d", input.GuideRefreshInterval))
+	}
+	if input.DeinterlacingMode != "" {
+		s.setSetting("deinterlacing_mode", input.DeinterlacingMode)
+	}
+	if input.LiveTVBufferSize != "" {
+		s.setSetting("livetv_buffer_size", input.LiveTVBufferSize)
+	}
+
 	// ---- Remote Access ----
 	s.setSetting("remote_access_enabled", fmt.Sprintf("%t", input.RemoteAccessEnabled))
 	if input.ExternalURL != "" {
@@ -4472,4 +4525,95 @@ func (s *Server) getSettingInt(key string, defaultVal int) int {
 func (s *Server) setSetting(key, value string) {
 	setting := models.Setting{Key: key, Value: value}
 	s.db.Where("key = ?", key).Assign(setting).FirstOrCreate(&setting)
+}
+
+// ============ Guide Data Handlers ============
+
+// refreshGuideData triggers a full guide data refresh (admin only)
+func (s *Server) refreshGuideData(c *gin.Context) {
+	if s.epgScheduler != nil {
+		go s.epgScheduler.ForceRefresh()
+	}
+	// Also invalidate guide cache
+	if s.guideCache != nil {
+		s.guideCache.InvalidateAll()
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Guide data refresh triggered",
+		"status":  "refreshing",
+	})
+}
+
+// rebuildGuideData triggers a full guide data rebuild (admin only)
+func (s *Server) rebuildGuideData(c *gin.Context) {
+	// Clear all cached guide data
+	if s.guideCache != nil {
+		s.guideCache.InvalidateAll()
+	}
+	// Force a full refresh
+	if s.epgScheduler != nil {
+		go s.epgScheduler.ForceRefresh()
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Guide data rebuild triggered. All cached data has been cleared.",
+		"status":  "rebuilding",
+	})
+}
+
+// ============ Global Client Settings Handlers ============
+
+// getGlobalClientSettings returns all global client setting overrides (admin only)
+func (s *Server) getGlobalClientSettings(c *gin.Context) {
+	var settings []models.Setting
+	s.db.Where("key LIKE ?", "client_override_%").Find(&settings)
+
+	overrides := make(map[string]string)
+	for _, setting := range settings {
+		// Strip the "client_override_" prefix for the key name
+		key := strings.TrimPrefix(setting.Key, "client_override_")
+		overrides[key] = setting.Value
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"overrides": overrides,
+	})
+}
+
+// updateGlobalClientSettings sets or updates a global client setting override (admin only)
+func (s *Server) updateGlobalClientSettings(c *gin.Context) {
+	var req struct {
+		Key   string `json:"key" binding:"required"`
+		Value string `json:"value" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "key and value are required"})
+		return
+	}
+
+	dbKey := "client_override_" + req.Key
+	s.setSetting(dbKey, req.Value)
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Client setting override saved",
+		"key":     req.Key,
+		"value":   req.Value,
+	})
+}
+
+// deleteGlobalClientSetting removes a single global client setting override (admin only)
+func (s *Server) deleteGlobalClientSetting(c *gin.Context) {
+	key := c.Param("key")
+	if key == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "key is required"})
+		return
+	}
+
+	dbKey := "client_override_" + key
+	result := s.db.Where("key = ?", dbKey).Delete(&models.Setting{})
+	if result.RowsAffected == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Override not found"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Override removed"})
 }

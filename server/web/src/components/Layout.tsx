@@ -41,6 +41,8 @@ import {
   ChevronDown,
   ListFilter,
   CalendarRange,
+  ListMusic,
+  LayoutList,
   type LucideIcon,
 } from 'lucide-react'
 import { useState } from 'react'
@@ -101,6 +103,8 @@ const navGroups: NavGroup[] = [
   {
     label: 'Content',
     items: [
+      { name: 'Playlists', href: '/ui/playlists', icon: ListMusic },
+      { name: 'Sections', href: '/ui/sections', icon: LayoutList },
       { name: 'VOD', href: '/ui/vod', icon: CloudDownload },
       { name: 'Downloads', href: '/ui/downloads', icon: Download },
       { name: 'Offline', href: '/ui/offline', icon: Smartphone },

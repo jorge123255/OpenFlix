@@ -22,6 +22,8 @@ import { LogsPage } from './pages/Logs'
 import { SettingsPage } from './pages/Settings'
 import { SettingsSourcesPage } from './pages/SettingsSources'
 import { SettingsAdvancedPage } from './pages/SettingsAdvanced'
+import { SettingsLiveTVDVRPage } from './pages/SettingsLiveTVDVR'
+import { SettingsStatusPage } from './pages/SettingsStatus'
 import { DownloadsPage } from './pages/Downloads'
 import { TunersPage } from './pages/Tuners'
 import { ChannelCollectionsPage } from './pages/ChannelCollections'
@@ -47,6 +49,8 @@ import { DeviceManagerPage } from './pages/DeviceManager'
 import { OfflineDownloadsPage } from './pages/OfflineDownloads'
 import { ShowDetailPage } from './pages/ShowDetail'
 import { MovieDetailPage } from './pages/MovieDetail'
+import { PlaylistsPage } from './pages/Playlists'
+import { PersonalSectionsPage } from './pages/PersonalSections'
 import { api } from './api/client'
 
 const queryClient = new QueryClient({
@@ -98,7 +102,9 @@ function App() {
             <Route path="logs" element={<LogsPage />} />
             <Route path="settings" element={<SettingsPage />} />
             <Route path="settings/sources" element={<SettingsSourcesPage />} />
+            <Route path="settings/livetv-dvr" element={<SettingsLiveTVDVRPage />} />
             <Route path="settings/advanced" element={<SettingsAdvancedPage />} />
+            <Route path="settings/status" element={<SettingsStatusPage />} />
             <Route path="downloads" element={<DownloadsPage />} />
             <Route path="tuners" element={<TunersPage />} />
             <Route path="channel-collections" element={<ChannelCollectionsPage />} />
@@ -122,6 +128,8 @@ function App() {
             <Route path="scheduler" element={<SchedulerPage />} />
             <Route path="devices" element={<DeviceManagerPage />} />
             <Route path="offline" element={<OfflineDownloadsPage />} />
+            <Route path="playlists" element={<PlaylistsPage />} />
+            <Route path="sections" element={<PersonalSectionsPage />} />
             <Route path="shows/:id" element={<ShowDetailPage />} />
             <Route path="movies/:id" element={<MovieDetailPage />} />
           </Route>

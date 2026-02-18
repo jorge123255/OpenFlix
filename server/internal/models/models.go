@@ -506,6 +506,18 @@ type Recording struct {
 	ChannelName     string     `gorm:"size:200" json:"channelName,omitempty"`    // Cached channel name
 	ChannelLogo     string     `gorm:"size:500" json:"channelLogo,omitempty"`    // Cached channel logo
 	ViewOffset      *int64     `json:"viewOffset,omitempty"`                     // Watch progress in ms
+	// File browser state
+	IsWatched       bool       `gorm:"default:false" json:"isWatched"`            // Marked as watched
+	IsFavorite      bool       `gorm:"default:false" json:"isFavorite"`           // Marked as favorite
+	KeepForever     bool       `gorm:"default:false" json:"keepForever"`          // Keep forever (skip auto-delete)
+	IsDeleted       bool       `gorm:"default:false;index" json:"isDeleted"`      // Soft-deleted (trash)
+	DeletedAt       *time.Time `json:"deletedAt,omitempty"`                       // When it was trashed
+	ContentType     string     `gorm:"size:20;default:show" json:"contentType"`   // show, movie, video, image, unmatched
+	VideoCodec      string     `gorm:"size:50" json:"videoCodec,omitempty"`       // h264, hevc, etc.
+	AudioCodec      string     `gorm:"size:50" json:"audioCodec,omitempty"`       // aac, ac3, eac3, etc.
+	VideoResolution string     `gorm:"size:20" json:"videoResolution,omitempty"`  // 1080i, 720p, 480i, etc.
+	HasCC           bool       `gorm:"default:false" json:"hasCC"`                // Has closed captions
+	HasDVS          bool       `gorm:"default:false" json:"hasDVS"`               // Has descriptive audio
 	// Retry handling
 	RetryCount int    `gorm:"default:0" json:"retryCount"`
 	MaxRetries int    `gorm:"default:3" json:"maxRetries"`
@@ -709,6 +721,14 @@ type ClientDevice struct {
 	IPAddress   string    `json:"ipAddress"`
 	AppVersion  string    `json:"appVersion"`
 
+	// Extended device info (populated from client registration)
+	DeviceModel    string `json:"deviceModel"`                           // e.g., "Apple TV 4K (3rd gen)", "Pixel 7"
+	OSVersion      string `json:"osVersion"`                             // e.g., "tvOS 17.2", "Android 14"
+	ConnectionType string `json:"connectionType" gorm:"default:'local'"` // local, remote
+
+	// Channel collection assignment
+	ChannelCollectionID uint `json:"channelCollectionId"` // 0 means all channels
+
 	// Server-controlled settings
 	KioskMode    bool   `json:"kioskMode"`    // hide settings/admin on this device
 	KidsOnlyMode bool   `json:"kidsOnlyMode"` // restrict to kids-rated content only
@@ -722,6 +742,9 @@ type ClientDevice struct {
 	StartupSection string `json:"startupSection"` // what section to show on launch (home, livetv, dvr, kids, sports)
 	Theme          string `json:"theme"`           // dark, light, auto
 
+	// Sidebar navigation visibility
+	SidebarSections string `json:"sidebarSections"` // comma-separated: "home,livetv,dvr,movies,shows,kids,sports,search"
+
 	// Feature toggles
 	EnableDVR       bool `json:"enableDVR" gorm:"default:true"`
 	EnableLiveTV    bool `json:"enableLiveTV" gorm:"default:true"`
@@ -729,4 +752,32 @@ type ClientDevice struct {
 
 	CreatedAt time.Time `json:"createdAt"`
 	UpdatedAt time.Time `json:"updatedAt"`
+}
+
+// ========== Personal Section Models ==========
+
+// PersonalSection represents a user-curated section for the client sidebar
+type PersonalSection struct {
+	ID          uint           `gorm:"primaryKey" json:"id"`
+	UserID      uint           `gorm:"index" json:"userId"`
+	Name        string         `gorm:"size:255" json:"name"`
+	Description string         `gorm:"type:text" json:"description,omitempty"`
+	SectionType string         `gorm:"size:20;default:manual" json:"sectionType"` // "smart" or "manual"
+	SmartFilter string         `gorm:"type:text" json:"smartFilter,omitempty"`    // JSON filter criteria for smart sections
+	Position    int            `json:"position"`
+	ItemCount   int            `gorm:"-" json:"itemCount"`
+	CreatedAt   time.Time      `json:"createdAt"`
+	UpdatedAt   time.Time      `json:"updatedAt"`
+	DeletedAt   gorm.DeletedAt `gorm:"index" json:"-"`
+
+	Items []PersonalSectionItem `gorm:"foreignKey:SectionID" json:"items,omitempty"`
+}
+
+// PersonalSectionItem represents an item in a personal section
+type PersonalSectionItem struct {
+	ID        uint      `gorm:"primaryKey" json:"id"`
+	SectionID uint      `gorm:"index" json:"sectionId"`
+	MediaID   uint      `gorm:"index" json:"mediaId"`
+	Position  int       `json:"position"`
+	CreatedAt time.Time `json:"createdAt"`
 }
