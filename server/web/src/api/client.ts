@@ -349,6 +349,11 @@ class ApiClient {
     return response.data
   }
 
+  async getOnNow(): Promise<OnNowChannel[]> {
+    const response = await this.client.get<{ channels: OnNowChannel[] }>('/livetv/now')
+    return response.data.channels || []
+  }
+
   async getEPGPrograms(params?: {
     page?: number
     limit?: number
@@ -519,6 +524,32 @@ class ApiClient {
     await this.client.put(`/dvr/recordings/${recordingId}/progress`, { viewOffset })
   }
 
+  // DVR Management (Passes, Schedule, Calendar)
+  async getDVRPasses(): Promise<DVRPass[]> {
+    const response = await this.client.get<{ passes: DVRPass[] }>('/dvr/passes')
+    return response.data.passes || []
+  }
+
+  async pauseDVRPass(id: number, type: string): Promise<void> {
+    await this.client.put(`/dvr/passes/${id}/pause`, null, { params: { type } })
+  }
+
+  async resumeDVRPass(id: number, type: string): Promise<void> {
+    await this.client.put(`/dvr/passes/${id}/resume`, null, { params: { type } })
+  }
+
+  async getDVRSchedule(): Promise<DVRScheduleResponse> {
+    const response = await this.client.get<DVRScheduleResponse>('/dvr/schedule')
+    return response.data
+  }
+
+  async getDVRCalendar(date?: string): Promise<DVRCalendarResponse> {
+    const response = await this.client.get<DVRCalendarResponse>('/dvr/calendar', {
+      params: date ? { date } : undefined,
+    })
+    return response.data
+  }
+
   // DVR Settings
   async getDVRSettings(): Promise<DVRSettings> {
     const response = await this.client.get<{ settings: DVRSettings }>('/dvr/settings')
@@ -533,6 +564,11 @@ class ApiClient {
   // Server admin endpoints
   async getServerStatus(): Promise<ServerStatus> {
     const response = await this.client.get<ServerStatus>('/api/status')
+    return response.data
+  }
+
+  async getDashboardData(): Promise<DashboardData> {
+    const response = await this.client.get<DashboardData>('/api/dashboard')
     return response.data
   }
 
@@ -677,6 +713,26 @@ export interface ServerSettings {
   frame_rate_match_mode?: string
   default_subtitle_language?: string
   default_audio_language?: string
+
+  // Advanced: Transcoder
+  transcoder_type?: string
+  deinterlacer_mode?: string
+  livetv_buffer_secs?: number
+
+  // Advanced: Web Player
+  playback_quality?: string
+  client_buffer_secs?: number
+
+  // Advanced: Integrations
+  edl_export?: boolean
+  m3u_channel_ids?: boolean
+  vlc_links?: boolean
+  http_logging?: boolean
+
+  // Advanced: Experimental
+  experimental_hdr?: boolean
+  experimental_low_latency?: boolean
+  experimental_ai_metadata?: boolean
 }
 
 // Provider discovery types
@@ -860,6 +916,69 @@ export interface DVRSettings {
   maxConcurrentRecordings: number  // 0 = unlimited
 }
 
+// DVR Management types
+export interface DVRPass {
+  id: number
+  type: 'series' | 'team'
+  name: string
+  thumb?: string
+  enabled: boolean
+  keepCount: number
+  priority: number
+  prePadding: number
+  postPadding: number
+  jobCount: number
+  createdAt: string
+  updatedAt: string
+  // Series-specific
+  keywords?: string
+  channelId?: number
+  timeSlot?: string
+  daysOfWeek?: string
+  // Team-specific
+  teamName?: string
+  league?: string
+}
+
+export interface DVRScheduleItem {
+  id: number
+  title: string
+  subtitle?: string
+  channelName?: string
+  channelLogo?: string
+  startTime: string
+  endTime: string
+  status: 'scheduled' | 'recording' | 'conflict'
+  priority: number
+  category?: string
+  episodeNum?: string
+  thumb?: string
+  art?: string
+  isMovie: boolean
+  day: string
+}
+
+export interface DVRScheduleResponse {
+  schedule: DVRScheduleItem[]
+  totalCount: number
+}
+
+export interface DVRCalendarItem {
+  id: number
+  title: string
+  channelName?: string
+  startTime: string
+  endTime: string
+  status: 'scheduled' | 'recording' | 'completed'
+  day: string
+}
+
+export interface DVRCalendarResponse {
+  items: DVRCalendarItem[]
+  weekStart: string
+  weekEnd: string
+}
+
 // Configuration Export/Import
 export interface ConfigStats {
   settings: number
@@ -887,6 +1006,102 @@ export interface ImportResult {
   errors?: string[]
   version?: string
   exportedAt?: string
+}
+
+// On Now types
+export interface OnNowProgram {
+  id: number
+  channelId: string
+  title: string
+  description?: string
+  start: string
+  end: string
+  icon?: string
+  category?: string
+  episodeNum?: string
+  isNew?: boolean
+  isPremiere?: boolean
+  isLive?: boolean
+  isFinale?: boolean
+  isMovie?: boolean
+  isSports?: boolean
+  isKids?: boolean
+  isNews?: boolean
+}
+
+export interface OnNowChannel {
+  id: number
+  sourceId: number
+  channelId: string
+  number: number
+  name: string
+  logo?: string
+  group?: string
+  streamUrl: string
+  enabled: boolean
+  isFavorite: boolean
+  hasEpgData: boolean
+  nowPlaying?: OnNowProgram
+  nextProgram?: OnNowProgram
+}
+
+// Dashboard types
+export interface DashboardUpNextItem {
+  id: number
+  title: string
+  type: string
+  thumb: string
+  art: string
+  year?: number
+  duration?: number
+  viewOffset: number
+  grandparentTitle?: string
+  parentIndex?: number
+  index?: number
+  grandparentThumb?: string
+  parentThumb?: string
+  summary?: string
+}
+
+export interface DashboardRecentShow {
+  id: number
+  title: string
+  thumb: string
+  art: string
+  year?: number
+  childCount?: number
+  leafCount?: number
+  updatedAt: string
+  summary?: string
+}
+
+export interface DashboardRecentMovie {
+  id: number
+  title: string
+  thumb: string
+  art: string
+  year?: number
+  summary?: string
+  rating?: number
+  studio?: string
+}
+
+export interface DashboardRecentRecording {
+  id: number
+  title: string
+  thumb: string
+  art: string
+  channelName?: string
+  duration?: number
+  year?: number
+  isMovie?: boolean
+}
+
+export interface DashboardData {
+  upNext: DashboardUpNextItem[]
+  recentShows: DashboardRecentShow[]
+  recentMovies: DashboardRecentMovie[]
+  recentRecordings: DashboardRecentRecording[]
 }
 
 export const api = new ApiClient()

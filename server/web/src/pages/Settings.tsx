@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { Link } from 'react-router-dom'
 import { Save, CheckCircle, XCircle, Loader, Download, Upload, AlertCircle, Server, Cpu, Tv, HardDrive, Globe, Play } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api, type ServerSettings, type DVRSettings, type ImportResult, type ConfigStats } from '../api/client'
@@ -636,7 +637,7 @@ transcode:
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between mb-2">
         <div>
           <h1 className="text-2xl font-bold text-white">Settings</h1>
           <p className="text-gray-400 mt-1">Configure your OpenFlix server</p>
@@ -649,6 +650,28 @@ transcode:
           <Save className="h-4 w-4" />
           {updateConfig.isPending ? 'Saving...' : saved ? 'Saved!' : 'Save Changes'}
         </button>
+      </div>
+
+      {/* Settings Tab Navigation */}
+      <div className="flex gap-1 mb-8 bg-gray-800 rounded-lg p-1 w-fit">
+        <Link
+          to="/ui/settings"
+          className="px-4 py-2 rounded-md text-sm font-medium bg-indigo-600 text-white"
+        >
+          General
+        </Link>
+        <Link
+          to="/ui/settings/sources"
+          className="px-4 py-2 rounded-md text-sm font-medium text-gray-400 hover:text-white hover:bg-gray-700 transition-colors"
+        >
+          Sources
+        </Link>
+        <Link
+          to="/ui/settings/advanced"
+          className="px-4 py-2 rounded-md text-sm font-medium text-gray-400 hover:text-white hover:bg-gray-700 transition-colors"
+        >
+          Advanced
+        </Link>
       </div>
 
       {/* 1. Server Settings */}
