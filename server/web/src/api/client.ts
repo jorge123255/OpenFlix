@@ -29,7 +29,7 @@ import type {
 const TOKEN_KEY = 'openflix_token'
 
 class ApiClient {
-  private client: AxiosInstance
+  client: AxiosInstance
 
   constructor() {
     this.client = axios.create({

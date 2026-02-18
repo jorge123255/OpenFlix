@@ -33,6 +33,9 @@ import {
   SlidersHorizontal,
   DatabaseBackup,
   Trash2,
+  Bell,
+  Captions,
+  Timer,
   ChevronDown,
   type LucideIcon,
 } from 'lucide-react'
@@ -109,6 +112,9 @@ const navGroups: NavGroup[] = [
       { name: 'Backups', href: '/ui/backups', icon: DatabaseBackup },
       { name: 'Trash', href: '/ui/trash', icon: Trash2 },
       { name: 'Updater', href: '/ui/updater', icon: RefreshCw },
+      { name: 'Notifications', href: '/ui/notifications', icon: Bell },
+      { name: 'Subtitles', href: '/ui/subtitles', icon: Captions },
+      { name: 'Scheduler', href: '/ui/scheduler', icon: Timer },
     ],
   },
 ]
