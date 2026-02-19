@@ -34,6 +34,7 @@ import {
   MoreHorizontal,
   Download,
   Check,
+  StopCircle,
 } from 'lucide-react'
 // DVR hooks available at '../hooks/useDVR' if needed
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -533,6 +534,7 @@ function RecordingManagerCard({
   onToggleFavorite,
   onToggleKeep,
   onTrash,
+  onStop,
   onFixMatch,
 }: {
   recording: Recording
@@ -543,6 +545,7 @@ function RecordingManagerCard({
   onToggleFavorite: () => void
   onToggleKeep: () => void
   onTrash: () => void
+  onStop?: () => void
   onFixMatch?: () => void
 }) {
   const [showOptions, setShowOptions] = useState(false)
@@ -644,6 +647,21 @@ function RecordingManagerCard({
 
             {/* Badges row */}
             <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+              {recording.status === 'recording' && (
+                <span className="px-1.5 py-0.5 text-[10px] font-bold bg-red-600 text-white rounded animate-pulse flex items-center gap-1">
+                  <Radio className="w-3 h-3" /> RECORDING
+                </span>
+              )}
+              {recording.status === 'scheduled' && (
+                <span className="px-1.5 py-0.5 text-[10px] font-bold bg-blue-600 text-white rounded">
+                  SCHEDULED
+                </span>
+              )}
+              {recording.status === 'failed' && (
+                <span className="px-1.5 py-0.5 text-[10px] font-bold bg-orange-600 text-white rounded">
+                  FAILED
+                </span>
+              )}
               {resBadge && (
                 <span className="px-1.5 py-0.5 text-[10px] font-bold bg-gray-700 text-gray-300 rounded">
                   {resBadge}
@@ -732,6 +750,15 @@ function RecordingManagerCard({
             >
               <Lock className="w-4 h-4" />
             </button>
+            {recording.status === 'recording' && onStop && (
+              <button
+                onClick={onStop}
+                className="p-1.5 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-md transition-colors"
+                title="Stop Recording"
+              >
+                <StopCircle className="w-4 h-4" />
+              </button>
+            )}
             <button
               onClick={onTrash}
               className="p-1.5 text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded-md transition-colors"
@@ -908,6 +935,14 @@ export function DVRPage() {
 
   const trashRecording = useMutation({
     mutationFn: (id: number) => api.trashRecording(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['recordings-manager'] })
+      queryClient.invalidateQueries({ queryKey: ['recordings'] })
+    },
+  })
+
+  const stopRecording = useMutation({
+    mutationFn: (id: number) => api.stopRecording(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['recordings-manager'] })
       queryClient.invalidateQueries({ queryKey: ['recordings'] })
@@ -1294,6 +1329,11 @@ export function DVRPage() {
                       trashRecording.mutate(rec.id)
                     }
                   }}
+                  onStop={rec.status === 'recording' ? () => {
+                    if (confirm(`Stop recording "${rec.title}"?`)) {
+                      stopRecording.mutate(rec.id)
+                    }
+                  } : undefined}
                   onFixMatch={activeCategory === 'unmatched' ? () => {
                     setFixMatchRecording(rec)
                     setFixMatchSearch(rec.title)

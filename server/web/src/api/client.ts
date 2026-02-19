@@ -485,6 +485,10 @@ class ApiClient {
     await this.client.delete(`/dvr/recordings/${id}`)
   }
 
+  async stopRecording(id: number): Promise<void> {
+    await this.client.post(`/dvr/recordings/${id}/stop`)
+  }
+
   async getSeriesRules(): Promise<SeriesRule[]> {
     const response = await this.client.get<{ rules: SeriesRule[] }>('/dvr/rules')
     return response.data.rules || []
