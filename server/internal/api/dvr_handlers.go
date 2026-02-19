@@ -499,6 +499,71 @@ func (s *Server) updateRecording(c *gin.Context) {
 	c.JSON(http.StatusOK, recording)
 }
 
+// applyRecordingMatch applies a TMDB match to a recording (for fixing unmatched recordings)
+func (s *Server) applyRecordingMatch(c *gin.Context) {
+	userID := c.GetUint("userID")
+	isAdmin := c.GetBool("isAdmin")
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid recording ID"})
+		return
+	}
+
+	var recording models.Recording
+	query := s.db.Where("id = ?", id)
+	if !isAdmin {
+		query = query.Where("user_id IN ?", []uint{userID, 0})
+	}
+	if err := query.First(&recording).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Recording not found"})
+		return
+	}
+
+	var req struct {
+		TMDBId    int    `json:"tmdb_id" binding:"required"`
+		MediaType string `json:"media_type"` // "movie" or "tv"
+		Title     string `json:"title"`
+		Poster    string `json:"poster"`
+		Backdrop  string `json:"backdrop"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Update TMDB ID
+	recording.TMDBId = &req.TMDBId
+
+	// Update content type based on media type
+	if req.MediaType == "movie" {
+		recording.IsMovie = true
+		recording.ContentType = "movie"
+	} else if req.MediaType == "tv" {
+		recording.IsMovie = false
+		recording.ContentType = "show"
+	}
+
+	// Update title if provided
+	if req.Title != "" {
+		recording.Title = req.Title
+	}
+
+	// Update poster/backdrop if provided
+	if req.Poster != "" {
+		recording.Thumb = "https://image.tmdb.org/t/p/w500" + req.Poster
+	}
+	if req.Backdrop != "" {
+		recording.Art = "https://image.tmdb.org/t/p/w1280" + req.Backdrop
+	}
+
+	if err := s.db.Save(&recording).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update recording"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Match applied successfully", "recording": recording})
+}
+
 // updateRecordingPriority updates the priority of a scheduled recording
 func (s *Server) updateRecordingPriority(c *gin.Context) {
 	userID := c.GetUint("userID")

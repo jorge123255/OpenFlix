@@ -51,6 +51,8 @@ import { ShowDetailPage } from './pages/ShowDetail'
 import { MovieDetailPage } from './pages/MovieDetail'
 import { PlaylistsPage } from './pages/Playlists'
 import { PersonalSectionsPage } from './pages/PersonalSections'
+import { MetadataEditorPage } from './pages/MetadataEditor'
+import { LabelsPage } from './pages/Labels'
 import { api } from './api/client'
 
 const queryClient = new QueryClient({
@@ -109,6 +111,7 @@ function App() {
             <Route path="tuners" element={<TunersPage />} />
             <Route path="channel-collections" element={<ChannelCollectionsPage />} />
             <Route path="artwork" element={<ArtworkManagerPage />} />
+            <Route path="metadata" element={<MetadataEditorPage />} />
             <Route path="collections" element={<CollectionsPage />} />
             <Route path="upload" element={<FileUploadPage />} />
             <Route path="connections" element={<ClientConnectionsPage />} />
@@ -132,6 +135,7 @@ function App() {
             <Route path="sections" element={<PersonalSectionsPage />} />
             <Route path="shows/:id" element={<ShowDetailPage />} />
             <Route path="movies/:id" element={<MovieDetailPage />} />
+            <Route path="labels" element={<LabelsPage />} />
           </Route>
           <Route path="*" element={<Navigate to="/ui" replace />} />
         </Routes>

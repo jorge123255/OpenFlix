@@ -441,6 +441,86 @@ func (s *Server) logout(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"status": "ok"})
 }
 
+// ============ Admin User Management ============
+
+func (s *Server) adminListUsers(c *gin.Context) {
+	users, err := s.authService.GetAllUsers()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	userList := make([]gin.H, len(users))
+	for i, user := range users {
+		// Get profile count
+		profiles, _ := s.authService.GetUserProfiles(user.ID)
+
+		userList[i] = gin.H{
+			"id":           user.ID,
+			"uuid":         user.UUID,
+			"username":     user.Username,
+			"email":        user.Email,
+			"title":        user.DisplayName,
+			"thumb":        user.Thumb,
+			"admin":        user.IsAdmin,
+			"restricted":   user.IsRestricted,
+			"profileCount": len(profiles),
+			"createdAt":    user.CreatedAt,
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{"users": userList})
+}
+
+func (s *Server) adminDeleteUser(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+		return
+	}
+
+	// Don't allow deleting yourself
+	currentUserID, _ := c.Get("userID")
+	if uint(id) == currentUserID.(uint) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Cannot delete your own account"})
+		return
+	}
+
+	if err := s.authService.DeleteUser(uint(id)); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"status": "ok"})
+}
+
+func (s *Server) adminGetUserProfiles(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+		return
+	}
+
+	profiles, err := s.authService.GetUserProfiles(uint(id))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	profileList := make([]gin.H, len(profiles))
+	for i, p := range profiles {
+		profileList[i] = gin.H{
+			"id":    p.ID,
+			"uuid":  p.UUID,
+			"name":  p.Name,
+			"thumb": p.Thumb,
+			"isKid": p.IsKid,
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{"profiles": profileList})
+}
+
 func (s *Server) getCurrentUser(c *gin.Context) {
 	userID, exists := c.Get("userID")
 	if !exists {
@@ -4472,12 +4552,30 @@ func maskAPIKey(key string) string {
 
 // DVRSettings represents DVR-specific settings
 type DVRSettings struct {
-	MaxConcurrentRecordings int `json:"maxConcurrentRecordings"` // 0 = unlimited
+	MaxConcurrentRecordings int    `json:"maxConcurrentRecordings"` // 0 = unlimited
+	DetectionMethod        string `json:"detection_method"`
+	ComskipPath            string `json:"comskip_path"`
+	Sensitivity            int    `json:"sensitivity"`
+	AutoSkipBehavior       string `json:"auto_skip_behavior"`
+	SkipPromptDuration     int    `json:"skip_prompt_duration"`
+	Enabled                bool   `json:"enabled"`
+	DetectionWorkers       int    `json:"detection_workers"`
+	GenerateThumbnails     bool   `json:"generate_thumbnails"`
+	ShareEdits             bool   `json:"share_edits"`
 }
 
 func (s *Server) getDVRSettings(c *gin.Context) {
 	settings := DVRSettings{
 		MaxConcurrentRecordings: s.getSettingInt("dvr_max_concurrent", 0),
+		DetectionMethod:        s.getSettingStr("comskip_detection_method", "comskip"),
+		ComskipPath:            s.getSettingStr("comskip_path", "/usr/bin/comskip"),
+		Sensitivity:            s.getSettingInt("comskip_sensitivity", 50),
+		AutoSkipBehavior:       s.getSettingStr("comskip_auto_skip_behavior", "show_prompt"),
+		SkipPromptDuration:     s.getSettingInt("comskip_skip_prompt_duration", 5),
+		Enabled:                s.getSettingBool("commercial_detection_enabled", false),
+		DetectionWorkers:       s.getSettingInt("comskip_detection_workers", 2),
+		GenerateThumbnails:     s.getSettingBool("comskip_generate_thumbnails", false),
+		ShareEdits:             s.getSettingBool("comskip_share_edits", false),
 	}
 
 	c.JSON(http.StatusOK, gin.H{
@@ -4497,9 +4595,48 @@ func (s *Server) updateDVRSettings(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "maxConcurrentRecordings must be >= 0 (0 = unlimited)"})
 		return
 	}
+	if input.DetectionWorkers < 1 {
+		input.DetectionWorkers = 1
+	}
+	if input.DetectionWorkers > 8 {
+		input.DetectionWorkers = 8
+	}
+	if input.Sensitivity < 0 {
+		input.Sensitivity = 0
+	}
+	if input.Sensitivity > 100 {
+		input.Sensitivity = 100
+	}
+	if input.SkipPromptDuration < 1 {
+		input.SkipPromptDuration = 1
+	}
+	if input.SkipPromptDuration > 30 {
+		input.SkipPromptDuration = 30
+	}
 
-	// Save to database
+	// Save all settings to database
 	s.setSetting("dvr_max_concurrent", fmt.Sprintf("%d", input.MaxConcurrentRecordings))
+	s.setSetting("comskip_detection_method", input.DetectionMethod)
+	s.setSetting("comskip_path", input.ComskipPath)
+	s.setSetting("comskip_sensitivity", fmt.Sprintf("%d", input.Sensitivity))
+	s.setSetting("comskip_auto_skip_behavior", input.AutoSkipBehavior)
+	s.setSetting("comskip_skip_prompt_duration", fmt.Sprintf("%d", input.SkipPromptDuration))
+	if input.Enabled {
+		s.setSetting("commercial_detection_enabled", "true")
+	} else {
+		s.setSetting("commercial_detection_enabled", "false")
+	}
+	s.setSetting("comskip_detection_workers", fmt.Sprintf("%d", input.DetectionWorkers))
+	if input.GenerateThumbnails {
+		s.setSetting("comskip_generate_thumbnails", "true")
+	} else {
+		s.setSetting("comskip_generate_thumbnails", "false")
+	}
+	if input.ShareEdits {
+		s.setSetting("comskip_share_edits", "true")
+	} else {
+		s.setSetting("comskip_share_edits", "false")
+	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"message":  "DVR settings updated",

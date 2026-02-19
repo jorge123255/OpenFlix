@@ -43,6 +43,8 @@ import {
   CalendarRange,
   ListMusic,
   LayoutList,
+  FileEdit,
+  Tag,
   type LucideIcon,
 } from 'lucide-react'
 import { useState } from 'react'
@@ -74,6 +76,7 @@ const navGroups: NavGroup[] = [
       { name: 'Media', href: '/ui/media', icon: Film },
       { name: 'Collections', href: '/ui/collections', icon: FolderHeart },
       { name: 'Artwork', href: '/ui/artwork', icon: Image },
+      { name: 'Metadata', href: '/ui/metadata', icon: FileEdit },
     ],
   },
   {
@@ -98,6 +101,7 @@ const navGroups: NavGroup[] = [
       { name: 'Team Pass', href: '/ui/teampass', icon: Trophy },
       { name: 'Comskip', href: '/ui/comskip', icon: SlidersHorizontal },
       { name: 'Segments', href: '/ui/segments', icon: Scissors },
+      { name: 'Labels', href: '/ui/labels', icon: Tag },
     ],
   },
   {

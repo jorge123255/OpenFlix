@@ -23,6 +23,9 @@ interface ComskipSettings {
     sensitivity: number
     auto_skip_behavior: string
     skip_prompt_duration: number
+    detection_workers: number
+    generate_thumbnails: boolean
+    share_edits: boolean
   }
 }
 
@@ -60,6 +63,9 @@ export function ComskipSettingsPage() {
   const [autoSkipBehavior, setAutoSkipBehavior] = useState('show_prompt')
   const [skipPromptDuration, setSkipPromptDuration] = useState(5)
   const [enabled, setEnabled] = useState(false)
+  const [detectionWorkers, setDetectionWorkers] = useState(2)
+  const [generateThumbnails, setGenerateThumbnails] = useState(false)
+  const [shareEdits, setShareEdits] = useState(false)
 
   useEffect(() => {
     if (settingsData?.settings) {
@@ -69,6 +75,9 @@ export function ComskipSettingsPage() {
       setSensitivity(s.sensitivity ?? 50)
       setAutoSkipBehavior(s.auto_skip_behavior || 'show_prompt')
       setSkipPromptDuration(s.skip_prompt_duration ?? 5)
+      setDetectionWorkers(s.detection_workers ?? 2)
+      setGenerateThumbnails(s.generate_thumbnails ?? false)
+      setShareEdits(s.share_edits ?? false)
     }
   }, [settingsData])
 
@@ -100,6 +109,9 @@ export function ComskipSettingsPage() {
       sensitivity,
       auto_skip_behavior: autoSkipBehavior,
       skip_prompt_duration: skipPromptDuration,
+      detection_workers: detectionWorkers,
+      generate_thumbnails: generateThumbnails,
+      share_edits: shareEdits,
     })
   }
 
@@ -293,6 +305,82 @@ export function ComskipSettingsPage() {
               </p>
             </div>
           )}
+
+          {/* Detection Workers */}
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">Detection Workers</label>
+            <input
+              type="number"
+              min="1"
+              max="8"
+              value={detectionWorkers}
+              onChange={(e) => setDetectionWorkers(Math.min(8, Math.max(1, Number(e.target.value))))}
+              className="w-32 px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Number of parallel commercial detection jobs (1-8). Higher values process recordings faster but use more CPU.
+            </p>
+          </div>
+
+          {/* Generate Thumbnails */}
+          <div className="flex items-center justify-between">
+            <div>
+              <label className="block text-sm font-medium text-gray-300">Generate Thumbnails</label>
+              <p className="text-xs text-gray-500 mt-1">
+                Generate preview thumbnails at chapter points during commercial detection.
+              </p>
+            </div>
+            <button
+              onClick={() => setGenerateThumbnails(!generateThumbnails)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
+                generateThumbnails
+                  ? 'bg-green-500/20 text-green-400 hover:bg-green-500/30'
+                  : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
+              }`}
+            >
+              {generateThumbnails ? (
+                <>
+                  <ToggleRight className="h-5 w-5" />
+                  On
+                </>
+              ) : (
+                <>
+                  <ToggleLeft className="h-5 w-5" />
+                  Off
+                </>
+              )}
+            </button>
+          </div>
+
+          {/* Share Commercial Edits */}
+          <div className="flex items-center justify-between">
+            <div>
+              <label className="block text-sm font-medium text-gray-300">Share Commercial Edits</label>
+              <p className="text-xs text-gray-500 mt-1">
+                Share your commercial detection results to help improve accuracy for everyone.
+              </p>
+            </div>
+            <button
+              onClick={() => setShareEdits(!shareEdits)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
+                shareEdits
+                  ? 'bg-green-500/20 text-green-400 hover:bg-green-500/30'
+                  : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
+              }`}
+            >
+              {shareEdits ? (
+                <>
+                  <ToggleRight className="h-5 w-5" />
+                  On
+                </>
+              ) : (
+                <>
+                  <ToggleLeft className="h-5 w-5" />
+                  Off
+                </>
+              )}
+            </button>
+          </div>
         </div>
       </div>
 

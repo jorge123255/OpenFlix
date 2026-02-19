@@ -460,6 +460,9 @@ type Program struct {
 	Teams  string `gorm:"size:500" json:"teams,omitempty"`  // Comma-separated team names
 	League string `gorm:"size:50" json:"league,omitempty"`  // NFL, NBA, MLB, NHL, MLS, etc.
 
+	// Source tracking
+	EPGSourceID *uint `gorm:"index" json:"epgSourceId,omitempty"` // Which EPG source imported this program
+
 	// External IDs
 	SeriesID    string `gorm:"size:100" json:"seriesId,omitempty"`
 	ProgramID   string `gorm:"size:100" json:"programId,omitempty"`

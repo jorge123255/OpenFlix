@@ -86,7 +86,10 @@ func (p *M3UParser) ParseM3U(content string) ([]ParsedChannel, error) {
 
 			// Extract logo
 			if matches := tvgLogoPattern.FindStringSubmatch(line); len(matches) > 1 {
-				currentChannel.Logo = matches[1]
+				logo := matches[1]
+				if strings.HasPrefix(logo, "http://") || strings.HasPrefix(logo, "https://") {
+					currentChannel.Logo = logo
+				}
 			}
 
 			// Extract group
@@ -587,7 +590,10 @@ func (p *M3UParser) ParseM3UVOD(content string) ([]ParsedVODEntry, error) {
 
 			// Extract logo
 			if matches := tvgLogoPattern.FindStringSubmatch(line); len(matches) > 1 {
-				currentEntry.Logo = matches[1]
+				logo := matches[1]
+				if strings.HasPrefix(logo, "http://") || strings.HasPrefix(logo, "https://") {
+					currentEntry.Logo = logo
+				}
 			}
 
 			// Extract group

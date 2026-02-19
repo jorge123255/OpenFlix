@@ -432,6 +432,11 @@ func (s *Server) updateChannel(c *gin.Context) {
 		return
 	}
 
+	// Invalidate guide cache when channel mapping changes
+	if req.ChannelID != "" || req.EPGSourceID != nil {
+		s.guideCache.InvalidateAll()
+	}
+
 	c.JSON(http.StatusOK, channel)
 }
 
@@ -458,6 +463,10 @@ func (s *Server) bulkMapChannels(c *gin.Context) {
 			return
 		}
 
+		// Preserve original ChannelID as TVGId before overwriting
+		if channel.TVGId == "" && channel.ChannelID != "" {
+			channel.TVGId = channel.ChannelID
+		}
 		channel.EPGSourceID = &req.EPGSourceID
 		channel.ChannelID = req.EPGChannelID
 
@@ -473,6 +482,9 @@ func (s *Server) bulkMapChannels(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to commit transaction"})
 		return
 	}
+
+	// Invalidate guide cache after bulk mapping
+	s.guideCache.InvalidateAll()
 
 	c.JSON(http.StatusOK, gin.H{
 		"message": fmt.Sprintf("Successfully mapped %d channels", updated),
@@ -967,6 +979,9 @@ func (s *Server) unmapChannel(c *gin.Context) {
 		return
 	}
 
+	// Invalidate guide cache after unmapping
+	s.guideCache.InvalidateAll()
+
 	c.JSON(http.StatusOK, gin.H{"message": "Channel unmapped successfully"})
 }
 
@@ -1012,6 +1027,9 @@ func (s *Server) refreshChannelEPG(c *gin.Context) {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save channel mapping"})
 			return
 		}
+
+		// Invalidate guide cache after refresh mapping
+		s.guideCache.InvalidateAll()
 	}
 
 	c.JSON(http.StatusOK, gin.H{
@@ -1346,6 +1364,10 @@ func (s *Server) autoDetectChannels(c *gin.Context) {
 
 				// Apply mapping if requested
 				if applyMappings {
+					// Preserve original ChannelID as TVGId before overwriting
+					if ch.TVGId == "" && ch.ChannelID != "" {
+						ch.TVGId = ch.ChannelID
+					}
 					ch.ChannelID = filteredMatches[0].EPGChannelID
 					ch.EPGCallSign = filteredMatches[0].EPGCallSign
 					ch.EPGChannelNo = filteredMatches[0].EPGNumber
@@ -1468,10 +1490,10 @@ func (s *Server) toggleChannelFavorite(c *gin.Context) {
 
 // getGuide returns EPG data for a time range with caching
 func (s *Server) getGuide(c *gin.Context) {
-	// Parse time range (defaults to next 24 hours)
+	// Parse time range (defaults to next 4 hours for performance)
 	now := time.Now()
 	start := now
-	end := now.Add(24 * time.Hour)
+	end := now.Add(4 * time.Hour)
 
 	if startStr := c.Query("start"); startStr != "" {
 		// Try parsing as Unix timestamp first (Android app sends seconds)
@@ -1492,7 +1514,27 @@ func (s *Server) getGuide(c *gin.Context) {
 		}
 	}
 
+	// Clamp time window to max 8 hours to prevent massive responses
+	maxWindow := 8 * time.Hour
+	if end.Sub(start) > maxWindow {
+		end = start.Add(maxWindow)
+	}
+
 	sourceID := c.Query("sourceId")
+
+	// Support limit/offset for channel pagination
+	limit := 0
+	offset := 0
+	if limitStr := c.Query("limit"); limitStr != "" {
+		if l, err := strconv.Atoi(limitStr); err == nil && l > 0 {
+			limit = l
+		}
+	}
+	if offsetStr := c.Query("offset"); offsetStr != "" {
+		if o, err := strconv.Atoi(offsetStr); err == nil && o >= 0 {
+			offset = o
+		}
+	}
 
 	// Generate cache key - truncate times to 5-minute buckets for better cache hits
 	startBucket := start.Truncate(5 * time.Minute)
@@ -1517,24 +1559,37 @@ func (s *Server) getGuide(c *gin.Context) {
 	if sourceID != "" {
 		channelQuery = channelQuery.Where("m3_u_source_id = ?", sourceID)
 	}
+
+	// Get total count before pagination
+	var totalChannels int64
+	channelQuery.Model(&models.Channel{}).Count(&totalChannels)
+
+	// Apply pagination if requested
+	if limit > 0 {
+		channelQuery = channelQuery.Offset(offset).Limit(limit)
+	}
+
 	if err := channelQuery.Find(&channels).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch channels"})
 		return
 	}
 
-	// Programs are stored with XMLTV channel IDs (e.g. "2", "11") which match
-	// the channel's tvg_id, NOT the channel's channel_id (e.g. "gracenote-DITV803-10367").
-	// We need to query programs by tvg_id and map results back to channel_id for the response.
-	programQueryIDs := make([]string, 0, len(channels))
-	tvgIDToChannelID := make(map[string]string) // tvg_id -> channel_id (for re-keying response)
+	// Programs may be stored with XMLTV channel IDs (e.g. "2", "11") matching
+	// the channel's tvg_id, OR with mapped IDs (e.g. "gracenote-DITV803-10367")
+	// matching channel_id. Query by BOTH to find all matching programs.
+	programQueryIDs := make([]string, 0, len(channels)*2)
+	programIDToChannelID := make(map[string]string) // program channel_id -> our channel_id (for re-keying response)
+	seen := make(map[string]bool)
 	for _, ch := range channels {
-		if ch.TVGId != "" {
+		if ch.TVGId != "" && !seen[ch.TVGId] {
 			programQueryIDs = append(programQueryIDs, ch.TVGId)
-			tvgIDToChannelID[ch.TVGId] = ch.ChannelID
-		} else if ch.ChannelID != "" {
-			// Fallback: try channel_id directly (some EPG sources may use it)
+			programIDToChannelID[ch.TVGId] = ch.ChannelID
+			seen[ch.TVGId] = true
+		}
+		if ch.ChannelID != "" && !seen[ch.ChannelID] {
 			programQueryIDs = append(programQueryIDs, ch.ChannelID)
-			tvgIDToChannelID[ch.ChannelID] = ch.ChannelID
+			programIDToChannelID[ch.ChannelID] = ch.ChannelID
+			seen[ch.ChannelID] = true
 		}
 	}
 
@@ -1546,41 +1601,59 @@ func (s *Server) getGuide(c *gin.Context) {
 		return
 	}
 
+	// Slim program struct for guide grid (reduces JSON payload ~70%)
+	type GuideProgram struct {
+		ID          uint   `json:"id"`
+		ChannelID   string `json:"channelId"`
+		Title       string `json:"title"`
+		Description string `json:"description,omitempty"`
+		Start       string `json:"start"`
+		End         string `json:"end"`
+		Category    string `json:"category,omitempty"`
+		IsNew       bool   `json:"isNew,omitempty"`
+		IsPremiere  bool   `json:"isPremiere,omitempty"`
+		IsLive      bool   `json:"isLive,omitempty"`
+		IsFinale    bool   `json:"isFinale,omitempty"`
+		IsMovie     bool   `json:"isMovie,omitempty"`
+		IsSports    bool   `json:"isSports,omitempty"`
+		IsKids      bool   `json:"isKids,omitempty"`
+		IsNews      bool   `json:"isNews,omitempty"`
+	}
+
 	// Group programs by channelId (what frontend uses for lookup)
-	// Re-key from tvg_id to channel_id so the client can match programs to channels
-	programsByChannel := make(map[string][]models.Program)
+	// Re-key from tvg_id/xmltv_id to channel_id so the client can match programs to channels
+	programsByChannel := make(map[string][]GuideProgram)
 	for _, prog := range programs {
-		if chID, ok := tvgIDToChannelID[prog.ChannelID]; ok {
-			programsByChannel[chID] = append(programsByChannel[chID], prog)
+		slim := GuideProgram{
+			ID:          prog.ID,
+			ChannelID:   prog.ChannelID,
+			Title:       prog.Title,
+			Description: prog.Description,
+			Start:       prog.Start.Format(time.RFC3339),
+			End:         prog.End.Format(time.RFC3339),
+			Category:    prog.Category,
+			IsNew:       prog.IsNew,
+			IsPremiere:  prog.IsPremiere,
+			IsLive:      prog.IsLive,
+			IsFinale:    prog.IsFinale,
+			IsMovie:     prog.IsMovie,
+			IsSports:    prog.IsSports,
+			IsKids:      prog.IsKids,
+			IsNews:      prog.IsNews,
+		}
+		if chID, ok := programIDToChannelID[prog.ChannelID]; ok {
+			slim.ChannelID = chID
+			programsByChannel[chID] = append(programsByChannel[chID], slim)
 		} else {
-			programsByChannel[prog.ChannelID] = append(programsByChannel[prog.ChannelID], prog)
+			programsByChannel[prog.ChannelID] = append(programsByChannel[prog.ChannelID], slim)
 		}
 	}
 
-	// Get M3U source names for provider display in guide
-	var m3uSources []models.M3USource
-	s.db.Find(&m3uSources)
-	sourceNames := make(map[uint]string)
-	for _, src := range m3uSources {
-		sourceNames[src.ID] = src.Name
-	}
-
-	// Enrich channels with source names
-	type GuideChannel struct {
-		models.Channel
-		SourceName string `json:"sourceName,omitempty"`
-	}
-	enrichedChannels := make([]GuideChannel, len(channels))
-	for i, ch := range channels {
-		enrichedChannels[i].Channel = ch
-		enrichedChannels[i].SourceName = sourceNames[ch.M3USourceID]
-	}
-
 	response := gin.H{
-		"channels": enrichedChannels,
-		"programs": programsByChannel,
-		"start":    start,
-		"end":      end,
+		"programs":      programsByChannel,
+		"start":         start,
+		"end":           end,
+		"totalChannels": totalChannels,
 	}
 
 	// Store in cache
@@ -2667,15 +2740,9 @@ func (s *Server) deleteEPGSource(c *gin.Context) {
 		return
 	}
 
-	// Find channels linked to this EPG source and delete their programs
-	var channelIDs []string
-	s.db.Model(&models.Channel{}).Where("epg_source_id = ?", id).Pluck("channel_id", &channelIDs)
-
-	programsDeleted := int64(0)
-	if len(channelIDs) > 0 {
-		result := s.db.Where("channel_id IN ?", channelIDs).Delete(&models.Program{})
-		programsDeleted = result.RowsAffected
-	}
+	// Delete all programs imported by this EPG source
+	result := s.db.Where("epg_source_id = ?", id).Delete(&models.Program{})
+	programsDeleted := result.RowsAffected
 
 	// Clear EPG source reference from channels (don't delete the channels themselves)
 	s.db.Model(&models.Channel{}).Where("epg_source_id = ?", id).Update("epg_source_id", nil)

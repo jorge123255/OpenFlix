@@ -5,6 +5,8 @@ import { api } from '../api/client'
 import Hls from 'hls.js'
 import mpegts from 'mpegts.js'
 
+const isAbsoluteUrl = (url?: string) => url ? /^https?:\/\//i.test(url) : false
+
 interface Channel {
   id: number
   channelId: string
@@ -850,13 +852,13 @@ export function TVGuidePage() {
   const [channelSearch, setChannelSearch] = useState('')
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
 
-  // Date-based navigation
+  // Date-based navigation - use current time rounded down to nearest hour as start
   const [selectedDate, setSelectedDate] = useState<Date>(() => {
     const d = new Date()
-    d.setHours(0, 0, 0, 0)
+    d.setMinutes(0, 0, 0) // round to current hour
     return d
   })
-  const [hoursWindow] = useState(24) // total hours of data to show
+  const [hoursWindow] = useState(4) // 4 hours visible at a time (like Channels DVR)
 
   // EPG Mapping modal state
   const [mappingChannel, setMappingChannel] = useState<Channel | null>(null)
@@ -866,8 +868,6 @@ export function TVGuidePage() {
   // Calculate time range based on selected date
   const { startTime, endTime } = useMemo(() => {
     const start = new Date(selectedDate)
-    // Start from the beginning of the day
-    start.setHours(0, 0, 0, 0)
     const end = new Date(start)
     end.setHours(end.getHours() + hoursWindow)
     return { startTime: start, endTime: end }
@@ -886,7 +886,7 @@ export function TVGuidePage() {
     return slots
   }, [startTime, endTime])
 
-  // Fetch channels
+  // Fetch channels (lightweight - no program data)
   const { data: channelsData, isLoading: loadingChannels } = useQuery({
     queryKey: ['channels'],
     queryFn: async () => {
@@ -900,7 +900,7 @@ export function TVGuidePage() {
     },
   })
 
-  // Fetch guide data for the selected date window
+  // Fetch guide data - 4 hour window, server-side capped at 8h max
   const { data: guideData, isLoading: loadingPrograms } = useQuery({
     queryKey: ['guide', startTime.toISOString(), endTime.toISOString()],
     queryFn: async () => {
@@ -1161,19 +1161,6 @@ export function TVGuidePage() {
   // ============================================================
   // Scroll synchronization: time header + channel column + grid
   // ============================================================
-  const handleGridScroll = useCallback(() => {
-    const grid = gridContainerRef.current
-    if (!grid) return
-    // Sync time header horizontal scroll
-    if (timeHeaderRef.current) {
-      timeHeaderRef.current.scrollLeft = grid.scrollLeft
-    }
-    // Sync channel column vertical scroll
-    if (channelColumnRef.current) {
-      channelColumnRef.current.scrollTop = grid.scrollTop
-    }
-  }, [])
-
   // Scroll to current time on mount / date change
   const scrollToNow = useCallback(() => {
     const grid = gridContainerRef.current
@@ -1221,20 +1208,20 @@ export function TVGuidePage() {
     }
   }
 
-  // Navigate days
-  const goToPreviousDay = () => {
+  // Navigate by time window (shift by hoursWindow)
+  const goToPreviousWindow = () => {
     const d = new Date(selectedDate)
-    d.setDate(d.getDate() - 1)
+    d.setHours(d.getHours() - hoursWindow)
     setSelectedDate(d)
   }
-  const goToNextDay = () => {
+  const goToNextWindow = () => {
     const d = new Date(selectedDate)
-    d.setDate(d.getDate() + 1)
+    d.setHours(d.getHours() + hoursWindow)
     setSelectedDate(d)
   }
-  const goToToday = () => {
+  const goToNow = () => {
     const d = new Date()
-    d.setHours(0, 0, 0, 0)
+    d.setMinutes(0, 0, 0)
     setSelectedDate(d)
   }
 
@@ -1269,7 +1256,7 @@ export function TVGuidePage() {
                 >
                   <td className="px-4 py-3 text-gray-500 text-sm">{channel.number}</td>
                   <td className="px-4 py-3">
-                    {channel.logo ? (
+                    {isAbsoluteUrl(channel.logo) ? (
                       <img
                         src={channel.logo}
                         alt={channel.name}
@@ -1319,7 +1306,12 @@ export function TVGuidePage() {
                   </td>
                   <td className="px-4 py-3">
                     {hasEPG ? (
-                      <span className="text-green-400 text-xs">Mapped</span>
+                      <button
+                        onClick={() => setMappingChannel(channel)}
+                        className="text-green-400 text-xs hover:text-green-300 hover:underline cursor-pointer transition-colors"
+                      >
+                        Mapped
+                      </button>
                     ) : (
                       <button
                         onClick={() => setMappingChannel(channel)}
@@ -1351,9 +1343,60 @@ export function TVGuidePage() {
   }
 
   // ============================================================
-  // Grid view
+  // Grid view with virtualization
   // ============================================================
+
+  // Virtualization state - track which rows are visible
+  const [visibleRange, setVisibleRange] = useState({ start: 0, end: 50 })
+  const OVERSCAN = 10 // Extra rows above/below viewport
+
+  // Update visible range on scroll
+  const updateVisibleRange = useCallback(() => {
+    const grid = gridContainerRef.current
+    if (!grid) return
+    const scrollTop = grid.scrollTop
+    const viewportHeight = grid.clientHeight
+    const startRow = Math.floor(scrollTop / ROW_HEIGHT)
+    const endRow = Math.ceil((scrollTop + viewportHeight) / ROW_HEIGHT)
+    setVisibleRange({
+      start: Math.max(0, startRow - OVERSCAN),
+      end: Math.min(channels.length, endRow + OVERSCAN),
+    })
+  }, [channels.length])
+
+  // Enhanced scroll handler with virtualization
+  const handleGridScrollVirtualized = useCallback(() => {
+    const grid = gridContainerRef.current
+    if (!grid) return
+    if (timeHeaderRef.current) {
+      timeHeaderRef.current.scrollLeft = grid.scrollLeft
+    }
+    if (channelColumnRef.current) {
+      channelColumnRef.current.scrollTop = grid.scrollTop
+    }
+    updateVisibleRange()
+  }, [updateVisibleRange])
+
+  // Initialize visible range after channels load
+  useEffect(() => {
+    updateVisibleRange()
+  }, [channels.length, updateVisibleRange])
+
+  // CSS background for grid lines (replaces per-row divs)
+  const hourWidth = 60 * PIXELS_PER_MINUTE // px per hour
+  const halfHourWidth = 30 * PIXELS_PER_MINUTE // px per 30min
+  const gridBgStyle = useMemo(() => ({
+    backgroundImage: `
+      repeating-linear-gradient(to right, rgba(75,85,99,0.4) 0px, rgba(75,85,99,0.4) 1px, transparent 1px, transparent ${hourWidth}px),
+      repeating-linear-gradient(to right, rgba(55,65,81,0.25) 0px, rgba(55,65,81,0.25) 1px, transparent 1px, transparent ${halfHourWidth}px)
+    `,
+    backgroundSize: `${hourWidth}px 100%, ${halfHourWidth}px 100%`,
+  }), [hourWidth, halfHourWidth])
+
   const renderGridView = () => {
+    const totalHeight = channels.length * ROW_HEIGHT
+    const visibleChannels = channels.slice(visibleRange.start, visibleRange.end)
+
     return (
       <div className="flex-1 bg-gray-900 rounded-xl overflow-hidden flex flex-col min-h-0">
         {/* Top row: corner spacer + time header */}
@@ -1415,16 +1458,17 @@ export function TVGuidePage() {
             className="flex-shrink-0 overflow-hidden border-r border-gray-700/50 bg-gray-900/80"
             style={{ width: CHANNEL_WIDTH, scrollbarWidth: 'none' }}
           >
-            <div>
-              {channels.map((channel) => {
+            <div style={{ height: totalHeight, position: 'relative' }}>
+              {visibleChannels.map((channel, idx) => {
                 const hasEPG = channelHasEPG(channel)
+                const rowIndex = visibleRange.start + idx
                 return (
                   <div
                     key={channel.id}
-                    className={`flex items-center gap-2 px-2 border-b border-gray-800/80 hover:bg-gray-800 cursor-pointer group ${
+                    className={`absolute left-0 right-0 flex items-center gap-2 px-2 border-b border-gray-800/80 hover:bg-gray-800 cursor-pointer group ${
                       hasEPG ? '' : 'bg-red-950/20'
                     }`}
-                    style={{ height: ROW_HEIGHT }}
+                    style={{ height: ROW_HEIGHT, top: rowIndex * ROW_HEIGHT }}
                     onClick={() => {
                       if (channel.streamUrl) {
                         setWatchingChannel({ channel, program: getCurrentProgram(channel) })
@@ -1432,7 +1476,7 @@ export function TVGuidePage() {
                     }}
                   >
                     {/* Channel logo */}
-                    {channel.logo ? (
+                    {isAbsoluteUrl(channel.logo) ? (
                       <img
                         src={channel.logo}
                         alt={channel.name}
@@ -1450,19 +1494,21 @@ export function TVGuidePage() {
                       <div className="text-xs font-medium text-gray-200 truncate leading-tight">{channel.name}</div>
                       <div className="text-[10px] text-gray-500 flex items-center gap-1 flex-wrap leading-tight">
                         <span>{channel.number}</span>
-                        {!hasEPG && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              setMappingChannel(channel)
-                            }}
-                            className="ml-0.5 px-1 py-0 bg-indigo-600 hover:bg-indigo-700 text-white text-[9px] rounded transition-colors flex items-center gap-0.5"
-                            title="Map to EPG channel"
-                          >
-                            <Link2 className="h-2.5 w-2.5" />
-                            Map
-                          </button>
-                        )}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setMappingChannel(channel)
+                          }}
+                          className={`ml-0.5 px-1 py-0 text-[9px] rounded transition-colors flex items-center gap-0.5 ${
+                            hasEPG
+                              ? 'text-green-400 hover:text-green-300 hover:bg-gray-700'
+                              : 'bg-indigo-600 hover:bg-indigo-700 text-white'
+                          }`}
+                          title={hasEPG ? "Remap EPG channel" : "Map to EPG channel"}
+                        >
+                          <Link2 className="h-2.5 w-2.5" />
+                          {hasEPG ? 'Remap' : 'Map'}
+                        </button>
                       </div>
                     </div>
                     {/* Play indicator on hover */}
@@ -1481,9 +1527,9 @@ export function TVGuidePage() {
           <div
             ref={gridContainerRef}
             className="flex-1 overflow-auto"
-            onScroll={handleGridScroll}
+            onScroll={handleGridScrollVirtualized}
           >
-            <div className="relative" style={{ width: gridWidth, minWidth: '100%' }}>
+            <div className="relative" style={{ width: gridWidth, height: totalHeight, minWidth: '100%', ...gridBgStyle }}>
               {/* Current time line spanning all rows */}
               {isCurrentTimeVisible && (
                 <div
@@ -1491,33 +1537,23 @@ export function TVGuidePage() {
                   style={{
                     left: currentTimeOffset,
                     top: 0,
-                    height: channels.length * ROW_HEIGHT,
+                    height: totalHeight,
                   }}
                 />
               )}
 
-              {/* Channel rows */}
-              {channels.map((channel) => {
+              {/* Only render visible channel rows */}
+              {visibleChannels.map((channel, idx) => {
                 const channelPrograms: Program[] = programsByChannel[channel.channelId] || []
+                const rowIndex = visibleRange.start + idx
+                const rowTop = rowIndex * ROW_HEIGHT
 
                 return (
                   <div
                     key={channel.id}
-                    className="relative border-b border-gray-800/60"
-                    style={{ height: ROW_HEIGHT }}
+                    className="absolute left-0 right-0 border-b border-gray-800/60"
+                    style={{ height: ROW_HEIGHT, top: rowTop }}
                   >
-                    {/* Hour grid lines (subtle) */}
-                    {timeSlots.map((time, idx) => {
-                      const isHour = time.getMinutes() === 0
-                      return (
-                        <div
-                          key={idx}
-                          className={`absolute top-0 bottom-0 ${isHour ? 'border-l border-gray-700/40' : 'border-l border-gray-800/40'}`}
-                          style={{ left: ((time.getTime() - startTime.getTime()) / 60000) * PIXELS_PER_MINUTE }}
-                        />
-                      )
-                    })}
-
                     {/* Programs */}
                     {channelPrograms.map((program) => {
                       const programStart = new Date(program.start)
@@ -1608,27 +1644,29 @@ export function TVGuidePage() {
           </button>
           <div className="h-5 w-px bg-gray-600" />
           <button
-            onClick={goToPreviousDay}
+            onClick={goToPreviousWindow}
             className="p-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
-            title="Previous day"
+            title={`Previous ${hoursWindow} hours`}
           >
             <ChevronLeft className="h-4 w-4" />
           </button>
           <DatePickerDropdown
             selectedDate={selectedDate}
-            onSelectDate={setSelectedDate}
+            onSelectDate={(d) => {
+              d.setMinutes(0, 0, 0)
+              setSelectedDate(d)
+            }}
           />
           <button
-            onClick={goToNextDay}
+            onClick={goToNextWindow}
             className="p-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
-            title="Next day"
+            title={`Next ${hoursWindow} hours`}
           >
             <ChevronRight className="h-4 w-4" />
           </button>
           <button
             onClick={() => {
-              goToToday()
-              // After switching to today, scroll to now
+              goToNow()
               setTimeout(scrollToNow, 200)
             }}
             className="px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition-colors"

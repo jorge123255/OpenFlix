@@ -27,6 +27,47 @@ type OnLaterResponse struct {
 	EndTime     time.Time     `json:"endTime"`
 }
 
+// handleGetOnLaterAll returns all upcoming programs
+// GET /api/onlater/all
+func (s *Server) handleGetOnLaterAll(c *gin.Context) {
+	start, end := s.getOnLaterTimeRange(c)
+
+	var programs []models.Program
+	s.db.Where("start >= ? AND start < ?", start, end).
+		Order("start ASC").
+		Limit(500).
+		Find(&programs)
+
+	items := s.enrichOnLaterItems(programs)
+	c.JSON(http.StatusOK, OnLaterResponse{
+		Items:      items,
+		TotalCount: len(items),
+		StartTime:  start,
+		EndTime:    end,
+	})
+}
+
+// handleGetOnLaterTVShows returns upcoming TV shows (not movies, sports, kids, or news)
+// GET /api/onlater/tvshows
+func (s *Server) handleGetOnLaterTVShows(c *gin.Context) {
+	start, end := s.getOnLaterTimeRange(c)
+
+	var programs []models.Program
+	s.db.Where("is_movie = ? AND is_sports = ? AND is_kids = ? AND is_news = ? AND start >= ? AND start < ?",
+		false, false, false, false, start, end).
+		Order("start ASC").
+		Limit(200).
+		Find(&programs)
+
+	items := s.enrichOnLaterItems(programs)
+	c.JSON(http.StatusOK, OnLaterResponse{
+		Items:      items,
+		TotalCount: len(items),
+		StartTime:  start,
+		EndTime:    end,
+	})
+}
+
 // handleGetOnLaterMovies returns upcoming movies
 // GET /api/onlater/movies
 func (s *Server) handleGetOnLaterMovies(c *gin.Context) {
@@ -323,8 +364,10 @@ func (s *Server) handleGetOnLaterStats(c *gin.Context) {
 	now := time.Now()
 	end := now.Add(7 * 24 * time.Hour)
 
-	var movieCount, sportsCount, kidsCount, newsCount, premiereCount int64
+	var allCount, tvshowsCount, movieCount, sportsCount, kidsCount, newsCount, premiereCount int64
 
+	s.db.Model(&models.Program{}).Where("start >= ? AND start < ?", now, end).Count(&allCount)
+	s.db.Model(&models.Program{}).Where("is_movie = ? AND is_sports = ? AND is_kids = ? AND is_news = ? AND start >= ? AND start < ?", false, false, false, false, now, end).Count(&tvshowsCount)
 	s.db.Model(&models.Program{}).Where("is_movie = ? AND start >= ? AND start < ?", true, now, end).Count(&movieCount)
 	s.db.Model(&models.Program{}).Where("is_sports = ? AND start >= ? AND start < ?", true, now, end).Count(&sportsCount)
 	s.db.Model(&models.Program{}).Where("is_kids = ? AND start >= ? AND start < ?", true, now, end).Count(&kidsCount)
@@ -332,6 +375,8 @@ func (s *Server) handleGetOnLaterStats(c *gin.Context) {
 	s.db.Model(&models.Program{}).Where("(is_premiere = ? OR is_new = ?) AND start >= ? AND start < ?", true, true, now, end).Count(&premiereCount)
 
 	c.JSON(http.StatusOK, gin.H{
+		"all":       allCount,
+		"tvshows":   tvshowsCount,
 		"movies":    movieCount,
 		"sports":    sportsCount,
 		"kids":      kidsCount,

@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   ListOrdered,
@@ -18,16 +18,34 @@ import {
   ChevronLeft,
   Tv,
   Hash,
+  Zap,
+  Eye,
 } from 'lucide-react'
+
+const isAbsoluteUrl = (url?: string) => url ? /^https?:\/\//i.test(url) : false
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
+interface SmartRuleCond {
+  field: string
+  op: string
+  value: string
+}
+
+interface SmartRuleConfig {
+  enabled: boolean
+  conditions: SmartRuleCond[]
+  match: 'any' | 'all'
+}
+
 interface ChannelCollection {
   id: number
   name: string
   description?: string
+  smart?: boolean
+  smartRules?: string
   channelIds: string
   virtualStationIds?: string
 }
@@ -38,6 +56,8 @@ interface LiveChannel {
   name: string
   logo?: string
   group?: string
+  sourceName?: string
+  sourceType?: string
   sourceId: number
   enabled: boolean
 }
@@ -48,6 +68,59 @@ interface VirtualStation {
   number: number
   logo?: string
   enabled: boolean
+}
+
+// ---------------------------------------------------------------------------
+// Constants for smart rules
+// ---------------------------------------------------------------------------
+
+const FIELD_OPTIONS: { value: string; label: string }[] = [
+  { value: 'group', label: 'Group' },
+  { value: 'name', label: 'Channel Name' },
+  { value: 'number', label: 'Channel Number' },
+  { value: 'sourceName', label: 'Source Name' },
+  { value: 'sourceType', label: 'Source Type' },
+  { value: 'hd', label: 'HD' },
+  { value: 'favorite', label: 'Favorite' },
+]
+
+const OP_OPTIONS: Record<string, { value: string; label: string }[]> = {
+  group: [
+    { value: 'eq', label: 'equals' },
+    { value: 'neq', label: 'not equals' },
+    { value: 'contains', label: 'contains' },
+    { value: 'starts_with', label: 'starts with' },
+  ],
+  name: [
+    { value: 'eq', label: 'equals' },
+    { value: 'neq', label: 'not equals' },
+    { value: 'contains', label: 'contains' },
+    { value: 'not_contains', label: 'does not contain' },
+    { value: 'starts_with', label: 'starts with' },
+    { value: 'ends_with', label: 'ends with' },
+  ],
+  number: [
+    { value: 'eq', label: 'equals' },
+    { value: 'gt', label: 'greater than' },
+    { value: 'lt', label: 'less than' },
+    { value: 'gte', label: 'at least' },
+    { value: 'lte', label: 'at most' },
+  ],
+  sourceName: [
+    { value: 'eq', label: 'equals' },
+    { value: 'neq', label: 'not equals' },
+    { value: 'contains', label: 'contains' },
+  ],
+  sourceType: [
+    { value: 'eq', label: 'equals' },
+    { value: 'neq', label: 'not equals' },
+  ],
+  hd: [{ value: 'eq', label: 'is' }],
+  favorite: [{ value: 'eq', label: 'is' }],
+}
+
+function getOpsForField(field: string) {
+  return OP_OPTIONS[field] || OP_OPTIONS['name']
 }
 
 // ---------------------------------------------------------------------------
@@ -115,6 +188,36 @@ async function fetchVirtualStations(): Promise<VirtualStation[]> {
   return data.stations || []
 }
 
+async function previewSmartRules(
+  smartRules: string,
+): Promise<{ count: number; channels: LiveChannel[] }> {
+  const res = await fetch('/dvr/v2/channel-collection-rules/preview', {
+    method: 'POST',
+    headers: authHeaders,
+    body: JSON.stringify({ smartRules }),
+  })
+  if (!res.ok) throw new Error('Failed to preview rules')
+  return res.json()
+}
+
+async function fetchChannelGroups(): Promise<string[]> {
+  const res = await fetch('/dvr/v2/channel-collection-meta/groups', {
+    headers: authHeaders,
+  })
+  if (!res.ok) return []
+  const data = await res.json()
+  return data.groups || []
+}
+
+async function fetchChannelSources(): Promise<string[]> {
+  const res = await fetch('/dvr/v2/channel-collection-meta/sources', {
+    headers: authHeaders,
+  })
+  if (!res.ok) return []
+  const data = await res.json()
+  return data.sources || []
+}
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -134,6 +237,357 @@ function serializeIds(ids: number[]): string {
 function getM3UExportUrl(id: number): string {
   const token = localStorage.getItem('openflix_token') || ''
   return `/dvr/v2/channel-collections/${id}/export.m3u?X-Plex-Token=${token}`
+}
+
+function parseSmartRules(json?: string): SmartRuleConfig {
+  if (!json) {
+    return { enabled: true, conditions: [], match: 'any' }
+  }
+  try {
+    return JSON.parse(json) as SmartRuleConfig
+  } catch {
+    return { enabled: true, conditions: [], match: 'any' }
+  }
+}
+
+function emptyCondition(): SmartRuleCond {
+  return { field: 'group', op: 'eq', value: '' }
+}
+
+// ---------------------------------------------------------------------------
+// SmartRulesBuilder
+// ---------------------------------------------------------------------------
+
+function SmartRulesBuilder({
+  config,
+  onChange,
+}: {
+  config: SmartRuleConfig
+  onChange: (cfg: SmartRuleConfig) => void
+}) {
+  const { data: groups } = useQuery({
+    queryKey: ['channel-collection-groups'],
+    queryFn: fetchChannelGroups,
+  })
+
+  const { data: sources } = useQuery({
+    queryKey: ['channel-collection-sources'],
+    queryFn: fetchChannelSources,
+  })
+
+  const [previewResult, setPreviewResult] = useState<{
+    count: number
+    channels: LiveChannel[]
+  } | null>(null)
+  const [previewing, setPreviewing] = useState(false)
+
+  const addCondition = () => {
+    onChange({
+      ...config,
+      conditions: [...config.conditions, emptyCondition()],
+    })
+  }
+
+  const removeCondition = (index: number) => {
+    onChange({
+      ...config,
+      conditions: config.conditions.filter((_, i) => i !== index),
+    })
+  }
+
+  const updateCondition = (
+    index: number,
+    updates: Partial<SmartRuleCond>,
+  ) => {
+    const next = config.conditions.map((c, i) =>
+      i === index ? { ...c, ...updates } : c,
+    )
+    // Reset op and value when field changes
+    if (updates.field !== undefined) {
+      const ops = getOpsForField(updates.field)
+      next[index].op = ops[0]?.value || 'eq'
+      if (updates.field === 'hd' || updates.field === 'favorite') {
+        next[index].value = 'true'
+      } else {
+        next[index].value = ''
+      }
+    }
+    onChange({ ...config, conditions: next })
+    setPreviewResult(null)
+  }
+
+  const handlePreview = useCallback(async () => {
+    if (config.conditions.length === 0) return
+    setPreviewing(true)
+    setPreviewResult(null)
+    try {
+      const rulesJSON = JSON.stringify(config)
+      const result = await previewSmartRules(rulesJSON)
+      setPreviewResult(result)
+    } catch {
+      // ignore
+    } finally {
+      setPreviewing(false)
+    }
+  }, [config])
+
+  const renderValueInput = (cond: SmartRuleCond, index: number) => {
+    // Boolean fields
+    if (cond.field === 'hd' || cond.field === 'favorite') {
+      return (
+        <select
+          value={cond.value}
+          onChange={(e) => updateCondition(index, { value: e.target.value })}
+          className="flex-1 min-w-0 px-2 py-1.5 bg-gray-700 border border-gray-600 rounded-lg text-white text-xs focus:outline-none focus:border-indigo-500"
+        >
+          <option value="true">Yes</option>
+          <option value="false">No</option>
+        </select>
+      )
+    }
+
+    // Group field with datalist suggestions
+    if (cond.field === 'group' && groups && groups.length > 0) {
+      return (
+        <>
+          <input
+            list={`group-options-${index}`}
+            type="text"
+            value={cond.value}
+            onChange={(e) =>
+              updateCondition(index, { value: e.target.value })
+            }
+            placeholder="e.g. Sports"
+            className="flex-1 min-w-0 px-2 py-1.5 bg-gray-700 border border-gray-600 rounded-lg text-white text-xs placeholder-gray-500 focus:outline-none focus:border-indigo-500"
+          />
+          <datalist id={`group-options-${index}`}>
+            {groups.map((g) => (
+              <option key={g} value={g} />
+            ))}
+          </datalist>
+        </>
+      )
+    }
+
+    // Source name field with datalist suggestions
+    if (cond.field === 'sourceName' && sources && sources.length > 0) {
+      return (
+        <>
+          <input
+            list={`source-options-${index}`}
+            type="text"
+            value={cond.value}
+            onChange={(e) =>
+              updateCondition(index, { value: e.target.value })
+            }
+            placeholder="e.g. My IPTV"
+            className="flex-1 min-w-0 px-2 py-1.5 bg-gray-700 border border-gray-600 rounded-lg text-white text-xs placeholder-gray-500 focus:outline-none focus:border-indigo-500"
+          />
+          <datalist id={`source-options-${index}`}>
+            {sources.map((s) => (
+              <option key={s} value={s} />
+            ))}
+          </datalist>
+        </>
+      )
+    }
+
+    // Source type dropdown
+    if (cond.field === 'sourceType') {
+      return (
+        <select
+          value={cond.value}
+          onChange={(e) => updateCondition(index, { value: e.target.value })}
+          className="flex-1 min-w-0 px-2 py-1.5 bg-gray-700 border border-gray-600 rounded-lg text-white text-xs focus:outline-none focus:border-indigo-500"
+        >
+          <option value="">Select...</option>
+          <option value="m3u">M3U</option>
+          <option value="xtream">Xtream</option>
+        </select>
+      )
+    }
+
+    // Default text input
+    return (
+      <input
+        type={cond.field === 'number' ? 'number' : 'text'}
+        value={cond.value}
+        onChange={(e) => updateCondition(index, { value: e.target.value })}
+        placeholder={
+          cond.field === 'number' ? 'e.g. 100' : 'e.g. ESPN'
+        }
+        className="flex-1 min-w-0 px-2 py-1.5 bg-gray-700 border border-gray-600 rounded-lg text-white text-xs placeholder-gray-500 focus:outline-none focus:border-indigo-500"
+      />
+    )
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Match mode */}
+      <div className="flex items-center gap-4">
+        <span className="text-xs text-gray-400">Match channels where:</span>
+        <div className="flex items-center gap-2">
+          <label className="flex items-center gap-1.5 cursor-pointer">
+            <input
+              type="radio"
+              name="matchMode"
+              checked={config.match === 'any'}
+              onChange={() => {
+                onChange({ ...config, match: 'any' })
+                setPreviewResult(null)
+              }}
+              className="text-indigo-500 focus:ring-indigo-500 bg-gray-700 border-gray-600"
+            />
+            <span className="text-xs text-gray-300">Any condition</span>
+          </label>
+          <label className="flex items-center gap-1.5 cursor-pointer">
+            <input
+              type="radio"
+              name="matchMode"
+              checked={config.match === 'all'}
+              onChange={() => {
+                onChange({ ...config, match: 'all' })
+                setPreviewResult(null)
+              }}
+              className="text-indigo-500 focus:ring-indigo-500 bg-gray-700 border-gray-600"
+            />
+            <span className="text-xs text-gray-300">All conditions</span>
+          </label>
+        </div>
+      </div>
+
+      {/* Conditions */}
+      <div className="space-y-2">
+        {config.conditions.map((cond, i) => (
+          <div key={i} className="flex items-center gap-2">
+            {/* Field dropdown */}
+            <select
+              value={cond.field}
+              onChange={(e) => updateCondition(i, { field: e.target.value })}
+              className="w-36 flex-shrink-0 px-2 py-1.5 bg-gray-700 border border-gray-600 rounded-lg text-white text-xs focus:outline-none focus:border-indigo-500"
+            >
+              {FIELD_OPTIONS.map((f) => (
+                <option key={f.value} value={f.value}>
+                  {f.label}
+                </option>
+              ))}
+            </select>
+
+            {/* Operator dropdown */}
+            <select
+              value={cond.op}
+              onChange={(e) => updateCondition(i, { op: e.target.value })}
+              className="w-32 flex-shrink-0 px-2 py-1.5 bg-gray-700 border border-gray-600 rounded-lg text-white text-xs focus:outline-none focus:border-indigo-500"
+            >
+              {getOpsForField(cond.field).map((op) => (
+                <option key={op.value} value={op.value}>
+                  {op.label}
+                </option>
+              ))}
+            </select>
+
+            {/* Value input */}
+            {renderValueInput(cond, i)}
+
+            {/* Remove button */}
+            <button
+              type="button"
+              onClick={() => removeCondition(i)}
+              className="p-1.5 text-gray-500 hover:text-red-400 rounded-lg hover:bg-gray-700 transition-colors flex-shrink-0"
+              title="Remove condition"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        ))}
+      </div>
+
+      {/* Add condition + Preview */}
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          onClick={addCondition}
+          className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-indigo-400 hover:text-indigo-300 border border-indigo-500/30 hover:border-indigo-500/50 rounded-lg transition-colors"
+        >
+          <Plus className="w-3.5 h-3.5" />
+          Add Condition
+        </button>
+
+        {config.conditions.length > 0 && (
+          <button
+            type="button"
+            onClick={handlePreview}
+            disabled={previewing}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-emerald-400 hover:text-emerald-300 border border-emerald-500/30 hover:border-emerald-500/50 rounded-lg transition-colors disabled:opacity-50"
+          >
+            {previewing ? (
+              <Loader className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <Eye className="w-3.5 h-3.5" />
+            )}
+            Preview
+          </button>
+        )}
+
+        {previewResult !== null && (
+          <span className="text-xs text-gray-400">
+            {previewResult.count === 0 ? (
+              <span className="text-amber-400">No channels match</span>
+            ) : (
+              <>
+                <span className="text-emerald-400 font-medium">
+                  {previewResult.count}
+                </span>{' '}
+                channel{previewResult.count !== 1 ? 's' : ''} matched
+              </>
+            )}
+          </span>
+        )}
+      </div>
+
+      {/* Preview results */}
+      {previewResult && previewResult.channels.length > 0 && (
+        <div className="bg-gray-700/30 border border-gray-600 rounded-lg max-h-48 overflow-y-auto">
+          {previewResult.channels.map((ch) => (
+            <div
+              key={ch.id}
+              className="flex items-center gap-2 px-3 py-1.5 border-b border-gray-700/50 last:border-0"
+            >
+              {isAbsoluteUrl(ch.logo) ? (
+                <img
+                  src={ch.logo}
+                  alt=""
+                  className="w-5 h-5 rounded object-contain flex-shrink-0 bg-gray-800"
+                />
+              ) : (
+                <div className="w-5 h-5 rounded bg-gray-800 flex items-center justify-center flex-shrink-0">
+                  <Tv className="w-2.5 h-2.5 text-gray-600" />
+                </div>
+              )}
+              <span className="text-xs text-gray-500 font-mono w-8 text-right flex-shrink-0">
+                {ch.number}
+              </span>
+              <span className="text-sm text-gray-300 truncate flex-1">
+                {ch.name}
+              </span>
+              {ch.group && (
+                <span className="text-xs text-gray-500 truncate max-w-24">
+                  {ch.group}
+                </span>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {config.conditions.length === 0 && (
+        <p className="text-xs text-gray-500">
+          Add conditions to automatically populate this lineup based on channel
+          properties like group, name, or source.
+        </p>
+      )}
+    </div>
+  )
 }
 
 // ---------------------------------------------------------------------------
@@ -260,7 +714,7 @@ function ChannelPicker({
                 onClick={() => addChannel(ch.id)}
                 className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-gray-700 transition-colors border-b border-gray-700/50 last:border-0"
               >
-                {ch.logo ? (
+                {isAbsoluteUrl(ch.logo) ? (
                   <img
                     src={ch.logo}
                     alt=""
@@ -327,7 +781,7 @@ function ChannelPicker({
                   <span className="text-xs text-gray-500 font-mono w-5 text-right flex-shrink-0">
                     {realIdx + 1}
                   </span>
-                  {ch.logo ? (
+                  {isAbsoluteUrl(ch.logo) ? (
                     <img
                       src={ch.logo}
                       alt=""
@@ -395,6 +849,10 @@ function ChannelCollectionModal({
 
   const [name, setName] = useState(collection?.name || '')
   const [description, setDescription] = useState(collection?.description || '')
+  const [isSmart, setIsSmart] = useState(collection?.smart || false)
+  const [smartRuleConfig, setSmartRuleConfig] = useState<SmartRuleConfig>(
+    parseSmartRules(collection?.smartRules),
+  )
   const [channelIds, setChannelIds] = useState<number[]>(
     parseIds(collection?.channelIds),
   )
@@ -443,7 +901,9 @@ function ChannelCollectionModal({
     const body: Partial<ChannelCollection> = {
       name,
       description: description || undefined,
-      channelIds: serializeIds(channelIds),
+      smart: isSmart,
+      smartRules: isSmart ? JSON.stringify(smartRuleConfig) : undefined,
+      channelIds: isSmart ? '' : serializeIds(channelIds),
       virtualStationIds: serializeIds(virtualStationIds) || undefined,
     }
 
@@ -501,27 +961,72 @@ function ChannelCollectionModal({
             </div>
           </div>
 
-          {/* Channel Picker */}
+          {/* Mode Toggle: Manual vs Smart */}
           <div>
-            <h3 className="text-sm font-medium text-gray-300 mb-3">
-              Channels
-            </h3>
-            {loadingChannels ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader className="w-6 h-6 text-indigo-500 animate-spin" />
-              </div>
-            ) : allChannels ? (
-              <ChannelPicker
-                allChannels={allChannels}
-                selectedIds={channelIds}
-                onChange={setChannelIds}
-              />
-            ) : (
-              <p className="text-gray-500 text-sm">
-                No channels available
-              </p>
-            )}
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Lineup Type
+            </label>
+            <div className="flex rounded-lg border border-gray-600 overflow-hidden">
+              <button
+                type="button"
+                onClick={() => setIsSmart(false)}
+                className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors ${
+                  !isSmart
+                    ? 'bg-indigo-600 text-white'
+                    : 'bg-gray-700 text-gray-400 hover:text-gray-300'
+                }`}
+              >
+                <ListOrdered className="w-4 h-4" />
+                Manual
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsSmart(true)}
+                className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors ${
+                  isSmart
+                    ? 'bg-indigo-600 text-white'
+                    : 'bg-gray-700 text-gray-400 hover:text-gray-300'
+                }`}
+              >
+                <Zap className="w-4 h-4" />
+                Smart (Auto-populate)
+              </button>
+            </div>
           </div>
+
+          {/* Smart Rules or Manual Channel Picker */}
+          {isSmart ? (
+            <div>
+              <h3 className="text-sm font-medium text-gray-300 mb-3">
+                Auto-populate Rules
+              </h3>
+              <SmartRulesBuilder
+                config={smartRuleConfig}
+                onChange={setSmartRuleConfig}
+              />
+            </div>
+          ) : (
+            <div>
+              <h3 className="text-sm font-medium text-gray-300 mb-3">
+                Channels
+              </h3>
+              {loadingChannels ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader className="w-6 h-6 text-indigo-500 animate-spin" />
+                </div>
+              ) : allChannels ? (
+                <ChannelPicker
+                  allChannels={allChannels}
+                  selectedIds={channelIds}
+                  onChange={setChannelIds}
+                />
+              ) : (
+                <p className="text-gray-500 text-sm">
+                  No channels available
+                </p>
+              )}
+            </div>
+          )}
 
           {/* Virtual Stations */}
           {allStations && allStations.length > 0 && (
@@ -642,35 +1147,88 @@ function LineupCard({
     }
   }
 
+  // Parse smart rules to show summary
+  const smartSummary = useMemo(() => {
+    if (!lineup.smart || !lineup.smartRules) return null
+    try {
+      const cfg = JSON.parse(lineup.smartRules) as SmartRuleConfig
+      if (!cfg.conditions || cfg.conditions.length === 0) return 'No rules defined'
+      const parts = cfg.conditions.map((c) => {
+        const fieldLabel =
+          FIELD_OPTIONS.find((f) => f.value === c.field)?.label || c.field
+        return `${fieldLabel} ${c.op} "${c.value}"`
+      })
+      const joiner = cfg.match === 'all' ? ' AND ' : ' OR '
+      return parts.join(joiner)
+    } catch {
+      return 'Smart rules'
+    }
+  }, [lineup.smart, lineup.smartRules])
+
   return (
     <div className="bg-gray-800 rounded-xl p-5 border border-gray-700 hover:border-gray-600 transition-colors">
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-start gap-4 flex-1 min-w-0">
-          <div className="flex-shrink-0 w-12 h-12 bg-indigo-600/20 rounded-xl flex items-center justify-center">
-            <ListOrdered className="w-6 h-6 text-indigo-400" />
+          <div
+            className={`flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center ${
+              lineup.smart
+                ? 'bg-amber-600/20'
+                : 'bg-indigo-600/20'
+            }`}
+          >
+            {lineup.smart ? (
+              <Zap className="w-6 h-6 text-amber-400" />
+            ) : (
+              <ListOrdered className="w-6 h-6 text-indigo-400" />
+            )}
           </div>
           <div className="flex-1 min-w-0">
-            <h3 className="text-white font-semibold truncate">{lineup.name}</h3>
+            <div className="flex items-center gap-2">
+              <h3 className="text-white font-semibold truncate">
+                {lineup.name}
+              </h3>
+              {lineup.smart && (
+                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-medium bg-amber-500/20 text-amber-400 rounded">
+                  <Zap className="w-2.5 h-2.5" />
+                  SMART
+                </span>
+              )}
+            </div>
             {lineup.description && (
               <p className="text-sm text-gray-400 line-clamp-1 mt-0.5">
                 {lineup.description}
               </p>
             )}
+            {smartSummary && (
+              <p className="text-xs text-amber-400/70 line-clamp-1 mt-0.5 font-mono">
+                {smartSummary}
+              </p>
+            )}
             <div className="flex flex-wrap items-center gap-3 mt-2 text-xs text-gray-500">
-              <span className="flex items-center gap-1">
-                <Tv className="w-3 h-3" />
-                {channelCount} channels
-              </span>
+              {!lineup.smart && (
+                <span className="flex items-center gap-1">
+                  <Tv className="w-3 h-3" />
+                  {channelCount} channels
+                </span>
+              )}
+              {lineup.smart && (
+                <span className="flex items-center gap-1">
+                  <Zap className="w-3 h-3" />
+                  Auto-populated
+                </span>
+              )}
               {virtualCount > 0 && (
                 <span className="flex items-center gap-1">
                   <Radio className="w-3 h-3" />
                   {virtualCount} virtual
                 </span>
               )}
-              <span className="flex items-center gap-1">
-                <Hash className="w-3 h-3" />
-                {totalCount} total
-              </span>
+              {!lineup.smart && (
+                <span className="flex items-center gap-1">
+                  <Hash className="w-3 h-3" />
+                  {totalCount} total
+                </span>
+              )}
             </div>
           </div>
         </div>

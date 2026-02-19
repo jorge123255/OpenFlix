@@ -325,7 +325,11 @@ type ChannelCollection struct {
 	Name        string `gorm:"size:255" json:"name"`
 	Description string `gorm:"type:text" json:"description,omitempty"`
 
-	// Channel list (ordered)
+	// Smart (auto-populate) vs manual mode
+	Smart      bool   `gorm:"default:false" json:"smart"`
+	SmartRules string `gorm:"type:text" json:"smartRules,omitempty"` // JSON: SmartRuleConfig
+
+	// Channel list (ordered) - used for manual mode, also caches smart results
 	ChannelIDs string `gorm:"type:text" json:"channelIds"` // Comma-separated, ordered
 
 	// Include virtual stations
@@ -333,6 +337,20 @@ type ChannelCollection struct {
 
 	CreatedAt time.Time `json:"createdAt"`
 	UpdatedAt time.Time `json:"updatedAt"`
+}
+
+// SmartRuleConfig defines the auto-population rules for a smart channel collection
+type SmartRuleConfig struct {
+	Enabled    bool            `json:"enabled"`
+	Conditions []SmartRuleCond `json:"conditions"`
+	Match      string          `json:"match"` // "any" or "all"
+}
+
+// SmartRuleCond is a single condition in a smart rule
+type SmartRuleCond struct {
+	Field string `json:"field"` // group, name, number, hd, source, sourceType
+	Op    string `json:"op"`    // eq, neq, contains, starts_with, gt, lt
+	Value string `json:"value"`
 }
 
 // ========== Bookmarks & Clips ==========

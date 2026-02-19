@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
-import { Tv, Plus, Trash2, RefreshCw, FileText, Radio, Search, Edit, X, Check, Settings, MapPin, Zap, AlertCircle, Film, Monitor, Download, Clock, Archive, Layers, ArrowUp, ArrowDown, ChevronDown, ChevronRight, Wand2, Upload } from 'lucide-react'
+import { Tv, Plus, Trash2, RefreshCw, FileText, Radio, Search, Edit, X, Check, Settings, MapPin, Zap, AlertCircle, Film, Monitor, Download, Clock, Archive, Layers, ArrowUp, ArrowDown, ChevronDown, ChevronRight, Wand2, Upload, List, Copy, Star } from 'lucide-react'
 import { EPGSourceCard } from '../components/EPGSourceCard'
 import {
   useM3USources,
@@ -14,6 +14,8 @@ import {
   useRefreshEPG,
 } from '../hooks/useLiveTV'
 import { api, type Provider, type ProviderGroup } from '../api/client'
+
+const isAbsoluteUrl = (url?: string) => url ? /^https?:\/\//i.test(url) : false
 
 interface Channel {
   id: number
@@ -2250,7 +2252,7 @@ function ChannelGroupCard({
               <ChevronRight className="h-5 w-5" />
             )}
           </button>
-          {group.logo ? (
+          {isAbsoluteUrl(group.logo) ? (
             <img
               src={group.logo}
               alt={group.name}
@@ -2315,7 +2317,7 @@ function ChannelGroupCard({
                       <span className="text-gray-500 text-sm font-mono w-6">
                         {index + 1}.
                       </span>
-                      {member.channel?.logo ? (
+                      {isAbsoluteUrl(member.channel?.logo) ? (
                         <img
                           src={member.channel.logo}
                           alt={member.channel.name}
@@ -2405,7 +2407,7 @@ function ChannelGroupCard({
                       }}
                       className="w-full flex items-center gap-3 p-2 hover:bg-gray-700 rounded text-left"
                     >
-                      {channel.logo ? (
+                      {isAbsoluteUrl(channel.logo) ? (
                         <img
                           src={channel.logo}
                           alt={channel.name}
@@ -2621,7 +2623,7 @@ function AutoDetectModal({
             <div key={index} className="bg-gray-750 rounded-lg p-4">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-3">
-                  {group.channels[0]?.logo ? (
+                  {isAbsoluteUrl(group.channels[0]?.logo) ? (
                     <img
                       src={group.channels[0].logo}
                       alt={group.name}
@@ -2683,6 +2685,351 @@ function AutoDetectModal({
   )
 }
 
+function ExportURLsSection() {
+  const [copiedField, setCopiedField] = useState<'m3u' | 'epg' | null>(null)
+
+  const m3uUrl = `${window.location.origin}/api/livetv/export.m3u?enabled=true`
+  const epgUrl = `${window.location.origin}/api/livetv/export.xml`
+
+  const handleCopy = async (url: string, field: 'm3u' | 'epg') => {
+    try {
+      await navigator.clipboard.writeText(url)
+      setCopiedField(field)
+      setTimeout(() => setCopiedField(null), 2000)
+    } catch {
+      // Fallback for older browsers
+      const textarea = document.createElement('textarea')
+      textarea.value = url
+      document.body.appendChild(textarea)
+      textarea.select()
+      document.execCommand('copy')
+      document.body.removeChild(textarea)
+      setCopiedField(field)
+      setTimeout(() => setCopiedField(null), 2000)
+    }
+  }
+
+  return (
+    <div className="mt-8">
+      <h2 className="text-lg font-semibold text-white flex items-center gap-2 mb-4">
+        <Download className="h-5 w-5 text-green-400" />
+        Export URLs
+      </h2>
+      <div className="bg-gray-800 rounded-xl p-6">
+        <p className="text-sm text-gray-400 mb-4">
+          Use these URLs in other apps to access your channel lineup and program guide.
+        </p>
+
+        {/* M3U Playlist URL */}
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-300 mb-2">M3U Playlist URL</label>
+          <div className="flex items-center gap-2">
+            <div className="flex-1 px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-300 text-sm font-mono truncate">
+              {m3uUrl}
+            </div>
+            <button
+              onClick={() => handleCopy(m3uUrl, 'm3u')}
+              className="flex items-center gap-1.5 px-3 py-2 bg-gray-700 hover:bg-gray-600 border border-gray-600 text-white text-sm rounded-lg whitespace-nowrap"
+            >
+              <Copy className="h-4 w-4" />
+              {copiedField === 'm3u' ? 'Copied!' : 'Copy'}
+            </button>
+          </div>
+        </div>
+
+        {/* EPG Guide URL */}
+        <div>
+          <label className="block text-sm font-medium text-gray-300 mb-2">EPG Guide URL</label>
+          <div className="flex items-center gap-2">
+            <div className="flex-1 px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-300 text-sm font-mono truncate">
+              {epgUrl}
+            </div>
+            <button
+              onClick={() => handleCopy(epgUrl, 'epg')}
+              className="flex items-center gap-1.5 px-3 py-2 bg-gray-700 hover:bg-gray-600 border border-gray-600 text-white text-sm rounded-lg whitespace-nowrap"
+            >
+              <Copy className="h-4 w-4" />
+              {copiedField === 'epg' ? 'Copied!' : 'Copy'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function ManageLineupModal({
+  source,
+  onClose,
+}: {
+  source: { id: number; name: string }
+  onClose: () => void
+}) {
+  const queryClient = useQueryClient()
+  const [search, setSearch] = useState('')
+  const [channels, setChannels] = useState<Channel[]>([])
+  const [changes, setChanges] = useState<Record<number, Partial<Channel>>>({})
+  const [isLoading, setIsLoading] = useState(true)
+  const [isSaving, setIsSaving] = useState(false)
+  const [error, setError] = useState('')
+
+  // Fetch channels for this source
+  React.useEffect(() => {
+    const fetchChannels = async () => {
+      setIsLoading(true)
+      try {
+        const response = await fetch(`/livetv/channels?sourceId=${source.id}`, {
+          headers: { 'X-Plex-Token': api.getToken() || '' },
+        })
+        const data = await response.json()
+        setChannels(data.channels || [])
+      } catch (err: any) {
+        setError(err.message || 'Failed to load channels')
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    fetchChannels()
+  }, [source.id])
+
+  const getChannelValue = (channel: Channel, field: keyof Channel) => {
+    const changed = changes[channel.id]
+    if (changed && field in changed) return changed[field as keyof typeof changed]
+    return channel[field]
+  }
+
+  const updateField = (channelId: number, field: string, value: any) => {
+    setChanges((prev) => ({
+      ...prev,
+      [channelId]: {
+        ...prev[channelId],
+        [field]: value,
+      },
+    }))
+  }
+
+  const filteredChannels = channels.filter((ch) => {
+    if (!search) return true
+    const q = search.toLowerCase()
+    return (
+      ch.name.toLowerCase().includes(q) ||
+      ch.channelId.toLowerCase().includes(q) ||
+      String(ch.number).includes(q)
+    )
+  })
+
+  const handleSave = async () => {
+    const changedIds = Object.keys(changes).map(Number)
+    if (changedIds.length === 0) {
+      onClose()
+      return
+    }
+
+    setIsSaving(true)
+    setError('')
+    try {
+      for (const id of changedIds) {
+        const update = changes[id]
+        await fetch(`/livetv/channels/${id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Plex-Token': api.getToken() || '',
+          },
+          body: JSON.stringify(update),
+        })
+      }
+      queryClient.invalidateQueries({ queryKey: ['channels'] })
+      queryClient.invalidateQueries({ queryKey: ['m3uSources'] })
+      onClose()
+    } catch (err: any) {
+      setError(err.message || 'Failed to save changes')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const changedCount = Object.keys(changes).length
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="bg-gray-800 rounded-xl w-full max-w-4xl max-h-[90vh] flex flex-col">
+        {/* Header */}
+        <div className="p-6 border-b border-gray-700">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+              <List className="h-5 w-5 text-indigo-400" />
+              Manage Lineup — {source.name}
+            </h2>
+            <button
+              onClick={onClose}
+              className="p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+          {/* Search */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search by name, ID, or number..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400"
+            />
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto p-6">
+          {error && (
+            <div className="mb-4 p-3 bg-red-900/30 border border-red-700 rounded-lg text-red-400 text-sm">
+              {error}
+            </div>
+          )}
+
+          {isLoading ? (
+            <div className="text-gray-400 text-center py-8">Loading channels...</div>
+          ) : filteredChannels.length === 0 ? (
+            <div className="text-gray-400 text-center py-8">
+              {search ? 'No channels match your search' : 'No channels found for this source'}
+            </div>
+          ) : (
+            <table className="w-full">
+              <thead className="sticky top-0 bg-gray-800 border-b border-gray-700">
+                <tr>
+                  <th className="text-left p-3 text-gray-400 text-sm font-medium w-20">Enabled</th>
+                  <th className="text-left p-3 text-gray-400 text-sm font-medium w-24">Source #</th>
+                  <th className="text-left p-3 text-gray-400 text-sm font-medium">Channel</th>
+                  <th className="text-left p-3 text-gray-400 text-sm font-medium w-28">Output #</th>
+                  <th className="text-left p-3 text-gray-400 text-sm font-medium w-20">Favorite</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-700">
+                {filteredChannels.map((channel) => {
+                  const enabled = getChannelValue(channel, 'enabled') as boolean
+                  const number = getChannelValue(channel, 'number') as number
+                  const hasChanges = !!changes[channel.id]
+
+                  return (
+                    <tr
+                      key={channel.id}
+                      className={`${!enabled ? 'opacity-50' : ''} ${hasChanges ? 'bg-gray-750' : ''}`}
+                    >
+                      {/* Enabled checkbox */}
+                      <td className="p-3">
+                        <button
+                          onClick={() => updateField(channel.id, 'enabled', !enabled)}
+                          className={`w-5 h-5 rounded border flex items-center justify-center ${
+                            enabled
+                              ? 'bg-indigo-600 border-indigo-600'
+                              : 'border-gray-500 hover:border-gray-400'
+                          }`}
+                        >
+                          {enabled && <Check className="h-3 w-3 text-white" />}
+                        </button>
+                      </td>
+
+                      {/* Source # (original, read-only) */}
+                      <td className="p-3 text-gray-400 text-sm font-mono">
+                        {channel.channelId}
+                      </td>
+
+                      {/* Channel Name + Logo */}
+                      <td className="p-3">
+                        <div className="flex items-center gap-3">
+                          {isAbsoluteUrl(channel.logo) ? (
+                            <img
+                              src={channel.logo}
+                              alt={channel.name}
+                              className="w-8 h-8 object-contain bg-gray-700 rounded flex-shrink-0"
+                            />
+                          ) : (
+                            <div className="w-8 h-8 bg-gray-700 rounded flex items-center justify-center flex-shrink-0">
+                              <Radio className="h-4 w-4 text-gray-500" />
+                            </div>
+                          )}
+                          <span className="text-white text-sm">{channel.name}</span>
+                        </div>
+                      </td>
+
+                      {/* Output # (editable) */}
+                      <td className="p-3">
+                        <input
+                          type="number"
+                          value={number}
+                          onChange={(e) =>
+                            updateField(channel.id, 'number', parseInt(e.target.value) || 0)
+                          }
+                          className="w-20 px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-sm text-center"
+                        />
+                      </td>
+
+                      {/* Favorite star */}
+                      <td className="p-3">
+                        <button
+                          onClick={() => {
+                            const current = getChannelValue(channel, 'group') as string | undefined
+                            const isFav = current === 'Favorites'
+                            updateField(
+                              channel.id,
+                              'group',
+                              isFav ? (channel.group === 'Favorites' ? '' : channel.group) : 'Favorites'
+                            )
+                          }}
+                          className="p-1"
+                        >
+                          <Star
+                            className={`h-5 w-5 ${
+                              (getChannelValue(channel, 'group') as string) === 'Favorites'
+                                ? 'text-yellow-400 fill-yellow-400'
+                                : 'text-gray-500 hover:text-yellow-400'
+                            }`}
+                          />
+                        </button>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="p-6 border-t border-gray-700 flex items-center justify-between">
+          <div className="text-sm text-gray-400">
+            {channels.length} channels{changedCount > 0 && ` • ${changedCount} modified`}
+          </div>
+          <div className="flex gap-3">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSave}
+              disabled={isSaving || changedCount === 0}
+              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-600 disabled:text-gray-400 text-white rounded-lg flex items-center gap-2"
+            >
+              {isSaving ? (
+                <>
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                `Save All${changedCount > 0 ? ` (${changedCount})` : ''}`
+              )}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export function LiveTVPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
@@ -2698,6 +3045,7 @@ export function LiveTVPage() {
   const [editingChannel, setEditingChannel] = useState<Channel | null>(null)
   const [showMapNumbersModal, setShowMapNumbersModal] = useState(false)
   const [editingM3USource, setEditingM3USource] = useState<any | null>(null)
+  const [managingLineupSource, setManagingLineupSource] = useState<{ id: number; name: string } | null>(null)
   const [editingXtreamSource, setEditingXtreamSource] = useState<any | null>(null)
   const [editingEPGSource, setEditingEPGSource] = useState<any | null>(null)
   const [refreshingEPGId, setRefreshingEPGId] = useState<number | null>(null)
@@ -3041,6 +3389,13 @@ export function LiveTVPage() {
                     </div>
                     <div className="flex items-center gap-2">
                       <button
+                        onClick={() => setManagingLineupSource({ id: source.id, name: source.name })}
+                        className="p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg"
+                        title="Manage Lineup"
+                      >
+                        <List className="h-4 w-4" />
+                      </button>
+                      <button
                         onClick={() => setEditingM3USource(source)}
                         className="p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg"
                         title="Edit"
@@ -3122,6 +3477,13 @@ export function LiveTVPage() {
                         )}
                       </div>
                       <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => setManagingLineupSource({ id: source.id, name: source.name })}
+                          className="p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg"
+                          title="Manage Lineup"
+                        >
+                          <List className="h-4 w-4" />
+                        </button>
                         <button
                           onClick={() => setEditingXtreamSource(source)}
                           className="p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg"
@@ -3256,6 +3618,9 @@ export function LiveTVPage() {
               </div>
             )}
           </div>
+
+          {/* Export URLs */}
+          <ExportURLsSection />
         </>
       )}
 
@@ -3327,7 +3692,7 @@ export function LiveTVPage() {
                         <td className="p-3 text-gray-400 text-sm">{channel.number}</td>
                         <td className="p-3">
                           <div className="flex items-center gap-3">
-                            {channel.logo ? (
+                            {isAbsoluteUrl(channel.logo) ? (
                               <img
                                 src={channel.logo}
                                 alt={channel.name}
@@ -3495,6 +3860,13 @@ export function LiveTVPage() {
         <EditM3USourceModal
           source={editingM3USource}
           onClose={() => setEditingM3USource(null)}
+        />
+      )}
+
+      {managingLineupSource && (
+        <ManageLineupModal
+          source={managingLineupSource}
+          onClose={() => setManagingLineupSource(null)}
         />
       )}
 

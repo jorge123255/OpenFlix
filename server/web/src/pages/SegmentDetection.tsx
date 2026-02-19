@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ScanLine, Layers, Trash2, Plus, Loader, AlertCircle, Play, Pencil } from 'lucide-react'
+import { ScanLine, Layers, Trash2, Plus, Loader, AlertCircle, Play, Pencil, Download } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 
 const authFetch = async (url: string, options?: RequestInit) => {
@@ -481,18 +481,44 @@ export function SegmentDetectionPage() {
                   {segments.length} segment{segments.length !== 1 ? 's' : ''} detected
                 </span>
                 {segments.length > 0 && (
-                  <button
-                    onClick={() => {
-                      if (confirm('Delete all segments for this file?')) {
-                        deleteAllSegments.mutate(activeFileId)
-                      }
-                    }}
-                    disabled={deleteAllSegments.isPending}
-                    className="flex items-center gap-1 px-3 py-1 text-sm text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-colors"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                    Clear All
-                  </button>
+                  <>
+                    <button
+                      onClick={() => {
+                        const token = localStorage.getItem('openflix_token') || ''
+                        const url = `/dvr/v2/files/${activeFileId}/export.edl?types=commercial,intro,outro,credits&X-Plex-Token=${token}`
+                        window.open(url, '_blank')
+                      }}
+                      className="flex items-center gap-1 px-3 py-1 text-sm text-indigo-400 hover:text-indigo-300 hover:bg-indigo-500/10 rounded-lg transition-colors"
+                      title="Download EDL file for use with Kodi, MPC-HC, and other players"
+                    >
+                      <Download className="h-3.5 w-3.5" />
+                      Export EDL
+                    </button>
+                    <button
+                      onClick={() => {
+                        const token = localStorage.getItem('openflix_token') || ''
+                        const url = `/dvr/v2/files/${activeFileId}/export.edl?format=mplayer&types=commercial,intro,outro,credits&X-Plex-Token=${token}`
+                        window.open(url, '_blank')
+                      }}
+                      className="flex items-center gap-1 px-3 py-1 text-sm text-indigo-400 hover:text-indigo-300 hover:bg-indigo-500/10 rounded-lg transition-colors"
+                      title="Download MPlayer-format EDL file"
+                    >
+                      <Download className="h-3.5 w-3.5" />
+                      EDL (MPlayer)
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (confirm('Delete all segments for this file?')) {
+                          deleteAllSegments.mutate(activeFileId)
+                        }
+                      }}
+                      disabled={deleteAllSegments.isPending}
+                      className="flex items-center gap-1 px-3 py-1 text-sm text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-colors"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                      Clear All
+                    </button>
+                  </>
                 )}
               </div>
             </div>
