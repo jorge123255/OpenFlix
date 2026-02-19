@@ -45,9 +45,11 @@ type LoggingConfig struct {
 type ServerConfig struct {
 	Host             string `yaml:"host"`
 	Port             int    `yaml:"port"`
-	Name             string `yaml:"name"`               // Friendly server name
-	MachineID        string `yaml:"machine_id"`         // Unique server identifier
-	DiscoveryEnabled bool   `yaml:"discovery_enabled"`  // Enable UDP discovery
+	Name             string `yaml:"name"`                // Friendly server name
+	MachineID        string `yaml:"machine_id"`          // Unique server identifier
+	DiscoveryEnabled bool   `yaml:"discovery_enabled"`   // Enable UDP discovery
+	CloudRegistryURL string `yaml:"cloud_registry_url"`  // Cloud discovery registry URL (e.g. "https://discover.openflix.app")
+	ClaimToken       string `yaml:"claim_token"`         // Current 4-char pairing code (auto-generated)
 }
 
 // DatabaseConfig holds database connection settings

@@ -24,12 +24,8 @@ import (
 	"gorm.io/gorm"
 )
 
-// Server identity - used by clients to identify this server
-var (
-	machineIdentifier = uuid.New().String()
-	serverVersion     = "1.0.0"
-	serverName        = "OpenFlix Server"
-)
+// Server version constant
+const serverVersion = "1.0.0"
 
 // ============ Server Info Handlers ============
 
@@ -39,9 +35,9 @@ func (s *Server) getServerInfo(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"MediaContainer": gin.H{
 			"size":              0,
-			"machineIdentifier": machineIdentifier,
+			"machineIdentifier": s.config.Server.MachineID,
 			"version":           serverVersion,
-			"friendlyName":      serverName,
+			"friendlyName":      s.config.Server.Name,
 			"platform":          runtime.GOOS,
 			"platformVersion":   runtime.Version(),
 			"myPlex":            false,
@@ -57,9 +53,9 @@ func (s *Server) getServerIdentity(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"MediaContainer": gin.H{
 			"size":              0,
-			"machineIdentifier": machineIdentifier,
+			"machineIdentifier": s.config.Server.MachineID,
 			"version":           serverVersion,
-			"friendlyName":      serverName,
+			"friendlyName":      s.config.Server.Name,
 		},
 	})
 }
@@ -69,8 +65,8 @@ func (s *Server) getServerPrefs(c *gin.Context) {
 		"MediaContainer": gin.H{
 			"size": 0,
 			"Setting": []gin.H{
-				{"id": "FriendlyName", "value": serverName},
-				{"id": "MachineIdentifier", "value": machineIdentifier},
+				{"id": "FriendlyName", "value": s.config.Server.Name},
+				{"id": "MachineIdentifier", "value": s.config.Server.MachineID},
 			},
 		},
 	})
@@ -123,10 +119,10 @@ func (s *Server) getServerStatus(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"server": gin.H{
-			"name":              serverName,
+			"name":              s.config.Server.Name,
 			"version":           serverVersion,
 			"hostname":          hostname,
-			"machineIdentifier": machineIdentifier,
+			"machineIdentifier": s.config.Server.MachineID,
 			"platform":          runtime.GOOS,
 			"arch":              runtime.GOARCH,
 			"goVersion":         runtime.Version(),
@@ -854,11 +850,11 @@ func (s *Server) getResources(c *gin.Context) {
 	// Return this server as a resource
 	c.JSON(http.StatusOK, []gin.H{
 		{
-			"name":             serverName,
+			"name":             s.config.Server.Name,
 			"product":          "OpenFlix Media Server",
 			"productVersion":   serverVersion,
 			"platform":         runtime.GOOS,
-			"clientIdentifier": machineIdentifier,
+			"clientIdentifier": s.config.Server.MachineID,
 			"accessToken":      c.GetString("token"),
 			"provides":         "server",
 			"owned":            true,

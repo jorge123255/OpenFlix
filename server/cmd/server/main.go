@@ -8,6 +8,7 @@ import (
 	"github.com/openflix/openflix-server/internal/db"
 	"github.com/openflix/openflix-server/internal/discovery"
 	"github.com/openflix/openflix-server/internal/logger"
+	"github.com/openflix/openflix-server/internal/mdns"
 )
 
 func main() {
@@ -53,6 +54,19 @@ func main() {
 			logger.Log.Warnf("Failed to start discovery service: %v", err)
 		} else {
 			defer discoveryService.Stop()
+		}
+
+		// Start mDNS service for Bonjour discovery
+		mdnsService := mdns.NewService(
+			cfg.Server.Name,
+			cfg.Server.Port,
+			cfg.Server.MachineID,
+			"1.0.0",
+		)
+		if err := mdnsService.Start(); err != nil {
+			logger.Log.Warnf("Failed to start mDNS service: %v", err)
+		} else {
+			defer mdnsService.Stop()
 		}
 	}
 

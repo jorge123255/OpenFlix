@@ -201,6 +201,11 @@ func (d *DiscoveryService) sendBroadcast(conn *net.UDPConn) {
 }
 
 // getLocalAddresses returns all local IPv4 addresses
+// GetLocalAddresses returns all non-loopback IPv4 addresses on this machine.
+func GetLocalAddresses() []string {
+	return getLocalAddresses()
+}
+
 func getLocalAddresses() []string {
 	var addresses []string
 

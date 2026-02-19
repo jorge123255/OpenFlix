@@ -15,6 +15,7 @@ import (
 	"github.com/openflix/openflix-server/internal/commercial"
 	"github.com/openflix/openflix-server/internal/config"
 	"github.com/openflix/openflix-server/internal/ddns"
+	"github.com/openflix/openflix-server/internal/discovery"
 	"github.com/openflix/openflix-server/internal/dvr"
 	"github.com/openflix/openflix-server/internal/health"
 	"github.com/openflix/openflix-server/internal/instant"
@@ -69,6 +70,7 @@ type Server struct {
 	healthMonitor      *health.StreamHealthMonitor
 	taskScheduler      *scheduler.TaskScheduler
 	subtitleManager    *subtitles.SubtitleManager
+	cloudRegistry      *discovery.CloudRegistryClient
 }
 
 // NewServer creates a new API server
@@ -334,6 +336,24 @@ func NewServer(cfg *config.Config, db *gorm.DB) *Server {
 		healthMonitor:      healthMonitor,
 		taskScheduler:      taskSched,
 	}
+	// Start cloud registry if configured
+	if cfg.Server.CloudRegistryURL != "" {
+		localAddrs := discovery.GetLocalAddresses()
+		serverInfo := discovery.ServerInfo{
+			Name:           cfg.Server.Name,
+			Version:        "1.0.0",
+			MachineID:      cfg.Server.MachineID,
+			Host:           cfg.Server.Host,
+			Port:           cfg.Server.Port,
+			Protocol:       "http",
+			LocalAddresses: localAddrs,
+		}
+		s.cloudRegistry = discovery.NewCloudRegistryClient(cfg.Server.CloudRegistryURL, serverInfo, cfg.Server.ClaimToken)
+		if s.cloudRegistry != nil {
+			s.cloudRegistry.Start()
+		}
+	}
+
 	s.setupRouter()
 
 	// Wire enricher/grouper/upnext into recorder for post-processing
@@ -448,6 +468,10 @@ func (s *Server) setupRouter() {
 	r.GET("/identity", s.getServerIdentity)
 	r.GET("/api/status", s.authRequired(), s.getServerStatus)
 	r.GET("/api/dashboard", s.authRequired(), s.getDashboardData)
+
+	// Discovery / Claim Token API (admin only)
+	r.POST("/api/claim-token", s.authRequired(), s.adminRequired(), s.postClaimToken)
+	r.GET("/api/claim-token", s.authRequired(), s.adminRequired(), s.getClaimToken)
 
 	// Diagnostics & System Status API (admin only)
 	r.GET("/api/diagnostics/health-check", s.authRequired(), s.adminRequired(), s.runHealthChecks)
