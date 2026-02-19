@@ -1190,9 +1190,17 @@ func (s *Server) getRecordingStreamUrl(c *gin.Context) {
 		return
 	}
 
-	// Return HLS URL for browser playback (browsers don't support raw .ts)
-	streamUrl := fmt.Sprintf("/dvr/recordings/%d/hls/master.m3u8", recording.ID)
-	c.JSON(http.StatusOK, gin.H{"url": streamUrl})
+	// Return stream URLs for playback
+	// HLS URL for browser playback (browsers don't support raw .ts)
+	hlsUrl := fmt.Sprintf("/dvr/recordings/%d/hls/master.m3u8", recording.ID)
+	// Direct stream URL for native apps (AVPlayer/ExoPlayer handle .ts natively)
+	directUrl := fmt.Sprintf("/dvr/stream/%d", recording.ID)
+	c.JSON(http.StatusOK, gin.H{
+		"url":       hlsUrl,
+		"hlsUrl":    hlsUrl,
+		"directUrl": directUrl,
+		"format":    "ts",
+	})
 }
 
 // getRecordingHLSPlaylist generates an HLS playlist for a recording
