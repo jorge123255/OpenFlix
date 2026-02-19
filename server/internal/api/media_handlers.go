@@ -70,6 +70,27 @@ func (s *Server) adminGetMedia(c *gin.Context) {
 		}
 	}
 
+	// Filter by resolution (e.g., "4k" for >= 2160p height)
+	if resolution := c.Query("resolution"); resolution != "" {
+		switch resolution {
+		case "4k", "uhd":
+			// Join with media_files to filter by height >= 2160
+			query = query.Where("media_items.id IN (?)",
+				s.db.Model(&models.MediaFile{}).Select("media_item_id").Where("height >= ?", 2160))
+		case "hd":
+			query = query.Where("media_items.id IN (?)",
+				s.db.Model(&models.MediaFile{}).Select("media_item_id").Where("height >= ? AND height < ?", 720, 2160))
+		case "sd":
+			query = query.Where("media_items.id IN (?)",
+				s.db.Model(&models.MediaFile{}).Select("media_item_id").Where("height < ?", 720))
+		}
+	}
+
+	// Filter unmatched (no TMDB metadata)
+	if c.Query("unmatched") == "true" {
+		query = query.Where("(uuid IS NULL OR uuid = '' OR uuid NOT LIKE 'tmdb://%') AND (thumb IS NULL OR thumb = '')")
+	}
+
 	// Get total count
 	var total int64
 	query.Count(&total)

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
-import { Save, CheckCircle, XCircle, Loader, Download, Upload, AlertCircle, Server, Cpu, Tv, HardDrive, Globe, Play } from 'lucide-react'
+import { Save, CheckCircle, XCircle, Loader, Download, Upload, AlertCircle, Server, Tv, HardDrive, Globe, Play } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api, type ServerSettings, type DVRSettings, type ImportResult, type ConfigStats } from '../api/client'
 
@@ -776,71 +776,7 @@ transcode:
         </SettingField>
       </SettingSection>
 
-      {/* 2. Transcoding */}
-      <SettingSection title="Transcoding" icon={<Cpu className="h-5 w-5 text-orange-400" />}>
-        <SettingField label="Hardware Acceleration" description="GPU-accelerated encoding/decoding. 'auto' will detect the best option.">
-          <select
-            value={formData.hardware_accel || 'auto'}
-            onChange={(e) => updateField('hardware_accel', e.target.value)}
-            className={selectClass}
-          >
-            <option value="auto">Auto-detect</option>
-            <option value="nvidia">NVIDIA (NVENC)</option>
-            <option value="amd">AMD (AMF)</option>
-            <option value="intel_qsv">Intel Quick Sync (QSV)</option>
-            <option value="videotoolbox">Apple VideoToolbox</option>
-            <option value="software">Software (CPU only)</option>
-          </select>
-        </SettingField>
-        <SettingField label="Max Concurrent Transcode Sessions" description="Limit simultaneous transcodes to prevent CPU/GPU overload">
-          <div className="flex items-center gap-3">
-            <input
-              type="number"
-              min="1"
-              max="20"
-              value={formData.max_transcode_sessions || 3}
-              onChange={(e) => updateField('max_transcode_sessions', Number(e.target.value))}
-              className={numberInputClass}
-            />
-            <span className="text-gray-400 text-sm">sessions</span>
-          </div>
-        </SettingField>
-        <SettingField label="Transcode Temp Directory" description="Temporary directory for transcode output files">
-          <input
-            type="text"
-            value={formData.transcode_temp_dir || ''}
-            onChange={(e) => updateField('transcode_temp_dir', e.target.value)}
-            className={inputClass}
-            placeholder="~/.openflix/transcode"
-          />
-        </SettingField>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <SettingField label="Default Video Codec" description="Preferred output video codec for transcoding">
-            <select
-              value={formData.default_video_codec || 'h264'}
-              onChange={(e) => updateField('default_video_codec', e.target.value)}
-              className={selectClass}
-            >
-              <option value="h264">H.264 (AVC)</option>
-              <option value="hevc">H.265 (HEVC)</option>
-              <option value="copy">Copy (no re-encode)</option>
-            </select>
-          </SettingField>
-          <SettingField label="Default Audio Codec" description="Preferred output audio codec for transcoding">
-            <select
-              value={formData.default_audio_codec || 'aac'}
-              onChange={(e) => updateField('default_audio_codec', e.target.value)}
-              className={selectClass}
-            >
-              <option value="aac">AAC</option>
-              <option value="ac3">AC3 (Dolby Digital)</option>
-              <option value="copy">Copy (no re-encode)</option>
-            </select>
-          </SettingField>
-        </div>
-      </SettingSection>
-
-      {/* 3. Live TV */}
+      {/* 2. Live TV */}
       <SettingSection title="Live TV" icon={<Tv className="h-5 w-5 text-blue-400" />}>
         <SettingField label="Max Concurrent Streams" description="Maximum number of simultaneous live TV streams. 0 = unlimited.">
           <div className="flex items-center gap-3">

@@ -10,25 +10,54 @@ import {
   XCircle,
   Pause,
   Filter,
+  Tv,
+  Film,
+  Trophy,
+  Radio,
+  Trash2,
+  StopCircle,
 } from 'lucide-react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 
-interface Job {
-  id: string
-  type: string
+const isAbsoluteUrl = (url?: string) => url ? /^https?:\/\//i.test(url) : false
+
+interface DVRJob {
+  id: number
+  userId: number
+  ruleId?: number
+  channelId: number
+  programId: number
+  title: string
+  subtitle?: string
+  description: string
+  startTime: string
+  endTime: string
   status: string
   priority: number
-  payload: string
-  result?: string
-  error?: string
+  qualityPreset: string
+  paddingStart: number
+  paddingEnd: number
+  retryCount: number
+  maxRetries: number
+  lastError?: string
+  cancelled: boolean
+  channelName: string
+  channelLogo?: string
+  category: string
+  episodeNum?: string
+  isMovie: boolean
+  isSports: boolean
+  seriesRecord: boolean
+  isDuplicate: boolean
+  acceptedDuplicate: boolean
+  fileId?: number
   createdAt: string
-  startedAt?: string
-  completedAt?: string
+  updatedAt: string
 }
 
 interface JobsResponse {
-  jobs: Job[]
-  total: number
+  jobs: DVRJob[]
+  totalCount: number
 }
 
 const TOKEN_KEY = 'openflix_token'
@@ -41,19 +70,22 @@ function formatDate(dateStr: string): string {
   return new Date(dateStr).toLocaleString()
 }
 
-function formatDuration(start?: string, end?: string): string {
-  if (!start) return '--'
-  const startTime = new Date(start).getTime()
-  const endTime = end ? new Date(end).getTime() : Date.now()
-  const diff = endTime - startTime
-  const seconds = Math.floor(diff / 1000)
-  if (seconds < 60) return `${seconds}s`
-  const minutes = Math.floor(seconds / 60)
-  const remainingSec = seconds % 60
-  if (minutes < 60) return `${minutes}m ${remainingSec}s`
+function formatTimeRange(start: string, end: string): string {
+  const s = new Date(start)
+  const e = new Date(end)
+  const dateStr = s.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+  const startTime = s.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
+  const endTime = e.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
+  return `${dateStr}, ${startTime} - ${endTime}`
+}
+
+function formatDuration(start: string, end: string): string {
+  const diff = new Date(end).getTime() - new Date(start).getTime()
+  const minutes = Math.round(diff / 60000)
+  if (minutes < 60) return `${minutes}m`
   const hours = Math.floor(minutes / 60)
   const remainingMin = minutes % 60
-  return `${hours}h ${remainingMin}m`
+  return remainingMin > 0 ? `${hours}h ${remainingMin}m` : `${hours}h`
 }
 
 const STATUS_CONFIG: Record<string, {
@@ -63,12 +95,26 @@ const STATUS_CONFIG: Record<string, {
   borderColor: string
   label: string
 }> = {
+  scheduled: {
+    icon: Clock,
+    color: 'text-yellow-400',
+    bgColor: 'bg-yellow-500/10',
+    borderColor: 'border-yellow-500/30',
+    label: 'Scheduled',
+  },
   pending: {
     icon: Clock,
     color: 'text-yellow-400',
     bgColor: 'bg-yellow-500/10',
     borderColor: 'border-yellow-500/30',
     label: 'Pending',
+  },
+  recording: {
+    icon: Play,
+    color: 'text-red-400',
+    bgColor: 'bg-red-500/10',
+    borderColor: 'border-red-500/30',
+    label: 'Recording',
   },
   running: {
     icon: Play,
@@ -91,12 +137,12 @@ const STATUS_CONFIG: Record<string, {
     borderColor: 'border-red-500/30',
     label: 'Failed',
   },
-  paused: {
+  cancelled: {
     icon: Pause,
     color: 'text-gray-400',
     bgColor: 'bg-gray-500/10',
     borderColor: 'border-gray-500/30',
-    label: 'Paused',
+    label: 'Cancelled',
   },
 }
 
@@ -111,27 +157,11 @@ function StatusBadge({ status }: { status: string }) {
   )
 }
 
-function PriorityBadge({ priority }: { priority: number }) {
-  let color = 'text-gray-400 bg-gray-500/10'
-  let label = 'Normal'
-  if (priority >= 8) {
-    color = 'text-red-400 bg-red-500/10'
-    label = 'Critical'
-  } else if (priority >= 5) {
-    color = 'text-orange-400 bg-orange-500/10'
-    label = 'High'
-  } else if (priority >= 3) {
-    color = 'text-yellow-400 bg-yellow-500/10'
-    label = 'Medium'
-  } else if (priority <= 1) {
-    color = 'text-gray-500 bg-gray-500/10'
-    label = 'Low'
-  }
-  return (
-    <span className={`px-2 py-0.5 ${color} rounded text-xs`}>
-      {label}
-    </span>
-  )
+function CategoryIcon({ job }: { job: DVRJob }) {
+  if (job.isSports) return <Trophy className="h-4 w-4 text-orange-400" />
+  if (job.isMovie) return <Film className="h-4 w-4 text-purple-400" />
+  if (job.category === 'TVShow') return <Tv className="h-4 w-4 text-blue-400" />
+  return <Radio className="h-4 w-4 text-gray-400" />
 }
 
 async function fetchJobs(): Promise<JobsResponse> {
@@ -142,17 +172,40 @@ async function fetchJobs(): Promise<JobsResponse> {
   return res.json()
 }
 
-const STATUS_FILTERS = ['all', 'pending', 'running', 'completed', 'failed'] as const
+const STATUS_FILTERS = ['all', 'scheduled', 'recording', 'completed', 'failed', 'cancelled'] as const
 type StatusFilter = typeof STATUS_FILTERS[number]
 
 export function JobQueuePage() {
+  const queryClient = useQueryClient()
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
-  const [expandedJob, setExpandedJob] = useState<string | null>(null)
+  const [expandedJob, setExpandedJob] = useState<number | null>(null)
 
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['jobs'],
     queryFn: fetchJobs,
     refetchInterval: 5000,
+  })
+
+  const cancelJob = useMutation({
+    mutationFn: async (jobId: number) => {
+      const res = await fetch(`/dvr/v2/jobs/${jobId}/cancel`, {
+        method: 'POST',
+        headers: { 'X-Plex-Token': getToken() },
+      })
+      if (!res.ok) throw new Error('Failed to cancel job')
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['jobs'] }),
+  })
+
+  const deleteJob = useMutation({
+    mutationFn: async (jobId: number) => {
+      const res = await fetch(`/dvr/v2/jobs/${jobId}`, {
+        method: 'DELETE',
+        headers: { 'X-Plex-Token': getToken() },
+      })
+      if (!res.ok) throw new Error('Failed to delete job')
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['jobs'] }),
   })
 
   const jobs = data?.jobs || []
@@ -197,11 +250,11 @@ export function JobQueuePage() {
         <div>
           <h1 className="text-2xl font-bold text-white flex items-center gap-3">
             <ListTodo className="h-7 w-7 text-indigo-400" />
-            Job Queue
+            DVR Jobs
           </h1>
           <p className="text-gray-400 mt-1">
             {jobs.length} job{jobs.length !== 1 ? 's' : ''} total
-            {statusCounts.running ? ` / ${statusCounts.running} running` : ''}
+            {statusCounts.recording ? ` / ${statusCounts.recording} recording` : ''}
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -221,7 +274,7 @@ export function JobQueuePage() {
 
       {/* Status Summary Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        {(['pending', 'running', 'completed', 'failed'] as const).map((status) => {
+        {(['scheduled', 'recording', 'completed', 'failed'] as const).map((status) => {
           const config = STATUS_CONFIG[status]
           const Icon = config.icon
           return (
@@ -266,7 +319,7 @@ export function JobQueuePage() {
         </div>
       </div>
 
-      {/* Jobs Table */}
+      {/* Jobs List */}
       {filteredJobs.length === 0 ? (
         <div className="flex flex-col items-center justify-center h-48 bg-gray-800 rounded-xl">
           <ListTodo className="h-12 w-12 text-gray-600 mb-3" />
@@ -274,110 +327,132 @@ export function JobQueuePage() {
           <p className="text-gray-400 text-sm">
             {statusFilter !== 'all'
               ? `No ${statusFilter} jobs found`
-              : 'The job queue is empty'}
+              : 'The DVR job queue is empty'}
           </p>
         </div>
       ) : (
-        <div className="bg-gray-800 rounded-xl overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="text-left text-sm text-gray-400 border-b border-gray-700">
-                  <th className="px-6 py-4 font-medium">Job ID</th>
-                  <th className="px-6 py-4 font-medium">Type</th>
-                  <th className="px-6 py-4 font-medium">Status</th>
-                  <th className="px-6 py-4 font-medium">Priority</th>
-                  <th className="px-6 py-4 font-medium">Created</th>
-                  <th className="px-6 py-4 font-medium">Duration</th>
-                </tr>
-              </thead>
-              <tbody className="text-sm">
-                {filteredJobs.map((job) => (
-                  <>
-                    <tr
-                      key={job.id}
-                      onClick={() => setExpandedJob(expandedJob === job.id ? null : job.id)}
-                      className="border-b border-gray-700/50 hover:bg-gray-700/30 transition-colors cursor-pointer"
-                    >
-                      <td className="px-6 py-4">
-                        <span className="text-gray-300 font-mono text-xs">{job.id}</span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className="text-white font-medium">
-                          {job.type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <StatusBadge status={job.status} />
-                      </td>
-                      <td className="px-6 py-4">
-                        <PriorityBadge priority={job.priority} />
-                      </td>
-                      <td className="px-6 py-4 text-gray-400 text-xs">
-                        {formatDate(job.createdAt)}
-                      </td>
-                      <td className="px-6 py-4 text-gray-400 text-xs">
-                        {formatDuration(job.startedAt, job.completedAt)}
-                      </td>
-                    </tr>
-                    {/* Expanded Details */}
-                    {expandedJob === job.id && (
-                      <tr key={`${job.id}-details`}>
-                        <td colSpan={6} className="px-6 py-4 bg-gray-900/50">
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-                            <div>
-                              <p className="text-gray-500 mb-1">Payload</p>
-                              <pre className="text-gray-300 bg-gray-900 p-3 rounded-lg overflow-x-auto font-mono">
-                                {(() => {
-                                  try {
-                                    return JSON.stringify(JSON.parse(job.payload), null, 2)
-                                  } catch {
-                                    return job.payload
-                                  }
-                                })()}
-                              </pre>
-                            </div>
-                            {job.result && (
-                              <div>
-                                <p className="text-gray-500 mb-1">Result</p>
-                                <pre className="text-green-400 bg-gray-900 p-3 rounded-lg overflow-x-auto font-mono">
-                                  {(() => {
-                                    try {
-                                      return JSON.stringify(JSON.parse(job.result), null, 2)
-                                    } catch {
-                                      return job.result
-                                    }
-                                  })()}
-                                </pre>
-                              </div>
-                            )}
-                            {job.error && (
-                              <div>
-                                <p className="text-gray-500 mb-1">Error</p>
-                                <pre className="text-red-400 bg-gray-900 p-3 rounded-lg overflow-x-auto font-mono">
-                                  {job.error}
-                                </pre>
-                              </div>
-                            )}
-                            <div className="md:col-span-2">
-                              <div className="flex gap-6 text-gray-400">
-                                {job.startedAt && (
-                                  <span>Started: {formatDate(job.startedAt)}</span>
-                                )}
-                                {job.completedAt && (
-                                  <span>Completed: {formatDate(job.completedAt)}</span>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        </td>
-                      </tr>
+        <div className="space-y-2">
+          {filteredJobs.map((job) => (
+            <div key={job.id} className="bg-gray-800 rounded-xl overflow-hidden">
+              {/* Job Row */}
+              <div
+                onClick={() => setExpandedJob(expandedJob === job.id ? null : job.id)}
+                className="flex items-center gap-4 p-4 hover:bg-gray-700/30 transition-colors cursor-pointer"
+              >
+                {/* Channel Logo */}
+                <div className="w-10 h-10 rounded-lg bg-gray-700 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                  {isAbsoluteUrl(job.channelLogo) ? (
+                    <img src={job.channelLogo} alt="" className="w-full h-full object-contain" />
+                  ) : (
+                    <CategoryIcon job={job} />
+                  )}
+                </div>
+
+                {/* Title & Info */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-white font-medium truncate">{job.title}</span>
+                    {job.subtitle && (
+                      <span className="text-gray-400 text-sm truncate">- {job.subtitle}</span>
                     )}
-                  </>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                  </div>
+                  <div className="flex items-center gap-3 text-xs text-gray-500 mt-0.5">
+                    <span>{job.channelName}</span>
+                    <span>{formatTimeRange(job.startTime, job.endTime)}</span>
+                    <span>{formatDuration(job.startTime, job.endTime)}</span>
+                  </div>
+                </div>
+
+                {/* Status */}
+                <StatusBadge status={job.status} />
+
+                {/* Actions */}
+                <div className="flex items-center gap-1">
+                  {(job.status === 'scheduled' || job.status === 'recording') && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); cancelJob.mutate(job.id) }}
+                      className="p-1.5 text-gray-400 hover:text-red-400 rounded-lg hover:bg-gray-700 transition-colors"
+                      title="Cancel"
+                    >
+                      <StopCircle className="h-4 w-4" />
+                    </button>
+                  )}
+                  {(job.status === 'completed' || job.status === 'failed' || job.status === 'cancelled') && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); deleteJob.mutate(job.id) }}
+                      className="p-1.5 text-gray-400 hover:text-red-400 rounded-lg hover:bg-gray-700 transition-colors"
+                      title="Delete"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Expanded Details */}
+              {expandedJob === job.id && (
+                <div className="px-4 pb-4 border-t border-gray-700/50">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-3 text-xs">
+                    <div>
+                      <p className="text-gray-500 mb-0.5">Category</p>
+                      <p className="text-gray-300 flex items-center gap-1.5">
+                        <CategoryIcon job={job} />
+                        {job.isMovie ? 'Movie' : job.isSports ? 'Sports' : job.category || 'TV Show'}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-gray-500 mb-0.5">Quality</p>
+                      <p className="text-gray-300">{job.qualityPreset || 'Original'}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-500 mb-0.5">Priority</p>
+                      <p className="text-gray-300">{job.priority}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-500 mb-0.5">Padding</p>
+                      <p className="text-gray-300">
+                        {job.paddingStart > 0 ? `${job.paddingStart}m before` : 'None'}
+                        {job.paddingEnd > 0 ? ` / ${job.paddingEnd}m after` : ''}
+                      </p>
+                    </div>
+                    {job.episodeNum && (
+                      <div>
+                        <p className="text-gray-500 mb-0.5">Episode</p>
+                        <p className="text-gray-300">{job.episodeNum}</p>
+                      </div>
+                    )}
+                    {job.retryCount > 0 && (
+                      <div>
+                        <p className="text-gray-500 mb-0.5">Retries</p>
+                        <p className="text-gray-300">{job.retryCount} / {job.maxRetries}</p>
+                      </div>
+                    )}
+                    {job.fileId && (
+                      <div>
+                        <p className="text-gray-500 mb-0.5">File ID</p>
+                        <p className="text-gray-300">#{job.fileId}</p>
+                      </div>
+                    )}
+                    <div>
+                      <p className="text-gray-500 mb-0.5">Created</p>
+                      <p className="text-gray-300">{formatDate(job.createdAt)}</p>
+                    </div>
+                  </div>
+                  {job.description && (
+                    <div className="mt-3">
+                      <p className="text-gray-500 text-xs mb-0.5">Description</p>
+                      <p className="text-gray-400 text-xs">{job.description}</p>
+                    </div>
+                  )}
+                  {job.lastError && (
+                    <div className="mt-3 p-2 bg-red-900/30 border border-red-500/30 rounded-lg">
+                      <p className="text-red-400 text-xs">{job.lastError}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          ))}
         </div>
       )}
     </div>

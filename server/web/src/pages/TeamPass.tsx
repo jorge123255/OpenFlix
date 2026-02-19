@@ -15,6 +15,8 @@ import {
 } from 'lucide-react'
 import { api } from '../api/client'
 
+const isAbsoluteUrl = (url?: string) => url ? /^https?:\/\//i.test(url) : false
+
 interface TeamPass {
   id: number
   userId: number
@@ -315,7 +317,7 @@ function TeamPassPage() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
                   <div className={`w-12 h-12 rounded-lg ${getLeagueColor(pass.league)} flex items-center justify-center overflow-hidden`}>
-                    {pass.logoUrl ? (
+                    {isAbsoluteUrl(pass.logoUrl) ? (
                       <img src={pass.logoUrl} alt={pass.teamName} className="w-10 h-10 object-contain" />
                     ) : (
                       <Trophy className="w-6 h-6 text-white" />
@@ -488,7 +490,7 @@ function TeamPassModal({
               <div className="flex items-center justify-between p-3 bg-gray-700 rounded-lg">
                 <div className="flex items-center gap-3">
                   <div className={`w-10 h-10 rounded ${getLeagueColor(formData.league)} flex items-center justify-center overflow-hidden`}>
-                    {formData.logoUrl ? (
+                    {isAbsoluteUrl(formData.logoUrl) ? (
                       <img src={formData.logoUrl} alt={formData.teamName} className="w-8 h-8 object-contain" />
                     ) : (
                       <Trophy className="w-5 h-5 text-white" />
@@ -552,7 +554,7 @@ function TeamPassModal({
                       className="p-2 bg-gray-700 rounded hover:bg-gray-600 text-left transition-colors flex items-center gap-2"
                     >
                       <div className={`w-8 h-8 rounded ${getLeagueColor(team.league)} flex items-center justify-center overflow-hidden flex-shrink-0`}>
-                        {team.logoUrl ? (
+                        {isAbsoluteUrl(team.logoUrl) ? (
                           <img src={team.logoUrl} alt={team.name} className="w-6 h-6 object-contain" />
                         ) : (
                           <Trophy className="w-4 h-4 text-white" />

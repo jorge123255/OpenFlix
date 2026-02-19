@@ -32,10 +32,12 @@ import {
   Image,
   FileQuestion,
   MoreHorizontal,
+  Download,
+  Check,
 } from 'lucide-react'
 // DVR hooks available at '../hooks/useDVR' if needed
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { api } from '../api/client'
+import { api, type TMDBSearchResult } from '../api/client'
 import type { Recording, CommercialSegment } from '../types'
 
 // ============ Utility Functions ============
@@ -531,6 +533,7 @@ function RecordingManagerCard({
   onToggleFavorite,
   onToggleKeep,
   onTrash,
+  onFixMatch,
 }: {
   recording: Recording
   isSelected: boolean
@@ -540,6 +543,7 @@ function RecordingManagerCard({
   onToggleFavorite: () => void
   onToggleKeep: () => void
   onTrash: () => void
+  onFixMatch?: () => void
 }) {
   const [showOptions, setShowOptions] = useState(false)
   const isWatched = recording.isWatched
@@ -685,6 +689,16 @@ function RecordingManagerCard({
 
           {/* Action buttons row */}
           <div className="flex items-center gap-1 mt-2 -mb-1">
+            {onFixMatch && (
+              <button
+                onClick={onFixMatch}
+                className="flex items-center gap-1 px-2 py-1 text-xs font-medium bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20 rounded-md transition-colors"
+                title="Fix metadata match"
+              >
+                <Search className="w-3.5 h-3.5" />
+                Fix Match
+              </button>
+            )}
             <button
               onClick={onToggleWatched}
               className={`p-1.5 rounded-md transition-colors ${
@@ -766,6 +780,29 @@ function RecordingManagerCard({
                     </button>
                     <div className="border-t border-gray-600 my-1" />
                     <button
+                      onClick={() => {
+                        const url = api.getRecordingEDLUrl(recording.id)
+                        window.open(url, '_blank')
+                        setShowOptions(false)
+                      }}
+                      className="w-full px-3 py-2 text-left text-sm text-gray-200 hover:bg-gray-600 flex items-center gap-2"
+                      title="Download EDL file for use with Kodi, MPC-HC, and other players"
+                    >
+                      <Download className="w-4 h-4" /> Export EDL
+                    </button>
+                    <button
+                      onClick={() => {
+                        const url = api.getRecordingEDLUrl(recording.id, 'mplayer')
+                        window.open(url, '_blank')
+                        setShowOptions(false)
+                      }}
+                      className="w-full px-3 py-2 text-left text-sm text-gray-200 hover:bg-gray-600 flex items-center gap-2"
+                      title="Download MPlayer-format EDL file"
+                    >
+                      <Download className="w-4 h-4" /> Export EDL (MPlayer)
+                    </button>
+                    <div className="border-t border-gray-600 my-1" />
+                    <button
                       onClick={() => { onTrash(); setShowOptions(false) }}
                       className="w-full px-3 py-2 text-left text-sm text-red-400 hover:bg-gray-600 flex items-center gap-2"
                     >
@@ -830,6 +867,8 @@ export function DVRPage() {
   const [playbackStartLive, setPlaybackStartLive] = useState(false)
   const [watchOptionsRecording, setWatchOptionsRecording] = useState<Recording | null>(null)
   const [showActionsDropdown, setShowActionsDropdown] = useState(false)
+  const [fixMatchRecording, setFixMatchRecording] = useState<Recording | null>(null)
+  const [fixMatchSearch, setFixMatchSearch] = useState('')
 
   // Query
   const { data: managerData, isLoading } = useQuery({
@@ -882,6 +921,31 @@ export function DVRPage() {
       queryClient.invalidateQueries({ queryKey: ['recordings-manager'] })
       queryClient.invalidateQueries({ queryKey: ['recordings'] })
       setSelectedRecordings(new Set())
+    },
+  })
+
+  // TMDB search for Fix Match modal
+  const { data: fixMatchResults, isLoading: isSearchingFixMatch } = useQuery({
+    queryKey: ['tmdb-fix-match', fixMatchRecording?.id, fixMatchSearch],
+    queryFn: () => api.searchTMDB(fixMatchSearch, fixMatchRecording?.isMovie ? 'movie' : 'tv'),
+    enabled: !!fixMatchRecording && fixMatchSearch.length > 2,
+  })
+
+  // Apply recording match mutation
+  const applyRecordingMatchMutation = useMutation({
+    mutationFn: (params: { id: number; result: TMDBSearchResult }) =>
+      api.applyRecordingMatch(
+        params.id,
+        params.result.id,
+        params.result.media_type,
+        params.result.title,
+        params.result.poster_path,
+        params.result.backdrop_path,
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['recordings-manager'] })
+      setFixMatchRecording(null)
+      setFixMatchSearch('')
     },
   })
 
@@ -1230,6 +1294,10 @@ export function DVRPage() {
                       trashRecording.mutate(rec.id)
                     }
                   }}
+                  onFixMatch={activeCategory === 'unmatched' ? () => {
+                    setFixMatchRecording(rec)
+                    setFixMatchSearch(rec.title)
+                  } : undefined}
                 />
               ))}
             </div>
@@ -1259,6 +1327,97 @@ export function DVRPage() {
           }}
           startLive={playbackStartLive}
         />
+      )}
+
+      {/* ============ Fix Match Modal ============ */}
+      {fixMatchRecording && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-gray-800 rounded-lg p-6 w-full max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-white">Fix Match: {fixMatchRecording.title}</h2>
+              <button
+                onClick={() => {
+                  setFixMatchRecording(null)
+                  setFixMatchSearch('')
+                }}
+                className="text-gray-400 hover:text-white"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="mb-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search TMDB..."
+                  value={fixMatchSearch}
+                  onChange={(e) => setFixMatchSearch(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 bg-gray-700 border border-gray-600 rounded text-white"
+                />
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto">
+              {isSearchingFixMatch ? (
+                <div className="p-8 text-center text-gray-400">Searching...</div>
+              ) : !fixMatchResults?.length ? (
+                <div className="p-8 text-center text-gray-400">
+                  {fixMatchSearch.length > 2 ? 'No results found' : 'Type to search'}
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {fixMatchResults.map((result: TMDBSearchResult) => (
+                    <div
+                      key={result.id}
+                      className="flex items-center gap-4 p-3 bg-gray-700 rounded hover:bg-gray-600 cursor-pointer"
+                      onClick={() => applyRecordingMatchMutation.mutate({
+                        id: fixMatchRecording.id,
+                        result,
+                      })}
+                    >
+                      <div className="w-12 h-18 bg-gray-600 rounded overflow-hidden flex-shrink-0">
+                        {result.poster_path ? (
+                          <img
+                            src={`https://image.tmdb.org/t/p/w92${result.poster_path}`}
+                            alt={result.title}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <Film className="h-4 w-4 text-gray-400" />
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <h4 className="text-white font-medium truncate">{result.title}</h4>
+                          <span className="text-gray-400 text-sm">
+                            ({(result.release_date || result.first_air_date || '').substring(0, 4)})
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-400 line-clamp-2">{result.overview}</p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          TMDB ID: {result.id} &bull; {result.media_type === 'movie' ? 'Movie' : 'TV Show'}
+                          {result.vote_average ? ` \u2022 Rating: ${result.vote_average.toFixed(1)}` : ''}
+                        </p>
+                      </div>
+                      <Check className="h-5 w-5 text-green-500 flex-shrink-0" />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {applyRecordingMatchMutation.isPending && (
+              <div className="mt-4 text-center text-gray-400 flex items-center justify-center gap-2">
+                <Loader className="h-4 w-4 animate-spin" />
+                Applying match...
+              </div>
+            )}
+          </div>
+        </div>
       )}
     </div>
   )

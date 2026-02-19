@@ -91,6 +91,9 @@ type DVRConfig struct {
 	LowSpaceGB       float64 `yaml:"low_space_gb"`       // threshold for low space warning (default 5GB)
 	DefaultQuality   string  `yaml:"default_quality"`    // original, high, medium, low
 	HWAccel          string  `yaml:"hw_accel"`           // vaapi, nvenc, qsv, or empty
+	DetectionWorkers int     `yaml:"detection_workers"`  // parallel commercial detection jobs (1-8, default 2)
+	GenerateThumbs   bool    `yaml:"generate_thumbnails"` // generate thumbnails at chapter points during detection
+	ShareEdits       bool    `yaml:"share_edits"`        // share commercial detection results with community
 }
 
 // VODConfig holds VOD (Video On Demand) download settings
@@ -147,6 +150,9 @@ func DefaultConfig() *Config {
 			CommercialDetect: true,  // enabled by default, but only runs if comskip is found
 			ComskipPath:      "",    // auto-detect
 			ComskipINIPath:   "",    // use defaults
+			DetectionWorkers: 2,     // 2 parallel detection jobs by default
+			GenerateThumbs:   false, // thumbnail generation off by default
+			ShareEdits:       false, // community sharing off by default
 		},
 		VOD: VODConfig{
 			Enabled: true,

@@ -1,6 +1,7 @@
 import axios, { type AxiosError, type AxiosInstance } from 'axios'
 import type {
   User,
+  UserProfile,
   LoginRequest,
   LoginResponse,
   RegisterRequest,
@@ -121,6 +122,26 @@ class ApiClient {
 
   async deleteUser(id: number): Promise<void> {
     await this.client.delete(`/admin/users/${id}`)
+  }
+
+  // Profile endpoints
+  async getProfiles(): Promise<UserProfile[]> {
+    const response = await this.client.get<{ profiles: UserProfile[] }>('/profiles')
+    return response.data.profiles || []
+  }
+
+  async getUserProfiles(userId: number): Promise<UserProfile[]> {
+    const response = await this.client.get<{ profiles: UserProfile[] }>(`/admin/users/${userId}/profiles`)
+    return response.data.profiles || []
+  }
+
+  async createProfile(data: { name: string; isKid?: boolean }): Promise<UserProfile> {
+    const response = await this.client.post<UserProfile>('/profiles', data)
+    return response.data
+  }
+
+  async deleteProfile(id: number): Promise<void> {
+    await this.client.delete(`/profiles/${id}`)
   }
 
   // Library endpoints
@@ -515,6 +536,20 @@ class ApiClient {
     await this.client.post(`/dvr/recordings/${recordingId}/commercials/detect`)
   }
 
+  // EDL Export - triggers download of EDL file for recording commercial segments
+  getRecordingEDLUrl(recordingId: number, format: 'standard' | 'mplayer' = 'standard'): string {
+    const token = localStorage.getItem('openflix_token') || ''
+    const base = this.client.defaults.baseURL || ''
+    return `${base}/dvr/recordings/${recordingId}/export.edl?format=${format}&X-Plex-Token=${token}`
+  }
+
+  // EDL Export for DVR v2 files
+  getFileEDLUrl(fileId: number, format: 'standard' | 'mplayer' = 'standard', types: string = 'commercial'): string {
+    const token = localStorage.getItem('openflix_token') || ''
+    const base = this.client.defaults.baseURL || ''
+    return `${base}/dvr/v2/files/${fileId}/export.edl?format=${format}&types=${types}&X-Plex-Token=${token}`
+  }
+
   async getRecordingStreamUrl(recordingId: number): Promise<string> {
     const response = await this.client.get<{ url: string }>(`/dvr/recordings/${recordingId}/stream`)
     return response.data.url
@@ -676,6 +711,8 @@ class ApiClient {
     type?: string
     libraryId?: number
     page?: number
+    resolution?: string
+    unmatched?: boolean
   }): Promise<MediaListResponse> {
     const response = await this.client.get<MediaListResponse>('/admin/media', { params })
     return response.data
@@ -699,6 +736,16 @@ class ApiClient {
 
   async applyMediaMatch(id: number, tmdbId: number, mediaType: string): Promise<void> {
     await this.client.post(`/admin/media/${id}/match`, { tmdb_id: tmdbId, media_type: mediaType })
+  }
+
+  async applyRecordingMatch(id: number, tmdbId: number, mediaType: string, title?: string, poster?: string, backdrop?: string): Promise<void> {
+    await this.client.post(`/dvr/recordings/${id}/match`, {
+      tmdb_id: tmdbId,
+      media_type: mediaType,
+      title: title || '',
+      poster: poster || '',
+      backdrop: backdrop || '',
+    })
   }
 
   // VOD endpoints
@@ -1073,6 +1120,7 @@ export interface TMDBSearchResult {
   first_air_date?: string
   overview?: string
   poster_path?: string
+  backdrop_path?: string
   vote_average?: number
   media_type: string
 }

@@ -223,6 +223,15 @@ func (s *Service) GetAllUsers() ([]models.User, error) {
 	return users, nil
 }
 
+// DeleteUser deletes a user and their profiles
+func (s *Service) DeleteUser(userID uint) error {
+	// Delete profiles first
+	if err := s.db.Where("user_id = ?", userID).Delete(&models.UserProfile{}).Error; err != nil {
+		return err
+	}
+	return s.db.Delete(&models.User{}, userID).Error
+}
+
 // GetUserProfiles retrieves all profiles for a user
 func (s *Service) GetUserProfiles(userID uint) ([]models.UserProfile, error) {
 	var profiles []models.UserProfile

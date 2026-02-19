@@ -565,6 +565,11 @@ func (s *Server) setupRouter() {
 		admin.POST("/media/refresh-missing", s.adminRefreshAllMissingMetadata)
 		admin.GET("/media/search-tmdb", s.adminSearchTMDB)
 		admin.POST("/media/:id/match", s.adminApplyMediaMatch)
+
+		// User management (admin only)
+		admin.GET("/users", s.adminListUsers)
+		admin.DELETE("/users/:id", s.adminDeleteUser)
+		admin.GET("/users/:id/profiles", s.adminGetUserProfiles)
 	}
 
 	// ============ Auto-Update API (admin only) ============
@@ -704,6 +709,7 @@ func (s *Server) setupRouter() {
 	livetvPublic := r.Group("/livetv")
 	{
 		livetvPublic.GET("/export.m3u", s.exportChannelsM3U)      // M3U playlist with tvc-guide-stationid
+		livetvPublic.GET("/export.xml", s.exportEPGXMLTV)         // XMLTV EPG guide data
 		livetvPublic.GET("/lineup.json", s.exportChannelsLineup)  // JSON lineup
 	}
 
@@ -839,6 +845,7 @@ func (s *Server) setupRouter() {
 		dvrGroup.POST("/recordings/bulk", s.bulkRecordingAction)     // Must be before :id route
 		dvrGroup.GET("/recordings/:id", s.getRecording)
 		dvrGroup.PUT("/recordings/:id", s.updateRecording)
+		dvrGroup.POST("/recordings/:id/match", s.applyRecordingMatch)
 		dvrGroup.DELETE("/recordings/:id", s.deleteRecording)
 		dvrGroup.PUT("/recordings/:id/priority", s.updateRecordingPriority)
 
@@ -853,6 +860,9 @@ func (s *Server) setupRouter() {
 		dvrGroup.GET("/recordings/:id/commercials", s.getCommercialSegments)
 		dvrGroup.POST("/recordings/:id/commercials/detect", s.rerunCommercialDetection)
 		dvrGroup.POST("/recordings/:id/reprocess", s.reprocessRecording)
+
+		// EDL Export (Edit Decision List for commercial skip in external players)
+		dvrGroup.GET("/recordings/:id/export.edl", s.exportRecordingEDL)
 
 		// Recording Playback
 		dvrGroup.GET("/stream/:id", s.streamRecording)
@@ -892,6 +902,12 @@ func (s *Server) setupRouter() {
 		dvrGroup.GET("/schedule", s.getDVRSchedule)
 		dvrGroup.GET("/calendar", s.getDVRCalendar)
 
+		// Labels / Tags management
+		dvrGroup.GET("/labels", s.getLabels)
+		dvrGroup.POST("/labels/bulk", s.bulkLabelAction)
+		dvrGroup.GET("/labels/:label/files", s.getFilesByLabel)
+		dvrGroup.PUT("/recordings/:id/labels", s.setRecordingLabels)
+
 		// DVR V2 (Channels DVR-style)
 		dvrV2 := dvrGroup.Group("/v2")
 		{
@@ -905,6 +921,7 @@ func (s *Server) setupRouter() {
 
 			// Files
 			dvrV2.GET("/files", s.getFiles)
+			dvrV2.GET("/files/locked", s.getLockedFiles)
 			dvrV2.GET("/files/:id", s.getFile)
 			dvrV2.PUT("/files/:id", s.updateFile)
 			dvrV2.DELETE("/files/:id", s.deleteFile)
@@ -912,6 +929,12 @@ func (s *Server) setupRouter() {
 			dvrV2.GET("/files/:id/dash/manifest.mpd", s.getFileDASHManifest)
 			dvrV2.GET("/files/:id/dash/:segment", s.getFileDASHSegment)
 			dvrV2.PUT("/files/:id/state", s.updateFileState)
+			dvrV2.PUT("/files/:id/labels", s.setFileLabels)
+			dvrV2.PUT("/files/:id/lock", s.lockFile)
+			dvrV2.DELETE("/files/:id/lock", s.unlockFile)
+
+			// EDL Export (Edit Decision List for external players)
+			dvrV2.GET("/files/:id/export.edl", s.exportFileEDL)
 
 			// Groups
 			dvrV2.GET("/groups", s.getGroups)
@@ -979,8 +1002,11 @@ func (s *Server) setupRouter() {
 
 			// Channel Collections (custom lineups)
 			dvrV2.GET("/channel-collections", s.getChannelCollections)
-			dvrV2.GET("/channel-collections/:id", s.getChannelCollection)
 			dvrV2.POST("/channel-collections", s.createChannelCollection)
+			dvrV2.POST("/channel-collection-rules/preview", s.previewSmartRules)
+			dvrV2.GET("/channel-collection-meta/groups", s.channelCollectionGroups)
+			dvrV2.GET("/channel-collection-meta/sources", s.channelCollectionSources)
+			dvrV2.GET("/channel-collections/:id", s.getChannelCollection)
 			dvrV2.PUT("/channel-collections/:id", s.updateChannelCollection)
 			dvrV2.DELETE("/channel-collections/:id", s.deleteChannelCollection)
 			dvrV2.GET("/channel-collections/:id/export.m3u", s.exportChannelCollectionM3U)
@@ -1027,6 +1053,8 @@ func (s *Server) setupRouter() {
 	onlater := r.Group("/api/onlater")
 	onlater.Use(s.authRequired())
 	{
+		onlater.GET("/all", s.handleGetOnLaterAll)
+		onlater.GET("/tvshows", s.handleGetOnLaterTVShows)
 		onlater.GET("/movies", s.handleGetOnLaterMovies)
 		onlater.GET("/sports", s.handleGetOnLaterSports)
 		onlater.GET("/kids", s.handleGetOnLaterKids)

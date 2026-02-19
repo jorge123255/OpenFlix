@@ -64,6 +64,11 @@ type DetectorConfig struct {
 	ComskipPath string `json:"comskip_path"`
 	ComskipIni  string `json:"comskip_ini"`
 	FFmpegPath  string `json:"ffmpeg_path"`
+
+	// Worker and processing settings
+	DetectionWorkers int  `json:"detection_workers"`   // parallel detection jobs (1-8, default 2)
+	GenerateThumbs   bool `json:"generate_thumbnails"` // generate thumbnails at chapter points
+	ShareEdits       bool `json:"share_edits"`         // share detection results with community
 }
 
 // DefaultDetectorConfig returns sensible defaults
@@ -84,6 +89,9 @@ func DefaultDetectorConfig() DetectorConfig {
 		ComskipPath:         "/usr/local/bin/comskip",
 		ComskipIni:          "/config/comskip.ini",
 		FFmpegPath:          "/usr/local/bin/ffmpeg",
+		DetectionWorkers:    2,
+		GenerateThumbs:      false,
+		ShareEdits:          false,
 	}
 }
 

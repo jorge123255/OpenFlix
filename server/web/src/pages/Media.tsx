@@ -42,6 +42,8 @@ export function MediaPage() {
   const [search, setSearch] = useState('')
   const [typeFilter, setTypeFilter] = useState<string>('')
   const [libraryFilter, setLibraryFilter] = useState<number | ''>('')
+  const [resolutionFilter, setResolutionFilter] = useState<string>('')
+  const [unmatchedFilter, setUnmatchedFilter] = useState(false)
   const [page, setPage] = useState(1)
   const [expandedItem, setExpandedItem] = useState<number | null>(null)
   const [editingItem, setEditingItem] = useState<MediaItem | null>(null)
@@ -56,8 +58,15 @@ export function MediaPage() {
 
   // Fetch media items
   const { data: mediaData, isLoading } = useQuery({
-    queryKey: ['admin-media', search, typeFilter, libraryFilter, page],
-    queryFn: () => api.getAdminMedia({ search, type: typeFilter, libraryId: libraryFilter || undefined, page }),
+    queryKey: ['admin-media', search, typeFilter, libraryFilter, resolutionFilter, unmatchedFilter, page],
+    queryFn: () => api.getAdminMedia({
+      search,
+      type: typeFilter,
+      libraryId: libraryFilter || undefined,
+      page,
+      resolution: resolutionFilter || undefined,
+      unmatched: unmatchedFilter || undefined,
+    }),
   })
 
   // Search TMDB for matches
@@ -175,6 +184,52 @@ export function MediaPage() {
             </option>
           ))}
         </select>
+
+        {/* Resolution filter chips */}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => {
+              setResolutionFilter(resolutionFilter === '4k' ? '' : '4k')
+              setPage(1)
+            }}
+            className={`px-3 py-2 text-sm font-semibold rounded-lg border transition-colors ${
+              resolutionFilter === '4k'
+                ? 'bg-indigo-600 border-indigo-500 text-white'
+                : 'bg-gray-800 border-gray-700 text-gray-400 hover:text-white hover:border-gray-500'
+            }`}
+          >
+            4K
+          </button>
+          <button
+            onClick={() => {
+              setResolutionFilter(resolutionFilter === 'hd' ? '' : 'hd')
+              setPage(1)
+            }}
+            className={`px-3 py-2 text-sm font-semibold rounded-lg border transition-colors ${
+              resolutionFilter === 'hd'
+                ? 'bg-indigo-600 border-indigo-500 text-white'
+                : 'bg-gray-800 border-gray-700 text-gray-400 hover:text-white hover:border-gray-500'
+            }`}
+          >
+            HD
+          </button>
+        </div>
+
+        {/* Unmatched filter */}
+        <button
+          onClick={() => {
+            setUnmatchedFilter(!unmatchedFilter)
+            setPage(1)
+          }}
+          className={`flex items-center gap-1.5 px-3 py-2 text-sm rounded-lg border transition-colors ${
+            unmatchedFilter
+              ? 'bg-yellow-600/20 border-yellow-500 text-yellow-400'
+              : 'bg-gray-800 border-gray-700 text-gray-400 hover:text-white hover:border-gray-500'
+          }`}
+        >
+          <AlertCircle className="h-3.5 w-3.5" />
+          Unmatched
+        </button>
       </div>
 
       {/* Media List */}

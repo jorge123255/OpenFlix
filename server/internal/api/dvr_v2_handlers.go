@@ -453,6 +453,11 @@ func (s *Server) getFiles(c *gin.Context) {
 		query = query.Where("is_movie = ?", false)
 	}
 
+	// Filter unmatched (no TMDB metadata)
+	if c.Query("unmatched") == "true" {
+		query = query.Where("(tmdb_id IS NULL OR tmdb_id = 0) AND (thumb IS NULL OR thumb = '')")
+	}
+
 	// Date range on recorded_at
 	if after := c.Query("after"); after != "" {
 		if t, err := time.Parse(time.RFC3339, after); err == nil {
@@ -1817,9 +1822,11 @@ func (s *Server) getChannelCollection(c *gin.Context) {
 		return
 	}
 
-	// Resolve channels
+	// For smart collections, evaluate rules to get matching channels
 	var channels []models.Channel
-	if collection.ChannelIDs != "" {
+	if collection.Smart && collection.SmartRules != "" {
+		channels = s.evaluateSmartRules(collection.SmartRules)
+	} else if collection.ChannelIDs != "" {
 		ids := parseIDList(collection.ChannelIDs)
 		if len(ids) > 0 {
 			s.db.Where("id IN ?", ids).Find(&channels)
@@ -1855,6 +1862,15 @@ func (s *Server) createChannelCollection(c *gin.Context) {
 		return
 	}
 
+	// Validate smart rules JSON if provided
+	if collection.Smart && collection.SmartRules != "" {
+		var cfg models.SmartRuleConfig
+		if err := json.Unmarshal([]byte(collection.SmartRules), &cfg); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid smart rules JSON"})
+			return
+		}
+	}
+
 	if err := s.db.Create(&collection).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create channel collection"})
 		return
@@ -1883,9 +1899,20 @@ func (s *Server) updateChannelCollection(c *gin.Context) {
 		return
 	}
 
+	// Validate smart rules JSON if provided
+	if updates.Smart && updates.SmartRules != "" {
+		var cfg models.SmartRuleConfig
+		if err := json.Unmarshal([]byte(updates.SmartRules), &cfg); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid smart rules JSON"})
+			return
+		}
+	}
+
 	s.db.Model(&collection).Updates(map[string]interface{}{
 		"name":                updates.Name,
 		"description":         updates.Description,
+		"smart":               updates.Smart,
+		"smart_rules":         updates.SmartRules,
 		"channel_ids":         updates.ChannelIDs,
 		"virtual_station_ids": updates.VirtualStationIDs,
 	})
@@ -1910,6 +1937,155 @@ func (s *Server) deleteChannelCollection(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Channel collection deleted"})
 }
 
+// previewSmartRules evaluates smart rules without saving and returns matching channels
+func (s *Server) previewSmartRules(c *gin.Context) {
+	var req struct {
+		SmartRules string `json:"smartRules"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil || req.SmartRules == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "smartRules is required"})
+		return
+	}
+
+	var cfg models.SmartRuleConfig
+	if err := json.Unmarshal([]byte(req.SmartRules), &cfg); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid smart rules JSON"})
+		return
+	}
+
+	channels := s.evaluateSmartRules(req.SmartRules)
+	c.JSON(http.StatusOK, gin.H{
+		"count":    len(channels),
+		"channels": channels,
+	})
+}
+
+// channelCollectionGroups returns distinct channel groups for the rules builder UI
+func (s *Server) channelCollectionGroups(c *gin.Context) {
+	var groups []string
+	s.db.Model(&models.Channel{}).Where("enabled = ? AND \"group\" != ''", true).Distinct().Pluck("\"group\"", &groups)
+	c.JSON(http.StatusOK, gin.H{"groups": groups})
+}
+
+// channelCollectionSources returns distinct source names for the rules builder UI
+func (s *Server) channelCollectionSources(c *gin.Context) {
+	var sources []string
+	s.db.Model(&models.Channel{}).Where("enabled = ? AND source_name != ''", true).Distinct().Pluck("source_name", &sources)
+	c.JSON(http.StatusOK, gin.H{"sources": sources})
+}
+
+// evaluateSmartRules parses a SmartRuleConfig JSON string and returns matching channels
+func (s *Server) evaluateSmartRules(rulesJSON string) []models.Channel {
+	var cfg models.SmartRuleConfig
+	if err := json.Unmarshal([]byte(rulesJSON), &cfg); err != nil {
+		return nil
+	}
+	if !cfg.Enabled || len(cfg.Conditions) == 0 {
+		return nil
+	}
+
+	// Load all enabled channels
+	var allChannels []models.Channel
+	s.db.Where("enabled = ?", true).Order("number, name").Find(&allChannels)
+
+	var matched []models.Channel
+	for _, ch := range allChannels {
+		if matchesSmartRules(ch, cfg) {
+			matched = append(matched, ch)
+		}
+	}
+	return matched
+}
+
+// matchesSmartRules checks if a channel matches the given smart rule configuration
+func matchesSmartRules(ch models.Channel, cfg models.SmartRuleConfig) bool {
+	if len(cfg.Conditions) == 0 {
+		return false
+	}
+
+	matchAll := cfg.Match == "all"
+
+	for _, cond := range cfg.Conditions {
+		result := evaluateCondition(ch, cond)
+		if matchAll && !result {
+			return false // all must match, one failed
+		}
+		if !matchAll && result {
+			return true // any must match, one succeeded
+		}
+	}
+
+	// If matchAll: all conditions passed. If matchAny: none passed.
+	return matchAll
+}
+
+// evaluateCondition evaluates a single smart rule condition against a channel
+func evaluateCondition(ch models.Channel, cond models.SmartRuleCond) bool {
+	var fieldVal string
+
+	switch strings.ToLower(cond.Field) {
+	case "group":
+		fieldVal = ch.Group
+	case "name":
+		fieldVal = ch.Name
+	case "number":
+		fieldVal = strconv.Itoa(ch.Number)
+	case "source", "sourcename":
+		fieldVal = ch.SourceName
+	case "sourcetype":
+		fieldVal = ch.SourceType
+	case "hd":
+		// Consider channels with number >= 500 or name containing "HD" as HD
+		isHD := ch.Number >= 500 || strings.Contains(strings.ToUpper(ch.Name), "HD")
+		if cond.Value == "true" {
+			return isHD
+		}
+		return !isHD
+	case "favorite":
+		if cond.Value == "true" {
+			return ch.IsFavorite
+		}
+		return !ch.IsFavorite
+	default:
+		return false
+	}
+
+	condVal := cond.Value
+
+	switch strings.ToLower(cond.Op) {
+	case "eq", "equals":
+		return strings.EqualFold(fieldVal, condVal)
+	case "neq", "not_equals":
+		return !strings.EqualFold(fieldVal, condVal)
+	case "contains":
+		return strings.Contains(strings.ToLower(fieldVal), strings.ToLower(condVal))
+	case "not_contains":
+		return !strings.Contains(strings.ToLower(fieldVal), strings.ToLower(condVal))
+	case "starts_with":
+		return strings.HasPrefix(strings.ToLower(fieldVal), strings.ToLower(condVal))
+	case "ends_with":
+		return strings.HasSuffix(strings.ToLower(fieldVal), strings.ToLower(condVal))
+	case "gt":
+		fv, _ := strconv.Atoi(fieldVal)
+		cv, _ := strconv.Atoi(condVal)
+		return fv > cv
+	case "lt":
+		fv, _ := strconv.Atoi(fieldVal)
+		cv, _ := strconv.Atoi(condVal)
+		return fv < cv
+	case "gte":
+		fv, _ := strconv.Atoi(fieldVal)
+		cv, _ := strconv.Atoi(condVal)
+		return fv >= cv
+	case "lte":
+		fv, _ := strconv.Atoi(fieldVal)
+		cv, _ := strconv.Atoi(condVal)
+		return fv <= cv
+	default:
+		return strings.EqualFold(fieldVal, condVal)
+	}
+}
+
 // exportChannelCollectionM3U exports a channel collection as M3U playlist
 func (s *Server) exportChannelCollectionM3U(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
@@ -1929,11 +2105,13 @@ func (s *Server) exportChannelCollectionM3U(c *gin.Context) {
 	var m3u strings.Builder
 	m3u.WriteString("#EXTM3U\n")
 
-	// Add real channels
-	if collection.ChannelIDs != "" {
+	// Resolve channels: smart rules or manual IDs
+	var channels []models.Channel
+	if collection.Smart && collection.SmartRules != "" {
+		channels = s.evaluateSmartRules(collection.SmartRules)
+	} else if collection.ChannelIDs != "" {
 		ids := parseIDList(collection.ChannelIDs)
 		if len(ids) > 0 {
-			var channels []models.Channel
 			s.db.Where("id IN ?", ids).Find(&channels)
 
 			// Maintain order from ChannelIDs
@@ -1941,39 +2119,43 @@ func (s *Server) exportChannelCollectionM3U(c *gin.Context) {
 			for _, ch := range channels {
 				channelMap[ch.ID] = ch
 			}
-
+			ordered := make([]models.Channel, 0, len(ids))
 			for _, chID := range ids {
-				ch, ok := channelMap[uint(chID)]
-				if !ok {
-					continue
+				if ch, ok := channelMap[uint(chID)]; ok {
+					ordered = append(ordered, ch)
 				}
-				extinf := "#EXTINF:-1"
-				tvgID := ch.ChannelID
-				if tvgID == "" {
-					tvgID = ch.TVGId
-				}
-				if tvgID != "" {
-					extinf += fmt.Sprintf(` tvg-id="%s"`, escapeM3UValue(tvgID))
-				}
-				extinf += fmt.Sprintf(` tvg-name="%s"`, escapeM3UValue(ch.Name))
-				if ch.Number > 0 {
-					extinf += fmt.Sprintf(` tvg-chno="%d"`, ch.Number)
-				}
-				if ch.Logo != "" {
-					extinf += fmt.Sprintf(` tvg-logo="%s"`, escapeM3UValue(ch.Logo))
-				}
-				if ch.Group != "" {
-					extinf += fmt.Sprintf(` group-title="%s"`, escapeM3UValue(ch.Group))
-				}
-				stationID := getGracenoteStationID(ch)
-				if stationID != "" {
-					extinf += fmt.Sprintf(` tvc-guide-stationid="%s"`, stationID)
-				}
-				extinf += fmt.Sprintf(",%s\n", ch.Name)
-				m3u.WriteString(extinf)
-				m3u.WriteString(fmt.Sprintf("%s/api/livetv/channels/%d/stream.m3u8\n", baseURL, ch.ID))
 			}
+			channels = ordered
 		}
+	}
+
+	// Write channels to M3U
+	for _, ch := range channels {
+		extinf := "#EXTINF:-1"
+		tvgID := ch.ChannelID
+		if tvgID == "" {
+			tvgID = ch.TVGId
+		}
+		if tvgID != "" {
+			extinf += fmt.Sprintf(` tvg-id="%s"`, escapeM3UValue(tvgID))
+		}
+		extinf += fmt.Sprintf(` tvg-name="%s"`, escapeM3UValue(ch.Name))
+		if ch.Number > 0 {
+			extinf += fmt.Sprintf(` tvg-chno="%d"`, ch.Number)
+		}
+		if ch.Logo != "" {
+			extinf += fmt.Sprintf(` tvg-logo="%s"`, escapeM3UValue(ch.Logo))
+		}
+		if ch.Group != "" {
+			extinf += fmt.Sprintf(` group-title="%s"`, escapeM3UValue(ch.Group))
+		}
+		stationID := getGracenoteStationID(ch)
+		if stationID != "" {
+			extinf += fmt.Sprintf(` tvc-guide-stationid="%s"`, stationID)
+		}
+		extinf += fmt.Sprintf(",%s\n", ch.Name)
+		m3u.WriteString(extinf)
+		m3u.WriteString(fmt.Sprintf("%s/api/livetv/channels/%d/stream.m3u8\n", baseURL, ch.ID))
 	}
 
 	// Add virtual stations

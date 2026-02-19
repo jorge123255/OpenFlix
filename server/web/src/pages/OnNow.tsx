@@ -17,6 +17,8 @@ import {
 } from 'lucide-react'
 import { api, type OnNowChannel } from '../api/client'
 
+const isAbsoluteUrl = (url?: string) => url ? /^https?:\/\//i.test(url) : false
+
 type FilterCategory = 'all' | 'favorites' | 'news' | 'sports' | 'movies' | 'entertainment' | 'kids'
 
 const filterCategories: { id: FilterCategory; name: string; icon: React.ElementType }[] = [
@@ -103,7 +105,7 @@ function ChannelCard({ channel }: { channel: OnNowChannel }) {
       <div className="p-4">
         {/* Channel header */}
         <div className="flex items-center gap-3 mb-3">
-          {channel.logo ? (
+          {isAbsoluteUrl(channel.logo) ? (
             <img
               src={channel.logo}
               alt={channel.name}
@@ -117,7 +119,7 @@ function ChannelCard({ channel }: { channel: OnNowChannel }) {
             />
           ) : null}
           <div
-            className={`h-10 w-10 rounded-lg bg-gray-700 flex items-center justify-center flex-shrink-0 ${channel.logo ? 'hidden' : ''}`}
+            className={`h-10 w-10 rounded-lg bg-gray-700 flex items-center justify-center flex-shrink-0 ${isAbsoluteUrl(channel.logo) ? 'hidden' : ''}`}
           >
             <Tv className="h-5 w-5 text-gray-400" />
           </div>

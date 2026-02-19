@@ -1,9 +1,12 @@
 package api
 
 import (
+	"encoding/xml"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/openflix/openflix-server/internal/livetv"
@@ -181,4 +184,210 @@ func getGracenoteStationID(ch models.Channel) string {
 // escapeM3UValue escapes quotes in M3U attribute values
 func escapeM3UValue(s string) string {
 	return strings.ReplaceAll(s, `"`, `\"`)
+}
+
+// ============ XMLTV EPG Export ============
+
+// XMLTV structs for XML marshalling
+type xmltvTV struct {
+	XMLName           xml.Name          `xml:"tv"`
+	GeneratorInfoName string            `xml:"generator-info-name,attr"`
+	Channels          []xmltvChannel    `xml:"channel"`
+	Programmes        []xmltvProgramme  `xml:"programme"`
+}
+
+type xmltvChannel struct {
+	ID          string         `xml:"id,attr"`
+	DisplayName xmltvLangValue `xml:"display-name"`
+	Icon        *xmltvIcon     `xml:"icon,omitempty"`
+}
+
+type xmltvProgramme struct {
+	Start      string          `xml:"start,attr"`
+	Stop       string          `xml:"stop,attr"`
+	Channel    string          `xml:"channel,attr"`
+	Title      xmltvLangValue  `xml:"title"`
+	Desc       *xmltvLangValue `xml:"desc,omitempty"`
+	Category   *xmltvLangValue `xml:"category,omitempty"`
+	EpisodeNum *xmltvEpisodeNum `xml:"episode-num,omitempty"`
+	Icon       *xmltvIcon      `xml:"icon,omitempty"`
+}
+
+type xmltvLangValue struct {
+	Lang  string `xml:"lang,attr"`
+	Value string `xml:",chardata"`
+}
+
+type xmltvEpisodeNum struct {
+	System string `xml:"system,attr"`
+	Value  string `xml:",chardata"`
+}
+
+type xmltvIcon struct {
+	Src string `xml:"src,attr"`
+}
+
+// formatXMLTVTime formats a time.Time to XMLTV datetime format: YYYYMMDDHHmmss +0000
+func formatXMLTVTime(t time.Time) string {
+	return t.UTC().Format("20060102150405") + " +0000"
+}
+
+// buildEpisodeNum builds an onscreen-format episode number string (e.g., "S1E5")
+func buildEpisodeNum(p models.Program) string {
+	if p.EpisodeNum != "" {
+		return p.EpisodeNum
+	}
+	if p.SeasonNumber > 0 && p.EpisodeNumber > 0 {
+		return fmt.Sprintf("S%dE%d", p.SeasonNumber, p.EpisodeNumber)
+	}
+	if p.EpisodeNumber > 0 {
+		return fmt.Sprintf("E%d", p.EpisodeNumber)
+	}
+	return ""
+}
+
+// exportEPGXMLTV exports EPG data in XMLTV format
+// GET /api/livetv/export.xml
+func (s *Server) exportEPGXMLTV(c *gin.Context) {
+	// --- Query channels ---
+	channelQuery := s.db.Model(&models.Channel{})
+
+	// Default to enabled channels only
+	enabledFilter := c.DefaultQuery("enabled", "true")
+	if enabledFilter == "true" {
+		channelQuery = channelQuery.Where("enabled = ?", true)
+	} else if enabledFilter == "false" {
+		channelQuery = channelQuery.Where("enabled = ?", false)
+	}
+	// "all" value means no filter on enabled
+
+	// Filter by group
+	if group := c.Query("group"); group != "" {
+		channelQuery = channelQuery.Where("`group` = ?", group)
+	}
+
+	var channels []models.Channel
+	if err := channelQuery.Order("number, name").Find(&channels).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch channels"})
+		return
+	}
+
+	// --- Determine time range for programs ---
+	hours := 48
+	if h := c.Query("hours"); h != "" {
+		if parsed, err := strconv.Atoi(h); err == nil && parsed > 0 {
+			hours = parsed
+		}
+	}
+
+	now := time.Now().UTC()
+	rangeStart := now.Add(-1 * time.Hour)
+	rangeEnd := now.Add(time.Duration(hours) * time.Hour)
+
+	// --- Build a set of channel IDs for program lookup ---
+	// Channels use ChannelID (string) to match programs
+	channelIDs := make([]string, 0, len(channels))
+	for _, ch := range channels {
+		chID := ch.ChannelID
+		if chID == "" {
+			chID = ch.TVGId
+		}
+		if chID != "" {
+			channelIDs = append(channelIDs, chID)
+		}
+	}
+
+	// --- Query programs within the time range for these channels ---
+	var programs []models.Program
+	if len(channelIDs) > 0 {
+		if err := s.db.Where("channel_id IN ? AND start < ? AND end > ?", channelIDs, rangeEnd, rangeStart).
+			Order("channel_id, start").
+			Find(&programs).Error; err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch programs"})
+			return
+		}
+	}
+
+	// --- Build XMLTV document ---
+	tv := xmltvTV{
+		GeneratorInfoName: "OpenFlix",
+	}
+
+	// Build channel elements
+	for _, ch := range channels {
+		chID := ch.ChannelID
+		if chID == "" {
+			chID = ch.TVGId
+		}
+		if chID == "" {
+			// Use the database ID as fallback
+			chID = fmt.Sprintf("%d", ch.ID)
+		}
+
+		xmlCh := xmltvChannel{
+			ID: chID,
+			DisplayName: xmltvLangValue{
+				Lang:  "en",
+				Value: ch.Name,
+			},
+		}
+		if ch.Logo != "" {
+			xmlCh.Icon = &xmltvIcon{Src: ch.Logo}
+		}
+		tv.Channels = append(tv.Channels, xmlCh)
+	}
+
+	// Build programme elements
+	for _, p := range programs {
+		prog := xmltvProgramme{
+			Start:   formatXMLTVTime(p.Start),
+			Stop:    formatXMLTVTime(p.End),
+			Channel: p.ChannelID,
+			Title: xmltvLangValue{
+				Lang:  "en",
+				Value: p.Title,
+			},
+		}
+
+		if p.Description != "" {
+			prog.Desc = &xmltvLangValue{
+				Lang:  "en",
+				Value: p.Description,
+			}
+		}
+
+		if p.Category != "" {
+			prog.Category = &xmltvLangValue{
+				Lang:  "en",
+				Value: p.Category,
+			}
+		}
+
+		epNum := buildEpisodeNum(p)
+		if epNum != "" {
+			prog.EpisodeNum = &xmltvEpisodeNum{
+				System: "onscreen",
+				Value:  epNum,
+			}
+		}
+
+		if p.Icon != "" {
+			prog.Icon = &xmltvIcon{Src: p.Icon}
+		}
+
+		tv.Programmes = append(tv.Programmes, prog)
+	}
+
+	// --- Marshal to XML ---
+	output, err := xml.MarshalIndent(tv, "", "  ")
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate XML"})
+		return
+	}
+
+	xmlDoc := xml.Header + string(output)
+
+	c.Header("Content-Type", "application/xml")
+	c.Header("Content-Disposition", `attachment; filename="epg.xml"`)
+	c.String(http.StatusOK, xmlDoc)
 }

@@ -197,10 +197,16 @@ func (p *EPGParser) ImportPrograms(sourceID uint, xmltv *XMLTV) (int, error) {
 	p.db.Where("m3_u_source_id = ?", sourceID).Find(&channels)
 
 	// Map EPG channel ID to our channel's ChannelID field
+	// We map both ChannelID and TVGId since XMLTV programs use the original
+	// tvg-id (stored in TVGId), but auto-detection may have changed ChannelID
+	// to a different EPG source's ID (e.g. Gracenote).
 	channelMap := make(map[string]string)
 	for _, ch := range channels {
 		if ch.ChannelID != "" {
 			channelMap[ch.ChannelID] = ch.ChannelID
+		}
+		if ch.TVGId != "" && ch.TVGId != ch.ChannelID {
+			channelMap[ch.TVGId] = ch.ChannelID
 		}
 	}
 
@@ -504,6 +510,7 @@ func (p *EPGParser) ImportProgramsFromEPGSource(source *models.EPGSource, xmltv 
 			existing.Category = category
 			existing.EpisodeNum = episodeNum
 			existing.Icon = icon
+			existing.EPGSourceID = &source.ID
 			// Set call sign from channel display name
 			if name, ok := channelNames[prog.Channel]; ok {
 				existing.CallSign = name
@@ -515,6 +522,7 @@ func (p *EPGParser) ImportProgramsFromEPGSource(source *models.EPGSource, xmltv 
 			// Create new
 			program := models.Program{
 				ChannelID:   prog.Channel,
+				EPGSourceID: &source.ID,
 				Start:       *start,
 				End:         *stop,
 				Title:       title,
@@ -652,6 +660,7 @@ func (p *EPGParser) ImportProgramsFromGracenote(source *models.EPGSource) (int, 
 				existing.Description = event.Program.ShortDesc
 				existing.Category = category
 				existing.Icon = icon
+				existing.EPGSourceID = &source.ID
 				existing.CallSign = channel.CallSign
 				existing.ChannelNo = channel.ChannelNo
 				existing.AffiliateName = channel.AffiliateName
@@ -666,6 +675,7 @@ func (p *EPGParser) ImportProgramsFromGracenote(source *models.EPGSource) (int, 
 				// Create new
 				program := models.Program{
 					ChannelID:     channelID,
+					EPGSourceID:   &source.ID,
 					CallSign:      channel.CallSign,
 					ChannelNo:     channel.ChannelNo,
 					AffiliateName: channel.AffiliateName,

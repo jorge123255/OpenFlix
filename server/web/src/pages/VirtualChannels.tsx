@@ -17,6 +17,8 @@ import {
   Power,
 } from 'lucide-react'
 
+const isAbsoluteUrl = (url?: string) => url ? /^https?:\/\//i.test(url) : false
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -685,7 +687,7 @@ function StationCard({
       <div className="flex items-start gap-4">
         {/* Logo */}
         <div className="flex-shrink-0 w-16 h-16 rounded-lg bg-gray-700 flex items-center justify-center overflow-hidden">
-          {station.logo ? (
+          {isAbsoluteUrl(station.logo) ? (
             <img
               src={station.logo}
               alt={station.name}

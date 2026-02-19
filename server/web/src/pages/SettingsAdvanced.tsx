@@ -133,6 +133,7 @@ function ToggleRow({
   )
 }
 
+const inputClass = 'w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white'
 const selectClass = 'w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white'
 const numberInputClass = 'w-32 px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white'
 
@@ -276,6 +277,61 @@ export function SettingsAdvancedPage() {
             <span className="text-gray-400 text-sm">seconds</span>
           </div>
         </SettingField>
+
+        <SettingField
+          label="Max Concurrent Transcode Sessions"
+          description="Limit simultaneous transcodes to prevent CPU/GPU overload"
+        >
+          <div className="flex items-center gap-3">
+            <input
+              type="number"
+              min="1"
+              max="20"
+              value={formData.max_transcode_sessions || 3}
+              onChange={(e) => updateField('max_transcode_sessions', Number(e.target.value))}
+              className={numberInputClass}
+            />
+            <span className="text-gray-400 text-sm">sessions</span>
+          </div>
+        </SettingField>
+
+        <SettingField
+          label="Transcode Temp Directory"
+          description="Temporary directory for transcode output files"
+        >
+          <input
+            type="text"
+            value={formData.transcode_temp_dir || ''}
+            onChange={(e) => updateField('transcode_temp_dir', e.target.value)}
+            className={inputClass}
+            placeholder="~/.openflix/transcode"
+          />
+        </SettingField>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <SettingField label="Default Video Codec" description="Preferred output video codec for transcoding">
+            <select
+              value={formData.default_video_codec || 'h264'}
+              onChange={(e) => updateField('default_video_codec', e.target.value)}
+              className={selectClass}
+            >
+              <option value="h264">H.264 (AVC)</option>
+              <option value="hevc">H.265 (HEVC)</option>
+              <option value="copy">Copy (no re-encode)</option>
+            </select>
+          </SettingField>
+          <SettingField label="Default Audio Codec" description="Preferred output audio codec for transcoding">
+            <select
+              value={formData.default_audio_codec || 'aac'}
+              onChange={(e) => updateField('default_audio_codec', e.target.value)}
+              className={selectClass}
+            >
+              <option value="aac">AAC</option>
+              <option value="ac3">AC3 (Dolby Digital)</option>
+              <option value="copy">Copy (no re-encode)</option>
+            </select>
+          </SettingField>
+        </div>
       </SettingSection>
 
       {/* Web Player Section */}
