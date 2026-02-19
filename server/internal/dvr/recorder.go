@@ -88,6 +88,14 @@ func NewRecorder(db *gorm.DB, config RecorderConfig) *Recorder {
 		dedup:    NewDuplicateDetector(db),
 	}
 
+	// Clean up orphaned "recording" status entries from previous crash/restart
+	var orphaned int64
+	db.Model(&models.Recording{}).Where("status = ?", "recording").Count(&orphaned)
+	if orphaned > 0 {
+		db.Model(&models.Recording{}).Where("status = ?", "recording").Update("status", "failed")
+		logger.Log.WithField("count", orphaned).Info("Cleaned up orphaned recordings from previous session")
+	}
+
 	// Start scheduler
 	go r.scheduleLoop()
 

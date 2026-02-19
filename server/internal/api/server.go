@@ -847,6 +847,7 @@ func (s *Server) setupRouter() {
 		dvrGroup.PUT("/recordings/:id", s.updateRecording)
 		dvrGroup.POST("/recordings/:id/match", s.applyRecordingMatch)
 		dvrGroup.DELETE("/recordings/:id", s.deleteRecording)
+		dvrGroup.POST("/recordings/:id/stop", s.stopRecording)
 		dvrGroup.PUT("/recordings/:id/priority", s.updateRecordingPriority)
 
 		// Series Rules

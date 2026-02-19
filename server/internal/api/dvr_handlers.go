@@ -173,6 +173,17 @@ func (s *Server) scheduleRecording(c *gin.Context) {
 		return
 	}
 
+	// Check for duplicate recording (same title + overlapping time window)
+	var existing models.Recording
+	if err := s.db.Where("user_id = ? AND status IN ? AND title = ? AND start_time < ? AND end_time > ?",
+		userID, []string{"scheduled", "recording"}, req.Title, req.EndTime, req.StartTime).First(&existing).Error; err == nil {
+		c.JSON(http.StatusConflict, gin.H{
+			"error":       "A recording for this program already exists",
+			"recordingId": existing.ID,
+		})
+		return
+	}
+
 	// Check for conflicts before creating
 	var conflicts []models.Recording
 	s.db.Where("user_id = ? AND status IN ? AND start_time < ? AND end_time > ?",
@@ -272,6 +283,17 @@ func (s *Server) recordFromProgram(c *gin.Context) {
 	var program models.Program
 	if err := s.db.First(&program, req.ProgramID).Error; err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Program not found"})
+		return
+	}
+
+	// Check for duplicate recording (same title + overlapping time = already scheduled)
+	var existingRec models.Recording
+	if err := s.db.Where("user_id = ? AND status IN ? AND title = ? AND start_time = ? AND end_time = ?",
+		userID, []string{"scheduled", "recording", "completed"}, program.Title, program.Start, program.End).First(&existingRec).Error; err == nil {
+		c.JSON(http.StatusConflict, gin.H{
+			"error":       "A recording for this program already exists",
+			"recordingId": existingRec.ID,
+		})
 		return
 	}
 
@@ -436,11 +458,17 @@ func (s *Server) deleteRecording(c *gin.Context) {
 		return
 	}
 
-	// If recording is in progress, we'd need to stop it
-	// For now, just mark as cancelled if scheduled, or delete if completed/failed
+	// If recording is in progress, stop it first
 	if recording.Status == "recording" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Cannot delete recording in progress"})
-		return
+		if s.recorder != nil {
+			if err := s.recorder.CancelRecording(recording.ID); err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Failed to stop recording: %v", err)})
+				return
+			}
+		} else {
+			recording.Status = "cancelled"
+			s.db.Save(&recording)
+		}
 	}
 
 	if err := s.db.Delete(&recording).Error; err != nil {
@@ -449,6 +477,38 @@ func (s *Server) deleteRecording(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Recording deleted"})
+}
+
+// stopRecording stops an in-progress recording
+func (s *Server) stopRecording(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid recording ID"})
+		return
+	}
+
+	var recording models.Recording
+	if err := s.db.First(&recording, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Recording not found"})
+		return
+	}
+
+	if recording.Status != "recording" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Recording is not in progress"})
+		return
+	}
+
+	if s.recorder != nil {
+		if err := s.recorder.CancelRecording(recording.ID); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Failed to stop recording: %v", err)})
+			return
+		}
+	} else {
+		recording.Status = "cancelled"
+		s.db.Save(&recording)
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Recording stopped"})
 }
 
 // updateRecording updates a recording's metadata (title, description, category)
