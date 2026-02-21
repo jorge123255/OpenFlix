@@ -71,6 +71,7 @@ type Server struct {
 	taskScheduler      *scheduler.TaskScheduler
 	subtitleManager    *subtitles.SubtitleManager
 	cloudRegistry      *discovery.CloudRegistryClient
+	discoveryService   *discovery.DiscoveryService
 }
 
 // NewServer creates a new API server
@@ -80,10 +81,10 @@ func NewServer(cfg *config.Config, db *gorm.DB) *Server {
 
 	// Initialize TMDB agent and metadata scheduler if API key is configured
 	var metadataScheduler *metadata.Scheduler
-	var epgEnricher *livetv.EPGEnricher
 	var dvrEnricher *dvr.Enricher
+	var tmdbAgent *metadata.TMDBAgent
 	if cfg.Library.TMDBApiKey != "" {
-		tmdbAgent := metadata.NewTMDBAgent(cfg.Library.TMDBApiKey, db, dataDir)
+		tmdbAgent = metadata.NewTMDBAgent(cfg.Library.TMDBApiKey, db, dataDir)
 		scanner.SetTMDBAgent(tmdbAgent)
 		logger.Info("TMDB metadata agent enabled")
 
@@ -92,14 +93,14 @@ func NewServer(cfg *config.Config, db *gorm.DB) *Server {
 		metadataScheduler.Start()
 		logger.Info("Metadata auto-refresh enabled (every 2 minutes)")
 
-		// Initialize EPG enricher for program artwork
-		epgEnricher = livetv.NewEPGEnricher(db, tmdbAgent)
-		logger.Info("EPG artwork enrichment enabled")
-
 		// Initialize DVR enricher for recording metadata
 		dvrEnricher = dvr.NewEnricher(db, tmdbAgent)
 		logger.Info("DVR metadata enrichment enabled")
 	}
+
+	// Always initialize EPG enricher (sports enrichment works without TMDB)
+	epgEnricher := livetv.NewEPGEnricher(db, tmdbAgent)
+	logger.Info("EPG enrichment enabled (sports teams + artwork)")
 
 	// Initialize transcoder
 	var transcoder *transcode.Transcoder
@@ -354,6 +355,12 @@ func NewServer(cfg *config.Config, db *gorm.DB) *Server {
 		}
 	}
 
+	// Start local network discovery (UDP broadcast + listener)
+	if cfg.Server.DiscoveryEnabled {
+		s.discoveryService = discovery.NewDiscoveryService(cfg.Server.Name, "1.0.0", cfg.Server.MachineID, cfg.Server.Host, cfg.Server.Port)
+		s.discoveryService.Start()
+	}
+
 	s.setupRouter()
 
 	// Wire enricher/grouper/upnext into recorder for post-processing
@@ -361,10 +368,8 @@ func NewServer(cfg *config.Config, db *gorm.DB) *Server {
 		recorder.SetEnricher(dvrEnricher)
 	}
 
-	// Start background EPG enrichment if TMDB is configured
-	if epgEnricher != nil {
-		epgEnricher.StartBackgroundEnrichment()
-	}
+	// Start background EPG enrichment (sports team enrichment + TMDB artwork)
+	epgEnricher.StartBackgroundEnrichment()
 
 	// Start background job queue
 	jobQueue.Start()
@@ -422,26 +427,26 @@ func (s *Server) reinitializeTMDBAgent() {
 			s.metadataScheduler.Start()
 		}
 
-		// Stop old enricher if running
+		// Restart EPG enricher with TMDB support
 		if s.epgEnricher != nil {
 			s.epgEnricher.StopBackgroundEnrichment()
 		}
-
-		// Initialize and start EPG enricher for program artwork
 		s.epgEnricher = livetv.NewEPGEnricher(s.db, tmdbAgent)
 		s.epgEnricher.StartBackgroundEnrichment()
 		logger.Info("TMDB metadata agent re-initialized with new API key")
-		logger.Info("EPG artwork enrichment enabled")
+		logger.Info("EPG enrichment enabled (sports teams + TMDB artwork)")
 	} else {
 		s.scanner.SetTMDBAgent(nil)
 		if s.metadataScheduler != nil {
 			s.metadataScheduler.SetTMDBAgent(nil)
 		}
+		// Restart enricher without TMDB (sports enrichment still works)
 		if s.epgEnricher != nil {
 			s.epgEnricher.StopBackgroundEnrichment()
 		}
-		s.epgEnricher = nil
-		logger.Info("TMDB metadata agent disabled (no API key)")
+		s.epgEnricher = livetv.NewEPGEnricher(s.db, nil)
+		s.epgEnricher.StartBackgroundEnrichment()
+		logger.Info("TMDB disabled, sports-only EPG enrichment active")
 	}
 }
 

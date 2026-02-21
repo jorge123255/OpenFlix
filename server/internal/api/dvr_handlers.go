@@ -261,27 +261,42 @@ func (s *Server) scheduleRecording(c *gin.Context) {
 func (s *Server) recordFromProgram(c *gin.Context) {
 	userID := c.GetUint("userID")
 
-	var req struct {
-		ChannelID    uint `json:"channelId" binding:"required"`
-		ProgramID    uint `json:"programId" binding:"required"`
-		SeriesRecord bool `json:"seriesRecord"`
-		Priority     *int `json:"priority"` // 0-100, higher = more important (default 50)
-	}
-	if err := c.ShouldBindJSON(&req); err != nil {
+	var raw map[string]interface{}
+	if err := c.ShouldBindJSON(&raw); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
+	channelID, err := parseUintField(raw, "channelId")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "channelId is required and must be a number"})
+		return
+	}
+	programID, err := parseUintField(raw, "programId")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "programId is required and must be a number"})
+		return
+	}
+	seriesRecord, _ := raw["seriesRecord"].(bool)
+
+	var priority *int
+	if p, ok := raw["priority"]; ok && p != nil {
+		if pf, ok := p.(float64); ok {
+			pi := int(pf)
+			priority = &pi
+		}
+	}
+
 	// Validate channel exists
 	var channel models.Channel
-	if err := s.db.First(&channel, req.ChannelID).Error; err != nil {
+	if err := s.db.First(&channel, channelID).Error; err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Channel not found"})
 		return
 	}
 
 	// Get the program
 	var program models.Program
-	if err := s.db.First(&program, req.ProgramID).Error; err != nil {
+	if err := s.db.First(&program, programID).Error; err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Program not found"})
 		return
 	}
@@ -303,27 +318,28 @@ func (s *Server) recordFromProgram(c *gin.Context) {
 		userID, []string{"scheduled", "recording"}, program.End, program.Start).Find(&conflicts)
 
 	// Set priority (default 50)
-	priority := 50
-	if req.Priority != nil {
-		if *req.Priority < 0 || *req.Priority > 100 {
+	prio := 50
+	if priority != nil {
+		if *priority < 0 || *priority > 100 {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Priority must be between 0 and 100"})
 			return
 		}
-		priority = *req.Priority
+		prio = *priority
 	}
 
 	// Create the recording with program metadata
+	progID := uint(programID)
 	recording := models.Recording{
 		UserID:       userID,
-		ChannelID:    req.ChannelID,
-		ProgramID:    &req.ProgramID,
+		ChannelID:    uint(channelID),
+		ProgramID:    &progID,
 		Title:        program.Title,
 		Subtitle:     program.Subtitle,
 		Description:  program.Description,
 		StartTime:    program.Start,
 		EndTime:      program.End,
 		Status:       "scheduled",
-		SeriesRecord: req.SeriesRecord,
+		SeriesRecord: seriesRecord,
 		Category:     program.Category,
 		EpisodeNum:   program.EpisodeNum,
 		Thumb:        program.Icon,        // Use program icon as initial thumb
@@ -331,7 +347,7 @@ func (s *Server) recordFromProgram(c *gin.Context) {
 		ChannelName:  channel.Name,
 		ChannelLogo:  channel.Logo,
 		IsMovie:      program.IsMovie,
-		Priority:     priority,
+		Priority:     prio,
 	}
 
 	if err := s.db.Create(&recording).Error; err != nil {
@@ -349,7 +365,7 @@ func (s *Server) recordFromProgram(c *gin.Context) {
 	}
 
 	// If series recording is requested, schedule future episodes
-	if req.SeriesRecord && program.Title != "" {
+	if seriesRecord && program.Title != "" {
 		go s.scheduleFutureSeriesRecordings(userID, channel.ChannelID, program.Title, recording.ID)
 	}
 
@@ -1932,4 +1948,20 @@ func (s *Server) bulkRecordingAction(c *gin.Context) {
 		"affected": affected,
 		"message":  fmt.Sprintf("%d recordings updated", affected),
 	})
+}
+
+// parseUintField extracts a uint64 from a map field that may be a JSON number or string.
+func parseUintField(m map[string]interface{}, key string) (uint64, error) {
+	val, ok := m[key]
+	if !ok || val == nil {
+		return 0, fmt.Errorf("%s is required", key)
+	}
+	switch v := val.(type) {
+	case float64:
+		return uint64(v), nil
+	case string:
+		return strconv.ParseUint(v, 10, 64)
+	default:
+		return 0, fmt.Errorf("%s must be a number", key)
+	}
 }
