@@ -16,6 +16,7 @@ import (
 	"github.com/openflix/openflix-server/internal/config"
 	"github.com/openflix/openflix-server/internal/ddns"
 	"github.com/openflix/openflix-server/internal/discovery"
+	"github.com/openflix/openflix-server/internal/mdns"
 	"github.com/openflix/openflix-server/internal/dvr"
 	"github.com/openflix/openflix-server/internal/health"
 	"github.com/openflix/openflix-server/internal/instant"
@@ -72,6 +73,7 @@ type Server struct {
 	subtitleManager    *subtitles.SubtitleManager
 	cloudRegistry      *discovery.CloudRegistryClient
 	discoveryService   *discovery.DiscoveryService
+	mdnsService        *mdns.Service
 }
 
 // NewServer creates a new API server
@@ -308,6 +310,77 @@ func NewServer(cfg *config.Config, db *gorm.DB) *Server {
 		}
 		return nil
 	})
+	taskSched.RegisterTask("source_refresh", "Source Refresh", "Refresh M3U and Xtream sources (channels + VOD/series)", "0 */12 * * *", 60*time.Minute, func(ctx context.Context) error {
+		logger.Info("[scheduler:source_refresh] refreshing all sources")
+
+		// Refresh M3U sources
+		var m3uSources []models.M3USource
+		db.Where("enabled = ?", true).Find(&m3uSources)
+		parser := livetv.NewM3UParser(db)
+		for i := range m3uSources {
+			src := &m3uSources[i]
+			logger.Infof("[scheduler:source_refresh] refreshing M3U source: %s", src.Name)
+			if err := parser.RefreshSource(src); err != nil {
+				logger.Warnf("[scheduler:source_refresh] failed to refresh M3U source %s: %v", src.Name, err)
+				continue
+			}
+			// Auto-import VOD/series if enabled
+			importer := livetv.NewVODImporter(db)
+			if src.ImportVOD && src.VODLibraryID != nil {
+				result, err := importer.ImportM3UVOD(src.ID)
+				if err != nil {
+					logger.Warnf("[scheduler:source_refresh] VOD import failed for %s: %v", src.Name, err)
+				} else {
+					logger.Infof("[scheduler:source_refresh] VOD import for %s: %d added, %d updated", src.Name, result.Added, result.Updated)
+				}
+			}
+			if src.ImportSeries && src.SeriesLibraryID != nil {
+				result, err := importer.ImportM3USeries(src.ID)
+				if err != nil {
+					logger.Warnf("[scheduler:source_refresh] series import failed for %s: %v", src.Name, err)
+				} else {
+					logger.Infof("[scheduler:source_refresh] series import for %s: %d added, %d updated", src.Name, result.Added, result.Updated)
+				}
+			}
+		}
+
+		// Refresh Xtream sources
+		var xtreamSources []models.XtreamSource
+		db.Where("enabled = ?", true).Find(&xtreamSources)
+		for i := range xtreamSources {
+			src := &xtreamSources[i]
+			logger.Infof("[scheduler:source_refresh] refreshing Xtream source: %s", src.Name)
+			client := livetv.NewXtreamClient(db)
+			if src.ImportLive {
+				added, updated, err := client.ImportChannels(src.ID)
+				if err != nil {
+					logger.Warnf("[scheduler:source_refresh] Xtream channel import failed for %s: %v", src.Name, err)
+				} else {
+					logger.Infof("[scheduler:source_refresh] Xtream channels for %s: %d added, %d updated", src.Name, added, updated)
+				}
+			}
+			importer := livetv.NewVODImporter(db)
+			if src.ImportVOD && src.VODLibraryID != nil {
+				result, err := importer.ImportXtreamVOD(src.ID)
+				if err != nil {
+					logger.Warnf("[scheduler:source_refresh] Xtream VOD import failed for %s: %v", src.Name, err)
+				} else {
+					logger.Infof("[scheduler:source_refresh] Xtream VOD for %s: %d added, %d updated", src.Name, result.Added, result.Updated)
+				}
+			}
+			if src.ImportSeries && src.SeriesLibraryID != nil {
+				result, err := importer.ImportXtreamSeries(src.ID)
+				if err != nil {
+					logger.Warnf("[scheduler:source_refresh] Xtream series import failed for %s: %v", src.Name, err)
+				} else {
+					logger.Infof("[scheduler:source_refresh] Xtream series for %s: %d added, %d updated", src.Name, result.Added, result.Updated)
+				}
+			}
+		}
+
+		logger.Info("[scheduler:source_refresh] all sources refreshed")
+		return nil
+	})
 
 	s := &Server{
 		config:            cfg,
@@ -355,10 +428,15 @@ func NewServer(cfg *config.Config, db *gorm.DB) *Server {
 		}
 	}
 
-	// Start local network discovery (UDP broadcast + listener)
+	// Start local network discovery (UDP broadcast + listener + mDNS)
 	if cfg.Server.DiscoveryEnabled {
 		s.discoveryService = discovery.NewDiscoveryService(cfg.Server.Name, "1.0.0", cfg.Server.MachineID, cfg.Server.Host, cfg.Server.Port)
 		s.discoveryService.Start()
+
+		s.mdnsService = mdns.NewService(cfg.Server.Name, cfg.Server.Port, cfg.Server.MachineID, "1.0.0")
+		if err := s.mdnsService.Start(); err != nil {
+			logger.Warnf("Failed to start mDNS service: %v", err)
+		}
 	}
 
 	s.setupRouter()
