@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
+import { FileBrowser } from '../components/FileBrowser'
 import {
   Save,
   Tv,
@@ -14,7 +15,7 @@ import {
   Trash2,
 } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { api, type ServerSettings } from '../api/client'
+import { api, type ServerSettings, type DVRSettings } from '../api/client'
 
 function SettingsTabNav({ active }: { active: 'general' | 'sources' | 'livetv-dvr' | 'advanced' | 'status' }) {
   const tabs = [
@@ -162,6 +163,7 @@ export function SettingsLiveTVDVRPage() {
   const queryClient = useQueryClient()
   const [formData, setFormData] = useState<Partial<ServerSettings>>({})
   const [saved, setSaved] = useState(false)
+  const [showRecordingDirBrowser, setShowRecordingDirBrowser] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
   const [rebuilding, setRebuilding] = useState(false)
 
@@ -261,6 +263,35 @@ export function SettingsLiveTVDVRPage() {
         description="Default settings applied to new DVR recordings"
         icon={<Film className="h-5 w-5 text-red-400" />}
       >
+        <SettingField label="Recording Directory" description="Where DVR recordings are saved">
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={formData.recording_dir || ''}
+              onChange={(e) => updateField('recording_dir', e.target.value)}
+              className="flex-1 px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
+              placeholder="~/.openflix/recordings"
+            />
+            <button
+              type="button"
+              onClick={() => setShowRecordingDirBrowser(true)}
+              className="px-3 py-2 bg-gray-700 hover:bg-gray-600 text-gray-300 hover:text-white rounded-lg text-sm whitespace-nowrap"
+            >
+              Browse
+            </button>
+          </div>
+          {showRecordingDirBrowser && (
+            <FileBrowser
+              initialPath={formData.recording_dir || ''}
+              onSelect={(path) => {
+                updateField('recording_dir', path)
+                setShowRecordingDirBrowser(false)
+              }}
+              onCancel={() => setShowRecordingDirBrowser(false)}
+            />
+          )}
+        </SettingField>
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <SettingField
             label="Pre-Padding"
@@ -542,6 +573,72 @@ export function SettingsLiveTVDVRPage() {
           </select>
         </SettingField>
       </SettingSection>
+
+      {/* Max Concurrent Recordings */}
+      <MaxConcurrentSection />
     </div>
+  )
+}
+
+function MaxConcurrentSection() {
+  const queryClient = useQueryClient()
+  const [maxConcurrent, setMaxConcurrent] = useState(0)
+  const [saved, setSaved] = useState(false)
+
+  const { data: dvrSettings, isLoading } = useQuery({
+    queryKey: ['dvrSettings'],
+    queryFn: () => api.getDVRSettings(),
+    retry: 1,
+  })
+
+  useEffect(() => {
+    if (dvrSettings) setMaxConcurrent(dvrSettings.maxConcurrentRecordings)
+  }, [dvrSettings])
+
+  const updateSettings = useMutation({
+    mutationFn: (data: Partial<DVRSettings>) => api.updateDVRSettings(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['dvrSettings'] })
+      setSaved(true)
+      setTimeout(() => setSaved(false), 3000)
+    },
+  })
+
+  if (isLoading) return null
+
+  return (
+    <SettingSection title="Concurrency" icon={<Film className="h-5 w-5 text-orange-400" />}>
+      <div className="flex items-center justify-between mb-2">
+        <span />
+        <button
+          onClick={() => updateSettings.mutate({ maxConcurrentRecordings: maxConcurrent })}
+          disabled={updateSettings.isPending}
+          className="flex items-center gap-2 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-800 text-white text-sm rounded-lg"
+        >
+          <Save className="h-3.5 w-3.5" />
+          {updateSettings.isPending ? 'Saving...' : saved ? 'Saved!' : 'Save'}
+        </button>
+      </div>
+      <SettingField
+        label="Max Concurrent Recordings"
+        description="Maximum recordings that can run simultaneously. 0 = unlimited."
+      >
+        <div className="flex items-center gap-3">
+          <input
+            type="number"
+            min="0"
+            value={maxConcurrent}
+            onChange={(e) => setMaxConcurrent(Number(e.target.value))}
+            className={numberInputClass}
+          />
+          <span className="text-gray-400 text-sm">
+            {maxConcurrent === 0 ? '(Unlimited)' : `(Max ${maxConcurrent} at once)`}
+          </span>
+        </div>
+      </SettingField>
+      <p className="text-xs text-gray-500">
+        When conflicts occur, higher priority recordings are preferred.
+      </p>
+    </SettingSection>
   )
 }
