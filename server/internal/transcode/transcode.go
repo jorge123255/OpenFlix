@@ -1,6 +1,7 @@
 package transcode
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -45,17 +46,18 @@ type Transcoder struct {
 
 // Session represents an active transcoding session
 type Session struct {
-	ID         string
-	FileID     uint
-	FilePath   string
-	OutputDir  string
-	Quality    string
-	Offset     int64
-	Process    *exec.Cmd
-	Done       chan struct{}
-	Error      error
-	StartTime  time.Time
-	LastAccess time.Time
+	ID           string
+	FileID       uint
+	FilePath     string
+	OutputDir    string
+	Quality      string
+	Offset       int64
+	FileDuration float64 // total file duration in seconds (0 if unknown)
+	Process      *exec.Cmd
+	Done         chan struct{}
+	Error        error
+	StartTime    time.Time
+	LastAccess   time.Time
 }
 
 // NewTranscoder creates a new transcoder instance
@@ -89,6 +91,33 @@ func NewTranscoder(ffmpegPath, tempDir, hwAccel string, maxSessions int) *Transc
 	go t.cleanupLoop()
 
 	return t
+}
+
+// ProbeFileDuration uses ffprobe to get the duration of a media file in seconds.
+func (t *Transcoder) ProbeFileDuration(filePath string) float64 {
+	ffprobePath := strings.Replace(t.ffmpegPath, "ffmpeg", "ffprobe", 1)
+	if _, err := exec.LookPath(ffprobePath); err != nil {
+		ffprobePath = "ffprobe"
+	}
+	out, err := exec.Command(ffprobePath,
+		"-v", "quiet",
+		"-print_format", "json",
+		"-show_entries", "format=duration",
+		filePath,
+	).Output()
+	if err != nil {
+		return 0
+	}
+	var result struct {
+		Format struct {
+			Duration string `json:"duration"`
+		} `json:"format"`
+	}
+	if err := json.Unmarshal(out, &result); err != nil {
+		return 0
+	}
+	d, _ := strconv.ParseFloat(result.Format.Duration, 64)
+	return d
 }
 
 // DetectHardwareAccel detects available hardware acceleration
@@ -148,6 +177,15 @@ func DetectHardwareAccel(ffmpegPath string) string {
 func (t *Transcoder) StartSession(fileID uint, filePath string, offset int64, quality string) (*Session, error) {
 	t.mutex.Lock()
 
+	// Reuse existing session for the same file+quality+offset
+	for _, existing := range t.sessions {
+		if existing.FileID == fileID && existing.Quality == quality && existing.Offset == offset {
+			existing.LastAccess = time.Now()
+			t.mutex.Unlock()
+			return existing, nil
+		}
+	}
+
 	// Check max sessions
 	if len(t.sessions) >= t.maxSessions {
 		t.mutex.Unlock()
@@ -164,16 +202,22 @@ func (t *Transcoder) StartSession(fileID uint, filePath string, offset int64, qu
 		return nil, fmt.Errorf("failed to create session directory: %w", err)
 	}
 
+	// Probe duration before starting transcode (lock not held during IO)
+	t.mutex.Unlock()
+	fileDuration := t.ProbeFileDuration(filePath)
+	t.mutex.Lock()
+
 	session := &Session{
-		ID:         sessionID,
-		FileID:     fileID,
-		FilePath:   filePath,
-		OutputDir:  outputDir,
-		Quality:    quality,
-		Offset:     offset,
-		Done:       make(chan struct{}),
-		StartTime:  time.Now(),
-		LastAccess: time.Now(),
+		ID:           sessionID,
+		FileID:       fileID,
+		FilePath:     filePath,
+		OutputDir:    outputDir,
+		Quality:      quality,
+		Offset:       offset,
+		FileDuration: fileDuration,
+		Done:         make(chan struct{}),
+		StartTime:    time.Now(),
+		LastAccess:   time.Now(),
 	}
 
 	t.sessions[sessionID] = session
@@ -310,6 +354,7 @@ func (t *Transcoder) buildFFmpegArgs(session *Session, playlistPath, segmentPatt
 		"-hls_time", "4",
 		"-hls_list_size", "0",
 		"-hls_segment_filename", segmentPattern,
+		"-hls_playlist_type", "event",
 		"-hls_flags", "independent_segments",
 		playlistPath,
 	)
@@ -725,27 +770,15 @@ func detectVAAPIDevice() string {
 	return "VA-API Compatible Device"
 }
 
-// detectNvidiaHardware checks if NVIDIA GPU hardware is present
+// detectNvidiaHardware checks if NVIDIA GPU hardware is present AND usable
 func detectNvidiaHardware() bool {
-	// Try nvidia-smi first (most reliable)
+	// nvidia-smi must be available - if it's not, CUDA runtime isn't installed
+	// and we can't use hardware encoding even if lspci sees the GPU
 	cmd := exec.Command("nvidia-smi", "-L")
-	if err := cmd.Run(); err == nil {
-		return true
-	}
-
-	// Fallback: check lspci for NVIDIA
-	cmd = exec.Command("lspci")
-	output, err := cmd.Output()
-	if err != nil {
+	if err := cmd.Run(); err != nil {
 		return false
 	}
-	lines := strings.Split(strings.ToLower(string(output)), "\n")
-	for _, line := range lines {
-		if strings.Contains(line, "nvidia") && (strings.Contains(line, "vga") || strings.Contains(line, "3d")) {
-			return true
-		}
-	}
-	return false
+	return true
 }
 
 // detectIntelHardware checks if Intel GPU hardware is present

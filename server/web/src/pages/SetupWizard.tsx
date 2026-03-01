@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { FileBrowser } from '../components/FileBrowser'
 import {
   Server,
   FolderOpen,
@@ -433,6 +434,8 @@ function StepDVR({
   state: WizardState
   onChange: (patch: Partial<WizardState>) => void
 }) {
+  const [showRecordingDirBrowser, setShowRecordingDirBrowser] = useState(false)
+
   return (
     <div className="space-y-6">
       <div className="text-center mb-4">
@@ -463,16 +466,35 @@ function StepDVR({
           <label className="block text-sm font-medium text-gray-300 mb-2">
             Recording Directory
           </label>
-          <input
-            type="text"
-            value={state.recordingDir}
-            onChange={(e) => onChange({ recordingDir: e.target.value })}
-            placeholder="/recordings"
-            className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
-          />
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={state.recordingDir}
+              onChange={(e) => onChange({ recordingDir: e.target.value })}
+              placeholder="/recordings"
+              className="flex-1 px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
+            />
+            <button
+              type="button"
+              onClick={() => setShowRecordingDirBrowser(true)}
+              className="px-3 py-2 bg-gray-700 hover:bg-gray-600 text-gray-300 hover:text-white rounded-lg text-sm whitespace-nowrap"
+            >
+              Browse
+            </button>
+          </div>
           <p className="text-xs text-gray-500 mt-1">
             Path where recorded programmes will be saved on disk.
           </p>
+          {showRecordingDirBrowser && (
+            <FileBrowser
+              initialPath={state.recordingDir || ''}
+              onSelect={(path) => {
+                onChange({ recordingDir: path })
+                setShowRecordingDirBrowser(false)
+              }}
+              onCancel={() => setShowRecordingDirBrowser(false)}
+            />
+          )}
         </div>
       )}
     </div>

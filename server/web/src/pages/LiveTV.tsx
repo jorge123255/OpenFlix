@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { Tv, Plus, Trash2, RefreshCw, FileText, Radio, Search, Edit, X, Check, Settings, MapPin, Zap, AlertCircle, Film, Monitor, Download, Clock, Archive, Layers, ArrowUp, ArrowDown, ChevronDown, ChevronRight, Wand2, Upload, List, Copy, Star } from 'lucide-react'
@@ -3048,6 +3048,8 @@ export function LiveTVPage() {
   const [managingLineupSource, setManagingLineupSource] = useState<{ id: number; name: string } | null>(null)
   const [editingXtreamSource, setEditingXtreamSource] = useState<any | null>(null)
   const [editingEPGSource, setEditingEPGSource] = useState<any | null>(null)
+  const [deleteConfirm, setDeleteConfirm] = useState<{ type: 'm3u' | 'xtream' | 'epg'; id: number; name: string } | null>(null)
+  const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set())
   const [refreshingEPGId, setRefreshingEPGId] = useState<number | null>(null)
   const [refreshingXtreamId, setRefreshingXtreamId] = useState<number | null>(null)
   // Channel Groups state
@@ -3060,6 +3062,31 @@ export function LiveTVPage() {
     queryKey: ['xtreamSources'],
     queryFn: () => api.getXtreamSources(),
   })
+
+  // Poll for source removal while deletes are in progress
+  useEffect(() => {
+    if (deletingIds.size === 0) return
+    const interval = setInterval(() => {
+      queryClient.invalidateQueries({ queryKey: ['m3uSources'] })
+      queryClient.invalidateQueries({ queryKey: ['xtreamSources'] })
+      queryClient.invalidateQueries({ queryKey: ['epgSources'] })
+    }, 3000)
+    return () => clearInterval(interval)
+  }, [deletingIds.size, queryClient])
+
+  // Clean up deletingIds when items actually disappear from query results
+  useEffect(() => {
+    if (deletingIds.size === 0) return
+    const remaining = new Set<string>()
+    deletingIds.forEach(key => {
+      const [type, idStr] = key.split('-')
+      const id = Number(idStr)
+      if (type === 'm3u' && m3uSources?.some(s => s.id === id)) remaining.add(key)
+      else if (type === 'xtream' && xtreamSources?.some(s => s.id === id)) remaining.add(key)
+      else if (type === 'epg' && epgSources?.some(s => s.id === id)) remaining.add(key)
+    })
+    if (remaining.size !== deletingIds.size) setDeletingIds(remaining)
+  }, [m3uSources, xtreamSources, epgSources, deletingIds])
 
   const deleteXtream = useMutation({
     mutationFn: (id: number) => api.deleteXtreamSource(id),
@@ -3377,7 +3404,15 @@ export function LiveTVPage() {
             ) : m3uSources?.length ? (
               <div className="bg-gray-800 rounded-xl divide-y divide-gray-700">
                 {m3uSources.map((source) => (
-                  <div key={source.id} className="p-4 flex items-center justify-between">
+                  <div key={source.id} className={`p-4 flex items-center justify-between relative ${deletingIds.has('m3u-' + source.id) ? 'opacity-50 pointer-events-none' : ''}`}>
+                    {deletingIds.has('m3u-' + source.id) && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-gray-800/60 rounded-lg z-10">
+                        <div className="flex items-center gap-2 text-red-400">
+                          <RefreshCw className="h-4 w-4 animate-spin" />
+                          <span className="text-sm font-medium">Deleting...</span>
+                        </div>
+                      </div>
+                    )}
                     <div>
                       <h3 className="font-medium text-white">{source.name}</h3>
                       <p className="text-sm text-gray-400">
@@ -3411,7 +3446,7 @@ export function LiveTVPage() {
                         <RefreshCw className={`h-4 w-4 ${refreshM3U.isPending ? 'animate-spin' : ''}`} />
                       </button>
                       <button
-                        onClick={() => deleteM3U.mutate(source.id)}
+                        onClick={() => setDeleteConfirm({ type: 'm3u', id: source.id, name: source.name })}
                         className="p-2 text-gray-400 hover:text-red-400 hover:bg-gray-700 rounded-lg"
                         title="Delete"
                       >
@@ -3450,7 +3485,15 @@ export function LiveTVPage() {
             ) : xtreamSources?.length ? (
               <div className="bg-gray-800 rounded-xl divide-y divide-gray-700">
                 {xtreamSources.map((source) => (
-                  <div key={source.id} className="p-4">
+                  <div key={source.id} className={`p-4 relative ${deletingIds.has('xtream-' + source.id) ? 'opacity-50 pointer-events-none' : ''}`}>
+                    {deletingIds.has('xtream-' + source.id) && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-gray-800/60 rounded-lg z-10">
+                        <div className="flex items-center gap-2 text-red-400">
+                          <RefreshCw className="h-4 w-4 animate-spin" />
+                          <span className="text-sm font-medium">Deleting...</span>
+                        </div>
+                      </div>
+                    )}
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
@@ -3500,7 +3543,7 @@ export function LiveTVPage() {
                           <RefreshCw className={`h-4 w-4 ${refreshingXtreamId === source.id ? 'animate-spin' : ''}`} />
                         </button>
                         <button
-                          onClick={() => deleteXtream.mutate(source.id)}
+                          onClick={() => setDeleteConfirm({ type: 'xtream', id: source.id, name: source.name })}
                           className="p-2 text-gray-400 hover:text-red-400 hover:bg-gray-700 rounded-lg"
                           title="Delete"
                         >
@@ -3601,14 +3644,26 @@ export function LiveTVPage() {
             ) : epgSources?.length ? (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 {epgSources.map((source) => (
-                  <EPGSourceCard
-                    key={source.id}
-                    source={source}
-                    onRefresh={(id) => refreshIndividualEPG.mutate(id)}
-                    onDelete={(id) => deleteEPG.mutate(id)}
-                    onEdit={(source) => setEditingEPGSource(source)}
-                    isRefreshing={refreshingEPGId === source.id}
-                  />
+                  <div key={source.id} className={`relative ${deletingIds.has('epg-' + source.id) ? 'opacity-50 pointer-events-none' : ''}`}>
+                    {deletingIds.has('epg-' + source.id) && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-gray-800/60 rounded-xl z-10">
+                        <div className="flex items-center gap-2 text-red-400">
+                          <RefreshCw className="h-4 w-4 animate-spin" />
+                          <span className="text-sm font-medium">Deleting...</span>
+                        </div>
+                      </div>
+                    )}
+                    <EPGSourceCard
+                      source={source}
+                      onRefresh={(id) => refreshIndividualEPG.mutate(id)}
+                      onDelete={(id) => {
+                        const epg = epgSources?.find(s => s.id === id)
+                        setDeleteConfirm({ type: 'epg', id, name: epg?.name || 'EPG Source' })
+                      }}
+                      onEdit={(source) => setEditingEPGSource(source)}
+                      isRefreshing={refreshingEPGId === source.id}
+                    />
+                  </div>
                 ))}
               </div>
             ) : (
@@ -3923,6 +3978,50 @@ export function LiveTVPage() {
           }}
           isCreating={false}
         />
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirm && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50" onClick={() => setDeleteConfirm(null)}>
+          <div className="bg-gray-800 rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 bg-red-500/20 rounded-lg">
+                <AlertCircle className="h-6 w-6 text-red-400" />
+              </div>
+              <h3 className="text-lg font-semibold text-white">Delete {deleteConfirm.type === 'm3u' ? 'M3U Playlist' : deleteConfirm.type === 'xtream' ? 'Xtream Source' : 'EPG Source'}?</h3>
+            </div>
+            <p className="text-gray-300 mb-1">
+              Are you sure you want to delete <strong className="text-white">{deleteConfirm.name}</strong>?
+            </p>
+            <p className="text-sm text-gray-400 mb-6">
+              {deleteConfirm.type === 'epg'
+                ? 'All program guide data from this source will be permanently deleted.'
+                : 'All channels, guide data, and imported media from this source will be permanently deleted. This may take a moment.'}
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setDeleteConfirm(null)}
+                className="px-4 py-2 text-gray-300 hover:text-white bg-gray-700 hover:bg-gray-600 rounded-lg text-sm"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  const { type, id } = deleteConfirm
+                  const key = `${type}-${id}`
+                  setDeleteConfirm(null)
+                  setDeletingIds(prev => new Set(prev).add(key))
+                  if (type === 'm3u') deleteM3U.mutate(id)
+                  else if (type === 'xtream') deleteXtream.mutate(id)
+                  else if (type === 'epg') deleteEPG.mutate(id)
+                }}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )

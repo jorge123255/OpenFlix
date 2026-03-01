@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { FileBrowser } from '../components/FileBrowser'
 import { Link } from 'react-router-dom'
 import {
   Save,
@@ -141,6 +142,7 @@ export function SettingsAdvancedPage() {
   const queryClient = useQueryClient()
   const [formData, setFormData] = useState<Partial<ServerSettings>>({})
   const [saved, setSaved] = useState(false)
+  const [showTranscodeDirBrowser, setShowTranscodeDirBrowser] = useState(false)
 
   const { data: config, isLoading, error } = useQuery({
     queryKey: ['serverConfig'],
@@ -299,13 +301,32 @@ export function SettingsAdvancedPage() {
           label="Transcode Temp Directory"
           description="Temporary directory for transcode output files"
         >
-          <input
-            type="text"
-            value={formData.transcode_temp_dir || ''}
-            onChange={(e) => updateField('transcode_temp_dir', e.target.value)}
-            className={inputClass}
-            placeholder="~/.openflix/transcode"
-          />
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={formData.transcode_temp_dir || ''}
+              onChange={(e) => updateField('transcode_temp_dir', e.target.value)}
+              className={inputClass}
+              placeholder="~/.openflix/transcode"
+            />
+            <button
+              type="button"
+              onClick={() => setShowTranscodeDirBrowser(true)}
+              className="px-3 py-2 bg-gray-700 hover:bg-gray-600 text-gray-300 hover:text-white rounded-lg text-sm whitespace-nowrap"
+            >
+              Browse
+            </button>
+          </div>
+          {showTranscodeDirBrowser && (
+            <FileBrowser
+              initialPath={formData.transcode_temp_dir || ''}
+              onSelect={(path) => {
+                updateField('transcode_temp_dir', path)
+                setShowTranscodeDirBrowser(false)
+              }}
+              onCancel={() => setShowTranscodeDirBrowser(false)}
+            />
+          )}
         </SettingField>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

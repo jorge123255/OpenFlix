@@ -457,6 +457,10 @@ func (s *Server) enrichOnLaterItems(programs []models.Program) []OnLaterItem {
 	}
 
 	for _, p := range programs {
+		// Fix image URLs (convert Gracenote IDs to full URLs)
+		p.Icon = fixProgramImageURL(p.Icon)
+		p.Art = fixProgramImageURL(p.Art)
+
 		item := OnLaterItem{
 			Program: p,
 			Channel: channelMap[p.ChannelID],
