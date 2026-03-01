@@ -732,8 +732,8 @@ class ApiClient {
   }
 
   // Tailscale remote access
-  async getRemoteAccessStatus(): Promise<{ status: string; tailscaleIp?: string; hostname?: string; loginUrl?: string }> {
-    const response = await this.client.get<{ status: string; tailscaleIp?: string; hostname?: string; loginUrl?: string }>('/remote-access/status')
+  async getRemoteAccessStatus(): Promise<{ status: string; tailscaleIp?: string; hostname?: string; loginUrl?: string; magicDnsName?: string; backendState?: string }> {
+    const response = await this.client.get<{ status: string; tailscaleIp?: string; hostname?: string; loginUrl?: string; magicDnsName?: string; backendState?: string }>('/remote-access/status')
     return response.data
   }
 
