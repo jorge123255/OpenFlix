@@ -701,15 +701,28 @@ class ApiClient {
     return response.data
   }
 
-  // Cloud discovery toggle
+  // Cloud discovery settings — backed by GET /admin/remote-access (CloudRegistryStatus)
   async getDiscoverySettings(): Promise<DiscoverySettings> {
-    const response = await this.client.get<DiscoverySettings>('/admin/discovery')
-    return response.data
+    const response = await this.client.get<CloudRegistryStatus>('/admin/remote-access')
+    const data = response.data
+    return {
+      enabled: data.cloudConnected,
+      url: data.cloudUrl,
+      connected: data.cloudConnected,
+      publicIp: data.publicIp,
+    }
   }
 
   async setDiscoveryEnabled(enabled: boolean): Promise<DiscoverySettings> {
-    const response = await this.client.post<DiscoverySettings>('/admin/discovery', { enabled })
-    return response.data
+    await this.client.put('/admin/settings', { remote_access_enabled: enabled })
+    const response = await this.client.get<CloudRegistryStatus>('/admin/remote-access')
+    const data = response.data
+    return {
+      enabled: data.cloudConnected,
+      url: data.cloudUrl,
+      connected: data.cloudConnected,
+      publicIp: data.publicIp,
+    }
   }
 
   // Claim token for cloud discovery
@@ -720,22 +733,22 @@ class ApiClient {
 
   // Tailscale remote access
   async getRemoteAccessStatus(): Promise<{ status: string; tailscaleIp?: string; hostname?: string; loginUrl?: string }> {
-    const response = await this.client.get<{ status: string; tailscaleIp?: string; hostname?: string; loginUrl?: string }>('/api/remote-access/status')
+    const response = await this.client.get<{ status: string; tailscaleIp?: string; hostname?: string; loginUrl?: string }>('/remote-access/status')
     return response.data
   }
 
   async enableRemoteAccess(authKey?: string): Promise<{ status: string }> {
-    const response = await this.client.post<{ status: string }>('/api/remote-access/enable', { authKey })
+    const response = await this.client.post<{ status: string }>('/remote-access/enable', { authKey })
     return response.data
   }
 
   async disableRemoteAccess(): Promise<{ status: string }> {
-    const response = await this.client.post<{ status: string }>('/api/remote-access/disable')
+    const response = await this.client.post<{ status: string }>('/remote-access/disable')
     return response.data
   }
 
   async getRemoteAccessLoginUrl(): Promise<{ url: string }> {
-    const response = await this.client.get<{ url: string }>('/api/remote-access/login-url')
+    const response = await this.client.get<{ url: string }>('/remote-access/login-url')
     return response.data
   }
 
