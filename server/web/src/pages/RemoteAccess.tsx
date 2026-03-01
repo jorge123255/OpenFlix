@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Globe,
   Wifi,
@@ -11,9 +11,10 @@ import {
   Loader,
   Copy,
   ExternalLink,
+  Save,
 } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { api } from '../api/client'
+import { api, type LicenseStatus, type DiscoverySettings } from '../api/client'
 
 function SettingSection({ title, icon, children }: { title: string; icon?: React.ReactNode; children: React.ReactNode }) {
   return (
@@ -54,11 +55,20 @@ function CopyButton({ text }: { text: string }) {
 
 function CloudDiscoverySection() {
   const queryClient = useQueryClient()
+  const [keyInput, setKeyInput] = useState('')
+  const [keySaved, setKeySaved] = useState(false)
 
-  const { data: cloudStatus, isLoading: cloudLoading, error: cloudError } = useQuery({
-    queryKey: ['cloudRegistryStatus'],
-    queryFn: () => api.getCloudRegistryStatus(),
-    refetchInterval: 30000,
+  const { data: discovery, isLoading: discoveryLoading } = useQuery<DiscoverySettings>({
+    queryKey: ['discoverySettings'],
+    queryFn: () => api.getDiscoverySettings(),
+    refetchInterval: (q) => (q.state.data?.enabled ? 15000 : false),
+    retry: 1,
+  })
+
+  const { data: licenseData } = useQuery<LicenseStatus>({
+    queryKey: ['licenseStatus'],
+    queryFn: () => api.getLicense(),
+    retry: 1,
   })
 
   const { data: claimToken, isLoading: claimLoading, refetch: refetchClaim } = useQuery({
@@ -67,148 +77,156 @@ function CloudDiscoverySection() {
     enabled: false,
   })
 
+  useEffect(() => {
+    if (licenseData?.key) setKeyInput(licenseData.key)
+  }, [licenseData])
+
   const toggleDiscovery = useMutation({
     mutationFn: (enabled: boolean) => api.setDiscoveryEnabled(enabled),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['discoverySettings'] }),
+  })
+
+  const saveLicense = useMutation({
+    mutationFn: (key: string) => api.saveLicense(key),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['cloudRegistryStatus'] })
+      queryClient.invalidateQueries({ queryKey: ['licenseStatus'] })
+      setKeySaved(true)
+      setTimeout(() => setKeySaved(false), 3000)
     },
   })
 
-  const isEnabled = cloudStatus?.cloudConnected ?? false
+  const enabled = discovery?.enabled ?? false
 
   return (
     <SettingSection
       title="Away From Home (Cloud Discovery)"
       icon={<Globe className="h-5 w-5 text-indigo-400" />}
     >
+      {/* Enable toggle */}
       <div className="flex items-center justify-between">
         <div>
           <p className="text-sm font-medium text-gray-300">Enable Cloud Discovery</p>
           <p className="text-xs text-gray-500 mt-0.5">
-            Allows clients to find your server from outside your home network
+            Allows the OpenFlix app to find this server when away from home.{' '}
+            <span className="text-yellow-400">Paid feature.</span>
           </p>
         </div>
-        <button
-          type="button"
-          role="switch"
-          aria-checked={isEnabled}
-          disabled={toggleDiscovery.isPending || cloudLoading}
-          onClick={() => toggleDiscovery.mutate(!isEnabled)}
-          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors disabled:opacity-50 ${
-            isEnabled ? 'bg-indigo-600' : 'bg-gray-600'
-          }`}
-        >
-          <span
-            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-              isEnabled ? 'translate-x-6' : 'translate-x-1'
+        {discoveryLoading ? (
+          <Loader className="h-4 w-4 animate-spin text-gray-400" />
+        ) : (
+          <button
+            type="button"
+            role="switch"
+            aria-checked={enabled}
+            disabled={toggleDiscovery.isPending}
+            onClick={() => toggleDiscovery.mutate(!enabled)}
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors disabled:opacity-50 ${
+              enabled ? 'bg-indigo-600' : 'bg-gray-600'
             }`}
-          />
-        </button>
+          >
+            <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${enabled ? 'translate-x-6' : 'translate-x-1'}`} />
+          </button>
+        )}
       </div>
 
-      {cloudLoading && (
-        <div className="flex items-center gap-2 text-gray-400 text-sm">
-          <Loader className="h-4 w-4 animate-spin" />
-          Loading cloud status...
+      {/* License key — always visible so user can enter key before enabling */}
+      <div>
+        <label className="block text-sm font-medium text-gray-300 mb-1 flex items-center gap-1.5">
+          <Key className="h-3.5 w-3.5 text-yellow-400" />
+          License Key
+        </label>
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={keyInput}
+            onChange={(e) => setKeyInput(e.target.value)}
+            className="flex-1 px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white font-mono text-sm"
+            placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+            spellCheck={false}
+          />
+          <button
+            onClick={() => saveLicense.mutate(keyInput)}
+            disabled={saveLicense.isPending}
+            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-800 text-white rounded-lg whitespace-nowrap"
+          >
+            {saveLicense.isPending ? <Loader className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+            {saveLicense.isPending ? 'Saving...' : keySaved ? 'Saved!' : 'Save'}
+          </button>
         </div>
-      )}
-
-      {cloudError && (
-        <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
-          Failed to load cloud registry status
-        </div>
-      )}
-
-      {cloudStatus && (
-        <div className="space-y-3">
-          <div className="flex items-center gap-2">
-            {cloudStatus.cloudConnected ? (
-              <CheckCircle className="h-4 w-4 text-green-400" />
-            ) : (
-              <XCircle className="h-4 w-4 text-red-400" />
-            )}
-            <span className={`text-sm ${cloudStatus.cloudConnected ? 'text-green-400' : 'text-red-400'}`}>
-              {cloudStatus.cloudConnected ? 'Connected to cloud registry' : 'Not connected to cloud registry'}
+        {licenseData && licenseData.status !== 'not_set' && (
+          <div className={`flex items-center gap-2 mt-2 p-2.5 rounded-lg text-sm ${
+            licenseData.status === 'valid' ? 'bg-green-500/10 border border-green-500/30' : 'bg-red-500/10 border border-red-500/30'
+          }`}>
+            {licenseData.status === 'valid'
+              ? <CheckCircle className="h-4 w-4 text-green-400 flex-shrink-0" />
+              : <XCircle className="h-4 w-4 text-red-400 flex-shrink-0" />}
+            <span className={licenseData.status === 'valid' ? 'text-green-400' : 'text-red-400'}>
+              {licenseData.status === 'valid' ? 'Valid' : 'Invalid key'}
             </span>
+            {licenseData.masked && <span className="text-xs text-gray-500 ml-1 font-mono">{licenseData.masked}</span>}
+          </div>
+        )}
+        <p className="text-xs text-gray-500 mt-1.5">
+          Get a license key at <span className="text-indigo-400">discover.openflix.io/admin</span>
+        </p>
+      </div>
+
+      {/* Connection status */}
+      <div className="flex items-center justify-between p-3 bg-gray-900 rounded-lg">
+        <div>
+          <p className="text-sm font-medium text-gray-300">Registry Connection</p>
+          {discovery?.publicIp && (
+            <p className="text-xs text-gray-500 mt-0.5">Public IP: {discovery.publicIp}</p>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          {discovery?.connected ? (
+            <>
+              <div className="h-2 w-2 rounded-full bg-green-400 animate-pulse" />
+              <span className="text-sm text-green-400">Connected</span>
+            </>
+          ) : (
+            <>
+              <div className="h-2 w-2 rounded-full bg-gray-500" />
+              <span className="text-sm text-gray-500">
+                {licenseData?.status === 'valid' ? 'Connecting...' : 'Waiting for license'}
+              </span>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Claim code for app pairing */}
+      {enabled && (
+        <div className="space-y-3 pt-2 border-t border-gray-700">
+          <div>
+            <p className="text-sm font-medium text-gray-300 mb-1">App Pairing Code</p>
+            <p className="text-xs text-gray-500 mb-3">
+              Generate a 4-character code to pair the OpenFlix app with this server when away from home.
+            </p>
+            <button
+              onClick={() => refetchClaim()}
+              disabled={claimLoading}
+              className="flex items-center gap-2 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-gray-300 hover:text-white rounded-lg text-sm transition-colors disabled:opacity-50"
+            >
+              {claimLoading ? <Loader className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+              Generate Claim Code
+            </button>
           </div>
 
-          {cloudStatus.cloudUrl && (
-            <div>
-              <p className="text-xs text-gray-500 mb-1">Cloud URL</p>
-              <div className="flex items-center gap-2">
-                <code className="flex-1 px-3 py-1.5 bg-gray-900 rounded-lg text-sm text-gray-300 font-mono truncate">
-                  {cloudStatus.cloudUrl}
-                </code>
-                <CopyButton text={cloudStatus.cloudUrl} />
-              </div>
-            </div>
-          )}
-
-          {cloudStatus.publicIp && (
-            <div>
-              <p className="text-xs text-gray-500 mb-1">Public IP</p>
-              <code className="px-3 py-1.5 bg-gray-900 rounded-lg text-sm text-gray-300 font-mono">
-                {cloudStatus.publicIp}
-              </code>
-            </div>
-          )}
-
-          {cloudStatus.claimActive && cloudStatus.claimToken && (
+          {claimToken && (
             <div className="p-4 rounded-lg bg-indigo-500/10 border border-indigo-500/20">
               <div className="flex items-center gap-2 mb-2">
                 <Key className="h-4 w-4 text-indigo-400" />
                 <p className="text-sm font-medium text-indigo-300">Claim Code</p>
               </div>
               <p className="text-xs text-gray-400 mb-3">
-                Enter this code in your OpenFlix client app to connect to this server remotely.
+                Enter this code in the OpenFlix app under "Away from Home" to connect.
               </p>
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-2">
-                  {cloudStatus.claimToken.split('').map((char, i) => (
-                    <div
-                      key={i}
-                      className="h-10 w-10 bg-gray-900 border border-indigo-500/40 rounded-lg flex items-center justify-center text-white text-lg font-bold font-mono"
-                    >
-                      {char.toUpperCase()}
-                    </div>
-                  ))}
-                </div>
-                <CopyButton text={cloudStatus.claimToken.toUpperCase()} />
-              </div>
-              {cloudStatus.claimExpires && (
-                <p className="text-xs text-gray-500 mt-2">
-                  Expires: {new Date(cloudStatus.claimExpires).toLocaleString()}
-                </p>
-              )}
-            </div>
-          )}
-
-          <button
-            onClick={() => refetchClaim()}
-            disabled={claimLoading}
-            className="flex items-center gap-2 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-gray-300 hover:text-white rounded-lg text-sm transition-colors disabled:opacity-50"
-          >
-            {claimLoading ? (
-              <Loader className="h-4 w-4 animate-spin" />
-            ) : (
-              <RefreshCw className="h-4 w-4" />
-            )}
-            Generate New Claim Code
-          </button>
-
-          {claimToken && (
-            <div className="p-4 rounded-lg bg-indigo-500/10 border border-indigo-500/20">
-              <div className="flex items-center gap-2 mb-2">
-                <Key className="h-4 w-4 text-indigo-400" />
-                <p className="text-sm font-medium text-indigo-300">New Claim Code Generated</p>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2">
                   {claimToken.token.split('').map((char, i) => (
-                    <div
-                      key={i}
-                      className="h-10 w-10 bg-gray-900 border border-indigo-500/40 rounded-lg flex items-center justify-center text-white text-lg font-bold font-mono"
-                    >
+                    <div key={i} className="h-10 w-10 bg-gray-900 border border-indigo-500/40 rounded-lg flex items-center justify-center text-white text-lg font-bold font-mono">
                       {char.toUpperCase()}
                     </div>
                   ))}

@@ -1,9 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
-import { FileBrowser } from '../components/FileBrowser'
 import { Link } from 'react-router-dom'
-import { Save, CheckCircle, XCircle, Loader, Download, Upload, AlertCircle, Server, Tv, HardDrive, Globe, Play, Key, Wifi } from 'lucide-react'
+import { Save, CheckCircle, XCircle, Loader, Download, Upload, AlertCircle, Server, Globe, Play } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { api, type ServerSettings, type DVRSettings, type ImportResult, type ConfigStats, type LicenseStatus, type DiscoverySettings } from '../api/client'
+import { api, type ServerSettings, type ImportResult, type ConfigStats } from '../api/client'
 
 function useServerConfig() {
   return useQuery({
@@ -43,159 +42,6 @@ function SettingField({
   )
 }
 
-function ToggleSwitch({
-  checked,
-  onChange,
-  label,
-}: {
-  checked: boolean
-  onChange: (checked: boolean) => void
-  label?: string
-}) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={checked}
-      onClick={() => onChange(!checked)}
-      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-        checked ? 'bg-indigo-600' : 'bg-gray-600'
-      }`}
-    >
-      <span
-        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-          checked ? 'translate-x-6' : 'translate-x-1'
-        }`}
-      />
-      {label && <span className="sr-only">{label}</span>}
-    </button>
-  )
-}
-
-function DVRSettingsSection() {
-  const queryClient = useQueryClient()
-  const [saved, setSaved] = useState(false)
-
-  const { data: dvrSettings, isLoading, error } = useQuery({
-    queryKey: ['dvrSettings'],
-    queryFn: () => api.getDVRSettings(),
-    retry: 1,
-  })
-
-  const { data: commercialStatus } = useQuery({
-    queryKey: ['commercialDetectionStatus'],
-    queryFn: () => api.getCommercialDetectionStatus(),
-    retry: 1,
-  })
-
-  const [maxConcurrent, setMaxConcurrent] = useState(0)
-
-  useEffect(() => {
-    if (dvrSettings) {
-      setMaxConcurrent(dvrSettings.maxConcurrentRecordings)
-    }
-  }, [dvrSettings])
-
-  const updateSettings = useMutation({
-    mutationFn: (data: Partial<DVRSettings>) => api.updateDVRSettings(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['dvrSettings'] })
-      setSaved(true)
-      setTimeout(() => setSaved(false), 3000)
-    },
-  })
-
-  const handleSave = () => {
-    updateSettings.mutate({ maxConcurrentRecordings: maxConcurrent })
-  }
-
-  if (isLoading) {
-    return (
-      <div className="bg-gray-800 rounded-xl p-6 mb-6">
-        <h2 className="text-lg font-semibold text-white mb-4">DVR Settings</h2>
-        <div className="text-gray-400">Loading...</div>
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="bg-gray-800 rounded-xl p-6 mb-6">
-        <h2 className="text-lg font-semibold text-white mb-4">DVR Settings</h2>
-        <div className="text-red-400 text-sm">Failed to load DVR settings</div>
-      </div>
-    )
-  }
-
-  return (
-    <div className="bg-gray-800 rounded-xl p-6 mb-6">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold text-white">DVR Settings</h2>
-        <button
-          onClick={handleSave}
-          disabled={updateSettings.isPending}
-          className="flex items-center gap-2 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-800 text-white text-sm rounded-lg"
-        >
-          <Save className="h-3.5 w-3.5" />
-          {updateSettings.isPending ? 'Saving...' : saved ? 'Saved!' : 'Save'}
-        </button>
-      </div>
-      <div className="space-y-4">
-        <SettingField
-          label="Max Concurrent Recordings"
-          description="Maximum number of recordings that can run at the same time. Set to 0 for unlimited."
-        >
-          <div className="flex items-center gap-3">
-            <input
-              type="number"
-              min="0"
-              value={maxConcurrent}
-              onChange={(e) => setMaxConcurrent(Number(e.target.value))}
-              className="w-32 px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
-            />
-            <span className="text-gray-400 text-sm">
-              {maxConcurrent === 0 ? '(Unlimited)' : `(Max ${maxConcurrent} at once)`}
-            </span>
-          </div>
-        </SettingField>
-        <p className="text-xs text-gray-500">
-          If you have limited tuners or bandwidth, you may want to set a limit.
-          When conflicts occur, higher priority recordings will be preferred.
-        </p>
-
-        {/* Commercial Detection Status */}
-        <div className="pt-4 border-t border-gray-700">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-sm font-medium text-gray-300">Commercial Detection</h3>
-              <p className="text-xs text-gray-500 mt-1">
-                Automatically detect and skip commercials in recordings using Comskip
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              {commercialStatus?.enabled ? (
-                <>
-                  <CheckCircle className="h-4 w-4 text-green-400" />
-                  <span className="text-sm text-green-400">Enabled</span>
-                </>
-              ) : (
-                <>
-                  <XCircle className="h-4 w-4 text-gray-500" />
-                  <span className="text-sm text-gray-500">Not Available</span>
-                </>
-              )}
-            </div>
-          </div>
-          {!commercialStatus?.enabled && (
-            <p className="text-xs text-gray-500 mt-2">
-              Comskip is not installed. Commercial detection will be enabled automatically when Comskip is available.
-            </p>
-          )}
-        </div>
-      </div>
-    </div>
-  )
-}
 
 function VODSettingsSection({
   vodApiUrl,
@@ -546,143 +392,6 @@ function ConfigBackupSection() {
   )
 }
 
-function CloudDiscoverySection() {
-  const queryClient = useQueryClient()
-  const [keyInput, setKeyInput] = useState('')
-  const [keySaved, setKeySaved] = useState(false)
-
-  const { data: discovery, isLoading: discoveryLoading } = useQuery<DiscoverySettings>({
-    queryKey: ['discoverySettings'],
-    queryFn: () => api.getDiscoverySettings(),
-    refetchInterval: (query) => (query.state.data?.enabled ? 15000 : false),
-    retry: 1,
-  })
-
-  const { data: licenseData } = useQuery<LicenseStatus>({
-    queryKey: ['licenseStatus'],
-    queryFn: () => api.getLicense(),
-    retry: 1,
-  })
-
-  useEffect(() => {
-    if (licenseData?.key) setKeyInput(licenseData.key)
-  }, [licenseData])
-
-  const toggleMutation = useMutation({
-    mutationFn: (enabled: boolean) => api.setDiscoveryEnabled(enabled),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['discoverySettings'] }),
-  })
-
-  const saveLicenseMutation = useMutation({
-    mutationFn: (key: string) => api.saveLicense(key),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['licenseStatus'] })
-      setKeySaved(true)
-      setTimeout(() => setKeySaved(false), 3000)
-    },
-  })
-
-  const enabled = discovery?.enabled ?? false
-
-  return (
-    <div className="bg-gray-800 rounded-xl p-6 mb-6">
-      <div className="flex items-center justify-between mb-1">
-        <h2 className="text-lg font-semibold text-white flex items-center gap-2">
-          <Wifi className="h-5 w-5 text-blue-400" />
-          Cloud Discovery
-        </h2>
-        {discoveryLoading ? (
-          <Loader className="h-4 w-4 animate-spin text-gray-400" />
-        ) : (
-          <ToggleSwitch
-            checked={enabled}
-            onChange={(v) => toggleMutation.mutate(v)}
-            label="Enable Cloud Discovery"
-          />
-        )}
-      </div>
-      <p className="text-sm text-gray-400 mb-4">
-        Allow the OpenFlix app to find this server when you're away from home.
-        Requires an active license key. <span className="text-yellow-400 font-medium">Paid feature.</span>
-      </p>
-
-      {enabled && (
-        <div className="space-y-4 pt-4 border-t border-gray-700">
-          {/* License key */}
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1 flex items-center gap-1.5">
-              <Key className="h-3.5 w-3.5 text-yellow-400" />
-              License Key
-            </label>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={keyInput}
-                onChange={(e) => setKeyInput(e.target.value)}
-                className="flex-1 px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white font-mono text-sm"
-                placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-                spellCheck={false}
-              />
-              <button
-                onClick={() => saveLicenseMutation.mutate(keyInput)}
-                disabled={saveLicenseMutation.isPending}
-                className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-800 text-white rounded-lg whitespace-nowrap"
-              >
-                {saveLicenseMutation.isPending ? <Loader className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                {saveLicenseMutation.isPending ? 'Saving...' : keySaved ? 'Saved!' : 'Save'}
-              </button>
-            </div>
-            {licenseData && licenseData.status !== 'not_set' && (
-              <div className={`flex items-center gap-2 mt-2 p-2.5 rounded-lg text-sm ${
-                licenseData.status === 'valid'
-                  ? 'bg-green-500/10 border border-green-500/30'
-                  : 'bg-red-500/10 border border-red-500/30'
-              }`}>
-                {licenseData.status === 'valid'
-                  ? <CheckCircle className="h-4 w-4 text-green-400 flex-shrink-0" />
-                  : <XCircle className="h-4 w-4 text-red-400 flex-shrink-0" />}
-                <span className={licenseData.status === 'valid' ? 'text-green-400' : 'text-red-400'}>
-                  {licenseData.status === 'valid' ? 'Valid' : 'Invalid key'}
-                </span>
-                {licenseData.masked && (
-                  <span className="text-xs text-gray-500 ml-1 font-mono">{licenseData.masked}</span>
-                )}
-              </div>
-            )}
-            <p className="text-xs text-gray-500 mt-1.5">
-              Get a license key at <span className="text-indigo-400">discover.openflix.io/admin</span>
-            </p>
-          </div>
-
-          {/* Connection status */}
-          <div className="flex items-center justify-between p-3 bg-gray-900 rounded-lg">
-            <div>
-              <p className="text-sm font-medium text-gray-300">Registry Connection</p>
-              {discovery?.publicIp && (
-                <p className="text-xs text-gray-500 mt-0.5">Public IP: {discovery.publicIp}</p>
-              )}
-            </div>
-            <div className="flex items-center gap-2">
-              {discovery?.connected ? (
-                <>
-                  <div className="h-2 w-2 rounded-full bg-green-400 animate-pulse" />
-                  <span className="text-sm text-green-400">Connected</span>
-                </>
-              ) : (
-                <>
-                  <div className="h-2 w-2 rounded-full bg-gray-500" />
-                  <span className="text-sm text-gray-500">
-                    {licenseData?.status === 'valid' ? 'Connecting...' : 'Waiting for license'}
-                  </span>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
 
 const inputClass = "w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
 const selectClass = "w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
@@ -694,7 +403,6 @@ export function SettingsPage() {
   const queryClient = useQueryClient()
   const [formData, setFormData] = useState<Partial<ServerSettings>>({})
   const [saved, setSaved] = useState(false)
-  const [showRecordingDirBrowser, setShowRecordingDirBrowser] = useState(false)
 
   useEffect(() => {
     if (config) {
@@ -916,215 +624,6 @@ transcode:
         </SettingField>
       </SettingSection>
 
-      {/* 2. Live TV */}
-      <SettingSection title="Live TV" icon={<Tv className="h-5 w-5 text-blue-400" />}>
-        <SettingField label="Max Concurrent Streams" description="Maximum number of simultaneous live TV streams. 0 = unlimited.">
-          <div className="flex items-center gap-3">
-            <input
-              type="number"
-              min="0"
-              value={formData.livetv_max_streams ?? 0}
-              onChange={(e) => updateField('livetv_max_streams', Number(e.target.value))}
-              className={numberInputClass}
-            />
-            <span className="text-gray-400 text-sm">
-              {(formData.livetv_max_streams ?? 0) === 0 ? '(Unlimited)' : `streams`}
-            </span>
-          </div>
-        </SettingField>
-        <SettingField label="Timeshift Buffer Duration" description="Hours of live TV kept for pause/rewind. Higher values use more disk space.">
-          <div className="flex items-center gap-3">
-            <input
-              type="number"
-              min="1"
-              max="72"
-              value={formData.timeshift_buffer_hrs || 4}
-              onChange={(e) => updateField('timeshift_buffer_hrs', Number(e.target.value))}
-              className={numberInputClass}
-            />
-            <span className="text-gray-400 text-sm">hours</span>
-          </div>
-        </SettingField>
-        <SettingField label="EPG Refresh Interval" description="How often to fetch updated program guide data">
-          <div className="flex items-center gap-3">
-            <input
-              type="number"
-              min="1"
-              max="48"
-              value={formData.epg_refresh_interval || 4}
-              onChange={(e) => updateField('epg_refresh_interval', Number(e.target.value))}
-              className={numberInputClass}
-            />
-            <span className="text-gray-400 text-sm">hours</span>
-          </div>
-        </SettingField>
-        <SettingField label="Channel Switch Buffer Size" description="Seconds of buffer to maintain for faster channel switching">
-          <div className="flex items-center gap-3">
-            <input
-              type="number"
-              min="1"
-              max="30"
-              value={formData.channel_switch_buffer || 3}
-              onChange={(e) => updateField('channel_switch_buffer', Number(e.target.value))}
-              className={numberInputClass}
-            />
-            <span className="text-gray-400 text-sm">seconds</span>
-          </div>
-        </SettingField>
-        <div className="flex items-center justify-between pt-2">
-          <SettingField label="Tuner Sharing" description="Allow multiple clients to share the same tuner when watching the same channel">
-            <span />
-          </SettingField>
-          <ToggleSwitch
-            checked={formData.tuner_sharing ?? true}
-            onChange={(checked) => updateField('tuner_sharing', checked)}
-            label="Tuner Sharing"
-          />
-        </div>
-      </SettingSection>
-
-      {/* 4. DVR Settings (expanded) */}
-      <SettingSection title="DVR" icon={<HardDrive className="h-5 w-5 text-red-400" />}>
-        <SettingField label="Recording Directory" description="Where DVR recordings are saved">
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={formData.recording_dir || ''}
-              onChange={(e) => updateField('recording_dir', e.target.value)}
-              className={inputClass}
-              placeholder="~/.openflix/recordings"
-            />
-            <button
-              type="button"
-              onClick={() => setShowRecordingDirBrowser(true)}
-              className="px-3 py-2 bg-gray-700 hover:bg-gray-600 text-gray-300 hover:text-white rounded-lg text-sm whitespace-nowrap"
-            >
-              Browse
-            </button>
-          </div>
-          {showRecordingDirBrowser && (
-            <FileBrowser
-              initialPath={formData.recording_dir || ''}
-              onSelect={(path) => {
-                updateField('recording_dir', path)
-                setShowRecordingDirBrowser(false)
-              }}
-              onCancel={() => setShowRecordingDirBrowser(false)}
-            />
-          )}
-        </SettingField>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <SettingField label="Pre-Padding Default" description="Minutes to start recording before scheduled time">
-            <div className="flex items-center gap-3">
-              <input
-                type="number"
-                min="0"
-                max="60"
-                value={formData.pre_padding ?? 2}
-                onChange={(e) => updateField('pre_padding', Number(e.target.value))}
-                className={numberInputClass}
-              />
-              <span className="text-gray-400 text-sm">minutes</span>
-            </div>
-          </SettingField>
-          <SettingField label="Post-Padding Default" description="Minutes to continue recording after scheduled end">
-            <div className="flex items-center gap-3">
-              <input
-                type="number"
-                min="0"
-                max="120"
-                value={formData.post_padding ?? 5}
-                onChange={(e) => updateField('post_padding', Number(e.target.value))}
-                className={numberInputClass}
-              />
-              <span className="text-gray-400 text-sm">minutes</span>
-            </div>
-          </SettingField>
-        </div>
-        <div className="flex items-center justify-between pt-2">
-          <SettingField label="Auto Commercial Detection" description="Run commercial detection on completed recordings using Comskip">
-            <span />
-          </SettingField>
-          <ToggleSwitch
-            checked={formData.commercial_detect ?? true}
-            onChange={(checked) => updateField('commercial_detect', checked)}
-            label="Auto Commercial Detection"
-          />
-        </div>
-        <SettingField label="Auto-Delete After" description="Automatically delete recordings after this many days. 0 = never auto-delete.">
-          <div className="flex items-center gap-3">
-            <input
-              type="number"
-              min="0"
-              value={formData.auto_delete_days ?? 0}
-              onChange={(e) => updateField('auto_delete_days', Number(e.target.value))}
-              className={numberInputClass}
-            />
-            <span className="text-gray-400 text-sm">
-              {(formData.auto_delete_days ?? 0) === 0 ? 'days (never)' : 'days'}
-            </span>
-          </div>
-        </SettingField>
-        <SettingField label="Max Recording Quality" description="Maximum quality for new recordings">
-          <select
-            value={formData.max_record_quality || 'original'}
-            onChange={(e) => updateField('max_record_quality', e.target.value)}
-            className={selectClass}
-          >
-            <option value="original">Original (no re-encode)</option>
-            <option value="high">High (1080p)</option>
-            <option value="medium">Medium (720p)</option>
-            <option value="low">Low (480p)</option>
-          </select>
-        </SettingField>
-      </SettingSection>
-
-      {/* Existing DVR concurrent recordings section */}
-      <DVRSettingsSection />
-
-      {/* 5. Remote Access */}
-      <SettingSection title="Remote Access" icon={<Globe className="h-5 w-5 text-green-400" />}>
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-sm font-medium text-gray-300">Tailscale Status</h3>
-            <p className="text-xs text-gray-500 mt-1">
-              Tailscale provides secure remote access to your server via WireGuard VPN
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            {formData.tailscale_status === 'connected' ? (
-              <>
-                <CheckCircle className="h-4 w-4 text-green-400" />
-                <span className="text-sm text-green-400">Connected</span>
-              </>
-            ) : (
-              <>
-                <XCircle className="h-4 w-4 text-gray-500" />
-                <span className="text-sm text-gray-500 capitalize">{formData.tailscale_status || 'Disconnected'}</span>
-              </>
-            )}
-          </div>
-        </div>
-        <div className="flex items-center justify-between pt-2">
-          <SettingField label="Remote Access" description="Enable access to your server from outside your local network">
-            <span />
-          </SettingField>
-          <ToggleSwitch
-            checked={formData.remote_access_enabled ?? false}
-            onChange={(checked) => updateField('remote_access_enabled', checked)}
-            label="Remote Access"
-          />
-        </div>
-        <SettingField label="External URL" description="The external URL clients use to reach your server (optional, auto-detected via Tailscale)">
-          <input
-            type="text"
-            value={formData.external_url || ''}
-            onChange={(e) => updateField('external_url', e.target.value)}
-            className={inputClass}
-            placeholder="https://openflix.your-tailnet.ts.net"
-          />
-        </SettingField>
-      </SettingSection>
 
       {/* 6. Playback Defaults */}
       <SettingSection title="Playback Defaults" icon={<Play className="h-5 w-5 text-purple-400" />}>
@@ -1205,8 +704,22 @@ transcode:
         onUrlChange={(url) => updateField('vod_api_url', url)}
       />
 
-      {/* Cloud Discovery */}
-      <CloudDiscoverySection />
+      {/* Remote Access link card */}
+      <div className="bg-gray-800 rounded-xl p-6 mb-6 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Globe className="h-6 w-6 text-green-400 flex-shrink-0" />
+          <div>
+            <h2 className="text-base font-semibold text-white">Remote Access & Cloud Discovery</h2>
+            <p className="text-sm text-gray-400 mt-0.5">Configure Tailscale, cloud discovery, and away-from-home access</p>
+          </div>
+        </div>
+        <Link
+          to="/ui/remote-access"
+          className="flex items-center gap-2 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-gray-300 hover:text-white rounded-lg text-sm transition-colors whitespace-nowrap"
+        >
+          Configure →
+        </Link>
+      </div>
 
       {/* Config Backup (existing) */}
       <ConfigBackupSection />
