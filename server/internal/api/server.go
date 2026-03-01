@@ -639,13 +639,6 @@ func (s *Server) setupRouter() {
 	admin := r.Group("/admin")
 	admin.Use(s.authRequired(), s.adminRequired())
 	{
-		// License key management
-		admin.GET("/license", s.getLicense)
-		admin.POST("/license", s.saveLicense)
-
-		// Remote access / cloud registry status
-		admin.GET("/remote-access", s.getCloudRegistryStatus)
-
 		// Library management (admin only)
 		admin.GET("/libraries", s.adminGetLibraries)
 		admin.POST("/libraries", s.adminCreateLibrary)
