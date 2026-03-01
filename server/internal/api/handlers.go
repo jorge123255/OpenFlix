@@ -462,6 +462,7 @@ func (s *Server) adminListUsers(c *gin.Context) {
 			"restricted":   user.IsRestricted,
 			"profileCount": len(profiles),
 			"createdAt":    user.CreatedAt,
+			"lastSeen":     user.UpdatedAt,
 		}
 	}
 
@@ -518,6 +519,20 @@ func (s *Server) adminGetUserProfiles(c *gin.Context) {
 }
 
 func (s *Server) getCurrentUser(c *gin.Context) {
+	// Local network access bypass — no real user record
+	if isLocal, exists := c.Get("isLocalAccess"); exists && isLocal.(bool) {
+		c.JSON(http.StatusOK, gin.H{
+			"id":       0,
+			"uuid":     "local-user",
+			"username": "admin",
+			"email":    "",
+			"title":    "Admin",
+			"thumb":    "",
+			"admin":    true,
+		})
+		return
+	}
+
 	userID, exists := c.Get("userID")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Not authenticated"})
@@ -1853,6 +1868,11 @@ func (s *Server) mediaItemToMetadata(item *models.MediaItem, lib *models.Library
 			}
 		}
 		metadata["Media"] = media
+	}
+
+	// Add stream URL for external/M3U/Xtream content
+	if item.StreamURL != "" {
+		metadata["streamUrl"] = item.StreamURL
 	}
 
 	return metadata
@@ -3463,25 +3483,22 @@ func (s *Server) transcodeStart(c *gin.Context) {
 		return
 	}
 
-	// Get parameters
-	path := c.Query("path")
-	if path == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Path is required"})
-		return
-	}
-
-	// Parse media key from path (e.g., /library/metadata/123)
-	parts := strings.Split(path, "/")
+	// Get media key - support both ?key=123 and legacy ?path=/library/metadata/123
 	var mediaKey int
-	for i, p := range parts {
-		if p == "metadata" && i+1 < len(parts) {
-			mediaKey, _ = strconv.Atoi(parts[i+1])
-			break
+	if keyStr := c.Query("key"); keyStr != "" {
+		mediaKey, _ = strconv.Atoi(keyStr)
+	} else if path := c.Query("path"); path != "" {
+		parts := strings.Split(path, "/")
+		for i, p := range parts {
+			if p == "metadata" && i+1 < len(parts) {
+				mediaKey, _ = strconv.Atoi(parts[i+1])
+				break
+			}
 		}
 	}
 
 	if mediaKey == 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid path"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Media key is required (use ?key=123)"})
 		return
 	}
 
@@ -3503,6 +3520,12 @@ func (s *Server) transcodeStart(c *gin.Context) {
 	offset, _ := strconv.ParseInt(c.Query("offset"), 10, 64)
 	quality := c.DefaultQuery("videoQuality", "original")
 
+	// For remote M3U VOD items, redirect directly to the stream URL (avoids unnecessary transcoding)
+	if file.IsRemote && file.RemoteURL != "" {
+		c.Redirect(http.StatusFound, file.RemoteURL)
+		return
+	}
+
 	// Start transcode session
 	session, err := s.transcoder.StartSession(file.ID, file.FilePath, offset, quality)
 	if err != nil {
@@ -3510,13 +3533,109 @@ func (s *Server) transcodeStart(c *gin.Context) {
 		return
 	}
 
-	// Wait a moment for transcoding to start and generate initial segment
-	time.Sleep(500 * time.Millisecond)
-
-	// Return HLS playlist
+	// Wait for playlist file to appear (with timeout)
 	playlistPath := s.transcoder.GetPlaylistPath(session.ID)
+	timeout := time.After(15 * time.Second)
+	ticker := time.NewTicker(250 * time.Millisecond)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-timeout:
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Transcode startup timeout"})
+			return
+		case <-ticker.C:
+			if _, err := os.Stat(playlistPath); err == nil {
+				s.serveTranscodePlaylist(c, session.ID, playlistPath)
+				return
+			}
+		case <-session.Done:
+			if session.Error != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Transcode failed: %v", session.Error)})
+				return
+			}
+			if _, err := os.Stat(playlistPath); err == nil {
+				s.serveTranscodePlaylist(c, session.ID, playlistPath)
+				return
+			}
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Transcode completed but no playlist generated"})
+			return
+		}
+	}
+}
+
+// serveTranscodePlaylist reads the HLS playlist and rewrites segment URLs to be absolute.
+// If the session has a known file duration, it generates a full VOD playlist upfront so
+// AVPlayer shows a proper scrubber instead of a "Live" indicator.
+func (s *Server) serveTranscodePlaylist(c *gin.Context, sessionID string, playlistPath string) {
+	basePath := fmt.Sprintf("/video/-/transcode/universal/session/%s/", sessionID)
+
+	// If we know the file duration, generate a full VOD playlist immediately.
+	// This makes AVPlayer show a real scrubber rather than a "Live" badge.
+	if session := s.transcoder.GetSession(sessionID); session != nil && session.FileDuration > 0 {
+		const segDuration = 4.0 // must match -hls_time in ffmpeg args
+		offsetSec := float64(session.Offset) / 1000.0
+		remaining := session.FileDuration - offsetSec
+		if remaining <= 0 {
+			remaining = session.FileDuration
+		}
+		numSegments := int(remaining/segDuration) + 1
+		maxTarget := int(segDuration) + 1
+
+		var sb strings.Builder
+		sb.WriteString("#EXTM3U\n")
+		sb.WriteString("#EXT-X-VERSION:6\n")
+		sb.WriteString(fmt.Sprintf("#EXT-X-TARGETDURATION:%d\n", maxTarget))
+		sb.WriteString("#EXT-X-MEDIA-SEQUENCE:0\n")
+		sb.WriteString("#EXT-X-PLAYLIST-TYPE:VOD\n")
+		sb.WriteString("#EXT-X-INDEPENDENT-SEGMENTS\n")
+		for i := 0; i < numSegments; i++ {
+			dur := segDuration
+			if float64(i+1)*segDuration > remaining {
+				dur = remaining - float64(i)*segDuration
+			}
+			if dur <= 0 {
+				break
+			}
+			sb.WriteString(fmt.Sprintf("#EXTINF:%.6f,\n", dur))
+			sb.WriteString(fmt.Sprintf("%ssegment%05d.ts\n", basePath, i))
+		}
+		sb.WriteString("#EXT-X-ENDLIST\n")
+		c.Header("Content-Type", "application/vnd.apple.mpegurl")
+		c.String(http.StatusOK, sb.String())
+		return
+	}
+
+	// Fallback: rewrite the actual playlist ffmpeg produced.
+	data, err := os.ReadFile(playlistPath)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read playlist"})
+		return
+	}
+	lines := strings.Split(string(data), "\n")
+	var rewritten []string
+	hasEndList := false
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if trimmed == "#EXT-X-ENDLIST" {
+			hasEndList = true
+		}
+		if trimmed != "" && !strings.HasPrefix(trimmed, "#") && !strings.HasPrefix(trimmed, "http") {
+			rewritten = append(rewritten, basePath+trimmed)
+		} else {
+			rewritten = append(rewritten, line)
+		}
+	}
+	// Inject playlist type
+	playlistType := "EVENT"
+	if hasEndList {
+		playlistType = "VOD"
+	}
+	injected := []string{rewritten[0], "#EXT-X-PLAYLIST-TYPE:" + playlistType}
+	rewritten = append(injected, rewritten[1:]...)
+
 	c.Header("Content-Type", "application/vnd.apple.mpegurl")
-	c.File(playlistPath)
+	c.String(http.StatusOK, strings.Join(rewritten, "\n"))
 }
 
 func (s *Server) transcodeSegment(c *gin.Context) {
