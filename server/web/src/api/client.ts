@@ -712,6 +712,44 @@ class ApiClient {
     return response.data
   }
 
+  // Claim token for cloud discovery
+  async getClaimToken(): Promise<{ token: string; expiresAt: string }> {
+    const response = await this.client.get<{ token: string; expiresAt: string }>('/api/claim-token')
+    return response.data
+  }
+
+  // Tailscale remote access
+  async getRemoteAccessStatus(): Promise<{ status: string; tailscaleIp?: string; hostname?: string; loginUrl?: string }> {
+    const response = await this.client.get<{ status: string; tailscaleIp?: string; hostname?: string; loginUrl?: string }>('/api/remote-access/status')
+    return response.data
+  }
+
+  async enableRemoteAccess(authKey?: string): Promise<{ status: string }> {
+    const response = await this.client.post<{ status: string }>('/api/remote-access/enable', { authKey })
+    return response.data
+  }
+
+  async disableRemoteAccess(): Promise<{ status: string }> {
+    const response = await this.client.post<{ status: string }>('/api/remote-access/disable')
+    return response.data
+  }
+
+  async getRemoteAccessLoginUrl(): Promise<{ url: string }> {
+    const response = await this.client.get<{ url: string }>('/api/remote-access/login-url')
+    return response.data
+  }
+
+  // Invite / family sharing
+  async createInvite(email: string): Promise<{ token: string; inviteUrl: string }> {
+    const response = await this.client.post<{ token: string; inviteUrl: string }>('/api/invite', { email })
+    return response.data
+  }
+
+  async getAdminUsers(): Promise<Array<{ id: number; username: string; email: string; admin: boolean; createdAt: string }>> {
+    const response = await this.client.get<Array<{ id: number; username: string; email: string; admin: boolean; createdAt: string }>>('/admin/users')
+    return response.data
+  }
+
   // Guide data management
   async refreshGuideData(): Promise<{ message: string; status: string }> {
     const response = await this.client.post<{ message: string; status: string }>('/api/guide/refresh')

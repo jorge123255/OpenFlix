@@ -53,6 +53,8 @@ import { PlaylistsPage } from './pages/Playlists'
 import { PersonalSectionsPage } from './pages/PersonalSections'
 import { MetadataEditorPage } from './pages/MetadataEditor'
 import { LabelsPage } from './pages/Labels'
+import { RemoteAccessPage } from './pages/RemoteAccess'
+import { FamilySharingPage } from './pages/FamilySharing'
 import { api } from './api/client'
 
 const queryClient = new QueryClient({
@@ -136,6 +138,8 @@ function App() {
             <Route path="shows/:id" element={<ShowDetailPage />} />
             <Route path="movies/:id" element={<MovieDetailPage />} />
             <Route path="labels" element={<LabelsPage />} />
+            <Route path="remote-access" element={<RemoteAccessPage />} />
+            <Route path="family-sharing" element={<FamilySharingPage />} />
           </Route>
           <Route path="*" element={<Navigate to="/ui" replace />} />
         </Routes>

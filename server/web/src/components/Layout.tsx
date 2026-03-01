@@ -45,6 +45,7 @@ import {
   LayoutList,
   FileEdit,
   Tag,
+  Globe,
   type LucideIcon,
 } from 'lucide-react'
 import { useState } from 'react'
@@ -119,6 +120,8 @@ const navGroups: NavGroup[] = [
     label: 'System',
     items: [
       { name: 'Users', href: '/ui/users', icon: Users },
+      { name: 'Remote Access', href: '/ui/remote-access', icon: Globe },
+      { name: 'Family Sharing', href: '/ui/family-sharing', icon: Users },
       { name: 'Settings', href: '/ui/settings', icon: Settings },
       { name: 'Transcode', href: '/ui/transcode', icon: Cpu },
       { name: 'Jobs', href: '/ui/jobs', icon: ListTodo },
