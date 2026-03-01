@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
+import { FileBrowser } from '../components/FileBrowser'
 import { Link } from 'react-router-dom'
-import { Save, CheckCircle, XCircle, Loader, Download, Upload, AlertCircle, Server, Tv, HardDrive, Globe, Play } from 'lucide-react'
+import { Save, CheckCircle, XCircle, Loader, Download, Upload, AlertCircle, Server, Tv, HardDrive, Globe, Play, Key, Wifi } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { api, type ServerSettings, type DVRSettings, type ImportResult, type ConfigStats } from '../api/client'
+import { api, type ServerSettings, type DVRSettings, type ImportResult, type ConfigStats, type LicenseStatus, type DiscoverySettings } from '../api/client'
 
 function useServerConfig() {
   return useQuery({
@@ -545,6 +546,144 @@ function ConfigBackupSection() {
   )
 }
 
+function CloudDiscoverySection() {
+  const queryClient = useQueryClient()
+  const [keyInput, setKeyInput] = useState('')
+  const [keySaved, setKeySaved] = useState(false)
+
+  const { data: discovery, isLoading: discoveryLoading } = useQuery<DiscoverySettings>({
+    queryKey: ['discoverySettings'],
+    queryFn: () => api.getDiscoverySettings(),
+    refetchInterval: (query) => (query.state.data?.enabled ? 15000 : false),
+    retry: 1,
+  })
+
+  const { data: licenseData } = useQuery<LicenseStatus>({
+    queryKey: ['licenseStatus'],
+    queryFn: () => api.getLicense(),
+    retry: 1,
+  })
+
+  useEffect(() => {
+    if (licenseData?.key) setKeyInput(licenseData.key)
+  }, [licenseData])
+
+  const toggleMutation = useMutation({
+    mutationFn: (enabled: boolean) => api.setDiscoveryEnabled(enabled),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['discoverySettings'] }),
+  })
+
+  const saveLicenseMutation = useMutation({
+    mutationFn: (key: string) => api.saveLicense(key),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['licenseStatus'] })
+      setKeySaved(true)
+      setTimeout(() => setKeySaved(false), 3000)
+    },
+  })
+
+  const enabled = discovery?.enabled ?? false
+
+  return (
+    <div className="bg-gray-800 rounded-xl p-6 mb-6">
+      <div className="flex items-center justify-between mb-1">
+        <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+          <Wifi className="h-5 w-5 text-blue-400" />
+          Cloud Discovery
+        </h2>
+        {discoveryLoading ? (
+          <Loader className="h-4 w-4 animate-spin text-gray-400" />
+        ) : (
+          <ToggleSwitch
+            checked={enabled}
+            onChange={(v) => toggleMutation.mutate(v)}
+            label="Enable Cloud Discovery"
+          />
+        )}
+      </div>
+      <p className="text-sm text-gray-400 mb-4">
+        Allow the OpenFlix app to find this server when you're away from home.
+        Requires an active license key. <span className="text-yellow-400 font-medium">Paid feature.</span>
+      </p>
+
+      {enabled && (
+        <div className="space-y-4 pt-4 border-t border-gray-700">
+          {/* License key */}
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-1 flex items-center gap-1.5">
+              <Key className="h-3.5 w-3.5 text-yellow-400" />
+              License Key
+            </label>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={keyInput}
+                onChange={(e) => setKeyInput(e.target.value)}
+                className="flex-1 px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white font-mono text-sm"
+                placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+                spellCheck={false}
+              />
+              <button
+                onClick={() => saveLicenseMutation.mutate(keyInput)}
+                disabled={saveLicenseMutation.isPending}
+                className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-800 text-white rounded-lg whitespace-nowrap"
+              >
+                {saveLicenseMutation.isPending ? <Loader className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                {saveLicenseMutation.isPending ? 'Saving...' : keySaved ? 'Saved!' : 'Save'}
+              </button>
+            </div>
+            {licenseData && licenseData.status !== 'not_set' && (
+              <div className={`flex items-center gap-2 mt-2 p-2.5 rounded-lg text-sm ${
+                licenseData.status === 'valid'
+                  ? 'bg-green-500/10 border border-green-500/30'
+                  : 'bg-red-500/10 border border-red-500/30'
+              }`}>
+                {licenseData.status === 'valid'
+                  ? <CheckCircle className="h-4 w-4 text-green-400 flex-shrink-0" />
+                  : <XCircle className="h-4 w-4 text-red-400 flex-shrink-0" />}
+                <span className={licenseData.status === 'valid' ? 'text-green-400' : 'text-red-400'}>
+                  {licenseData.status === 'valid' ? 'Valid' : 'Invalid key'}
+                </span>
+                {licenseData.masked && (
+                  <span className="text-xs text-gray-500 ml-1 font-mono">{licenseData.masked}</span>
+                )}
+              </div>
+            )}
+            <p className="text-xs text-gray-500 mt-1.5">
+              Get a license key at <span className="text-indigo-400">discover.openflix.io/admin</span>
+            </p>
+          </div>
+
+          {/* Connection status */}
+          <div className="flex items-center justify-between p-3 bg-gray-900 rounded-lg">
+            <div>
+              <p className="text-sm font-medium text-gray-300">Registry Connection</p>
+              {discovery?.publicIp && (
+                <p className="text-xs text-gray-500 mt-0.5">Public IP: {discovery.publicIp}</p>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              {discovery?.connected ? (
+                <>
+                  <div className="h-2 w-2 rounded-full bg-green-400 animate-pulse" />
+                  <span className="text-sm text-green-400">Connected</span>
+                </>
+              ) : (
+                <>
+                  <div className="h-2 w-2 rounded-full bg-gray-500" />
+                  <span className="text-sm text-gray-500">
+                    {licenseData?.status === 'valid' ? 'Connecting...' : 'Waiting for license'}
+                  </span>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 const inputClass = "w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
 const selectClass = "w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
 const numberInputClass = "w-32 px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
@@ -555,6 +694,7 @@ export function SettingsPage() {
   const queryClient = useQueryClient()
   const [formData, setFormData] = useState<Partial<ServerSettings>>({})
   const [saved, setSaved] = useState(false)
+  const [showRecordingDirBrowser, setShowRecordingDirBrowser] = useState(false)
 
   useEffect(() => {
     if (config) {
@@ -846,13 +986,32 @@ transcode:
       {/* 4. DVR Settings (expanded) */}
       <SettingSection title="DVR" icon={<HardDrive className="h-5 w-5 text-red-400" />}>
         <SettingField label="Recording Directory" description="Where DVR recordings are saved">
-          <input
-            type="text"
-            value={formData.recording_dir || ''}
-            onChange={(e) => updateField('recording_dir', e.target.value)}
-            className={inputClass}
-            placeholder="~/.openflix/recordings"
-          />
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={formData.recording_dir || ''}
+              onChange={(e) => updateField('recording_dir', e.target.value)}
+              className={inputClass}
+              placeholder="~/.openflix/recordings"
+            />
+            <button
+              type="button"
+              onClick={() => setShowRecordingDirBrowser(true)}
+              className="px-3 py-2 bg-gray-700 hover:bg-gray-600 text-gray-300 hover:text-white rounded-lg text-sm whitespace-nowrap"
+            >
+              Browse
+            </button>
+          </div>
+          {showRecordingDirBrowser && (
+            <FileBrowser
+              initialPath={formData.recording_dir || ''}
+              onSelect={(path) => {
+                updateField('recording_dir', path)
+                setShowRecordingDirBrowser(false)
+              }}
+              onCancel={() => setShowRecordingDirBrowser(false)}
+            />
+          )}
         </SettingField>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <SettingField label="Pre-Padding Default" description="Minutes to start recording before scheduled time">
@@ -1045,6 +1204,9 @@ transcode:
         vodApiUrl={formData.vod_api_url || ''}
         onUrlChange={(url) => updateField('vod_api_url', url)}
       />
+
+      {/* Cloud Discovery */}
+      <CloudDiscoverySection />
 
       {/* Config Backup (existing) */}
       <ConfigBackupSection />

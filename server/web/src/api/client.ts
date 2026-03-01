@@ -684,6 +684,34 @@ class ApiClient {
     return response.data.settings
   }
 
+  // License key management
+  async getLicense(): Promise<LicenseStatus> {
+    const response = await this.client.get<LicenseStatus>('/admin/license')
+    return response.data
+  }
+
+  async saveLicense(key: string): Promise<LicenseStatus> {
+    const response = await this.client.post<LicenseStatus>('/admin/license', { key })
+    return response.data
+  }
+
+  // Cloud registry / remote access status
+  async getCloudRegistryStatus(): Promise<CloudRegistryStatus> {
+    const response = await this.client.get<CloudRegistryStatus>('/admin/remote-access')
+    return response.data
+  }
+
+  // Cloud discovery toggle
+  async getDiscoverySettings(): Promise<DiscoverySettings> {
+    const response = await this.client.get<DiscoverySettings>('/admin/discovery')
+    return response.data
+  }
+
+  async setDiscoveryEnabled(enabled: boolean): Promise<DiscoverySettings> {
+    const response = await this.client.post<DiscoverySettings>('/admin/discovery', { enabled })
+    return response.data
+  }
+
   // Guide data management
   async refreshGuideData(): Promise<{ message: string; status: string }> {
     const response = await this.client.post<{ message: string; status: string }>('/api/guide/refresh')
@@ -1510,6 +1538,32 @@ export interface SystemStatusResponse {
   resources: SystemStatusResources
   database: SystemStatusDatabase
   components: SystemStatusComponents
+}
+
+// License key types
+export interface LicenseStatus {
+  key: string
+  status: 'valid' | 'invalid' | 'not_set'
+  masked: string
+}
+
+// Cloud discovery settings
+export interface DiscoverySettings {
+  enabled: boolean
+  url: string
+  connected: boolean
+  publicIp: string
+}
+
+// Cloud registry status types
+export interface CloudRegistryStatus {
+  cloudConnected: boolean
+  cloudUrl: string
+  publicIp: string
+  claimToken: string
+  claimExpires: string
+  claimActive: boolean
+  machineId: string
 }
 
 export const api = new ApiClient()
