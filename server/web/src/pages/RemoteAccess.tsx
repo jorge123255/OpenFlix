@@ -451,7 +451,7 @@ function ExternalUrlSection() {
   })
 
   const updateConfig = useMutation({
-    mutationFn: (url: string) => api.updateServerConfig({ remote_external_url: url } as any),
+    mutationFn: (url: string) => api.updateServerConfig({ external_url: url }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['serverConfig'] })
       setSaved(true)
@@ -460,7 +460,7 @@ function ExternalUrlSection() {
   })
 
   // Sync local state with fetched config
-  const configExternalUrl = (config as any)?.remote_external_url ?? ''
+  const configExternalUrl = config?.external_url ?? ''
   const displayUrl = externalUrl !== '' || saved ? externalUrl : configExternalUrl
 
   return (
