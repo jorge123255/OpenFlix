@@ -79,6 +79,9 @@ func (s *Server) addLiveTVSource(c *gin.Context) {
 				println("Failed to refresh EPG:", err.Error())
 			}
 		}
+
+		// Auto-import VOD/series if enabled
+		s.autoImportM3UContent(&source)
 	}()
 
 	c.JSON(http.StatusCreated, source)
@@ -154,40 +157,56 @@ func (s *Server) deleteLiveTVSource(c *gin.Context) {
 		return
 	}
 
-	// Collect channel IDs for program cleanup
-	var channelIDs []string
-	s.db.Model(&models.Channel{}).Where("m3_u_source_id = ?", id).Pluck("channel_id", &channelIDs)
+	var programsDeleted, channelsDeleted, mediaDeleted int64
 
-	// Delete programs for these channels
-	programsDeleted := int64(0)
-	if len(channelIDs) > 0 {
-		result := s.db.Where("channel_id IN ?", channelIDs).Delete(&models.Program{})
-		programsDeleted = result.RowsAffected
-	}
+	// Run entire delete in a transaction to prevent orphans
+	if err := s.db.Transaction(func(tx *gorm.DB) error {
+		// Collect channel IDs for program cleanup
+		var channelIDs []string
+		tx.Model(&models.Channel{}).Where("m3_u_source_id = ?", id).Pluck("channel_id", &channelIDs)
 
-	// Delete channels
-	channelResult := s.db.Where("m3_u_source_id = ?", id).Delete(&models.Channel{})
+		// Delete programs for these channels
+		if len(channelIDs) > 0 {
+			result := tx.Where("channel_id IN ?", channelIDs).Delete(&models.Program{})
+			programsDeleted = result.RowsAffected
+		}
 
-	// Delete VOD media items and their files from this source
-	var mediaIDs []uint
-	s.db.Model(&models.MediaItem{}).Where("m3u_source_id = ?", id).Pluck("id", &mediaIDs)
-	mediaDeleted := int64(0)
-	if len(mediaIDs) > 0 {
-		s.db.Where("media_item_id IN ?", mediaIDs).Delete(&models.MediaFile{})
-		result := s.db.Where("m3u_source_id = ?", id).Delete(&models.MediaItem{})
-		mediaDeleted = result.RowsAffected
-	}
+		// Delete channels
+		result := tx.Where("m3_u_source_id = ?", id).Delete(&models.Channel{})
+		channelsDeleted = result.RowsAffected
 
-	// Delete source
-	if err := s.db.Delete(&models.M3USource{}, id).Error; err != nil {
+		// Delete VOD media items and all related data from this source
+		var mediaIDs []uint
+		tx.Model(&models.MediaItem{}).Where("m3u_source_id = ?", id).Pluck("id", &mediaIDs)
+		if len(mediaIDs) > 0 {
+			tx.Where("media_item_id IN ?", mediaIDs).Delete(&models.MediaFile{})
+			tx.Exec("DELETE FROM media_genres WHERE media_item_id IN ?", mediaIDs)
+			tx.Exec("DELETE FROM cast_members WHERE media_item_id IN ?", mediaIDs)
+			tx.Exec("DELETE FROM media_streams WHERE media_file_id IN (SELECT id FROM media_files WHERE media_item_id IN ?)", mediaIDs)
+			// Hard-delete items (not soft-delete) so they don't linger
+			result := tx.Unscoped().Where("m3u_source_id = ?", id).Delete(&models.MediaItem{})
+			mediaDeleted = result.RowsAffected
+		}
+
+		// Delete source
+		if err := tx.Delete(&models.M3USource{}, id).Error; err != nil {
+			return err
+		}
+		return nil
+	}); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete source"})
 		return
 	}
 
-	log.Printf("Deleted M3U source %d: %d channels, %d programs, %d media items", id, channelResult.RowsAffected, programsDeleted, mediaDeleted)
+	// Invalidate guide cache so deleted channels disappear immediately
+	if s.guideCache != nil {
+		s.guideCache.InvalidateAll()
+	}
+
+	log.Printf("Deleted M3U source %d: %d channels, %d programs, %d media items", id, channelsDeleted, programsDeleted, mediaDeleted)
 	c.JSON(http.StatusOK, gin.H{
 		"message":         "Source deleted",
-		"channelsDeleted": channelResult.RowsAffected,
+		"channelsDeleted": channelsDeleted,
 		"programsDeleted": programsDeleted,
 		"mediaDeleted":    mediaDeleted,
 	})
@@ -222,7 +241,37 @@ func (s *Server) refreshLiveTVSource(c *gin.Context) {
 		}
 	}
 
+	// Auto-import VOD/series in background if enabled
+	go s.autoImportM3UContent(&source)
+
 	c.JSON(http.StatusOK, gin.H{"message": "Source refreshed"})
+}
+
+// autoImportM3UContent imports VOD movies and series from an M3U source if enabled
+func (s *Server) autoImportM3UContent(source *models.M3USource) {
+	importer := livetv.NewVODImporter(s.db)
+
+	if source.ImportVOD && source.VODLibraryID != nil {
+		log.Printf("Auto-importing VOD from M3U source %s (ID: %d)", source.Name, source.ID)
+		result, err := importer.ImportM3UVOD(source.ID)
+		if err != nil {
+			log.Printf("Auto VOD import failed for source %d: %v", source.ID, err)
+		} else {
+			log.Printf("Auto VOD import completed for source %d: %d added, %d updated, %d errors",
+				source.ID, result.Added, result.Updated, result.Errors)
+		}
+	}
+
+	if source.ImportSeries && source.SeriesLibraryID != nil {
+		log.Printf("Auto-importing series from M3U source %s (ID: %d)", source.Name, source.ID)
+		result, err := importer.ImportM3USeries(source.ID)
+		if err != nil {
+			log.Printf("Auto series import failed for source %d: %v", source.ID, err)
+		} else {
+			log.Printf("Auto series import completed for source %d: %d added, %d updated, %d errors",
+				source.ID, result.Added, result.Updated, result.Errors)
+		}
+	}
 }
 
 // importM3UVOD imports VOD movies from an M3U source
@@ -321,9 +370,13 @@ func (s *Server) getChannels(c *gin.Context) {
 		enrichedChannels[i].SourceName = sourceNames[ch.M3USourceID]
 		if ch.ChannelID != "" {
 			if program, err := epgParser.GetCurrentProgram(ch.ChannelID); err == nil {
+				program.Icon = fixProgramImageURL(program.Icon)
+				program.Art = fixProgramImageURL(program.Art)
 				enrichedChannels[i].NowPlaying = program
 			}
 			if program, err := epgParser.GetNextProgram(ch.ChannelID); err == nil {
+				program.Icon = fixProgramImageURL(program.Icon)
+				program.Art = fixProgramImageURL(program.Art)
 				enrichedChannels[i].NextProgram = program
 			}
 		}
@@ -367,9 +420,13 @@ func (s *Server) getChannel(c *gin.Context) {
 	if channel.ChannelID != "" {
 		epgParser := livetv.NewEPGParser(s.db)
 		if program, err := epgParser.GetCurrentProgram(channel.ChannelID); err == nil {
+			program.Icon = fixProgramImageURL(program.Icon)
+			program.Art = fixProgramImageURL(program.Art)
 			response.NowPlaying = program
 		}
 		if program, err := epgParser.GetNextProgram(channel.ChannelID); err == nil {
+			program.Icon = fixProgramImageURL(program.Icon)
+			program.Art = fixProgramImageURL(program.Art)
 			response.NextProgram = program
 		}
 	}
@@ -1609,7 +1666,11 @@ func (s *Server) getGuide(c *gin.Context) {
 		Description string `json:"description,omitempty"`
 		Start       string `json:"start"`
 		End         string `json:"end"`
+		Icon        string `json:"icon,omitempty"`
+		Art         string `json:"art,omitempty"`
 		Category    string `json:"category,omitempty"`
+		Teams       string `json:"teams,omitempty"`
+		League      string `json:"league,omitempty"`
 		IsNew       bool   `json:"isNew,omitempty"`
 		IsPremiere  bool   `json:"isPremiere,omitempty"`
 		IsLive      bool   `json:"isLive,omitempty"`
@@ -1631,7 +1692,11 @@ func (s *Server) getGuide(c *gin.Context) {
 			Description: prog.Description,
 			Start:       prog.Start.Format(time.RFC3339),
 			End:         prog.End.Format(time.RFC3339),
+			Icon:        fixProgramImageURL(prog.Icon),
+			Art:         fixProgramImageURL(prog.Art),
 			Category:    prog.Category,
+			Teams:       prog.Teams,
+			League:      prog.League,
 			IsNew:       prog.IsNew,
 			IsPremiere:  prog.IsPremiere,
 			IsLive:      prog.IsLive,
@@ -2740,17 +2805,30 @@ func (s *Server) deleteEPGSource(c *gin.Context) {
 		return
 	}
 
-	// Delete all programs imported by this EPG source
-	result := s.db.Where("epg_source_id = ?", id).Delete(&models.Program{})
-	programsDeleted := result.RowsAffected
+	var programsDeleted int64
 
-	// Clear EPG source reference from channels (don't delete the channels themselves)
-	s.db.Model(&models.Channel{}).Where("epg_source_id = ?", id).Update("epg_source_id", nil)
+	// Run entire delete in a transaction to prevent orphans
+	if err := s.db.Transaction(func(tx *gorm.DB) error {
+		// Delete all programs imported by this EPG source
+		result := tx.Where("epg_source_id = ?", id).Delete(&models.Program{})
+		programsDeleted = result.RowsAffected
 
-	// Delete the EPG source
-	if err := s.db.Delete(&models.EPGSource{}, id).Error; err != nil {
+		// Clear EPG source reference from channels (don't delete the channels themselves)
+		tx.Model(&models.Channel{}).Where("epg_source_id = ?", id).Update("epg_source_id", nil)
+
+		// Delete the EPG source
+		if err := tx.Delete(&models.EPGSource{}, id).Error; err != nil {
+			return err
+		}
+		return nil
+	}); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete EPG source"})
 		return
+	}
+
+	// Invalidate guide cache so deleted programs disappear immediately
+	if s.guideCache != nil {
+		s.guideCache.InvalidateAll()
 	}
 
 	log.Printf("Deleted EPG source %d: %d programs removed", id, programsDeleted)
@@ -3334,15 +3412,16 @@ func (s *Server) getCatchUpPrograms(c *gin.Context) {
 	isBuffering := s.timeshiftBuffer.IsBuffering(uint(id))
 	bufferActive, bufferStart, bufferDuration := s.timeshiftBuffer.GetBufferStatus(uint(id))
 
-	// Default buffer window (4 hours) even if not actively buffering
 	now := time.Now()
+	// Always show programs from the past 4 hours for display purposes
+	displayStart := now.Add(-4 * time.Hour)
 	if !bufferActive {
-		bufferStart = now.Add(-4 * time.Hour)
+		bufferStart = displayStart
 	}
 
 	var programs []models.Program
 	s.db.Where("channel_id = ? AND start >= ? AND start <= ?",
-		channel.ChannelID, bufferStart, now).
+		channel.ChannelID, displayStart, now).
 		Order("start ASC").
 		Find(&programs)
 
@@ -3357,12 +3436,24 @@ func (s *Server) getCatchUpPrograms(c *gin.Context) {
 		Description string    `json:"description,omitempty"`
 		Thumb       string    `json:"thumb,omitempty"`
 		Available   bool      `json:"available"`
+		StreamURL   string    `json:"streamUrl,omitempty"`
 	}
 
 	result := make([]CatchUpProgram, 0, len(programs))
 	for _, p := range programs {
-		// Program is available if buffering is active and program is within buffer window
-		available := bufferActive && p.End.Before(now) && p.Start.After(bufferStart)
+		// Program is available if buffering is active and overlaps with buffer window
+		// A program is available if it ended after buffer started (even partial recordings)
+		available := bufferActive && p.End.After(bufferStart) && p.End.Before(now)
+
+		// Also mark the currently-airing program as available if buffer is active
+		if bufferActive && p.Start.Before(now) && p.End.After(now) {
+			available = true
+		}
+
+		var streamURL string
+		if available {
+			streamURL = fmt.Sprintf("/livetv/timeshift/%d/stream.m3u8", id)
+		}
 
 		result = append(result, CatchUpProgram{
 			ID:          p.ID,
@@ -3375,6 +3466,7 @@ func (s *Server) getCatchUpPrograms(c *gin.Context) {
 			Description: p.Description,
 			Thumb:       p.Icon,
 			Available:   available,
+			StreamURL:   streamURL,
 		})
 	}
 
@@ -4305,4 +4397,23 @@ func (s *Server) proxyHLSSegment(c *gin.Context) {
 
 	c.Status(resp.StatusCode)
 	io.Copy(c.Writer, resp.Body)
+}
+
+// fixProgramImageURL converts EPG icon/art values to full URLs
+// Handles protocol-relative URLs (//example.com/...) and TMS/Gracenote asset IDs
+func fixProgramImageURL(val string) string {
+	if val == "" {
+		return ""
+	}
+	if strings.HasPrefix(val, "http://") || strings.HasPrefix(val, "https://") {
+		return val
+	}
+	if strings.HasPrefix(val, "//") {
+		return "https:" + val
+	}
+	// TMS/Gracenote asset IDs (e.g., "p27822843_b_v9_aa", "GNLZZGG002QLGYG")
+	if (strings.HasPrefix(val, "p") || strings.HasPrefix(val, "GN")) && !strings.Contains(val, "/") {
+		return "https://www.tmsimg.com/assets/" + val + ".jpg"
+	}
+	return val
 }

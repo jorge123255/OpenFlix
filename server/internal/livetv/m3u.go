@@ -35,6 +35,8 @@ type ParsedChannel struct {
 	StreamURL string
 	TVGId     string
 	TVGName   string
+	TVGType   string // tvg-type attribute (e.g., "movie", "series")
+	Duration  int    // Duration in seconds from EXTINF (0 = live, >0 = VOD)
 }
 
 // ParsedVODEntry represents a VOD entry parsed from M3U
@@ -64,6 +66,7 @@ func (p *M3UParser) ParseM3U(content string) ([]ParsedChannel, error) {
 	tvgIdPattern := regexp.MustCompile(`tvg-id="([^"]*)"`)
 	tvgNamePattern := regexp.MustCompile(`tvg-name="([^"]*)"`)
 	tvgLogoPattern := regexp.MustCompile(`tvg-logo="([^"]*)"`)
+	tvgTypePattern := regexp.MustCompile(`tvg-type="([^"]*)"`)
 	groupTitlePattern := regexp.MustCompile(`group-title="([^"]*)"`)
 	channelNumPattern := regexp.MustCompile(`tvg-chno="(\d+)"`)
 
@@ -74,6 +77,14 @@ func (p *M3UParser) ParseM3U(content string) ([]ParsedChannel, error) {
 			currentChannel = &ParsedChannel{}
 			currentHeaders = make(map[string]string)
 
+			// Extract duration from EXTINF (e.g., #EXTINF:3600, or #EXTINF:-1,)
+			extinfData := strings.TrimPrefix(line, "#EXTINF:")
+			if spaceOrComma := strings.IndexAny(extinfData, " ,"); spaceOrComma > 0 {
+				if dur, err := strconv.Atoi(strings.TrimSpace(extinfData[:spaceOrComma])); err == nil && dur > 0 {
+					currentChannel.Duration = dur
+				}
+			}
+
 			// Extract TVG-ID
 			if matches := tvgIdPattern.FindStringSubmatch(line); len(matches) > 1 {
 				currentChannel.TVGId = matches[1]
@@ -82,6 +93,11 @@ func (p *M3UParser) ParseM3U(content string) ([]ParsedChannel, error) {
 			// Extract TVG-Name
 			if matches := tvgNamePattern.FindStringSubmatch(line); len(matches) > 1 {
 				currentChannel.TVGName = matches[1]
+			}
+
+			// Extract TVG-Type (e.g., "movie", "series")
+			if matches := tvgTypePattern.FindStringSubmatch(line); len(matches) > 1 {
+				currentChannel.TVGType = matches[1]
 			}
 
 			// Extract logo
@@ -385,11 +401,21 @@ func (p *M3UParser) RefreshSource(source *models.M3USource) error {
 
 	// Filter out VOD content - only import live TV channels
 	// VOD content should be imported separately via ImportVOD/ImportSeries
+	// Filter by: tvg-type, group keywords, and duration
 	var liveChannels []ParsedChannel
 	for _, ch := range channels {
-		if !IsVODGroup(ch.Group) {
-			liveChannels = append(liveChannels, ch)
+		// Skip entries explicitly tagged as VOD content
+		tvgType := strings.ToLower(ch.TVGType)
+		if tvgType == "movie" || tvgType == "series" {
+			continue
 		}
+		if IsVODGroup(ch.Group) {
+			continue
+		}
+		if ch.Duration > 0 {
+			continue
+		}
+		liveChannels = append(liveChannels, ch)
 	}
 
 	_, _, err = p.ImportChannels(source.ID, liveChannels)

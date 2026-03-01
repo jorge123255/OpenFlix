@@ -487,6 +487,18 @@ func (s *Server) deleteRecording(c *gin.Context) {
 		}
 	}
 
+	// Remove the physical file and its EDL sidecar from disk
+	if recording.FilePath != "" {
+		if err := os.Remove(recording.FilePath); err != nil && !os.IsNotExist(err) {
+			logger.WithError(err).WithField("filePath", recording.FilePath).Warn("Failed to remove recording file from disk")
+		}
+		// Remove .edl sidecar (same name, different extension)
+		edlPath := strings.TrimSuffix(recording.FilePath, filepath.Ext(recording.FilePath)) + ".edl"
+		if err := os.Remove(edlPath); err != nil && !os.IsNotExist(err) {
+			logger.WithError(err).WithField("edlPath", edlPath).Warn("Failed to remove EDL file from disk")
+		}
+	}
+
 	if err := s.db.Delete(&recording).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete recording"})
 		return

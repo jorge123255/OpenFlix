@@ -80,7 +80,7 @@ var SportsTeamDB = map[string][]SportsTeam{
 		{Name: "Miami Heat", City: "Miami", Nickname: "Heat", Aliases: []string{"MIA"}, League: "NBA", LogoCode: "mia"},
 		{Name: "Milwaukee Bucks", City: "Milwaukee", Nickname: "Bucks", Aliases: []string{"MIL"}, League: "NBA", LogoCode: "mil"},
 		{Name: "Minnesota Timberwolves", City: "Minnesota", Nickname: "Timberwolves", Aliases: []string{"MIN", "Wolves", "T-Wolves"}, League: "NBA", LogoCode: "min"},
-		{Name: "New Orleans Pelicans", City: "New Orleans", Nickname: "Pelicans", Aliases: []string{"NOP", "NO", "Hornets"}, League: "NBA", LogoCode: "no"},
+		{Name: "New Orleans Pelicans", City: "New Orleans", Nickname: "Pelicans", Aliases: []string{"NOP", "NO"}, League: "NBA", LogoCode: "no"},
 		{Name: "New York Knicks", City: "New York", Nickname: "Knicks", Aliases: []string{"NYK"}, League: "NBA", LogoCode: "ny"},
 		{Name: "Oklahoma City Thunder", City: "Oklahoma City", Nickname: "Thunder", Aliases: []string{"OKC"}, League: "NBA", LogoCode: "okc"},
 		{Name: "Orlando Magic", City: "Orlando", Nickname: "Magic", Aliases: []string{"ORL"}, League: "NBA", LogoCode: "orl"},
@@ -132,7 +132,7 @@ var SportsTeamDB = map[string][]SportsTeam{
 		{Name: "Buffalo Sabres", City: "Buffalo", Nickname: "Sabres", Aliases: []string{"BUF"}, League: "NHL", LogoCode: "buf"},
 		{Name: "Calgary Flames", City: "Calgary", Nickname: "Flames", Aliases: []string{"CGY"}, League: "NHL", LogoCode: "cgy"},
 		{Name: "Carolina Hurricanes", City: "Carolina", Nickname: "Hurricanes", Aliases: []string{"CAR", "Canes"}, League: "NHL", LogoCode: "car"},
-		{Name: "Chicago Blackhawks", City: "Chicago", Nickname: "Blackhawks", Aliases: []string{"CHI", "Hawks"}, League: "NHL", LogoCode: "chi"},
+		{Name: "Chicago Blackhawks", City: "Chicago", Nickname: "Blackhawks", Aliases: []string{"CHI"}, League: "NHL", LogoCode: "chi"},
 		{Name: "Colorado Avalanche", City: "Colorado", Nickname: "Avalanche", Aliases: []string{"COL", "Avs"}, League: "NHL", LogoCode: "col"},
 		{Name: "Columbus Blue Jackets", City: "Columbus", Nickname: "Blue Jackets", Aliases: []string{"CBJ"}, League: "NHL", LogoCode: "cbj"},
 		{Name: "Dallas Stars", City: "Dallas", Nickname: "Stars", Aliases: []string{"DAL"}, League: "NHL", LogoCode: "dal"},
@@ -226,6 +226,18 @@ var ambiguousNicknames = map[string]bool{
 	"reds":      true, // Cincinnati Reds, common word
 	"twins":     true, // Minnesota Twins, common word
 	"rays":      true, // Tampa Bay Rays, common word
+	"hawks":     true, // Atlanta Hawks (NBA), too common
+	"tigers":    true, // Detroit Tigers (MLB), too common
+	"rockets":   true, // Houston Rockets (NBA), common word
+	"bulls":     true, // Chicago Bulls (NBA), common word
+	"impact":    true, // CF Montréal alias, common word
+	"wolves":    true, // Minnesota Timberwolves alias, common word
+	"union":     true, // Philadelphia Union (MLS), common word
+	"crew":      true, // Columbus Crew (MLS), common word
+	"rapids":    true, // Colorado Rapids (MLS), common word
+	"galaxy":    true, // LA Galaxy (MLS), common word
+	"revolution": true, // NE Revolution (MLS), common word
+	"dynamo":    true, // Houston Dynamo (MLS), common word
 }
 
 // FindTeamInText searches for any team name/alias in the given text

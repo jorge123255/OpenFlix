@@ -9,10 +9,25 @@ import {
   ChevronDown,
   ChevronRight,
   Loader,
+  Clock,
+  Calendar,
 } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../api/client'
 import type { User, UserProfile } from '../types'
+
+function formatDate(dateStr: string | undefined): string {
+  if (!dateStr) return 'Never'
+  try {
+    return new Date(dateStr).toLocaleDateString(undefined, {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    })
+  } catch {
+    return 'Unknown'
+  }
+}
 
 function useUsers() {
   return useQuery({
@@ -286,10 +301,10 @@ function UserRow({ user, onDelete }: { user: User; onDelete: () => void }) {
   return (
     <div>
       <div className="p-4 flex items-center justify-between">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 flex-1 min-w-0">
           <button
             onClick={() => setExpanded(!expanded)}
-            className="p-1 text-gray-400 hover:text-white rounded"
+            className="p-1 text-gray-400 hover:text-white rounded flex-shrink-0"
           >
             {expanded ? (
               <ChevronDown className="h-4 w-4" />
@@ -297,11 +312,11 @@ function UserRow({ user, onDelete }: { user: User; onDelete: () => void }) {
               <ChevronRight className="h-4 w-4" />
             )}
           </button>
-          <div className="h-10 w-10 rounded-full bg-indigo-600 flex items-center justify-center text-white font-medium">
+          <div className="h-10 w-10 rounded-full bg-indigo-600 flex items-center justify-center text-white font-medium flex-shrink-0">
             {user.username.charAt(0).toUpperCase()}
           </div>
-          <div>
-            <div className="flex items-center gap-2">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
               <h3 className="font-medium text-white">{user.title || user.username}</h3>
               {user.admin && (
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-indigo-500/20 text-indigo-400 text-xs rounded-full">
@@ -316,7 +331,21 @@ function UserRow({ user, onDelete }: { user: User; onDelete: () => void }) {
                 </span>
               )}
             </div>
-            <p className="text-sm text-gray-400">{user.email}</p>
+            <p className="text-sm text-gray-400 truncate">{user.email}</p>
+            <div className="flex items-center gap-4 mt-1">
+              {(user as any).createdAt && (
+                <span className="inline-flex items-center gap-1 text-xs text-gray-500">
+                  <Calendar className="h-3 w-3" />
+                  Joined {formatDate((user as any).createdAt)}
+                </span>
+              )}
+              {(user as any).lastSeen && (
+                <span className="inline-flex items-center gap-1 text-xs text-gray-500">
+                  <Clock className="h-3 w-3" />
+                  Last seen {formatDate((user as any).lastSeen)}
+                </span>
+              )}
+            </div>
           </div>
         </div>
         <button

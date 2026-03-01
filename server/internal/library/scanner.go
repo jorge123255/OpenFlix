@@ -79,13 +79,17 @@ func (s *Scanner) ScanLibrary(library *models.Library) (*ScanResult, error) {
 		return nil, err
 	}
 
-	// Track existing files to detect removals and modifications
+	// Track existing LOCAL files to detect removals and modifications
+	// Skip remote files (VOD streams from Xtream/M3U) - they don't exist on disk
 	existingFiles := make(map[string]*models.MediaFile)
 	var existingItems []models.MediaFile
 	s.db.Joins("JOIN media_items ON media_items.id = media_files.media_item_id").
 		Where("media_items.library_id = ?", library.ID).
 		Find(&existingItems)
 	for i := range existingItems {
+		if existingItems[i].IsRemote {
+			continue
+		}
 		existingFiles[existingItems[i].FilePath] = &existingItems[i]
 	}
 
