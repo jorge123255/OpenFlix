@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/openflix/openflix-server/internal/logger"
@@ -18,12 +19,17 @@ const (
 // CloudRegistryClient periodically registers this server with a cloud discovery service,
 // enabling remote clients to find the server by machineId or claim token.
 type CloudRegistryClient struct {
-	registryURL string
-	serverInfo  ServerInfo
-	claimToken  string
-	client      *http.Client
-	ctx         context.Context
-	cancel      context.CancelFunc
+	registryURL  string
+	serverInfo   ServerInfo
+	claimToken   string
+	inviteTokens []string
+	licenseKey   string
+	lastPublicIP string
+	lastSuccess  bool
+	mu           sync.Mutex
+	client       *http.Client
+	ctx          context.Context
+	cancel       context.CancelFunc
 }
 
 // CloudRegistration is the payload sent to the cloud registry.
@@ -34,6 +40,8 @@ type CloudRegistration struct {
 	Port           int      `json:"port"`
 	LocalAddresses []string `json:"localAddresses"`
 	ClaimToken     string   `json:"claimToken,omitempty"`
+	InviteTokens   []string `json:"inviteTokens,omitempty"`
+	LicenseKey     string   `json:"licenseKey,omitempty"`
 }
 
 // CloudRegistrationResponse is the response from the cloud registry.
@@ -93,17 +101,58 @@ func (c *CloudRegistryClient) Stop() {
 
 // SetClaimToken updates the claim token sent with heartbeats.
 func (c *CloudRegistryClient) SetClaimToken(token string) {
+	c.mu.Lock()
 	c.claimToken = token
+	c.mu.Unlock()
+}
+
+// SetInviteTokens updates the active invite tokens sent with heartbeats.
+func (c *CloudRegistryClient) SetInviteTokens(tokens []string) {
+	c.mu.Lock()
+	c.inviteTokens = tokens
+	c.mu.Unlock()
+}
+
+// SetLicenseKey updates the license key sent with heartbeats.
+func (c *CloudRegistryClient) SetLicenseKey(key string) {
+	c.mu.Lock()
+	c.licenseKey = key
+	c.mu.Unlock()
+}
+
+// CloudRegistryStatus holds the current cloud connection status.
+type CloudRegistryStatus struct {
+	Connected bool   `json:"connected"`
+	PublicIP  string `json:"publicIp"`
+}
+
+// GetStatus returns the current connection status.
+func (c *CloudRegistryClient) GetStatus() CloudRegistryStatus {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return CloudRegistryStatus{
+		Connected: c.lastSuccess,
+		PublicIP:  c.lastPublicIP,
+	}
 }
 
 func (c *CloudRegistryClient) register() {
+	c.mu.Lock()
+	claimToken := c.claimToken
+	licenseKey := c.licenseKey
+	inviteTokens := make([]string, len(c.inviteTokens))
+	copy(inviteTokens, c.inviteTokens)
+	c.mu.Unlock()
+
 	payload := CloudRegistration{
 		MachineID:      c.serverInfo.MachineID,
 		Name:           c.serverInfo.Name,
 		Version:        c.serverInfo.Version,
 		Port:           c.serverInfo.Port,
 		LocalAddresses: c.serverInfo.LocalAddresses,
-		ClaimToken:     c.claimToken,
+		ClaimToken:     claimToken,
+		InviteTokens:   inviteTokens,
+		LicenseKey:     licenseKey,
 	}
 
 	body, err := json.Marshal(payload)
@@ -122,20 +171,34 @@ func (c *CloudRegistryClient) register() {
 	resp, err := c.client.Do(req)
 	if err != nil {
 		logger.Debugf("Cloud registry: heartbeat failed (cloud may be unavailable): %v", err)
+		c.mu.Lock()
+		c.lastSuccess = false
+		c.mu.Unlock()
 		return
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		logger.Debugf("Cloud registry: heartbeat returned status %d", resp.StatusCode)
+		c.mu.Lock()
+		c.lastSuccess = false
+		c.mu.Unlock()
 		return
 	}
 
 	var result CloudRegistrationResponse
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
 		logger.Debugf("Cloud registry: failed to decode response: %v", err)
+		c.mu.Lock()
+		c.lastSuccess = false
+		c.mu.Unlock()
 		return
 	}
+
+	c.mu.Lock()
+	c.lastSuccess = result.Registered
+	c.lastPublicIP = result.PublicIP
+	c.mu.Unlock()
 
 	logger.Debugf("Cloud registry: registered (publicIp=%s)", result.PublicIP)
 }

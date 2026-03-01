@@ -424,6 +424,9 @@ func NewServer(cfg *config.Config, db *gorm.DB) *Server {
 		}
 		s.cloudRegistry = discovery.NewCloudRegistryClient(cfg.Server.CloudRegistryURL, serverInfo, cfg.Server.ClaimToken)
 		if s.cloudRegistry != nil {
+			if cfg.Server.LicenseKey != "" {
+				s.cloudRegistry.SetLicenseKey(cfg.Server.LicenseKey)
+			}
 			s.cloudRegistry.Start()
 		}
 	}
@@ -556,6 +559,11 @@ func (s *Server) setupRouter() {
 	r.POST("/api/claim-token", s.authRequired(), s.adminRequired(), s.postClaimToken)
 	r.GET("/api/claim-token", s.authRequired(), s.adminRequired(), s.getClaimToken)
 
+	// Invite API
+	r.POST("/api/invite", s.authRequired(), s.adminRequired(), s.createInvite)
+	r.GET("/api/invite/:token", s.validateInvite)           // public — app checks before showing register form
+	r.POST("/api/invite/:token/accept", s.acceptInvite)     // public — creates the account
+
 	// Diagnostics & System Status API (admin only)
 	r.GET("/api/diagnostics/health-check", s.authRequired(), s.adminRequired(), s.runHealthChecks)
 	r.GET("/api/system/status", s.authRequired(), s.adminRequired(), s.getSystemStatus)
@@ -631,6 +639,13 @@ func (s *Server) setupRouter() {
 	admin := r.Group("/admin")
 	admin.Use(s.authRequired(), s.adminRequired())
 	{
+		// License key management
+		admin.GET("/license", s.getLicense)
+		admin.POST("/license", s.saveLicense)
+
+		// Remote access / cloud registry status
+		admin.GET("/remote-access", s.getCloudRegistryStatus)
+
 		// Library management (admin only)
 		admin.GET("/libraries", s.adminGetLibraries)
 		admin.POST("/libraries", s.adminCreateLibrary)
@@ -677,6 +692,13 @@ func (s *Server) setupRouter() {
 		admin.GET("/users", s.adminListUsers)
 		admin.DELETE("/users/:id", s.adminDeleteUser)
 		admin.GET("/users/:id/profiles", s.adminGetUserProfiles)
+
+		// License key management (admin only)
+		admin.GET("/license", s.getLicense)
+		admin.POST("/license", s.saveLicense)
+
+		// Remote access / cloud registry status (admin only)
+		admin.GET("/remote-access", s.getCloudRegistryStatus)
 	}
 
 	// ============ Auto-Update API (admin only) ============

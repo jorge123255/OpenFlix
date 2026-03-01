@@ -9,14 +9,20 @@ import {
   Film,
   Clapperboard,
   Clock,
+  Globe,
+  CheckCircle,
+  XCircle,
+  RefreshCw,
+  Loader,
 } from 'lucide-react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../api/client'
 import type {
   DashboardUpNextItem,
   DashboardRecentShow,
   DashboardRecentMovie,
   DashboardRecentRecording,
+  CloudRegistryStatus,
 } from '../api/client'
 import { useLibraries } from '../hooks/useLibraries'
 import { useM3USources } from '../hooks/useLiveTV'
@@ -311,6 +317,111 @@ function RecentRecordingCard({ recording }: { recording: DashboardRecentRecordin
   )
 }
 
+// ---------- Remote Access Status Card ----------
+
+function RemoteAccessCard() {
+  const queryClient = useQueryClient()
+
+  const { data: remoteStatus, isLoading } = useQuery<CloudRegistryStatus>({
+    queryKey: ['cloudRegistryStatus'],
+    queryFn: () => api.getCloudRegistryStatus(),
+    refetchInterval: 30000,
+    retry: 1,
+  })
+
+  const generateToken = useMutation({
+    mutationFn: () => api.client.post<{ token: string; expires: string }>('/api/claim-token'),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['cloudRegistryStatus'] })
+    },
+  })
+
+  return (
+    <div className="bg-gray-800 rounded-xl p-5 mb-8">
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-base font-semibold text-white flex items-center gap-2">
+          <Globe className="h-4 w-4 text-green-400" />
+          Remote Access
+        </h2>
+        <Link
+          to="/ui/settings"
+          className="text-xs text-gray-400 hover:text-indigo-400 transition-colors"
+        >
+          Configure
+        </Link>
+      </div>
+
+      {isLoading ? (
+        <div className="flex items-center gap-2 text-gray-400 text-sm">
+          <Loader className="h-4 w-4 animate-spin" />
+          Loading...
+        </div>
+      ) : !remoteStatus ? (
+        <div className="text-sm text-gray-500">Remote access information unavailable.</div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {/* Cloud Registry Status */}
+          <div className="flex flex-col gap-1">
+            <span className="text-xs text-gray-400 uppercase tracking-wide">Cloud Registry</span>
+            <div className="flex items-center gap-2">
+              {remoteStatus.cloudConnected ? (
+                <>
+                  <CheckCircle className="h-4 w-4 text-green-400 flex-shrink-0" />
+                  <span className="text-sm text-green-400">Connected</span>
+                </>
+              ) : (
+                <>
+                  <XCircle className="h-4 w-4 text-gray-500 flex-shrink-0" />
+                  <span className="text-sm text-gray-500">
+                    {remoteStatus.cloudUrl ? 'Disconnected' : 'Not configured'}
+                  </span>
+                </>
+              )}
+            </div>
+            {remoteStatus.publicIp && (
+              <span className="text-xs text-gray-500 font-mono">{remoteStatus.publicIp}</span>
+            )}
+          </div>
+
+          {/* Claim Code */}
+          <div className="flex flex-col gap-1">
+            <span className="text-xs text-gray-400 uppercase tracking-wide">Claim Code</span>
+            {remoteStatus.claimActive && remoteStatus.claimToken ? (
+              <div className="flex items-center gap-2">
+                <span className="font-mono text-lg font-bold text-white tracking-widest">
+                  {remoteStatus.claimToken}
+                </span>
+              </div>
+            ) : (
+              <span className="text-sm text-gray-500">No active code</span>
+            )}
+            <button
+              onClick={() => generateToken.mutate()}
+              disabled={generateToken.isPending}
+              className="flex items-center gap-1 text-xs text-indigo-400 hover:text-indigo-300 mt-1 w-fit"
+            >
+              {generateToken.isPending ? (
+                <Loader className="h-3 w-3 animate-spin" />
+              ) : (
+                <RefreshCw className="h-3 w-3" />
+              )}
+              Generate New
+            </button>
+          </div>
+
+          {/* Machine ID */}
+          <div className="flex flex-col gap-1">
+            <span className="text-xs text-gray-400 uppercase tracking-wide">Server ID</span>
+            <span className="text-xs text-gray-500 font-mono truncate" title={remoteStatus.machineId}>
+              {remoteStatus.machineId ? remoteStatus.machineId.slice(0, 16) + '...' : 'Unknown'}
+            </span>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ---------- Main Dashboard ----------
 
 export function DashboardPage() {
@@ -363,6 +474,9 @@ export function DashboardPage() {
           color="bg-purple-600"
         />
       </div>
+
+      {/* Remote Access Status */}
+      <RemoteAccessCard />
 
       {/* Loading state */}
       {dashLoading && (

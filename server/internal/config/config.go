@@ -50,6 +50,7 @@ type ServerConfig struct {
 	DiscoveryEnabled bool   `yaml:"discovery_enabled"`   // Enable UDP discovery
 	CloudRegistryURL string `yaml:"cloud_registry_url"`  // Cloud discovery registry URL (e.g. "https://discover.openflix.app")
 	ClaimToken       string `yaml:"claim_token"`         // Current 4-char pairing code (auto-generated)
+	LicenseKey       string `yaml:"license_key"`         // OpenFlix license key
 }
 
 // DatabaseConfig holds database connection settings
@@ -125,6 +126,7 @@ func DefaultConfig() *Config {
 			Name:             "OpenFlix Server",
 			MachineID:        generateMachineID(),
 			DiscoveryEnabled: true,
+			CloudRegistryURL: "", // Set via OPENFLIX_CLOUD_REGISTRY_URL for cloud discovery
 		},
 		Database: DatabaseConfig{
 			Driver: "sqlite",
@@ -268,6 +270,14 @@ func loadEnvOverrides(cfg *Config) {
 	// VOD settings
 	if vodAPIURL := os.Getenv("OPENFLIX_VOD_API_URL"); vodAPIURL != "" {
 		cfg.VOD.APIURL = vodAPIURL
+	}
+	// Cloud discovery
+	if cloudURL := os.Getenv("OPENFLIX_CLOUD_REGISTRY_URL"); cloudURL != "" {
+		cfg.Server.CloudRegistryURL = cloudURL
+	}
+	// License key
+	if licenseKey := os.Getenv("OPENFLIX_LICENSE_KEY"); licenseKey != "" {
+		cfg.Server.LicenseKey = licenseKey
 	}
 }
 
