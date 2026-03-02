@@ -3,6 +3,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { ChevronDown, ChevronRight, Save, Trash2, Search, X } from 'lucide-react'
 import { api } from '../api/client'
 
+const isAbsoluteUrl = (url?: string) => url ? /^https?:\/\//i.test(url) : false
+
 interface Channel {
   id: number
   sourceId: number
@@ -215,7 +217,7 @@ export function EPGEditorPage() {
                       selectedChannel?.id === channel.id ? 'bg-blue-600 hover:bg-blue-700' : ''
                     }`}
                   >
-                    {channel.logo ? (
+                    {isAbsoluteUrl(channel.logo) ? (
                       <img
                         src={channel.logo}
                         alt={channel.name}
@@ -250,7 +252,7 @@ export function EPGEditorPage() {
             {/* Channel Header */}
             <div className="p-6 border-b border-gray-700">
               <div className="flex items-center gap-4">
-                {selectedChannel.logo ? (
+                {isAbsoluteUrl(selectedChannel.logo) ? (
                   <img
                     src={selectedChannel.logo}
                     alt={selectedChannel.name}

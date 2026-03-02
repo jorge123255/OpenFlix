@@ -18,7 +18,7 @@ data class LoginRequest(
 )
 
 data class AuthResponse(
-    @SerializedName("token") val token: String,
+    @SerializedName("authToken") val token: String,
     @SerializedName("user") val user: UserDto,
     @SerializedName("expires_at") val expiresAt: Long? = null
 )
@@ -28,10 +28,11 @@ data class UserDto(
     @SerializedName("uuid") val uuid: String,
     @SerializedName("username") val username: String,
     @SerializedName("email") val email: String?,
-    @SerializedName("is_admin") val isAdmin: Boolean,
-    @SerializedName("avatar") val avatar: String?,
-    @SerializedName("created_at") val createdAt: String?,
-    @SerializedName("updated_at") val updatedAt: String?
+    @SerializedName("admin") val isAdmin: Boolean = false,
+    @SerializedName("thumb") val avatar: String? = null,
+    @SerializedName("title") val displayName: String? = null,
+    @SerializedName("created_at") val createdAt: String? = null,
+    @SerializedName("updated_at") val updatedAt: String? = null
 )
 
 data class UpdateUserRequest(

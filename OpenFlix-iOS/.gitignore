@@ -1,0 +1,30 @@
+# Build artifacts
+build/
+build-device/
+build-sim/
+DerivedData/
+
+# CocoaPods - dependencies are declared in Podfile.lock, not committed
+Pods/
+
+# Xcode user data
+*.xcuserdatad/
+xcuserdata/
+*.xcscmblueprint
+*.xccheckout
+
+# macOS
+.DS_Store
+
+# SMB/NAS temp files (created when editing over network share)
+.smbdelete*
+
+# SwiftPM
+.build/
+.swiftpm/
+
+# Fastlane
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/**/*.png
+fastlane/test_output

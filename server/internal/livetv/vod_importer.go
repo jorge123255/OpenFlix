@@ -640,6 +640,12 @@ func (v *VODImporter) ImportM3UVOD(sourceID uint) (*ImportResult, error) {
 	source.LastFetched = &now
 	v.db.Save(&source)
 
+	// Deduplicate movies in target library
+	_, moviesMerged := v.DeduplicateLibrary(*source.VODLibraryID)
+	if moviesMerged > 0 {
+		log.Printf("Deduplicated %d duplicate movies in library %d", moviesMerged, *source.VODLibraryID)
+	}
+
 	result.Duration = time.Since(start).String()
 	log.Printf("M3U VOD import complete: %d added, %d updated, %d errors in %s",
 		result.Added, result.Updated, result.Errors, result.Duration)
@@ -693,22 +699,29 @@ func (v *VODImporter) ImportM3USeries(sourceID uint) (*ImportResult, error) {
 	result.Total = len(seriesEntries)
 	log.Printf("Importing %d series episodes from M3U source %s", result.Total, source.Name)
 
-	// Group episodes by series name
+	// Group episodes by series name (case-insensitive to avoid duplicates)
 	seriesMap := make(map[string][]ParsedVODEntry)
+	seriesDisplayName := make(map[string]string) // lowercase key -> best display name
 	for _, ep := range seriesEntries {
 		seriesName := ep.SeriesName
 		if seriesName == "" {
 			seriesName = ep.Name // Fallback to full name if no series name extracted
 		}
-		seriesMap[seriesName] = append(seriesMap[seriesName], ep)
+		key := strings.ToLower(strings.TrimSpace(seriesName))
+		seriesMap[key] = append(seriesMap[key], ep)
+		// Keep the version with more uppercase letters as display name (likely proper title case)
+		if existing, ok := seriesDisplayName[key]; !ok || countUpper(seriesName) > countUpper(existing) {
+			seriesDisplayName[key] = seriesName
+		}
 	}
 
 	showsAdded := 0
 	showsUpdated := 0
 
-	for seriesName, episodes := range seriesMap {
-		// Check if show already exists
-		m3uSeriesID := hashString(seriesName + "_" + source.Name)
+	for key, episodes := range seriesMap {
+		seriesName := seriesDisplayName[key]
+		// Check if show already exists (use lowercase key for consistent hashing)
+		m3uSeriesID := hashString(key + "_" + source.Name)
 		var existingShow models.MediaItem
 		err := v.db.Where("m3u_series_id = ? AND m3u_source_id = ? AND type = ?",
 			m3uSeriesID, source.ID, "show").First(&existingShow).Error
@@ -777,6 +790,12 @@ func (v *VODImporter) ImportM3USeries(sourceID uint) (*ImportResult, error) {
 	now := time.Now()
 	source.LastFetched = &now
 	v.db.Save(&source)
+
+	// Deduplicate shows in target library
+	showsMerged, _ := v.DeduplicateLibrary(*source.SeriesLibraryID)
+	if showsMerged > 0 {
+		log.Printf("Deduplicated %d duplicate shows in library %d", showsMerged, *source.SeriesLibraryID)
+	}
 
 	result.Duration = time.Since(start).String()
 	log.Printf("M3U Series import complete: %d shows added, %d updated, %d errors in %s",
@@ -945,6 +964,16 @@ func (v *VODImporter) importM3UEpisode(source *models.M3USource, showID, seasonI
 }
 
 // hashString creates a short hash of a string for use as an ID
+func countUpper(s string) int {
+	count := 0
+	for _, r := range s {
+		if r >= 'A' && r <= 'Z' {
+			count++
+		}
+	}
+	return count
+}
+
 func hashString(s string) string {
 	// Simple hash using FNV-1a
 	h := uint64(14695981039346656037)
@@ -1006,4 +1035,230 @@ func parseYearFromTitle(title string) (string, int) {
 	}
 
 	return title, 0
+}
+
+// DeduplicateLibrary merges duplicate media items within a library.
+// Instead of deleting duplicates, it moves their media files (stream sources)
+// to the keeper item, so the user has multiple source options for playback.
+// For shows: merges by case-insensitive title, re-parents seasons/episodes.
+// For movies: merges by case-insensitive title + year.
+func (v *VODImporter) DeduplicateLibrary(libraryID uint) (showsMerged, moviesMerged int) {
+	type dupGroup struct {
+		Title string
+		Count int
+	}
+
+	// Deduplicate shows
+	var showDups []dupGroup
+	v.db.Model(&models.MediaItem{}).
+		Select("LOWER(title) as title, COUNT(*) as count").
+		Where("type = ? AND library_id = ?", "show", libraryID).
+		Group("LOWER(title)").
+		Having("COUNT(*) > 1").
+		Scan(&showDups)
+
+	for _, dup := range showDups {
+		var shows []models.MediaItem
+		v.db.Where("LOWER(title) = ? AND type = ? AND library_id = ?", dup.Title, "show", libraryID).
+			Order("id ASC").Find(&shows)
+
+		if len(shows) < 2 {
+			continue
+		}
+
+		// Pick the best keeper: prefer one with thumb
+		keeperIdx := 0
+		for i, s := range shows {
+			if s.Thumb != "" && shows[keeperIdx].Thumb == "" {
+				keeperIdx = i
+			}
+		}
+		keeper := shows[keeperIdx]
+
+		for i, s := range shows {
+			if i == keeperIdx {
+				continue
+			}
+			// Re-parent seasons from duplicate to keeper
+			v.db.Model(&models.MediaItem{}).
+				Where("parent_id = ? AND type = ?", s.ID, "season").
+				Update("parent_id", keeper.ID)
+
+			// Re-parent episodes that directly reference this show
+			v.db.Model(&models.MediaItem{}).
+				Where("parent_id = ? AND type = ?", s.ID, "episode").
+				Update("parent_id", keeper.ID)
+
+			// Delete duplicate show (no media files on show items)
+			v.db.Delete(&s)
+			showsMerged++
+		}
+
+		// Deduplicate seasons within the keeper show (same season number)
+		v.deduplicateSeasons(keeper.ID)
+	}
+
+	// Deduplicate movies
+	type movieDupGroup struct {
+		Title string
+		Year  int
+		Count int
+	}
+
+	var movieDups []movieDupGroup
+	v.db.Model(&models.MediaItem{}).
+		Select("LOWER(title) as title, year, COUNT(*) as count").
+		Where("type = ? AND library_id = ?", "movie", libraryID).
+		Group("LOWER(title), year").
+		Having("COUNT(*) > 1").
+		Scan(&movieDups)
+
+	for _, dup := range movieDups {
+		var movies []models.MediaItem
+		v.db.Where("LOWER(title) = ? AND year = ? AND type = ? AND library_id = ?",
+			dup.Title, dup.Year, "movie", libraryID).
+			Order("id ASC").Find(&movies)
+
+		if len(movies) < 2 {
+			continue
+		}
+
+		// Keep the one with the best data (has thumb, has stream URL)
+		keeperIdx := 0
+		for i, m := range movies {
+			if m.Thumb != "" && movies[keeperIdx].Thumb == "" {
+				keeperIdx = i
+			} else if m.StreamURL != "" && movies[keeperIdx].StreamURL == "" {
+				keeperIdx = i
+			}
+		}
+		keeper := movies[keeperIdx]
+
+		for i, m := range movies {
+			if i == keeperIdx {
+				continue
+			}
+			// Move media files from duplicate to keeper (alternative sources)
+			v.db.Model(&models.MediaFile{}).
+				Where("media_item_id = ?", m.ID).
+				Update("media_item_id", keeper.ID)
+
+			// If the duplicate has a stream URL the keeper doesn't, add it as a media file
+			if m.StreamURL != "" && m.StreamURL != keeper.StreamURL {
+				ext := getExtensionFromURL(m.StreamURL)
+				providerName := m.ProviderName
+				if providerName == "" {
+					providerName = "unknown"
+				}
+				mediaFile := models.MediaFile{
+					MediaItemID:     keeper.ID,
+					FilePath:        fmt.Sprintf("alt://%s/%d/%s.%s", providerName, m.ID, m.Title, ext),
+					Container:       ext,
+					IsRemote:        true,
+					RemoteURL:       m.StreamURL,
+					RemoteExtension: ext,
+				}
+				v.db.Create(&mediaFile)
+			}
+
+			// Delete the duplicate item
+			v.db.Delete(&m)
+			moviesMerged++
+		}
+	}
+
+	return showsMerged, moviesMerged
+}
+
+// deduplicateSeasons merges duplicate seasons (same index) within a show
+func (v *VODImporter) deduplicateSeasons(showID uint) {
+	type seasonDup struct {
+		Index int
+		Count int
+	}
+
+	var dups []seasonDup
+	v.db.Model(&models.MediaItem{}).
+		Select("`index`, COUNT(*) as count").
+		Where("parent_id = ? AND type = ?", showID, "season").
+		Group("`index`").
+		Having("COUNT(*) > 1").
+		Scan(&dups)
+
+	for _, dup := range dups {
+		var seasons []models.MediaItem
+		v.db.Where("parent_id = ? AND type = ? AND `index` = ?", showID, "season", dup.Index).
+			Order("id ASC").Find(&seasons)
+
+		if len(seasons) < 2 {
+			continue
+		}
+
+		keeper := seasons[0]
+		for i := 1; i < len(seasons); i++ {
+			// Re-parent episodes to keeper season
+			v.db.Model(&models.MediaItem{}).
+				Where("parent_id = ? AND type = ?", seasons[i].ID, "episode").
+				Update("parent_id", keeper.ID)
+			v.db.Delete(&seasons[i])
+		}
+
+		// Deduplicate episodes within the keeper season (same episode number)
+		v.deduplicateEpisodes(keeper.ID)
+	}
+}
+
+// deduplicateEpisodes merges duplicate episodes (same index) within a season.
+// Moves media files from duplicates to keeper so multiple sources are available.
+func (v *VODImporter) deduplicateEpisodes(seasonID uint) {
+	type epDup struct {
+		Index int
+		Count int
+	}
+
+	var dups []epDup
+	v.db.Model(&models.MediaItem{}).
+		Select("`index`, COUNT(*) as count").
+		Where("parent_id = ? AND type = ?", seasonID, "episode").
+		Group("`index`").
+		Having("COUNT(*) > 1").
+		Scan(&dups)
+
+	for _, dup := range dups {
+		var eps []models.MediaItem
+		v.db.Where("parent_id = ? AND type = ? AND `index` = ?", seasonID, "episode", dup.Index).
+			Order("id ASC").Find(&eps)
+
+		if len(eps) < 2 {
+			continue
+		}
+
+		keeper := eps[0]
+		for i := 1; i < len(eps); i++ {
+			// Move media files from duplicate to keeper (alternative sources)
+			v.db.Model(&models.MediaFile{}).
+				Where("media_item_id = ?", eps[i].ID).
+				Update("media_item_id", keeper.ID)
+
+			// If duplicate has a stream URL, ensure it's preserved as a media file
+			if eps[i].StreamURL != "" && eps[i].StreamURL != keeper.StreamURL {
+				ext := getExtensionFromURL(eps[i].StreamURL)
+				providerName := eps[i].ProviderName
+				if providerName == "" {
+					providerName = "unknown"
+				}
+				mediaFile := models.MediaFile{
+					MediaItemID:     keeper.ID,
+					FilePath:        fmt.Sprintf("alt://%s/%d/%s.%s", providerName, eps[i].ID, eps[i].Title, ext),
+					Container:       ext,
+					IsRemote:        true,
+					RemoteURL:       eps[i].StreamURL,
+					RemoteExtension: ext,
+				}
+				v.db.Create(&mediaFile)
+			}
+
+			v.db.Delete(&eps[i])
+		}
+	}
 }

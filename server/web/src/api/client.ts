@@ -1,6 +1,7 @@
 import axios, { type AxiosError, type AxiosInstance } from 'axios'
 import type {
   User,
+  UserProfile,
   LoginRequest,
   LoginResponse,
   RegisterRequest,
@@ -29,7 +30,7 @@ import type {
 const TOKEN_KEY = 'openflix_token'
 
 class ApiClient {
-  private client: AxiosInstance
+  client: AxiosInstance
 
   constructor() {
     this.client = axios.create({
@@ -121,6 +122,26 @@ class ApiClient {
 
   async deleteUser(id: number): Promise<void> {
     await this.client.delete(`/admin/users/${id}`)
+  }
+
+  // Profile endpoints
+  async getProfiles(): Promise<UserProfile[]> {
+    const response = await this.client.get<{ profiles: UserProfile[] }>('/profiles')
+    return response.data.profiles || []
+  }
+
+  async getUserProfiles(userId: number): Promise<UserProfile[]> {
+    const response = await this.client.get<{ profiles: UserProfile[] }>(`/admin/users/${userId}/profiles`)
+    return response.data.profiles || []
+  }
+
+  async createProfile(data: { name: string; isKid?: boolean }): Promise<UserProfile> {
+    const response = await this.client.post<UserProfile>('/profiles', data)
+    return response.data
+  }
+
+  async deleteProfile(id: number): Promise<void> {
+    await this.client.delete(`/profiles/${id}`)
   }
 
   // Library endpoints
@@ -349,6 +370,11 @@ class ApiClient {
     return response.data
   }
 
+  async getOnNow(): Promise<OnNowChannel[]> {
+    const response = await this.client.get<{ channels: OnNowChannel[] }>('/livetv/now')
+    return response.data.channels || []
+  }
+
   async getEPGPrograms(params?: {
     page?: number
     limit?: number
@@ -459,6 +485,10 @@ class ApiClient {
     await this.client.delete(`/dvr/recordings/${id}`)
   }
 
+  async stopRecording(id: number): Promise<void> {
+    await this.client.post(`/dvr/recordings/${id}/stop`)
+  }
+
   async getSeriesRules(): Promise<SeriesRule[]> {
     const response = await this.client.get<{ rules: SeriesRule[] }>('/dvr/rules')
     return response.data.rules || []
@@ -510,6 +540,20 @@ class ApiClient {
     await this.client.post(`/dvr/recordings/${recordingId}/commercials/detect`)
   }
 
+  // EDL Export - triggers download of EDL file for recording commercial segments
+  getRecordingEDLUrl(recordingId: number, format: 'standard' | 'mplayer' = 'standard'): string {
+    const token = localStorage.getItem('openflix_token') || ''
+    const base = this.client.defaults.baseURL || ''
+    return `${base}/dvr/recordings/${recordingId}/export.edl?format=${format}&X-Plex-Token=${token}`
+  }
+
+  // EDL Export for DVR v2 files
+  getFileEDLUrl(fileId: number, format: 'standard' | 'mplayer' = 'standard', types: string = 'commercial'): string {
+    const token = localStorage.getItem('openflix_token') || ''
+    const base = this.client.defaults.baseURL || ''
+    return `${base}/dvr/v2/files/${fileId}/export.edl?format=${format}&types=${types}&X-Plex-Token=${token}`
+  }
+
   async getRecordingStreamUrl(recordingId: number): Promise<string> {
     const response = await this.client.get<{ url: string }>(`/dvr/recordings/${recordingId}/stream`)
     return response.data.url
@@ -517,6 +561,84 @@ class ApiClient {
 
   async updateRecordingProgress(recordingId: number, viewOffset: number): Promise<void> {
     await this.client.put(`/dvr/recordings/${recordingId}/progress`, { viewOffset })
+  }
+
+  // Recordings Manager endpoints
+  async getRecordingsManager(params?: {
+    contentType?: string
+    sortBy?: string
+    sortDir?: string
+    search?: string
+    watched?: string
+    favorite?: string
+    contentRating?: string
+    showTitle?: string
+    status?: string
+  }): Promise<RecordingsManagerResponse> {
+    const response = await this.client.get<RecordingsManagerResponse>('/dvr/recordings/manager', { params })
+    return response.data
+  }
+
+  async toggleRecordingWatched(id: number, watched?: boolean): Promise<{ id: number; isWatched: boolean }> {
+    const response = await this.client.put<{ id: number; isWatched: boolean }>(
+      `/dvr/recordings/${id}/watched`,
+      watched !== undefined ? { watched } : {}
+    )
+    return response.data
+  }
+
+  async toggleRecordingFavorite(id: number, favorite?: boolean): Promise<{ id: number; isFavorite: boolean }> {
+    const response = await this.client.put<{ id: number; isFavorite: boolean }>(
+      `/dvr/recordings/${id}/favorite`,
+      favorite !== undefined ? { favorite } : {}
+    )
+    return response.data
+  }
+
+  async toggleRecordingKeep(id: number, keepForever?: boolean): Promise<{ id: number; keepForever: boolean }> {
+    const response = await this.client.put<{ id: number; keepForever: boolean }>(
+      `/dvr/recordings/${id}/keep`,
+      keepForever !== undefined ? { keepForever } : {}
+    )
+    return response.data
+  }
+
+  async trashRecording(id: number): Promise<void> {
+    await this.client.delete(`/dvr/recordings/${id}/trash`)
+  }
+
+  async bulkRecordingAction(ids: number[], action: string): Promise<{ action: string; affected: number }> {
+    const response = await this.client.post<{ action: string; affected: number }>(
+      '/dvr/recordings/bulk',
+      { ids, action }
+    )
+    return response.data
+  }
+
+  // DVR Management (Passes, Schedule, Calendar)
+  async getDVRPasses(): Promise<DVRPass[]> {
+    const response = await this.client.get<{ passes: DVRPass[] }>('/dvr/passes')
+    return response.data.passes || []
+  }
+
+  async pauseDVRPass(id: number, type: string): Promise<void> {
+    await this.client.put(`/dvr/passes/${id}/pause`, null, { params: { type } })
+  }
+
+  async resumeDVRPass(id: number, type: string): Promise<void> {
+    await this.client.put(`/dvr/passes/${id}/resume`, null, { params: { type } })
+  }
+
+  async getDVRSchedule(): Promise<DVRScheduleResponse> {
+    const response = await this.client.get<DVRScheduleResponse>('/dvr/schedule')
+    return response.data
+  }
+
+  async getDVRCalendar(date?: string): Promise<DVRCalendarResponse> {
+    const response = await this.client.get<DVRCalendarResponse>('/dvr/calendar', {
+      params: date ? { date } : undefined,
+    })
+    return response.data
   }
 
   // DVR Settings
@@ -536,6 +658,22 @@ class ApiClient {
     return response.data
   }
 
+  async getDashboardData(): Promise<DashboardData> {
+    const response = await this.client.get<DashboardData>('/api/dashboard')
+    return response.data
+  }
+
+  // Diagnostics & System Status
+  async runHealthChecks(): Promise<HealthCheckResponse> {
+    const response = await this.client.get<HealthCheckResponse>('/api/diagnostics/health-check')
+    return response.data
+  }
+
+  async getSystemStatus(): Promise<SystemStatusResponse> {
+    const response = await this.client.get<SystemStatusResponse>('/api/system/status')
+    return response.data
+  }
+
   async getServerConfig(): Promise<ServerSettings> {
     const response = await this.client.get<{ settings: ServerSettings }>('/admin/settings')
     return response.data.settings
@@ -546,12 +684,118 @@ class ApiClient {
     return response.data.settings
   }
 
+  // License key management
+  async getLicense(): Promise<LicenseStatus> {
+    const response = await this.client.get<LicenseStatus>('/admin/license')
+    return response.data
+  }
+
+  async saveLicense(key: string): Promise<LicenseStatus> {
+    const response = await this.client.post<LicenseStatus>('/admin/license', { key })
+    return response.data
+  }
+
+  // Cloud registry / remote access status
+  async getCloudRegistryStatus(): Promise<CloudRegistryStatus> {
+    const response = await this.client.get<CloudRegistryStatus>('/admin/remote-access')
+    return response.data
+  }
+
+  // Cloud discovery settings — backed by GET /admin/remote-access (CloudRegistryStatus)
+  async getDiscoverySettings(): Promise<DiscoverySettings> {
+    const response = await this.client.get<CloudRegistryStatus>('/admin/remote-access')
+    const data = response.data
+    return {
+      enabled: data.cloudConnected,
+      url: data.cloudUrl,
+      connected: data.cloudConnected,
+      publicIp: data.publicIp,
+    }
+  }
+
+  async setDiscoveryEnabled(enabled: boolean): Promise<DiscoverySettings> {
+    await this.client.put('/admin/settings', { remote_access_enabled: enabled })
+    const response = await this.client.get<CloudRegistryStatus>('/admin/remote-access')
+    const data = response.data
+    return {
+      enabled: data.cloudConnected,
+      url: data.cloudUrl,
+      connected: data.cloudConnected,
+      publicIp: data.publicIp,
+    }
+  }
+
+  // Claim token for cloud discovery
+  async getClaimToken(): Promise<{ token: string; expiresAt: string }> {
+    const response = await this.client.get<{ token: string; expiresAt: string }>('/api/claim-token')
+    return response.data
+  }
+
+  // Tailscale remote access
+  async getRemoteAccessStatus(): Promise<{ status: string; tailscaleIp?: string; hostname?: string; loginUrl?: string; magicDnsName?: string; backendState?: string }> {
+    const response = await this.client.get<{ status: string; tailscaleIp?: string; hostname?: string; loginUrl?: string; magicDnsName?: string; backendState?: string }>('/remote-access/status')
+    return response.data
+  }
+
+  async enableRemoteAccess(authKey?: string): Promise<{ status: string }> {
+    const response = await this.client.post<{ status: string }>('/remote-access/enable', { authKey })
+    return response.data
+  }
+
+  async disableRemoteAccess(): Promise<{ status: string }> {
+    const response = await this.client.post<{ status: string }>('/remote-access/disable')
+    return response.data
+  }
+
+  async getRemoteAccessLoginUrl(): Promise<{ url: string }> {
+    const response = await this.client.get<{ url: string }>('/remote-access/login-url')
+    return response.data
+  }
+
+  // Invite / family sharing
+  async createInvite(email: string): Promise<{ token: string; inviteUrl: string }> {
+    const response = await this.client.post<{ token: string; inviteUrl: string }>('/api/invite', { email })
+    return response.data
+  }
+
+  async getAdminUsers(): Promise<Array<{ id: number; username: string; email: string; admin: boolean; createdAt: string }>> {
+    const response = await this.client.get<Array<{ id: number; username: string; email: string; admin: boolean; createdAt: string }>>('/admin/users')
+    return response.data
+  }
+
+  // Guide data management
+  async refreshGuideData(): Promise<{ message: string; status: string }> {
+    const response = await this.client.post<{ message: string; status: string }>('/api/guide/refresh')
+    return response.data
+  }
+
+  async rebuildGuideData(): Promise<{ message: string; status: string }> {
+    const response = await this.client.post<{ message: string; status: string }>('/api/guide/rebuild')
+    return response.data
+  }
+
+  // Global client settings overrides
+  async getGlobalClientSettings(): Promise<Record<string, string>> {
+    const response = await this.client.get<{ overrides: Record<string, string> }>('/api/client-settings')
+    return response.data.overrides || {}
+  }
+
+  async updateGlobalClientSetting(key: string, value: string): Promise<void> {
+    await this.client.put('/api/client-settings', { key, value })
+  }
+
+  async deleteGlobalClientSetting(key: string): Promise<void> {
+    await this.client.delete(`/api/client-settings/${key}`)
+  }
+
   // Media management endpoints
   async getAdminMedia(params: {
     search?: string
     type?: string
     libraryId?: number
     page?: number
+    resolution?: string
+    unmatched?: boolean
   }): Promise<MediaListResponse> {
     const response = await this.client.get<MediaListResponse>('/admin/media', { params })
     return response.data
@@ -575,6 +819,16 @@ class ApiClient {
 
   async applyMediaMatch(id: number, tmdbId: number, mediaType: string): Promise<void> {
     await this.client.post(`/admin/media/${id}/match`, { tmdb_id: tmdbId, media_type: mediaType })
+  }
+
+  async applyRecordingMatch(id: number, tmdbId: number, mediaType: string, title?: string, poster?: string, backdrop?: string): Promise<void> {
+    await this.client.post(`/dvr/recordings/${id}/match`, {
+      tmdb_id: tmdbId,
+      media_type: mediaType,
+      title: title || '',
+      poster: poster || '',
+      backdrop: backdrop || '',
+    })
   }
 
   // VOD endpoints
@@ -628,15 +882,265 @@ class ApiClient {
       await this.client.delete(`/api/vod/queue/${id}`)
     },
   }
+
+  // ============ Admin Playlists API ============
+
+  async getAdminPlaylists(): Promise<AdminPlaylist[]> {
+    const response = await this.client.get<{ playlists: AdminPlaylist[] }>('/api/playlists')
+    return response.data.playlists || []
+  }
+
+  async createAdminPlaylist(data: { name: string; description: string }): Promise<AdminPlaylist> {
+    const response = await this.client.post<AdminPlaylist>('/api/playlists', data)
+    return response.data
+  }
+
+  async getAdminPlaylist(id: number): Promise<AdminPlaylistDetail> {
+    const response = await this.client.get<AdminPlaylistDetail>(`/api/playlists/${id}`)
+    return response.data
+  }
+
+  async updateAdminPlaylist(id: number, data: { name?: string; description?: string }): Promise<AdminPlaylist> {
+    const response = await this.client.put<AdminPlaylist>(`/api/playlists/${id}`, data)
+    return response.data
+  }
+
+  async deleteAdminPlaylist(id: number): Promise<void> {
+    await this.client.delete(`/api/playlists/${id}`)
+  }
+
+  async addItemsToAdminPlaylist(id: number, mediaIds: number[]): Promise<{ added: number }> {
+    const response = await this.client.post<{ added: number }>(`/api/playlists/${id}/items`, { mediaIds })
+    return response.data
+  }
+
+  async removeItemFromAdminPlaylist(playlistId: number, itemId: number): Promise<void> {
+    await this.client.delete(`/api/playlists/${playlistId}/items/${itemId}`)
+  }
+
+  async reorderAdminPlaylistItems(playlistId: number, itemIds: number[]): Promise<void> {
+    await this.client.put(`/api/playlists/${playlistId}/items/reorder`, { itemIds })
+  }
+
+  // ============ Personal Sections API ============
+
+  async getPersonalSections(): Promise<PersonalSection[]> {
+    const response = await this.client.get<{ sections: PersonalSection[] }>('/api/sections')
+    return response.data.sections || []
+  }
+
+  async createPersonalSection(data: {
+    name: string
+    description: string
+    sectionType: string
+    smartFilter?: string
+  }): Promise<PersonalSection> {
+    const response = await this.client.post<PersonalSection>('/api/sections', data)
+    return response.data
+  }
+
+  async getPersonalSection(id: number): Promise<PersonalSectionDetail> {
+    const response = await this.client.get<PersonalSectionDetail>(`/api/sections/${id}`)
+    return response.data
+  }
+
+  async updatePersonalSection(id: number, data: {
+    name?: string
+    description?: string
+    smartFilter?: string
+  }): Promise<PersonalSection> {
+    const response = await this.client.put<PersonalSection>(`/api/sections/${id}`, data)
+    return response.data
+  }
+
+  async deletePersonalSection(id: number): Promise<void> {
+    await this.client.delete(`/api/sections/${id}`)
+  }
+
+  async addItemsToPersonalSection(sectionId: number, mediaIds: number[]): Promise<{ added: number }> {
+    const response = await this.client.post<{ added: number }>(`/api/sections/${sectionId}/items`, { mediaIds })
+    return response.data
+  }
+
+  async removeItemFromPersonalSection(sectionId: number, itemId: number): Promise<void> {
+    await this.client.delete(`/api/sections/${sectionId}/items/${itemId}`)
+  }
+
+  async reorderPersonalSectionItems(sectionId: number, itemIds: number[]): Promise<void> {
+    await this.client.put(`/api/sections/${sectionId}/reorder`, { itemIds })
+  }
+
+  async previewSmartFilter(smartFilter: string, limit?: number): Promise<SmartFilterPreview> {
+    const response = await this.client.post<SmartFilterPreview>('/api/sections/preview', {
+      smartFilter,
+      limit: limit || 50,
+    })
+    return response.data
+  }
+
+  async getAvailableGenres(): Promise<string[]> {
+    const response = await this.client.get<{ genres: string[] }>('/api/sections/genres')
+    return response.data.genres || []
+  }
+}
+
+// Admin Playlist types
+export interface AdminPlaylist {
+  ID: number
+  guid: string
+  userId: number
+  title: string
+  summary: string
+  playlistType: string
+  smart: boolean
+  leafCount: number
+  duration: number
+  addedAt: string
+  updatedAt: string
+}
+
+export interface AdminPlaylistItem {
+  id: number
+  playlistId: number
+  mediaId: number
+  position: number
+  title: string
+  type: string
+  year?: number
+  thumb?: string
+  duration?: number
+  summary?: string
+}
+
+export interface AdminPlaylistDetail {
+  playlist: AdminPlaylist
+  items: AdminPlaylistItem[]
+}
+
+// Personal Section types
+export interface PersonalSection {
+  id: number
+  userId: number
+  name: string
+  description: string
+  sectionType: string
+  smartFilter: string
+  position: number
+  itemCount: number
+  createdAt: string
+  updatedAt: string
+}
+
+export interface PersonalSectionItem {
+  id: number
+  mediaId: number
+  position: number
+  title: string
+  type: string
+  year?: number
+  thumb?: string
+  duration?: number
+  summary?: string
+}
+
+export interface PersonalSectionDetail {
+  section: PersonalSection
+  items: PersonalSectionItem[]
+}
+
+export interface SmartFilterPreview {
+  items: Array<{
+    id: number
+    title: string
+    type: string
+    year?: number
+    thumb?: string
+    duration?: number
+  }>
+  total: number
 }
 
 // Server settings (from /admin/settings endpoint)
 export interface ServerSettings {
+  // Metadata
   tmdb_api_key?: string
   tvdb_api_key?: string
   metadata_lang?: string
   scan_interval?: number
   vod_api_url?: string
+
+  // Server
+  server_name?: string
+  server_port?: number
+  log_level?: string
+  data_dir?: string
+
+  // Transcoding
+  hardware_accel?: string
+  max_transcode_sessions?: number
+  transcode_temp_dir?: string
+  default_video_codec?: string
+  default_audio_codec?: string
+
+  // Live TV
+  livetv_max_streams?: number
+  timeshift_buffer_hrs?: number
+  epg_refresh_interval?: number
+  channel_switch_buffer?: number
+  tuner_sharing?: boolean
+
+  // DVR (extended)
+  recording_dir?: string
+  pre_padding?: number
+  post_padding?: number
+  commercial_detect?: boolean
+  auto_delete_days?: number
+  max_record_quality?: string
+
+  // Live TV & DVR (dedicated settings page)
+  recording_pre_padding?: number
+  recording_post_padding?: number
+  recording_quality?: string
+  keep_rule?: string
+  auto_delete_watched?: boolean
+  commercial_detection_enabled?: boolean
+  commercial_detection_mode?: string
+  auto_skip_commercials?: boolean
+  guide_refresh_interval?: number
+  guide_data_source?: string
+  deinterlacing_mode?: string
+  livetv_buffer_size?: string
+
+  // Remote Access
+  remote_access_enabled?: boolean
+  tailscale_status?: string
+  external_url?: string
+
+  // Playback Defaults
+  default_playback_speed?: string
+  frame_rate_match_mode?: string
+  default_subtitle_language?: string
+  default_audio_language?: string
+
+  // Advanced: Transcoder
+  transcoder_type?: string
+  deinterlacer_mode?: string
+  livetv_buffer_secs?: number
+
+  // Advanced: Web Player
+  playback_quality?: string
+  client_buffer_secs?: number
+
+  // Advanced: Integrations
+  edl_export?: boolean
+  m3u_channel_ids?: boolean
+  vlc_links?: boolean
+  http_logging?: boolean
+
+  // Advanced: Experimental
+  experimental_hdr?: boolean
+  experimental_low_latency?: boolean
+  experimental_ai_metadata?: boolean
 }
 
 // Provider discovery types
@@ -699,6 +1203,7 @@ export interface TMDBSearchResult {
   first_air_date?: string
   overview?: string
   poster_path?: string
+  backdrop_path?: string
   vote_average?: number
   media_type: string
 }
@@ -820,6 +1325,69 @@ export interface DVRSettings {
   maxConcurrentRecordings: number  // 0 = unlimited
 }
 
+// DVR Management types
+export interface DVRPass {
+  id: number
+  type: 'series' | 'team'
+  name: string
+  thumb?: string
+  enabled: boolean
+  keepCount: number
+  priority: number
+  prePadding: number
+  postPadding: number
+  jobCount: number
+  createdAt: string
+  updatedAt: string
+  // Series-specific
+  keywords?: string
+  channelId?: number
+  timeSlot?: string
+  daysOfWeek?: string
+  // Team-specific
+  teamName?: string
+  league?: string
+}
+
+export interface DVRScheduleItem {
+  id: number
+  title: string
+  subtitle?: string
+  channelName?: string
+  channelLogo?: string
+  startTime: string
+  endTime: string
+  status: 'scheduled' | 'recording' | 'conflict'
+  priority: number
+  category?: string
+  episodeNum?: string
+  thumb?: string
+  art?: string
+  isMovie: boolean
+  day: string
+}
+
+export interface DVRScheduleResponse {
+  schedule: DVRScheduleItem[]
+  totalCount: number
+}
+
+export interface DVRCalendarItem {
+  id: number
+  title: string
+  channelName?: string
+  startTime: string
+  endTime: string
+  status: 'scheduled' | 'recording' | 'completed'
+  day: string
+}
+
+export interface DVRCalendarResponse {
+  items: DVRCalendarItem[]
+  weekStart: string
+  weekEnd: string
+}
+
 // Configuration Export/Import
 export interface ConfigStats {
   settings: number
@@ -847,6 +1415,206 @@ export interface ImportResult {
   errors?: string[]
   version?: string
   exportedAt?: string
+}
+
+// On Now types
+export interface OnNowProgram {
+  id: number
+  channelId: string
+  title: string
+  description?: string
+  start: string
+  end: string
+  icon?: string
+  category?: string
+  episodeNum?: string
+  isNew?: boolean
+  isPremiere?: boolean
+  isLive?: boolean
+  isFinale?: boolean
+  isMovie?: boolean
+  isSports?: boolean
+  isKids?: boolean
+  isNews?: boolean
+}
+
+export interface OnNowChannel {
+  id: number
+  sourceId: number
+  channelId: string
+  number: number
+  name: string
+  logo?: string
+  group?: string
+  streamUrl: string
+  enabled: boolean
+  isFavorite: boolean
+  hasEpgData: boolean
+  nowPlaying?: OnNowProgram
+  nextProgram?: OnNowProgram
+}
+
+// Dashboard types
+export interface DashboardUpNextItem {
+  id: number
+  title: string
+  type: string
+  thumb: string
+  art: string
+  year?: number
+  duration?: number
+  viewOffset: number
+  grandparentTitle?: string
+  parentIndex?: number
+  index?: number
+  grandparentThumb?: string
+  parentThumb?: string
+  summary?: string
+}
+
+export interface DashboardRecentShow {
+  id: number
+  title: string
+  thumb: string
+  art: string
+  year?: number
+  childCount?: number
+  leafCount?: number
+  updatedAt: string
+  summary?: string
+}
+
+export interface DashboardRecentMovie {
+  id: number
+  title: string
+  thumb: string
+  art: string
+  year?: number
+  summary?: string
+  rating?: number
+  studio?: string
+}
+
+export interface DashboardRecentRecording {
+  id: number
+  title: string
+  thumb: string
+  art: string
+  channelName?: string
+  duration?: number
+  year?: number
+  isMovie?: boolean
+}
+
+export interface DashboardData {
+  upNext: DashboardUpNextItem[]
+  recentShows: DashboardRecentShow[]
+  recentMovies: DashboardRecentMovie[]
+  recentRecordings: DashboardRecentRecording[]
+}
+
+// Recordings Manager types
+export interface RecordingsManagerResponse {
+  recordings: Recording[]
+  totalCount: number
+  showTitles: string[]
+  contentRatings: string[]
+}
+
+// Health Check types
+export interface HealthCheckResult {
+  name: string
+  status: 'ok' | 'warning' | 'error'
+  message: string
+  details?: string
+}
+
+export interface HealthCheckResponse {
+  timestamp: string
+  duration: string
+  summary: string
+  checks: HealthCheckResult[]
+}
+
+// System Status types
+export interface SystemStatusServer {
+  version: string
+  uptime: string
+  uptimeSec: number
+  startedAt: string
+  os: string
+  arch: string
+  goVersion: string
+  hostname: string
+}
+
+export interface DiskUsageInfo {
+  path: string
+  label: string
+  total: number
+  used: number
+  free: number
+  percent: number
+}
+
+export interface SystemStatusResources {
+  cpuCores: number
+  memUsedMB: number
+  memTotalMB: number
+  memPercent: number
+  goroutines: number
+  diskUsage: DiskUsageInfo[]
+}
+
+export interface SystemStatusDatabase {
+  sizeMB: number
+  libraries: number
+  channels: number
+  recordings: number
+  passes: number
+  users: number
+  mediaItems: number
+  programs: number
+}
+
+export interface SystemStatusComponents {
+  ffmpegVersion: string
+  chromeVersion: string
+  comskipAvailable: boolean
+  transcodeHW: string
+}
+
+export interface SystemStatusResponse {
+  server: SystemStatusServer
+  resources: SystemStatusResources
+  database: SystemStatusDatabase
+  components: SystemStatusComponents
+}
+
+// License key types
+export interface LicenseStatus {
+  key: string
+  status: 'valid' | 'invalid' | 'not_set'
+  masked: string
+}
+
+// Cloud discovery settings
+export interface DiscoverySettings {
+  enabled: boolean
+  url: string
+  connected: boolean
+  publicIp: string
+}
+
+// Cloud registry status types
+export interface CloudRegistryStatus {
+  cloudConnected: boolean
+  cloudUrl: string
+  publicIp: string
+  claimToken: string
+  claimExpires: string
+  claimActive: boolean
+  machineId: string
 }
 
 export const api = new ApiClient()

@@ -153,17 +153,17 @@ func (s *Server) getPlaybackDecision(c *gin.Context) {
 	decision := playback.DecidePlayback(mediaInfo, caps)
 
 	// Build response with additional context
-	c.JSON(http.StatusOK, gin.H{
+	response := gin.H{
 		"decision": decision,
 		"mediaInfo": gin.H{
-			"container":   mediaInfo.Container,
-			"videoCodec":  mediaInfo.VideoCodec,
-			"audioCodec":  mediaInfo.AudioCodec,
-			"resolution":  formatResolution(mediaInfo.Width, mediaInfo.Height),
-			"bitrate":     mediaInfo.Bitrate,
-			"hasHDR":      mediaInfo.HasHDR,
+			"container":      mediaInfo.Container,
+			"videoCodec":     mediaInfo.VideoCodec,
+			"audioCodec":     mediaInfo.AudioCodec,
+			"resolution":     formatResolution(mediaInfo.Width, mediaInfo.Height),
+			"bitrate":        mediaInfo.Bitrate,
+			"hasHDR":         mediaInfo.HasHDR,
 			"hasDolbyVision": mediaInfo.HasDolbyVision,
-			"hasAtmos":    mediaInfo.HasAtmos,
+			"hasAtmos":       mediaInfo.HasAtmos,
 		},
 		"clientCapabilities": gin.H{
 			"platform":      caps.Platform,
@@ -172,7 +172,31 @@ func (s *Server) getPlaybackDecision(c *gin.Context) {
 			"audioCodecs":   caps.AudioCodecs,
 		},
 		"playbackUrl": buildPlaybackUrl(file.ID, decision),
-	})
+	}
+
+	// If the client supports DASH and transcoding is needed, also offer a DASH URL
+	if decision.Mode == playback.ModeTranscode && isDASHCapable(caps.Containers) {
+		response["dashUrl"] = buildDASHPlaybackUrl(file.ID, decision.SuggestedResolution)
+	}
+
+	// Include bandwidth-based quality recommendation if available
+	if deviceID != "" && s.bandwidthManager != nil {
+		estimatedBW := s.bandwidthManager.GetEstimatedBandwidth(deviceID)
+		if estimatedBW > 0 {
+			response["estimatedBandwidth"] = estimatedBW
+			response["recommendedQuality"] = s.bandwidthManager.GetRecommendedQuality(deviceID)
+		}
+	}
+
+	// Include skip markers if available for this file
+	userID, _ := c.Get("userID")
+	if markers := s.getSkipMarkersForFile(file.ID, userID); len(markers) > 0 {
+		settings := s.getUserSkipSettings(userID)
+		response["markers"] = markers
+		response["skipButtonDuration"] = settings.SkipButtonDuration
+	}
+
+	c.JSON(http.StatusOK, response)
 }
 
 // getMediaPlaybackOptions returns all playback options for a media item

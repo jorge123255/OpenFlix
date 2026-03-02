@@ -45,9 +45,12 @@ type LoggingConfig struct {
 type ServerConfig struct {
 	Host             string `yaml:"host"`
 	Port             int    `yaml:"port"`
-	Name             string `yaml:"name"`               // Friendly server name
-	MachineID        string `yaml:"machine_id"`         // Unique server identifier
-	DiscoveryEnabled bool   `yaml:"discovery_enabled"`  // Enable UDP discovery
+	Name             string `yaml:"name"`                // Friendly server name
+	MachineID        string `yaml:"machine_id"`          // Unique server identifier
+	DiscoveryEnabled bool   `yaml:"discovery_enabled"`   // Enable UDP discovery
+	CloudRegistryURL string `yaml:"cloud_registry_url"`  // Cloud discovery registry URL (e.g. "https://discover.openflix.app")
+	ClaimToken       string `yaml:"claim_token"`         // Current 4-char pairing code (auto-generated)
+	LicenseKey       string `yaml:"license_key"`         // OpenFlix license key
 }
 
 // DatabaseConfig holds database connection settings
@@ -91,6 +94,9 @@ type DVRConfig struct {
 	LowSpaceGB       float64 `yaml:"low_space_gb"`       // threshold for low space warning (default 5GB)
 	DefaultQuality   string  `yaml:"default_quality"`    // original, high, medium, low
 	HWAccel          string  `yaml:"hw_accel"`           // vaapi, nvenc, qsv, or empty
+	DetectionWorkers int     `yaml:"detection_workers"`  // parallel commercial detection jobs (1-8, default 2)
+	GenerateThumbs   bool    `yaml:"generate_thumbnails"` // generate thumbnails at chapter points during detection
+	ShareEdits       bool    `yaml:"share_edits"`        // share commercial detection results with community
 }
 
 // VODConfig holds VOD (Video On Demand) download settings
@@ -120,6 +126,7 @@ func DefaultConfig() *Config {
 			Name:             "OpenFlix Server",
 			MachineID:        generateMachineID(),
 			DiscoveryEnabled: true,
+			CloudRegistryURL: "", // Set via OPENFLIX_CLOUD_REGISTRY_URL for cloud discovery
 		},
 		Database: DatabaseConfig{
 			Driver: "sqlite",
@@ -147,6 +154,9 @@ func DefaultConfig() *Config {
 			CommercialDetect: true,  // enabled by default, but only runs if comskip is found
 			ComskipPath:      "",    // auto-detect
 			ComskipINIPath:   "",    // use defaults
+			DetectionWorkers: 2,     // 2 parallel detection jobs by default
+			GenerateThumbs:   false, // thumbnail generation off by default
+			ShareEdits:       false, // community sharing off by default
 		},
 		VOD: VODConfig{
 			Enabled: true,
@@ -260,6 +270,14 @@ func loadEnvOverrides(cfg *Config) {
 	// VOD settings
 	if vodAPIURL := os.Getenv("OPENFLIX_VOD_API_URL"); vodAPIURL != "" {
 		cfg.VOD.APIURL = vodAPIURL
+	}
+	// Cloud discovery
+	if cloudURL := os.Getenv("OPENFLIX_CLOUD_REGISTRY_URL"); cloudURL != "" {
+		cfg.Server.CloudRegistryURL = cloudURL
+	}
+	// License key
+	if licenseKey := os.Getenv("OPENFLIX_LICENSE_KEY"); licenseKey != "" {
+		cfg.Server.LicenseKey = licenseKey
 	}
 }
 

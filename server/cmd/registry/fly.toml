@@ -1,0 +1,24 @@
+# fly.toml app configuration file generated for openflix-registry on 2026-02-28T14:38:53-06:00
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
+
+app = 'openflix-registry'
+primary_region = 'ord'
+
+[build]
+  dockerfile = 'Dockerfile'
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = 'stop'
+  auto_start_machines = true
+  min_machines_running = 0
+
+[env]
+  DATABASE_URL = "" # Set via: fly secrets set DATABASE_URL=postgres://...
+
+[[vm]]
+  size = 'shared-cpu-1x'
+  memory = '256mb'

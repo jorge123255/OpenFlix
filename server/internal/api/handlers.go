@@ -24,12 +24,8 @@ import (
 	"gorm.io/gorm"
 )
 
-// Server identity - used by clients to identify this server
-var (
-	machineIdentifier = uuid.New().String()
-	serverVersion     = "1.0.0"
-	serverName        = "OpenFlix Server"
-)
+// Server version constant
+const serverVersion = "1.0.0"
 
 // ============ Server Info Handlers ============
 
@@ -39,9 +35,9 @@ func (s *Server) getServerInfo(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"MediaContainer": gin.H{
 			"size":              0,
-			"machineIdentifier": machineIdentifier,
+			"machineIdentifier": s.config.Server.MachineID,
 			"version":           serverVersion,
-			"friendlyName":      serverName,
+			"friendlyName":      s.config.Server.Name,
 			"platform":          runtime.GOOS,
 			"platformVersion":   runtime.Version(),
 			"myPlex":            false,
@@ -57,9 +53,9 @@ func (s *Server) getServerIdentity(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"MediaContainer": gin.H{
 			"size":              0,
-			"machineIdentifier": machineIdentifier,
+			"machineIdentifier": s.config.Server.MachineID,
 			"version":           serverVersion,
-			"friendlyName":      serverName,
+			"friendlyName":      s.config.Server.Name,
 		},
 	})
 }
@@ -69,8 +65,8 @@ func (s *Server) getServerPrefs(c *gin.Context) {
 		"MediaContainer": gin.H{
 			"size": 0,
 			"Setting": []gin.H{
-				{"id": "FriendlyName", "value": serverName},
-				{"id": "MachineIdentifier", "value": machineIdentifier},
+				{"id": "FriendlyName", "value": s.config.Server.Name},
+				{"id": "MachineIdentifier", "value": s.config.Server.MachineID},
 			},
 		},
 	})
@@ -123,10 +119,10 @@ func (s *Server) getServerStatus(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"server": gin.H{
-			"name":              serverName,
+			"name":              s.config.Server.Name,
 			"version":           serverVersion,
 			"hostname":          hostname,
-			"machineIdentifier": machineIdentifier,
+			"machineIdentifier": s.config.Server.MachineID,
 			"platform":          runtime.GOOS,
 			"arch":              runtime.GOARCH,
 			"goVersion":         runtime.Version(),
@@ -441,7 +437,102 @@ func (s *Server) logout(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"status": "ok"})
 }
 
+// ============ Admin User Management ============
+
+func (s *Server) adminListUsers(c *gin.Context) {
+	users, err := s.authService.GetAllUsers()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	userList := make([]gin.H, len(users))
+	for i, user := range users {
+		// Get profile count
+		profiles, _ := s.authService.GetUserProfiles(user.ID)
+
+		userList[i] = gin.H{
+			"id":           user.ID,
+			"uuid":         user.UUID,
+			"username":     user.Username,
+			"email":        user.Email,
+			"title":        user.DisplayName,
+			"thumb":        user.Thumb,
+			"admin":        user.IsAdmin,
+			"restricted":   user.IsRestricted,
+			"profileCount": len(profiles),
+			"createdAt":    user.CreatedAt,
+			"lastSeen":     user.UpdatedAt,
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{"users": userList})
+}
+
+func (s *Server) adminDeleteUser(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+		return
+	}
+
+	// Don't allow deleting yourself
+	currentUserID, _ := c.Get("userID")
+	if uint(id) == currentUserID.(uint) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Cannot delete your own account"})
+		return
+	}
+
+	if err := s.authService.DeleteUser(uint(id)); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"status": "ok"})
+}
+
+func (s *Server) adminGetUserProfiles(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+		return
+	}
+
+	profiles, err := s.authService.GetUserProfiles(uint(id))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	profileList := make([]gin.H, len(profiles))
+	for i, p := range profiles {
+		profileList[i] = gin.H{
+			"id":    p.ID,
+			"uuid":  p.UUID,
+			"name":  p.Name,
+			"thumb": p.Thumb,
+			"isKid": p.IsKid,
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{"profiles": profileList})
+}
+
 func (s *Server) getCurrentUser(c *gin.Context) {
+	// Local network access bypass — no real user record
+	if isLocal, exists := c.Get("isLocalAccess"); exists && isLocal.(bool) {
+		c.JSON(http.StatusOK, gin.H{
+			"id":       0,
+			"uuid":     "local-user",
+			"username": "admin",
+			"email":    "",
+			"title":    "Admin",
+			"thumb":    "",
+			"admin":    true,
+		})
+		return
+	}
+
 	userID, exists := c.Get("userID")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Not authenticated"})
@@ -774,11 +865,11 @@ func (s *Server) getResources(c *gin.Context) {
 	// Return this server as a resource
 	c.JSON(http.StatusOK, []gin.H{
 		{
-			"name":             serverName,
+			"name":             s.config.Server.Name,
 			"product":          "OpenFlix Media Server",
 			"productVersion":   serverVersion,
 			"platform":         runtime.GOOS,
-			"clientIdentifier": machineIdentifier,
+			"clientIdentifier": s.config.Server.MachineID,
 			"accessToken":      c.GetString("token"),
 			"provides":         "server",
 			"owned":            true,
@@ -1777,6 +1868,11 @@ func (s *Server) mediaItemToMetadata(item *models.MediaItem, lib *models.Library
 			}
 		}
 		metadata["Media"] = media
+	}
+
+	// Add stream URL for external/M3U/Xtream content
+	if item.StreamURL != "" {
+		metadata["streamUrl"] = item.StreamURL
 	}
 
 	return metadata
@@ -2802,28 +2898,6 @@ func (s *Server) deletePlaylist(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"status": "ok"})
 }
 
-// ============ Collection Handlers ============
-
-func (s *Server) getCollectionItems(c *gin.Context) {
-	s.respondWithMediaContainer(c, []gin.H{}, 0, 0, 0)
-}
-
-func (s *Server) createCollection(c *gin.Context) {
-	c.JSON(http.StatusCreated, gin.H{"ratingKey": "1"})
-}
-
-func (s *Server) addToCollection(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{"status": "ok"})
-}
-
-func (s *Server) removeFromCollection(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{"status": "ok"})
-}
-
-func (s *Server) deleteCollection(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{"status": "ok"})
-}
-
 // ============ Watchlist Handlers ============
 
 func (s *Server) getWatchlist(c *gin.Context) {
@@ -2932,40 +3006,6 @@ func (s *Server) removeFromWatchlist(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"status": "ok"})
-}
-
-// ============ Play Queue Handlers ============
-
-func (s *Server) createPlayQueue(c *gin.Context) {
-	c.JSON(http.StatusCreated, gin.H{
-		"MediaContainer": gin.H{
-			"playQueueID":       1,
-			"playQueueVersion":  1,
-			"playQueueShuffled": false,
-			"size":              0,
-			"Metadata":          []gin.H{},
-		},
-	})
-}
-
-func (s *Server) getPlayQueue(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{
-		"MediaContainer": gin.H{
-			"playQueueID":       c.Param("id"),
-			"playQueueVersion":  1,
-			"playQueueShuffled": false,
-			"size":              0,
-			"Metadata":          []gin.H{},
-		},
-	})
-}
-
-func (s *Server) shufflePlayQueue(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{"status": "ok"})
-}
-
-func (s *Server) clearPlayQueue(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"status": "ok"})
 }
 
@@ -3443,25 +3483,22 @@ func (s *Server) transcodeStart(c *gin.Context) {
 		return
 	}
 
-	// Get parameters
-	path := c.Query("path")
-	if path == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Path is required"})
-		return
-	}
-
-	// Parse media key from path (e.g., /library/metadata/123)
-	parts := strings.Split(path, "/")
+	// Get media key - support both ?key=123 and legacy ?path=/library/metadata/123
 	var mediaKey int
-	for i, p := range parts {
-		if p == "metadata" && i+1 < len(parts) {
-			mediaKey, _ = strconv.Atoi(parts[i+1])
-			break
+	if keyStr := c.Query("key"); keyStr != "" {
+		mediaKey, _ = strconv.Atoi(keyStr)
+	} else if path := c.Query("path"); path != "" {
+		parts := strings.Split(path, "/")
+		for i, p := range parts {
+			if p == "metadata" && i+1 < len(parts) {
+				mediaKey, _ = strconv.Atoi(parts[i+1])
+				break
+			}
 		}
 	}
 
 	if mediaKey == 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid path"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Media key is required (use ?key=123)"})
 		return
 	}
 
@@ -3483,6 +3520,12 @@ func (s *Server) transcodeStart(c *gin.Context) {
 	offset, _ := strconv.ParseInt(c.Query("offset"), 10, 64)
 	quality := c.DefaultQuery("videoQuality", "original")
 
+	// For remote M3U VOD items, redirect directly to the stream URL (avoids unnecessary transcoding)
+	if file.IsRemote && file.RemoteURL != "" {
+		c.Redirect(http.StatusFound, file.RemoteURL)
+		return
+	}
+
 	// Start transcode session
 	session, err := s.transcoder.StartSession(file.ID, file.FilePath, offset, quality)
 	if err != nil {
@@ -3490,13 +3533,109 @@ func (s *Server) transcodeStart(c *gin.Context) {
 		return
 	}
 
-	// Wait a moment for transcoding to start and generate initial segment
-	time.Sleep(500 * time.Millisecond)
-
-	// Return HLS playlist
+	// Wait for playlist file to appear (with timeout)
 	playlistPath := s.transcoder.GetPlaylistPath(session.ID)
+	timeout := time.After(15 * time.Second)
+	ticker := time.NewTicker(250 * time.Millisecond)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-timeout:
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Transcode startup timeout"})
+			return
+		case <-ticker.C:
+			if _, err := os.Stat(playlistPath); err == nil {
+				s.serveTranscodePlaylist(c, session.ID, playlistPath)
+				return
+			}
+		case <-session.Done:
+			if session.Error != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Transcode failed: %v", session.Error)})
+				return
+			}
+			if _, err := os.Stat(playlistPath); err == nil {
+				s.serveTranscodePlaylist(c, session.ID, playlistPath)
+				return
+			}
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Transcode completed but no playlist generated"})
+			return
+		}
+	}
+}
+
+// serveTranscodePlaylist reads the HLS playlist and rewrites segment URLs to be absolute.
+// If the session has a known file duration, it generates a full VOD playlist upfront so
+// AVPlayer shows a proper scrubber instead of a "Live" indicator.
+func (s *Server) serveTranscodePlaylist(c *gin.Context, sessionID string, playlistPath string) {
+	basePath := fmt.Sprintf("/video/-/transcode/universal/session/%s/", sessionID)
+
+	// If we know the file duration, generate a full VOD playlist immediately.
+	// This makes AVPlayer show a real scrubber rather than a "Live" badge.
+	if session := s.transcoder.GetSession(sessionID); session != nil && session.FileDuration > 0 {
+		const segDuration = 4.0 // must match -hls_time in ffmpeg args
+		offsetSec := float64(session.Offset) / 1000.0
+		remaining := session.FileDuration - offsetSec
+		if remaining <= 0 {
+			remaining = session.FileDuration
+		}
+		numSegments := int(remaining/segDuration) + 1
+		maxTarget := int(segDuration) + 1
+
+		var sb strings.Builder
+		sb.WriteString("#EXTM3U\n")
+		sb.WriteString("#EXT-X-VERSION:6\n")
+		sb.WriteString(fmt.Sprintf("#EXT-X-TARGETDURATION:%d\n", maxTarget))
+		sb.WriteString("#EXT-X-MEDIA-SEQUENCE:0\n")
+		sb.WriteString("#EXT-X-PLAYLIST-TYPE:VOD\n")
+		sb.WriteString("#EXT-X-INDEPENDENT-SEGMENTS\n")
+		for i := 0; i < numSegments; i++ {
+			dur := segDuration
+			if float64(i+1)*segDuration > remaining {
+				dur = remaining - float64(i)*segDuration
+			}
+			if dur <= 0 {
+				break
+			}
+			sb.WriteString(fmt.Sprintf("#EXTINF:%.6f,\n", dur))
+			sb.WriteString(fmt.Sprintf("%ssegment%05d.ts\n", basePath, i))
+		}
+		sb.WriteString("#EXT-X-ENDLIST\n")
+		c.Header("Content-Type", "application/vnd.apple.mpegurl")
+		c.String(http.StatusOK, sb.String())
+		return
+	}
+
+	// Fallback: rewrite the actual playlist ffmpeg produced.
+	data, err := os.ReadFile(playlistPath)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read playlist"})
+		return
+	}
+	lines := strings.Split(string(data), "\n")
+	var rewritten []string
+	hasEndList := false
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if trimmed == "#EXT-X-ENDLIST" {
+			hasEndList = true
+		}
+		if trimmed != "" && !strings.HasPrefix(trimmed, "#") && !strings.HasPrefix(trimmed, "http") {
+			rewritten = append(rewritten, basePath+trimmed)
+		} else {
+			rewritten = append(rewritten, line)
+		}
+	}
+	// Inject playlist type
+	playlistType := "EVENT"
+	if hasEndList {
+		playlistType = "VOD"
+	}
+	injected := []string{rewritten[0], "#EXT-X-PLAYLIST-TYPE:" + playlistType}
+	rewritten = append(injected, rewritten[1:]...)
+
 	c.Header("Content-Type", "application/vnd.apple.mpegurl")
-	c.File(playlistPath)
+	c.String(http.StatusOK, strings.Join(rewritten, "\n"))
 }
 
 func (s *Server) transcodeSegment(c *gin.Context) {
@@ -4130,23 +4269,202 @@ func sortFileEntries(entries []FileSystemEntry) {
 
 // ServerSettings represents configurable server settings
 type ServerSettings struct {
+	// Metadata
 	TMDBApiKey   string `json:"tmdb_api_key,omitempty"`
 	TVDBApiKey   string `json:"tvdb_api_key,omitempty"`
 	MetadataLang string `json:"metadata_lang,omitempty"`
 	ScanInterval int    `json:"scan_interval,omitempty"`
 	VODAPIURL    string `json:"vod_api_url,omitempty"`
+
+	// Server
+	ServerName string `json:"server_name,omitempty"`
+	ServerPort int    `json:"server_port,omitempty"`
+	LogLevel   string `json:"log_level,omitempty"`
+	DataDir    string `json:"data_dir,omitempty"`
+
+	// Transcoding
+	HardwareAccel    string `json:"hardware_accel,omitempty"`
+	MaxTranscode     int    `json:"max_transcode_sessions,omitempty"`
+	TranscodeTempDir string `json:"transcode_temp_dir,omitempty"`
+	DefaultVideoCodec string `json:"default_video_codec,omitempty"`
+	DefaultAudioCodec string `json:"default_audio_codec,omitempty"`
+
+	// Live TV
+	LiveTVMaxStreams    int  `json:"livetv_max_streams,omitempty"`
+	TimeshiftBufferHrs int  `json:"timeshift_buffer_hrs,omitempty"`
+	EPGRefreshInterval int  `json:"epg_refresh_interval,omitempty"`
+	ChannelSwitchBuffer int `json:"channel_switch_buffer,omitempty"`
+	TunerSharing       bool `json:"tuner_sharing"`
+
+	// DVR (extended)
+	RecordingDir      string `json:"recording_dir,omitempty"`
+	PrePadding        int    `json:"pre_padding,omitempty"`
+	PostPadding       int    `json:"post_padding,omitempty"`
+	CommercialDetect  bool   `json:"commercial_detect"`
+	AutoDeleteDays    int    `json:"auto_delete_days,omitempty"`
+	MaxRecordQuality  string `json:"max_record_quality,omitempty"`
+
+	// Live TV & DVR (dedicated settings page)
+	RecordingPrePadding  int    `json:"recording_pre_padding"`
+	RecordingPostPadding int    `json:"recording_post_padding"`
+	RecordingQuality     string `json:"recording_quality,omitempty"`
+	KeepRule             string `json:"keep_rule,omitempty"`
+	AutoDeleteWatched    bool   `json:"auto_delete_watched"`
+	CommercialDetectionEnabled bool   `json:"commercial_detection_enabled"`
+	CommercialDetectionMode    string `json:"commercial_detection_mode,omitempty"`
+	AutoSkipCommercials        bool   `json:"auto_skip_commercials"`
+	GuideRefreshInterval       int    `json:"guide_refresh_interval,omitempty"`
+	GuideDataSource            string `json:"guide_data_source,omitempty"`
+	DeinterlacingMode          string `json:"deinterlacing_mode,omitempty"`
+	LiveTVBufferSize           string `json:"livetv_buffer_size,omitempty"`
+
+	// Remote Access
+	RemoteAccessEnabled bool   `json:"remote_access_enabled"`
+	TailscaleStatus     string `json:"tailscale_status,omitempty"`
+	ExternalURL         string `json:"external_url,omitempty"`
+
+	// Playback Defaults
+	DefaultPlaybackSpeed    string `json:"default_playback_speed,omitempty"`
+	FrameRateMatchMode      string `json:"frame_rate_match_mode,omitempty"`
+	DefaultSubtitleLanguage string `json:"default_subtitle_language,omitempty"`
+	DefaultAudioLanguage    string `json:"default_audio_language,omitempty"`
+
+	// Advanced: Transcoder
+	TranscoderType      string `json:"transcoder_type,omitempty"`
+	DeinterlacerMode    string `json:"deinterlacer_mode,omitempty"`
+	LiveTVBufferSecs    int    `json:"livetv_buffer_secs,omitempty"`
+
+	// Advanced: Web Player
+	PlaybackQuality     string `json:"playback_quality,omitempty"`
+	ClientBufferSecs    int    `json:"client_buffer_secs,omitempty"`
+
+	// Advanced: Integrations
+	EDLExport           bool   `json:"edl_export"`
+	M3UChannelIDs       bool   `json:"m3u_channel_ids"`
+	VLCLinks            bool   `json:"vlc_links"`
+	HTTPLogging         bool   `json:"http_logging"`
+
+	// Advanced: Experimental
+	ExperimentalHDR     bool   `json:"experimental_hdr"`
+	ExperimentalLowLatency bool `json:"experimental_low_latency"`
+	ExperimentalAIMetadata bool `json:"experimental_ai_metadata"`
 }
 
-func (s *Server) adminGetSettings(c *gin.Context) {
-	// Return current settings (mask API keys partially for security)
-	settings := ServerSettings{
+// getSettingStr reads a string setting from the database
+func (s *Server) getSettingStr(key, defaultVal string) string {
+	var setting models.Setting
+	if err := s.db.Where("key = ?", key).First(&setting).Error; err != nil {
+		return defaultVal
+	}
+	return setting.Value
+}
+
+// getSettingBool reads a boolean setting from the database
+func (s *Server) getSettingBool(key string, defaultVal bool) bool {
+	val := s.getSettingStr(key, "")
+	if val == "" {
+		return defaultVal
+	}
+	return val == "true" || val == "1"
+}
+
+func (s *Server) buildFullSettings() ServerSettings {
+	// Determine tailscale status
+	tailscaleStatus := "disconnected"
+	if s.remoteAccess != nil {
+		status := s.remoteAccess.GetStatus()
+		if status.Status == "connected" {
+			tailscaleStatus = "connected"
+		} else if status.Status != "" {
+			tailscaleStatus = status.Status
+		}
+	}
+
+	return ServerSettings{
+		// Metadata
 		TMDBApiKey:   maskAPIKey(s.config.Library.TMDBApiKey),
 		TVDBApiKey:   maskAPIKey(s.config.Library.TVDBApiKey),
 		MetadataLang: s.config.Library.MetadataLang,
 		ScanInterval: s.config.Library.ScanInterval,
 		VODAPIURL:    s.config.VOD.APIURL,
-	}
 
+		// Server
+		ServerName: s.config.Server.Name,
+		ServerPort: s.config.Server.Port,
+		LogLevel:   s.config.Logging.Level,
+		DataDir:    s.config.GetDataDir(),
+
+		// Transcoding
+		HardwareAccel:     s.config.Transcode.HardwareAccel,
+		MaxTranscode:      s.config.Transcode.MaxSessions,
+		TranscodeTempDir:  s.config.Transcode.TempDir,
+		DefaultVideoCodec: s.getSettingStr("transcode_default_video_codec", "h264"),
+		DefaultAudioCodec: s.getSettingStr("transcode_default_audio_codec", "aac"),
+
+		// Live TV
+		LiveTVMaxStreams:     s.getSettingInt("livetv_max_streams", 0),
+		TimeshiftBufferHrs:  s.getSettingInt("livetv_timeshift_buffer_hrs", 4),
+		EPGRefreshInterval:  s.config.LiveTV.EPGInterval,
+		ChannelSwitchBuffer: s.getSettingInt("livetv_channel_switch_buffer", 3),
+		TunerSharing:        s.getSettingBool("livetv_tuner_sharing", true),
+
+		// DVR (extended)
+		RecordingDir:     s.config.DVR.RecordingDir,
+		PrePadding:       s.config.DVR.PrePadding,
+		PostPadding:      s.config.DVR.PostPadding,
+		CommercialDetect: s.config.DVR.CommercialDetect,
+		AutoDeleteDays:   s.getSettingInt("dvr_auto_delete_days", 0),
+		MaxRecordQuality: s.getSettingStr("dvr_max_record_quality", "original"),
+
+		// Live TV & DVR (dedicated page)
+		RecordingPrePadding:        s.getSettingInt("recording_pre_padding", 2),
+		RecordingPostPadding:       s.getSettingInt("recording_post_padding", 5),
+		RecordingQuality:           s.getSettingStr("recording_quality", "original"),
+		KeepRule:                   s.getSettingStr("keep_rule", "all"),
+		AutoDeleteWatched:          s.getSettingBool("auto_delete_watched", false),
+		CommercialDetectionEnabled: s.getSettingBool("commercial_detection_enabled", false),
+		CommercialDetectionMode:    s.getSettingStr("commercial_detection_mode", "comskip"),
+		AutoSkipCommercials:        s.getSettingBool("auto_skip_commercials", false),
+		GuideRefreshInterval:       s.getSettingInt("guide_refresh_interval", 12),
+		GuideDataSource:            s.getSettingStr("guide_data_source", "xmltv"),
+		DeinterlacingMode:          s.getSettingStr("deinterlacing_mode", "blend"),
+		LiveTVBufferSize:           s.getSettingStr("livetv_buffer_size", "1min"),
+
+		// Remote Access
+		RemoteAccessEnabled: s.getSettingBool("remote_access_enabled", false),
+		TailscaleStatus:     tailscaleStatus,
+		ExternalURL:         s.getSettingStr("remote_external_url", ""),
+
+		// Playback Defaults
+		DefaultPlaybackSpeed:    s.getSettingStr("playback_default_speed", "1.0"),
+		FrameRateMatchMode:      s.getSettingStr("playback_frame_rate_match", "auto"),
+		DefaultSubtitleLanguage: s.getSettingStr("playback_default_subtitle_lang", ""),
+		DefaultAudioLanguage:    s.getSettingStr("playback_default_audio_lang", "en"),
+
+		// Advanced: Transcoder
+		TranscoderType:   s.getSettingStr("advanced_transcoder_type", "software"),
+		DeinterlacerMode: s.getSettingStr("advanced_deinterlacer_mode", "blend"),
+		LiveTVBufferSecs: s.getSettingInt("advanced_livetv_buffer_secs", 8),
+
+		// Advanced: Web Player
+		PlaybackQuality:  s.getSettingStr("advanced_playback_quality", "original"),
+		ClientBufferSecs: s.getSettingInt("advanced_client_buffer_secs", 5),
+
+		// Advanced: Integrations
+		EDLExport:     s.getSettingBool("advanced_edl_export", false),
+		M3UChannelIDs: s.getSettingBool("advanced_m3u_channel_ids", false),
+		VLCLinks:      s.getSettingBool("advanced_vlc_links", false),
+		HTTPLogging:   s.getSettingBool("advanced_http_logging", false),
+
+		// Advanced: Experimental
+		ExperimentalHDR:        s.getSettingBool("advanced_experimental_hdr", false),
+		ExperimentalLowLatency: s.getSettingBool("advanced_experimental_low_latency", false),
+		ExperimentalAIMetadata: s.getSettingBool("advanced_experimental_ai_metadata", false),
+	}
+}
+
+func (s *Server) adminGetSettings(c *gin.Context) {
+	settings := s.buildFullSettings()
 	c.JSON(http.StatusOK, gin.H{
 		"settings": settings,
 	})
@@ -4172,10 +4490,9 @@ func (s *Server) adminUpdateSettings(c *gin.Context) {
 		return
 	}
 
-	// Update config in memory
+	// ---- Metadata ----
 	if input.TMDBApiKey != "" && !strings.HasPrefix(input.TMDBApiKey, "****") {
 		s.config.Library.TMDBApiKey = input.TMDBApiKey
-		// Re-initialize TMDB agent with new key
 		s.reinitializeTMDBAgent()
 	}
 	if input.TVDBApiKey != "" && !strings.HasPrefix(input.TVDBApiKey, "****") {
@@ -4187,21 +4504,151 @@ func (s *Server) adminUpdateSettings(c *gin.Context) {
 	if input.ScanInterval > 0 {
 		s.config.Library.ScanInterval = input.ScanInterval
 	}
-	// VOD API URL can be set to empty string to disable, so we check differently
 	if input.VODAPIURL != "" || c.Request.ContentLength > 0 {
-		// Allow setting VOD API URL (including clearing it)
 		s.config.VOD.APIURL = input.VODAPIURL
 	}
 
+	// ---- Server ----
+	if input.ServerName != "" {
+		s.config.Server.Name = input.ServerName
+	}
+	if input.ServerPort > 0 {
+		s.config.Server.Port = input.ServerPort
+	}
+	if input.LogLevel != "" {
+		s.config.Logging.Level = input.LogLevel
+		logger.SetLevel(input.LogLevel)
+	}
+
+	// ---- Transcoding ----
+	if input.HardwareAccel != "" {
+		s.config.Transcode.HardwareAccel = input.HardwareAccel
+	}
+	if input.MaxTranscode > 0 {
+		s.config.Transcode.MaxSessions = input.MaxTranscode
+	}
+	if input.TranscodeTempDir != "" {
+		s.config.Transcode.TempDir = input.TranscodeTempDir
+	}
+	if input.DefaultVideoCodec != "" {
+		s.setSetting("transcode_default_video_codec", input.DefaultVideoCodec)
+	}
+	if input.DefaultAudioCodec != "" {
+		s.setSetting("transcode_default_audio_codec", input.DefaultAudioCodec)
+	}
+
+	// ---- Live TV ----
+	if input.LiveTVMaxStreams >= 0 {
+		s.setSetting("livetv_max_streams", fmt.Sprintf("%d", input.LiveTVMaxStreams))
+	}
+	if input.TimeshiftBufferHrs > 0 {
+		s.setSetting("livetv_timeshift_buffer_hrs", fmt.Sprintf("%d", input.TimeshiftBufferHrs))
+	}
+	if input.EPGRefreshInterval > 0 {
+		s.config.LiveTV.EPGInterval = input.EPGRefreshInterval
+	}
+	if input.ChannelSwitchBuffer > 0 {
+		s.setSetting("livetv_channel_switch_buffer", fmt.Sprintf("%d", input.ChannelSwitchBuffer))
+	}
+	// Tuner sharing is a bool, always persist
+	s.setSetting("livetv_tuner_sharing", fmt.Sprintf("%t", input.TunerSharing))
+
+	// ---- DVR (extended) ----
+	if input.RecordingDir != "" {
+		s.config.DVR.RecordingDir = input.RecordingDir
+	}
+	if input.PrePadding >= 0 {
+		s.config.DVR.PrePadding = input.PrePadding
+	}
+	if input.PostPadding >= 0 {
+		s.config.DVR.PostPadding = input.PostPadding
+	}
+	s.config.DVR.CommercialDetect = input.CommercialDetect
+	if input.AutoDeleteDays >= 0 {
+		s.setSetting("dvr_auto_delete_days", fmt.Sprintf("%d", input.AutoDeleteDays))
+	}
+	if input.MaxRecordQuality != "" {
+		s.setSetting("dvr_max_record_quality", input.MaxRecordQuality)
+	}
+
+	// ---- Live TV & DVR (dedicated page) ----
+	s.setSetting("recording_pre_padding", fmt.Sprintf("%d", input.RecordingPrePadding))
+	s.setSetting("recording_post_padding", fmt.Sprintf("%d", input.RecordingPostPadding))
+	if input.RecordingQuality != "" {
+		s.setSetting("recording_quality", input.RecordingQuality)
+	}
+	if input.KeepRule != "" {
+		s.setSetting("keep_rule", input.KeepRule)
+	}
+	s.setSetting("auto_delete_watched", fmt.Sprintf("%t", input.AutoDeleteWatched))
+	s.setSetting("commercial_detection_enabled", fmt.Sprintf("%t", input.CommercialDetectionEnabled))
+	if input.CommercialDetectionMode != "" {
+		s.setSetting("commercial_detection_mode", input.CommercialDetectionMode)
+	}
+	s.setSetting("auto_skip_commercials", fmt.Sprintf("%t", input.AutoSkipCommercials))
+	if input.GuideRefreshInterval > 0 {
+		s.setSetting("guide_refresh_interval", fmt.Sprintf("%d", input.GuideRefreshInterval))
+	}
+	if input.DeinterlacingMode != "" {
+		s.setSetting("deinterlacing_mode", input.DeinterlacingMode)
+	}
+	if input.LiveTVBufferSize != "" {
+		s.setSetting("livetv_buffer_size", input.LiveTVBufferSize)
+	}
+
+	// ---- Remote Access ----
+	s.setSetting("remote_access_enabled", fmt.Sprintf("%t", input.RemoteAccessEnabled))
+	if input.ExternalURL != "" {
+		s.setSetting("remote_external_url", input.ExternalURL)
+	}
+
+	// ---- Playback Defaults ----
+	if input.DefaultPlaybackSpeed != "" {
+		s.setSetting("playback_default_speed", input.DefaultPlaybackSpeed)
+	}
+	if input.FrameRateMatchMode != "" {
+		s.setSetting("playback_frame_rate_match", input.FrameRateMatchMode)
+	}
+	if input.DefaultSubtitleLanguage != "" {
+		s.setSetting("playback_default_subtitle_lang", input.DefaultSubtitleLanguage)
+	}
+	if input.DefaultAudioLanguage != "" {
+		s.setSetting("playback_default_audio_lang", input.DefaultAudioLanguage)
+	}
+
+	// ---- Advanced: Transcoder ----
+	if input.TranscoderType != "" {
+		s.setSetting("advanced_transcoder_type", input.TranscoderType)
+	}
+	if input.DeinterlacerMode != "" {
+		s.setSetting("advanced_deinterlacer_mode", input.DeinterlacerMode)
+	}
+	if input.LiveTVBufferSecs > 0 {
+		s.setSetting("advanced_livetv_buffer_secs", fmt.Sprintf("%d", input.LiveTVBufferSecs))
+	}
+
+	// ---- Advanced: Web Player ----
+	if input.PlaybackQuality != "" {
+		s.setSetting("advanced_playback_quality", input.PlaybackQuality)
+	}
+	if input.ClientBufferSecs > 0 {
+		s.setSetting("advanced_client_buffer_secs", fmt.Sprintf("%d", input.ClientBufferSecs))
+	}
+
+	// ---- Advanced: Integrations ----
+	s.setSetting("advanced_edl_export", fmt.Sprintf("%t", input.EDLExport))
+	s.setSetting("advanced_m3u_channel_ids", fmt.Sprintf("%t", input.M3UChannelIDs))
+	s.setSetting("advanced_vlc_links", fmt.Sprintf("%t", input.VLCLinks))
+	s.setSetting("advanced_http_logging", fmt.Sprintf("%t", input.HTTPLogging))
+
+	// ---- Advanced: Experimental ----
+	s.setSetting("advanced_experimental_hdr", fmt.Sprintf("%t", input.ExperimentalHDR))
+	s.setSetting("advanced_experimental_low_latency", fmt.Sprintf("%t", input.ExperimentalLowLatency))
+	s.setSetting("advanced_experimental_ai_metadata", fmt.Sprintf("%t", input.ExperimentalAIMetadata))
+
 	c.JSON(http.StatusOK, gin.H{
-		"message": "Settings updated successfully",
-		"settings": ServerSettings{
-			TMDBApiKey:   maskAPIKey(s.config.Library.TMDBApiKey),
-			TVDBApiKey:   maskAPIKey(s.config.Library.TVDBApiKey),
-			MetadataLang: s.config.Library.MetadataLang,
-			ScanInterval: s.config.Library.ScanInterval,
-			VODAPIURL:    s.config.VOD.APIURL,
-		},
+		"message":  "Settings updated successfully",
+		"settings": s.buildFullSettings(),
 	})
 }
 
@@ -4220,12 +4667,30 @@ func maskAPIKey(key string) string {
 
 // DVRSettings represents DVR-specific settings
 type DVRSettings struct {
-	MaxConcurrentRecordings int `json:"maxConcurrentRecordings"` // 0 = unlimited
+	MaxConcurrentRecordings int    `json:"maxConcurrentRecordings"` // 0 = unlimited
+	DetectionMethod        string `json:"detection_method"`
+	ComskipPath            string `json:"comskip_path"`
+	Sensitivity            int    `json:"sensitivity"`
+	AutoSkipBehavior       string `json:"auto_skip_behavior"`
+	SkipPromptDuration     int    `json:"skip_prompt_duration"`
+	Enabled                bool   `json:"enabled"`
+	DetectionWorkers       int    `json:"detection_workers"`
+	GenerateThumbnails     bool   `json:"generate_thumbnails"`
+	ShareEdits             bool   `json:"share_edits"`
 }
 
 func (s *Server) getDVRSettings(c *gin.Context) {
 	settings := DVRSettings{
 		MaxConcurrentRecordings: s.getSettingInt("dvr_max_concurrent", 0),
+		DetectionMethod:        s.getSettingStr("comskip_detection_method", "comskip"),
+		ComskipPath:            s.getSettingStr("comskip_path", "/usr/bin/comskip"),
+		Sensitivity:            s.getSettingInt("comskip_sensitivity", 50),
+		AutoSkipBehavior:       s.getSettingStr("comskip_auto_skip_behavior", "show_prompt"),
+		SkipPromptDuration:     s.getSettingInt("comskip_skip_prompt_duration", 5),
+		Enabled:                s.getSettingBool("commercial_detection_enabled", false),
+		DetectionWorkers:       s.getSettingInt("comskip_detection_workers", 2),
+		GenerateThumbnails:     s.getSettingBool("comskip_generate_thumbnails", false),
+		ShareEdits:             s.getSettingBool("comskip_share_edits", false),
 	}
 
 	c.JSON(http.StatusOK, gin.H{
@@ -4245,9 +4710,48 @@ func (s *Server) updateDVRSettings(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "maxConcurrentRecordings must be >= 0 (0 = unlimited)"})
 		return
 	}
+	if input.DetectionWorkers < 1 {
+		input.DetectionWorkers = 1
+	}
+	if input.DetectionWorkers > 8 {
+		input.DetectionWorkers = 8
+	}
+	if input.Sensitivity < 0 {
+		input.Sensitivity = 0
+	}
+	if input.Sensitivity > 100 {
+		input.Sensitivity = 100
+	}
+	if input.SkipPromptDuration < 1 {
+		input.SkipPromptDuration = 1
+	}
+	if input.SkipPromptDuration > 30 {
+		input.SkipPromptDuration = 30
+	}
 
-	// Save to database
+	// Save all settings to database
 	s.setSetting("dvr_max_concurrent", fmt.Sprintf("%d", input.MaxConcurrentRecordings))
+	s.setSetting("comskip_detection_method", input.DetectionMethod)
+	s.setSetting("comskip_path", input.ComskipPath)
+	s.setSetting("comskip_sensitivity", fmt.Sprintf("%d", input.Sensitivity))
+	s.setSetting("comskip_auto_skip_behavior", input.AutoSkipBehavior)
+	s.setSetting("comskip_skip_prompt_duration", fmt.Sprintf("%d", input.SkipPromptDuration))
+	if input.Enabled {
+		s.setSetting("commercial_detection_enabled", "true")
+	} else {
+		s.setSetting("commercial_detection_enabled", "false")
+	}
+	s.setSetting("comskip_detection_workers", fmt.Sprintf("%d", input.DetectionWorkers))
+	if input.GenerateThumbnails {
+		s.setSetting("comskip_generate_thumbnails", "true")
+	} else {
+		s.setSetting("comskip_generate_thumbnails", "false")
+	}
+	if input.ShareEdits {
+		s.setSetting("comskip_share_edits", "true")
+	} else {
+		s.setSetting("comskip_share_edits", "false")
+	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"message":  "DVR settings updated",
@@ -4273,4 +4777,95 @@ func (s *Server) getSettingInt(key string, defaultVal int) int {
 func (s *Server) setSetting(key, value string) {
 	setting := models.Setting{Key: key, Value: value}
 	s.db.Where("key = ?", key).Assign(setting).FirstOrCreate(&setting)
+}
+
+// ============ Guide Data Handlers ============
+
+// refreshGuideData triggers a full guide data refresh (admin only)
+func (s *Server) refreshGuideData(c *gin.Context) {
+	if s.epgScheduler != nil {
+		go s.epgScheduler.ForceRefresh()
+	}
+	// Also invalidate guide cache
+	if s.guideCache != nil {
+		s.guideCache.InvalidateAll()
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Guide data refresh triggered",
+		"status":  "refreshing",
+	})
+}
+
+// rebuildGuideData triggers a full guide data rebuild (admin only)
+func (s *Server) rebuildGuideData(c *gin.Context) {
+	// Clear all cached guide data
+	if s.guideCache != nil {
+		s.guideCache.InvalidateAll()
+	}
+	// Force a full refresh
+	if s.epgScheduler != nil {
+		go s.epgScheduler.ForceRefresh()
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Guide data rebuild triggered. All cached data has been cleared.",
+		"status":  "rebuilding",
+	})
+}
+
+// ============ Global Client Settings Handlers ============
+
+// getGlobalClientSettings returns all global client setting overrides (admin only)
+func (s *Server) getGlobalClientSettings(c *gin.Context) {
+	var settings []models.Setting
+	s.db.Where("key LIKE ?", "client_override_%").Find(&settings)
+
+	overrides := make(map[string]string)
+	for _, setting := range settings {
+		// Strip the "client_override_" prefix for the key name
+		key := strings.TrimPrefix(setting.Key, "client_override_")
+		overrides[key] = setting.Value
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"overrides": overrides,
+	})
+}
+
+// updateGlobalClientSettings sets or updates a global client setting override (admin only)
+func (s *Server) updateGlobalClientSettings(c *gin.Context) {
+	var req struct {
+		Key   string `json:"key" binding:"required"`
+		Value string `json:"value" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "key and value are required"})
+		return
+	}
+
+	dbKey := "client_override_" + req.Key
+	s.setSetting(dbKey, req.Value)
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Client setting override saved",
+		"key":     req.Key,
+		"value":   req.Value,
+	})
+}
+
+// deleteGlobalClientSetting removes a single global client setting override (admin only)
+func (s *Server) deleteGlobalClientSetting(c *gin.Context) {
+	key := c.Param("key")
+	if key == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "key is required"})
+		return
+	}
+
+	dbKey := "client_override_" + key
+	result := s.db.Where("key = ?", dbKey).Delete(&models.Setting{})
+	if result.RowsAffected == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Override not found"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Override removed"})
 }

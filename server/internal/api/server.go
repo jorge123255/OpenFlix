@@ -1,8 +1,10 @@
 package api
 
 import (
+	"context"
 	"fmt"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -10,17 +12,28 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/openflix/openflix-server/internal/auth"
+	"github.com/openflix/openflix-server/internal/commercial"
 	"github.com/openflix/openflix-server/internal/config"
+	"github.com/openflix/openflix-server/internal/ddns"
+	"github.com/openflix/openflix-server/internal/discovery"
+	"github.com/openflix/openflix-server/internal/mdns"
 	"github.com/openflix/openflix-server/internal/dvr"
+	"github.com/openflix/openflix-server/internal/health"
+	"github.com/openflix/openflix-server/internal/instant"
+	"github.com/openflix/openflix-server/internal/jobq"
 	"github.com/openflix/openflix-server/internal/library"
 	"github.com/openflix/openflix-server/internal/livetv"
 	"github.com/openflix/openflix-server/internal/logger"
 	"github.com/openflix/openflix-server/internal/metadata"
-	"github.com/openflix/openflix-server/internal/transcode"
-	"github.com/openflix/openflix-server/internal/instant"
+	"github.com/openflix/openflix-server/internal/models"
 	"github.com/openflix/openflix-server/internal/multiview"
+	"github.com/openflix/openflix-server/internal/notify"
+	"github.com/openflix/openflix-server/internal/scheduler"
+	"github.com/openflix/openflix-server/internal/search"
 	"github.com/openflix/openflix-server/internal/sports"
-	"github.com/openflix/openflix-server/internal/commercial"
+	"github.com/openflix/openflix-server/internal/subtitles"
+	"github.com/openflix/openflix-server/internal/transcode"
+	"github.com/openflix/openflix-server/internal/updater"
 	limiter "github.com/ulule/limiter/v3"
 	mgin "github.com/ulule/limiter/v3/drivers/middleware/gin"
 	"github.com/ulule/limiter/v3/drivers/store/memory"
@@ -48,6 +61,19 @@ type Server struct {
 	remoteAccess       *livetv.RemoteAccessManager
 	prebuffer          *instant.PrebufferManager
 	multiviewManager   *multiview.MultiviewManager
+	searchEngine       *search.SearchEngine
+	updater            *updater.Updater
+	jobQueue           *jobq.JobQueue
+	clipManager        *dvr.ClipManager
+	bandwidthManager   *transcode.BandwidthManager
+	ddnsClient         *ddns.Client
+	notifyManager      *notify.NotificationManager
+	healthMonitor      *health.StreamHealthMonitor
+	taskScheduler      *scheduler.TaskScheduler
+	subtitleManager    *subtitles.SubtitleManager
+	cloudRegistry      *discovery.CloudRegistryClient
+	discoveryService   *discovery.DiscoveryService
+	mdnsService        *mdns.Service
 }
 
 // NewServer creates a new API server
@@ -57,10 +83,10 @@ func NewServer(cfg *config.Config, db *gorm.DB) *Server {
 
 	// Initialize TMDB agent and metadata scheduler if API key is configured
 	var metadataScheduler *metadata.Scheduler
-	var epgEnricher *livetv.EPGEnricher
 	var dvrEnricher *dvr.Enricher
+	var tmdbAgent *metadata.TMDBAgent
 	if cfg.Library.TMDBApiKey != "" {
-		tmdbAgent := metadata.NewTMDBAgent(cfg.Library.TMDBApiKey, db, dataDir)
+		tmdbAgent = metadata.NewTMDBAgent(cfg.Library.TMDBApiKey, db, dataDir)
 		scanner.SetTMDBAgent(tmdbAgent)
 		logger.Info("TMDB metadata agent enabled")
 
@@ -69,14 +95,14 @@ func NewServer(cfg *config.Config, db *gorm.DB) *Server {
 		metadataScheduler.Start()
 		logger.Info("Metadata auto-refresh enabled (every 2 minutes)")
 
-		// Initialize EPG enricher for program artwork
-		epgEnricher = livetv.NewEPGEnricher(db, tmdbAgent)
-		logger.Info("EPG artwork enrichment enabled")
-
 		// Initialize DVR enricher for recording metadata
 		dvrEnricher = dvr.NewEnricher(db, tmdbAgent)
 		logger.Info("DVR metadata enrichment enabled")
 	}
+
+	// Always initialize EPG enricher (sports enrichment works without TMDB)
+	epgEnricher := livetv.NewEPGEnricher(db, tmdbAgent)
+	logger.Info("EPG enrichment enabled (sports teams + artwork)")
 
 	// Initialize transcoder
 	var transcoder *transcode.Transcoder
@@ -159,6 +185,203 @@ func NewServer(cfg *config.Config, db *gorm.DB) *Server {
 	prebuffer := instant.NewPrebufferManager(6, 500, dataDir)
 	logger.Info("Instant Switch Prebuffer Manager initialized")
 
+	// Initialize full-text search engine
+	var searchEngine *search.SearchEngine
+	if se, err := search.NewSearchEngine(db, dataDir); err != nil {
+		logger.Warnf("Failed to initialize search engine: %v", err)
+	} else {
+		searchEngine = se
+		logger.Info("Full-text search engine initialized")
+	}
+
+	// Initialize background job queue
+	jobQueue := jobq.NewJobQueue()
+
+	// Initialize clip manager for bookmarks & clips
+	clipsDir := filepath.Join(dataDir, "clips")
+	clipManager := dvr.NewClipManager(db, clipsDir)
+	logger.Info("Clip manager initialized")
+
+	// Initialize bandwidth manager for adaptive bitrate streaming
+	bandwidthManager := transcode.NewBandwidthManager()
+	logger.Info("Bandwidth manager initialized")
+
+	// Initialize notification manager (subscribes to DVR event bus)
+	var notifyManager *notify.NotificationManager
+	if recorder != nil {
+		if eb := recorder.GetEventBus(); eb != nil {
+			notifyManager = notify.NewNotificationManager(eb)
+			notifyManager.Start()
+			logger.Info("Notification manager initialized")
+		}
+	}
+
+	// Initialize stream health monitor
+	healthMonitor := health.NewStreamHealthMonitor()
+	healthMonitor.StartBackgroundTasks()
+
+	// Initialize DDNS client
+	ddnsClient := ddns.New()
+	logger.Info("DDNS client initialized")
+
+	// Initialize self-updater
+	appUpdater := updater.New(updater.Config{
+		DataDir:        dataDir,
+		CurrentVersion: "1.0.0", // Set at build time via ldflags
+	})
+
+	// Initialize task scheduler with default tasks
+	taskSched := scheduler.NewTaskScheduler()
+	taskSched.RegisterTask("epg_refresh", "EPG Refresh", "Refresh EPG data from all sources", "0 */6 * * *", 30*time.Minute, func(ctx context.Context) error {
+		logger.Info("[scheduler:epg_refresh] refreshing EPG data")
+		// Trigger EPG refresh via the EPG scheduler
+		if epgScheduler != nil {
+			epgScheduler.ForceRefresh()
+		}
+		return nil
+	})
+	taskSched.RegisterTask("library_scan", "Library Scan", "Scan library paths for new media", "0 * * * *", 30*time.Minute, func(ctx context.Context) error {
+		logger.Info("[scheduler:library_scan] scanning libraries for new media")
+		var libs []models.Library
+		db.Preload("Paths").Find(&libs)
+		for i := range libs {
+			if _, err := scanner.ScanLibrary(&libs[i]); err != nil {
+				logger.Warnf("[scheduler:library_scan] failed to scan library %d: %v", libs[i].ID, err)
+			}
+		}
+		return nil
+	})
+	taskSched.RegisterTask("backup_db", "Database Backup", "Create a backup of the database", "0 3 * * *", 10*time.Minute, func(ctx context.Context) error {
+		logger.Info("[scheduler:backup_db] creating database backup")
+		backupDir := filepath.Join(dataDir, "backups")
+		if err := os.MkdirAll(backupDir, 0755); err != nil {
+			return fmt.Errorf("failed to create backup dir: %w", err)
+		}
+		timestamp := time.Now().Format("20060102-150405")
+		backupPath := filepath.Join(backupDir, fmt.Sprintf("openflix-auto-%s.db", timestamp))
+		sqlDB, err := db.DB()
+		if err != nil {
+			return fmt.Errorf("failed to get db connection: %w", err)
+		}
+		vacuumSQL := fmt.Sprintf("VACUUM INTO '%s'", backupPath)
+		if _, err := sqlDB.Exec(vacuumSQL); err != nil {
+			return fmt.Errorf("VACUUM INTO failed: %w", err)
+		}
+		logger.Infof("[scheduler:backup_db] backup created: %s", backupPath)
+		return nil
+	})
+	taskSched.RegisterTask("prune_recordings", "Prune Recordings", "Clean up old recordings per retention rules", "0 4 * * *", 15*time.Minute, func(ctx context.Context) error {
+		logger.Info("[scheduler:prune_recordings] checking recordings for cleanup")
+		// Delete recordings that are failed and older than 7 days
+		cutoff := time.Now().AddDate(0, 0, -7)
+		result := db.Where("status = ? AND updated_at < ?", "failed", cutoff).Delete(&models.Recording{})
+		if result.RowsAffected > 0 {
+			logger.Infof("[scheduler:prune_recordings] cleaned up %d failed recordings", result.RowsAffected)
+		}
+		return nil
+	})
+	taskSched.RegisterTask("subtitle_search", "Subtitle Search", "Search subtitles for media missing them", "0 2 * * *", 30*time.Minute, func(ctx context.Context) error {
+		logger.Info("[scheduler:subtitle_search] checking for media missing subtitles")
+		// Placeholder: count media without subtitles
+		var count int64
+		db.Model(&models.MediaItem{}).Where("type IN ? AND subtitle_path = ''", []string{"movie", "episode"}).Count(&count)
+		if count > 0 {
+			logger.Infof("[scheduler:subtitle_search] found %d items without subtitles", count)
+		}
+		return nil
+	})
+	taskSched.RegisterTask("cleanup_sessions", "Cleanup Sessions", "Clean expired playback sessions", "*/30 * * * *", 5*time.Minute, func(ctx context.Context) error {
+		// Delete sessions not updated in the last 2 hours
+		cutoff := time.Now().Add(-2 * time.Hour)
+		result := db.Where("updated_at < ?", cutoff).Delete(&models.PlaybackSession{})
+		if result.RowsAffected > 0 {
+			logger.Infof("[scheduler:cleanup_sessions] cleaned up %d stale sessions", result.RowsAffected)
+		}
+		return nil
+	})
+	taskSched.RegisterTask("health_check", "Health Check", "System health check", "*/5 * * * *", 2*time.Minute, func(ctx context.Context) error {
+		// Check database connectivity
+		sqlDB, err := db.DB()
+		if err != nil {
+			return fmt.Errorf("database connection error: %w", err)
+		}
+		if err := sqlDB.PingContext(ctx); err != nil {
+			return fmt.Errorf("database ping failed: %w", err)
+		}
+		return nil
+	})
+	taskSched.RegisterTask("source_refresh", "Source Refresh", "Refresh M3U and Xtream sources (channels + VOD/series)", "0 */12 * * *", 60*time.Minute, func(ctx context.Context) error {
+		logger.Info("[scheduler:source_refresh] refreshing all sources")
+
+		// Refresh M3U sources
+		var m3uSources []models.M3USource
+		db.Where("enabled = ?", true).Find(&m3uSources)
+		parser := livetv.NewM3UParser(db)
+		for i := range m3uSources {
+			src := &m3uSources[i]
+			logger.Infof("[scheduler:source_refresh] refreshing M3U source: %s", src.Name)
+			if err := parser.RefreshSource(src); err != nil {
+				logger.Warnf("[scheduler:source_refresh] failed to refresh M3U source %s: %v", src.Name, err)
+				continue
+			}
+			// Auto-import VOD/series if enabled
+			importer := livetv.NewVODImporter(db)
+			if src.ImportVOD && src.VODLibraryID != nil {
+				result, err := importer.ImportM3UVOD(src.ID)
+				if err != nil {
+					logger.Warnf("[scheduler:source_refresh] VOD import failed for %s: %v", src.Name, err)
+				} else {
+					logger.Infof("[scheduler:source_refresh] VOD import for %s: %d added, %d updated", src.Name, result.Added, result.Updated)
+				}
+			}
+			if src.ImportSeries && src.SeriesLibraryID != nil {
+				result, err := importer.ImportM3USeries(src.ID)
+				if err != nil {
+					logger.Warnf("[scheduler:source_refresh] series import failed for %s: %v", src.Name, err)
+				} else {
+					logger.Infof("[scheduler:source_refresh] series import for %s: %d added, %d updated", src.Name, result.Added, result.Updated)
+				}
+			}
+		}
+
+		// Refresh Xtream sources
+		var xtreamSources []models.XtreamSource
+		db.Where("enabled = ?", true).Find(&xtreamSources)
+		for i := range xtreamSources {
+			src := &xtreamSources[i]
+			logger.Infof("[scheduler:source_refresh] refreshing Xtream source: %s", src.Name)
+			client := livetv.NewXtreamClient(db)
+			if src.ImportLive {
+				added, updated, err := client.ImportChannels(src.ID)
+				if err != nil {
+					logger.Warnf("[scheduler:source_refresh] Xtream channel import failed for %s: %v", src.Name, err)
+				} else {
+					logger.Infof("[scheduler:source_refresh] Xtream channels for %s: %d added, %d updated", src.Name, added, updated)
+				}
+			}
+			importer := livetv.NewVODImporter(db)
+			if src.ImportVOD && src.VODLibraryID != nil {
+				result, err := importer.ImportXtreamVOD(src.ID)
+				if err != nil {
+					logger.Warnf("[scheduler:source_refresh] Xtream VOD import failed for %s: %v", src.Name, err)
+				} else {
+					logger.Infof("[scheduler:source_refresh] Xtream VOD for %s: %d added, %d updated", src.Name, result.Added, result.Updated)
+				}
+			}
+			if src.ImportSeries && src.SeriesLibraryID != nil {
+				result, err := importer.ImportXtreamSeries(src.ID)
+				if err != nil {
+					logger.Warnf("[scheduler:source_refresh] Xtream series import failed for %s: %v", src.Name, err)
+				} else {
+					logger.Infof("[scheduler:source_refresh] Xtream series for %s: %d added, %d updated", src.Name, result.Added, result.Updated)
+				}
+			}
+		}
+
+		logger.Info("[scheduler:source_refresh] all sources refreshed")
+		return nil
+	})
+
 	s := &Server{
 		config:            cfg,
 		db:                db,
@@ -177,12 +400,88 @@ func NewServer(cfg *config.Config, db *gorm.DB) *Server {
 		dvrEnricher:       dvrEnricher,
 		remoteAccess:      remoteAccess,
 		prebuffer:         prebuffer,
+		searchEngine:      searchEngine,
+		updater:           appUpdater,
+		jobQueue:          jobQueue,
+		clipManager:        clipManager,
+		bandwidthManager:   bandwidthManager,
+		ddnsClient:         ddnsClient,
+		notifyManager:      notifyManager,
+		healthMonitor:      healthMonitor,
+		taskScheduler:      taskSched,
 	}
+	// Start cloud registry if configured
+	if cfg.Server.CloudRegistryURL != "" {
+		localAddrs := discovery.GetLocalAddresses()
+		serverInfo := discovery.ServerInfo{
+			Name:           cfg.Server.Name,
+			Version:        "1.0.0",
+			MachineID:      cfg.Server.MachineID,
+			Host:           cfg.Server.Host,
+			Port:           cfg.Server.Port,
+			Protocol:       "http",
+			LocalAddresses: localAddrs,
+		}
+		s.cloudRegistry = discovery.NewCloudRegistryClient(cfg.Server.CloudRegistryURL, serverInfo, cfg.Server.ClaimToken)
+		if s.cloudRegistry != nil {
+			if cfg.Server.LicenseKey != "" {
+				s.cloudRegistry.SetLicenseKey(cfg.Server.LicenseKey)
+			}
+			s.cloudRegistry.Start()
+		}
+	}
+
+	// Start local network discovery (UDP broadcast + listener + mDNS)
+	if cfg.Server.DiscoveryEnabled {
+		s.discoveryService = discovery.NewDiscoveryService(cfg.Server.Name, "1.0.0", cfg.Server.MachineID, cfg.Server.Host, cfg.Server.Port)
+		s.discoveryService.Start()
+
+		s.mdnsService = mdns.NewService(cfg.Server.Name, cfg.Server.Port, cfg.Server.MachineID, "1.0.0")
+		if err := s.mdnsService.Start(); err != nil {
+			logger.Warnf("Failed to start mDNS service: %v", err)
+		}
+	}
+
 	s.setupRouter()
 
-	// Start background EPG enrichment if TMDB is configured
-	if epgEnricher != nil {
-		epgEnricher.StartBackgroundEnrichment()
+	// Wire enricher/grouper/upnext into recorder for post-processing
+	if recorder != nil && dvrEnricher != nil {
+		recorder.SetEnricher(dvrEnricher)
+	}
+
+	// Start background EPG enrichment (sports team enrichment + TMDB artwork)
+	epgEnricher.StartBackgroundEnrichment()
+
+	// Start background job queue
+	jobQueue.Start()
+
+	// Start self-updater background checker
+	appUpdater.Start()
+
+	// Restore persisted auto-update configuration (if any)
+	s.restoreAutoUpdateConfig()
+
+	// Restore persisted DDNS configuration (if any)
+	s.loadDDNSConfig()
+
+	// Restore persisted notification configuration (if any)
+	s.loadNotificationConfig()
+
+	// Load persisted scheduler configuration and start scheduler
+	s.loadSchedulerConfig()
+	taskSched.Start()
+	logger.Info("Task scheduler started")
+
+	// Load subtitle configuration and initialize SubtitleManager
+	s.loadSubtitleConfig()
+
+	// Kick off initial search index build in background
+	if searchEngine != nil {
+		go func() {
+			if err := searchEngine.RebuildIndex(); err != nil {
+				logger.Warnf("Initial search index build failed: %v", err)
+			}
+		}()
 	}
 
 	return s
@@ -209,26 +508,26 @@ func (s *Server) reinitializeTMDBAgent() {
 			s.metadataScheduler.Start()
 		}
 
-		// Stop old enricher if running
+		// Restart EPG enricher with TMDB support
 		if s.epgEnricher != nil {
 			s.epgEnricher.StopBackgroundEnrichment()
 		}
-
-		// Initialize and start EPG enricher for program artwork
 		s.epgEnricher = livetv.NewEPGEnricher(s.db, tmdbAgent)
 		s.epgEnricher.StartBackgroundEnrichment()
 		logger.Info("TMDB metadata agent re-initialized with new API key")
-		logger.Info("EPG artwork enrichment enabled")
+		logger.Info("EPG enrichment enabled (sports teams + TMDB artwork)")
 	} else {
 		s.scanner.SetTMDBAgent(nil)
 		if s.metadataScheduler != nil {
 			s.metadataScheduler.SetTMDBAgent(nil)
 		}
+		// Restart enricher without TMDB (sports enrichment still works)
 		if s.epgEnricher != nil {
 			s.epgEnricher.StopBackgroundEnrichment()
 		}
-		s.epgEnricher = nil
-		logger.Info("TMDB metadata agent disabled (no API key)")
+		s.epgEnricher = livetv.NewEPGEnricher(s.db, nil)
+		s.epgEnricher.StartBackgroundEnrichment()
+		logger.Info("TMDB disabled, sports-only EPG enrichment active")
 	}
 }
 
@@ -254,6 +553,20 @@ func (s *Server) setupRouter() {
 	r.GET("/", s.getServerInfo)
 	r.GET("/identity", s.getServerIdentity)
 	r.GET("/api/status", s.authRequired(), s.getServerStatus)
+	r.GET("/api/dashboard", s.authRequired(), s.getDashboardData)
+
+	// Discovery / Claim Token API (admin only)
+	r.POST("/api/claim-token", s.authRequired(), s.adminRequired(), s.postClaimToken)
+	r.GET("/api/claim-token", s.authRequired(), s.adminRequired(), s.getClaimToken)
+
+	// Invite API
+	r.POST("/api/invite", s.authRequired(), s.adminRequired(), s.createInvite)
+	r.GET("/api/invite/:token", s.validateInvite)           // public — app checks before showing register form
+	r.POST("/api/invite/:token/accept", s.acceptInvite)     // public — creates the account
+
+	// Diagnostics & System Status API (admin only)
+	r.GET("/api/diagnostics/health-check", s.authRequired(), s.adminRequired(), s.runHealthChecks)
+	r.GET("/api/system/status", s.authRequired(), s.adminRequired(), s.getSystemStatus)
 
 	// Logs API (admin only)
 	r.GET("/api/logs", s.authRequired(), s.adminRequired(), s.getLogs)
@@ -297,6 +610,16 @@ func (s *Server) setupRouter() {
 		profiles.POST("/:id/switch", s.switchProfile)
 	}
 
+	// ============ Parental Controls API ============
+	parentalGroup := r.Group("/api/parental")
+	parentalGroup.Use(s.authRequired())
+	{
+		parentalGroup.PUT("/pin", s.setParentalPIN)
+		parentalGroup.POST("/verify", s.verifyParentalPIN)
+		parentalGroup.GET("/settings", s.getParentalSettings)
+		parentalGroup.PUT("/settings", s.updateParentalSettings)
+	}
+
 	// Plex-compatible auth endpoints (for client compatibility)
 	r.POST("/api/v2/pins", s.createPin)
 	r.GET("/api/v2/pins/:id", s.checkPin)
@@ -304,6 +627,9 @@ func (s *Server) setupRouter() {
 	r.GET("/api/v2/resources", s.authRequired(), s.getResources)
 	r.GET("/api/v2/home/users", s.authRequired(), s.getHomeUsers)
 	r.POST("/api/v2/home/users/:uuid/switch", s.authRequired(), s.switchUser)
+
+	// ============ Universal Search API ============
+	r.GET("/api/search", s.authRequired(), s.handleUniversalSearch)
 
 	// ============ Client Settings API (authenticated but not admin) ============
 	// This endpoint provides settings needed by client apps (TMDB API key for trailers, etc.)
@@ -331,6 +657,22 @@ func (s *Server) setupRouter() {
 		admin.GET("/settings", s.adminGetSettings)
 		admin.PUT("/settings", s.adminUpdateSettings)
 
+		// Database Backups (admin only)
+		admin.POST("/backups", s.createBackup)
+		admin.GET("/backups", s.listBackups)
+		admin.GET("/backups/:filename/download", s.downloadBackup)
+		admin.DELETE("/backups/:filename", s.deleteBackup)
+		admin.POST("/backups/:filename/restore", s.restoreBackup)
+
+		// Search Engine (admin only)
+		admin.POST("/search/reindex", s.handleSearchReindex)
+		admin.GET("/search/stats", s.handleSearchStats)
+
+		// Self-Update (admin only)
+		admin.GET("/updater/status", s.getUpdateStatus)
+		admin.POST("/updater/check", s.checkForUpdate)
+		admin.POST("/updater/apply", s.applyUpdate)
+
 		// Media management (admin only)
 		admin.GET("/media", s.adminGetMedia)
 		admin.PUT("/media/:id", s.adminUpdateMedia)
@@ -338,11 +680,33 @@ func (s *Server) setupRouter() {
 		admin.POST("/media/refresh-missing", s.adminRefreshAllMissingMetadata)
 		admin.GET("/media/search-tmdb", s.adminSearchTMDB)
 		admin.POST("/media/:id/match", s.adminApplyMediaMatch)
+
+		// User management (admin only)
+		admin.GET("/users", s.adminListUsers)
+		admin.DELETE("/users/:id", s.adminDeleteUser)
+		admin.GET("/users/:id/profiles", s.adminGetUserProfiles)
+
+		// License key management (admin only)
+		admin.GET("/license", s.getLicense)
+		admin.POST("/license", s.saveLicense)
+
+		// Remote access / cloud registry status (admin only)
+		admin.GET("/remote-access", s.getCloudRegistryStatus)
+	}
+
+	// ============ Auto-Update API (admin only) ============
+	updatesGroup := r.Group("/api/updates")
+	updatesGroup.Use(s.authRequired(), s.adminRequired())
+	{
+		updatesGroup.GET("/auto-config", s.getAutoUpdateConfig)
+		updatesGroup.PUT("/auto-config", s.putAutoUpdateConfig)
+		updatesGroup.GET("/schedule", s.getAutoUpdateSchedule)
+		updatesGroup.POST("/check-now", s.triggerAutoUpdateCheck)
 	}
 
 	// ============ Library API ============
 	libraryGroup := r.Group("/library")
-	libraryGroup.Use(s.authRequired())
+	libraryGroup.Use(s.authRequired(), s.parentalControlMiddleware())
 	{
 		// Sections
 		libraryGroup.GET("/sections", s.getLibrarySections)
@@ -365,12 +729,6 @@ func (s *Server) setupRouter() {
 		libraryGroup.GET("/recentlyAdded", s.getRecentlyAdded)
 		libraryGroup.GET("/onDeck", s.getOnDeck)
 
-		// Collections
-		libraryGroup.GET("/collections/:id/children", s.getCollectionItems)
-		libraryGroup.POST("/collections", s.createCollection)
-		libraryGroup.PUT("/collections/:id/items", s.addToCollection)
-		libraryGroup.DELETE("/collections/:id/items/:itemId", s.removeFromCollection)
-		libraryGroup.DELETE("/collections/:id", s.deleteCollection)
 	}
 
 	// ============ Hubs API (Recommendations) ============
@@ -429,6 +787,36 @@ func (s *Server) setupRouter() {
 		playlists.DELETE("/:id", s.deletePlaylist)
 	}
 
+	// ============ Admin Playlists API (Web UI) ============
+	adminPlaylists := r.Group("/api/playlists")
+	adminPlaylists.Use(s.authRequired())
+	{
+		adminPlaylists.GET("", s.getAdminPlaylists)
+		adminPlaylists.POST("", s.createAdminPlaylist)
+		adminPlaylists.GET("/:id", s.getAdminPlaylist)
+		adminPlaylists.PUT("/:id", s.updateAdminPlaylist)
+		adminPlaylists.DELETE("/:id", s.deleteAdminPlaylist)
+		adminPlaylists.POST("/:id/items", s.addItemsToAdminPlaylist)
+		adminPlaylists.DELETE("/:id/items/:itemId", s.removeItemFromAdminPlaylist)
+		adminPlaylists.PUT("/:id/items/reorder", s.reorderAdminPlaylistItems)
+	}
+
+	// ============ Personal Sections API ============
+	personalSections := r.Group("/api/sections")
+	personalSections.Use(s.authRequired())
+	{
+		personalSections.GET("", s.getPersonalSections)
+		personalSections.POST("", s.createPersonalSection)
+		personalSections.POST("/preview", s.previewSmartFilter)  // Must be before /:id
+		personalSections.GET("/genres", s.getAvailableGenres)    // Must be before /:id
+		personalSections.GET("/:id", s.getPersonalSection)
+		personalSections.PUT("/:id", s.updatePersonalSection)
+		personalSections.DELETE("/:id", s.deletePersonalSection)
+		personalSections.POST("/:id/items", s.addItemsToPersonalSection)
+		personalSections.DELETE("/:id/items/:itemId", s.removeItemFromPersonalSection)
+		personalSections.PUT("/:id/reorder", s.reorderPersonalSectionItems)
+	}
+
 	// ============ Watchlist API ============
 	watchlist := r.Group("/watchlist")
 	watchlist.Use(s.authRequired())
@@ -438,21 +826,12 @@ func (s *Server) setupRouter() {
 		watchlist.DELETE("/:mediaId", s.removeFromWatchlist)
 	}
 
-	// ============ Play Queues API ============
-	playQueues := r.Group("/playQueues")
-	playQueues.Use(s.authRequired())
-	{
-		playQueues.POST("", s.createPlayQueue)
-		playQueues.GET("/:id", s.getPlayQueue)
-		playQueues.PUT("/:id/shuffle", s.shufflePlayQueue)
-		playQueues.DELETE("/:id/items", s.clearPlayQueue)
-	}
-
 	// ============ Live TV API ============
 	// Public endpoints for external integrations (Channels DVR, etc.)
 	livetvPublic := r.Group("/livetv")
 	{
 		livetvPublic.GET("/export.m3u", s.exportChannelsM3U)      // M3U playlist with tvc-guide-stationid
+		livetvPublic.GET("/export.xml", s.exportEPGXMLTV)         // XMLTV EPG guide data
 		livetvPublic.GET("/lineup.json", s.exportChannelsLineup)  // JSON lineup
 	}
 
@@ -527,6 +906,9 @@ func (s *Server) setupRouter() {
 		livetv.POST("/epg/overlaps/resolve", s.resolveOverlaps)
 		livetv.POST("/epg/cleanup", s.cleanupOldPrograms)
 
+		// Database maintenance
+		livetv.POST("/cleanup-database", s.cleanupDatabase)
+
 		// Multi-Source Fallback
 		livetv.GET("/epg/sources/health", s.getEPGSourceHealth)
 		livetv.POST("/epg/sources/fetch-fallback", s.fetchWithFallback)
@@ -581,9 +963,13 @@ func (s *Server) setupRouter() {
 		dvrGroup.POST("/recordings", s.scheduleRecording)
 		dvrGroup.POST("/recordings/from-program", s.recordFromProgram)
 		dvrGroup.GET("/recordings/stats", s.getActiveRecordingStats) // Must be before :id route
+		dvrGroup.GET("/recordings/manager", s.getRecordingsManager)  // Must be before :id route
+		dvrGroup.POST("/recordings/bulk", s.bulkRecordingAction)     // Must be before :id route
 		dvrGroup.GET("/recordings/:id", s.getRecording)
 		dvrGroup.PUT("/recordings/:id", s.updateRecording)
+		dvrGroup.POST("/recordings/:id/match", s.applyRecordingMatch)
 		dvrGroup.DELETE("/recordings/:id", s.deleteRecording)
+		dvrGroup.POST("/recordings/:id/stop", s.stopRecording)
 		dvrGroup.PUT("/recordings/:id/priority", s.updateRecordingPriority)
 
 		// Series Rules
@@ -598,12 +984,23 @@ func (s *Server) setupRouter() {
 		dvrGroup.POST("/recordings/:id/commercials/detect", s.rerunCommercialDetection)
 		dvrGroup.POST("/recordings/:id/reprocess", s.reprocessRecording)
 
+		// EDL Export (Edit Decision List for commercial skip in external players)
+		dvrGroup.GET("/recordings/:id/export.edl", s.exportRecordingEDL)
+
 		// Recording Playback
 		dvrGroup.GET("/stream/:id", s.streamRecording)
 		dvrGroup.GET("/recordings/:id/stream", s.getRecordingStreamUrl)
 		dvrGroup.GET("/recordings/:id/hls/master.m3u8", s.getRecordingHLSPlaylist)
 		dvrGroup.GET("/recordings/:id/hls/:segment", s.getRecordingHLSSegment)
+		dvrGroup.GET("/recordings/:id/dash/manifest.mpd", s.getRecordingDASHManifest)
+		dvrGroup.GET("/recordings/:id/dash/:segment", s.getRecordingDASHSegment)
 		dvrGroup.PUT("/recordings/:id/progress", s.updateRecordingProgress)
+
+		// Recordings Manager (file browser UI) - :id routes
+		dvrGroup.PUT("/recordings/:id/watched", s.toggleRecordingWatched)
+		dvrGroup.PUT("/recordings/:id/favorite", s.toggleRecordingFavorite)
+		dvrGroup.PUT("/recordings/:id/keep", s.toggleRecordingKeep)
+		dvrGroup.DELETE("/recordings/:id/trash", s.trashRecording)
 
 		// Stream Validation (validates stream before scheduling)
 		dvrGroup.GET("/validate-stream", s.validateRecordingStream)
@@ -620,6 +1017,136 @@ func (s *Server) setupRouter() {
 		// DVR Settings
 		dvrGroup.GET("/settings", s.getDVRSettings)
 		dvrGroup.PUT("/settings", s.updateDVRSettings)
+
+		// DVR Management (Passes, Schedule, Calendar)
+		dvrGroup.GET("/passes", s.getDVRPasses)
+		dvrGroup.PUT("/passes/:id/pause", s.pauseDVRPass)
+		dvrGroup.PUT("/passes/:id/resume", s.resumeDVRPass)
+		dvrGroup.GET("/schedule", s.getDVRSchedule)
+		dvrGroup.GET("/calendar", s.getDVRCalendar)
+
+		// Labels / Tags management
+		dvrGroup.GET("/labels", s.getLabels)
+		dvrGroup.POST("/labels/bulk", s.bulkLabelAction)
+		dvrGroup.GET("/labels/:label/files", s.getFilesByLabel)
+		dvrGroup.PUT("/recordings/:id/labels", s.setRecordingLabels)
+
+		// DVR V2 (Channels DVR-style)
+		dvrV2 := dvrGroup.Group("/v2")
+		{
+			// Jobs
+			dvrV2.GET("/jobs", s.getJobs)
+			dvrV2.GET("/jobs/:id", s.getJob)
+			dvrV2.POST("/jobs", s.createJob)
+			dvrV2.PUT("/jobs/:id", s.updateJob)
+			dvrV2.DELETE("/jobs/:id", s.deleteJob)
+			dvrV2.POST("/jobs/:id/cancel", s.cancelJob)
+
+			// Files
+			dvrV2.GET("/files", s.getFiles)
+			dvrV2.GET("/files/locked", s.getLockedFiles)
+			dvrV2.GET("/files/:id", s.getFile)
+			dvrV2.PUT("/files/:id", s.updateFile)
+			dvrV2.DELETE("/files/:id", s.deleteFile)
+			dvrV2.GET("/files/:id/stream", s.streamFile)
+			dvrV2.GET("/files/:id/dash/manifest.mpd", s.getFileDASHManifest)
+			dvrV2.GET("/files/:id/dash/:segment", s.getFileDASHSegment)
+			dvrV2.PUT("/files/:id/state", s.updateFileState)
+			dvrV2.PUT("/files/:id/labels", s.setFileLabels)
+			dvrV2.PUT("/files/:id/lock", s.lockFile)
+			dvrV2.DELETE("/files/:id/lock", s.unlockFile)
+
+			// EDL Export (Edit Decision List for external players)
+			dvrV2.GET("/files/:id/export.edl", s.exportFileEDL)
+
+			// Groups
+			dvrV2.GET("/groups", s.getGroups)
+			dvrV2.GET("/groups/:id", s.getGroup)
+			dvrV2.DELETE("/groups/:id", s.deleteGroup)
+			dvrV2.PUT("/groups/:id/state", s.updateGroupState)
+			dvrV2.POST("/groups/regroup", s.groupUngroupedFiles)
+
+			// Rules
+			dvrV2.GET("/rules", s.getRules)
+			dvrV2.GET("/rules/:id", s.getRule)
+			dvrV2.POST("/rules", s.createRule)
+			dvrV2.PUT("/rules/:id", s.updateRule)
+			dvrV2.DELETE("/rules/:id", s.deleteRule)
+			dvrV2.POST("/rules/preview", s.previewRule)
+			dvrV2.GET("/rules/:id/preview", s.previewExistingRule)
+
+			// Duplicate Detection
+			dvrV2.GET("/duplicates", s.getDuplicates)
+			dvrV2.GET("/duplicates/check", s.checkDuplicate)
+			dvrV2.GET("/duplicates/stats", s.getDuplicateStats)
+			dvrV2.POST("/duplicates/:jobId/override", s.overrideDuplicate)
+
+			// Watch state
+			dvrV2.GET("/upnext", s.getUpNext)
+
+			// File management
+			dvrV2.POST("/files/:id/regroup", s.regroupFile)
+
+			// Virtual Stations
+			dvrV2.GET("/virtual-stations", s.getVirtualStations)
+			dvrV2.GET("/virtual-stations/:id", s.getVirtualStation)
+			dvrV2.POST("/virtual-stations", s.createVirtualStation)
+			dvrV2.PUT("/virtual-stations/:id", s.updateVirtualStation)
+			dvrV2.DELETE("/virtual-stations/:id", s.deleteVirtualStation)
+			dvrV2.GET("/virtual-stations/:id/stream.m3u8", s.streamVirtualStation)
+
+			// Collections (smart playlists)
+			dvrV2.GET("/collections", s.getDVRCollections)
+			dvrV2.GET("/collections/:id", s.getDVRCollection)
+			dvrV2.POST("/collections", s.createDVRCollection)
+			dvrV2.PUT("/collections/:id", s.updateDVRCollection)
+			dvrV2.DELETE("/collections/:id", s.deleteDVRCollection)
+			dvrV2.GET("/collections/:id/items", s.getDVRCollectionItems)
+
+			// Trash / Recycle Bin
+			dvrV2.GET("/trash", s.getTrash)
+			dvrV2.POST("/trash/:id/restore", s.restoreFromTrash)
+			dvrV2.DELETE("/trash", s.emptyTrash)
+			dvrV2.DELETE("/trash/:id", s.permanentlyDelete)
+
+			// File Upload / Import
+			dvrV2.POST("/files/upload", s.uploadFile)
+			dvrV2.POST("/files/import", s.importFromPath)
+			dvrV2.POST("/files/import/bulk", s.bulkImport)
+			dvrV2.GET("/files/upload/:id/progress", s.getUploadProgress)
+
+			// WebSocket event stream
+			dvrV2.GET("/events", s.dvrEvents)
+
+			// Ad Stripping
+			dvrV2.POST("/files/:id/strip-ads", s.stripAds)
+			dvrV2.GET("/files/:id/strip-ads/status", s.getStripAdsStatus)
+			dvrV2.POST("/files/:id/strip-ads/undo", s.undoStripAds)
+
+			// Channel Collections (custom lineups)
+			dvrV2.GET("/channel-collections", s.getChannelCollections)
+			dvrV2.POST("/channel-collections", s.createChannelCollection)
+			dvrV2.POST("/channel-collection-rules/preview", s.previewSmartRules)
+			dvrV2.GET("/channel-collection-meta/groups", s.channelCollectionGroups)
+			dvrV2.GET("/channel-collection-meta/sources", s.channelCollectionSources)
+			dvrV2.GET("/channel-collections/:id", s.getChannelCollection)
+			dvrV2.PUT("/channel-collections/:id", s.updateChannelCollection)
+			dvrV2.DELETE("/channel-collections/:id", s.deleteChannelCollection)
+			dvrV2.GET("/channel-collections/:id/export.m3u", s.exportChannelCollectionM3U)
+
+			// Conflict Resolution
+			dvrV2.GET("/conflicts", s.getV2Conflicts)
+			dvrV2.GET("/conflicts/:jobId/alternatives", s.getV2ConflictAlternatives)
+			dvrV2.POST("/conflicts/:jobId/resolve", s.resolveV2Conflict)
+			dvrV2.POST("/conflicts/auto-resolve", s.autoResolveV2Conflicts)
+
+			// Chapter Markers
+			dvrV2.GET("/files/:id/chapters", s.getFileChapters)
+			dvrV2.POST("/files/:id/chapters", s.addFileChapter)
+			dvrV2.PUT("/files/:id/chapters/:chapterId", s.updateFileChapter)
+			dvrV2.DELETE("/files/:id/chapters/:chapterId", s.deleteFileChapter)
+			dvrV2.POST("/files/:id/chapters/detect", s.detectFileChapters)
+		}
 	}
 
 	// ============ VOD API (Video On Demand Downloads) ============
@@ -649,6 +1176,8 @@ func (s *Server) setupRouter() {
 	onlater := r.Group("/api/onlater")
 	onlater.Use(s.authRequired())
 	{
+		onlater.GET("/all", s.handleGetOnLaterAll)
+		onlater.GET("/tvshows", s.handleGetOnLaterTVShows)
 		onlater.GET("/movies", s.handleGetOnLaterMovies)
 		onlater.GET("/sports", s.handleGetOnLaterSports)
 		onlater.GET("/kids", s.handleGetOnLaterKids)
@@ -707,6 +1236,27 @@ func (s *Server) setupRouter() {
 		remoteAccess.GET("/login-url", s.adminRequired(), s.getRemoteAccessLoginUrl)
 	}
 
+	// ============ Notifications API ============
+	notifyGroup := r.Group("/api/notifications")
+	notifyGroup.Use(s.authRequired(), s.adminRequired())
+	{
+		notifyGroup.GET("/config", s.getNotificationConfig)
+		notifyGroup.PUT("/config", s.putNotificationConfig)
+		notifyGroup.POST("/test", s.testNotification)
+		notifyGroup.GET("/history", s.getNotificationHistory)
+	}
+
+	// ============ Dynamic DNS API ============
+	ddnsGroup := r.Group("/api/ddns")
+	ddnsGroup.Use(s.authRequired(), s.adminRequired())
+	{
+		ddnsGroup.GET("/status", s.getDDNSStatus)
+		ddnsGroup.PUT("/configure", s.configureDDNS)
+		ddnsGroup.POST("/test", s.testDDNS)
+		ddnsGroup.POST("/update", s.forceUpdateDDNS)
+		ddnsGroup.DELETE("/disable", s.disableDDNS)
+	}
+
 	// ============ Instant Switch API ============
 	instantSwitch := r.Group("/api/instant")
 	instantSwitch.Use(s.authRequired())
@@ -754,6 +1304,81 @@ func (s *Server) setupRouter() {
 	// ============ Watch Party API ============
 	s.RegisterWatchPartyRoutes(r)
 
+	// ============ Speed Test API ============
+	speedtestGroup := r.Group("/api/speedtest")
+	speedtestGroup.Use(s.authRequired())
+	{
+		speedtestGroup.GET("/ping", s.speedTestPing)
+		speedtestGroup.GET("/download", s.speedTestDownload)
+		speedtestGroup.POST("/upload", s.speedTestUpload)
+		speedtestGroup.GET("/results/:id", s.speedTestResults)
+	}
+
+	// ============ Stream Health Monitoring API ============
+	healthGroup := r.Group("/api/health")
+	healthGroup.Use(s.authRequired())
+	{
+		healthGroup.GET("/streams", s.getHealthStreams)
+		healthGroup.GET("/streams/:id", s.getHealthStream)
+		healthGroup.POST("/streams/:id/report", s.reportStreamHealth)
+		healthGroup.GET("/channels", s.getHealthChannels)
+		healthGroup.GET("/channels/:id/history", s.getHealthChannelHistory)
+
+		// Admin-only endpoints
+		healthGroup.GET("/alerts", s.adminRequired(), s.getHealthAlerts)
+		healthGroup.GET("/summary", s.adminRequired(), s.getHealthSummary)
+	}
+
+	// ============ Tuner API (HDHR) ============
+	tunerGroup := r.Group("/api/tuners")
+	tunerGroup.Use(s.authRequired())
+	{
+		tunerGroup.GET("", s.getTuners)
+		tunerGroup.POST("", s.addTuner)
+		tunerGroup.POST("/discover", s.discoverTuners)
+		tunerGroup.DELETE("/:id", s.removeTuner)
+		tunerGroup.GET("/:id/lineup", s.getTunerLineup)
+		tunerGroup.GET("/:id/status", s.getTunerStatus)
+		tunerGroup.POST("/:id/import", s.importTunerChannels)
+		tunerGroup.POST("/:id/scan", s.scanTunerChannels)
+	}
+
+	// ============ Bookmarks & Clips API ============
+	bookmarkGroup := r.Group("/api/bookmarks")
+	bookmarkGroup.Use(s.authRequired())
+	{
+		bookmarkGroup.GET("", s.listBookmarks)
+		bookmarkGroup.POST("", s.createBookmark)
+		bookmarkGroup.GET("/:id", s.getBookmark)
+		bookmarkGroup.PUT("/:id", s.updateBookmark)
+		bookmarkGroup.DELETE("/:id", s.deleteBookmark)
+	}
+
+	clipGroup := r.Group("/api/clips")
+	clipGroup.Use(s.authRequired())
+	{
+		clipGroup.GET("", s.listClips)
+		clipGroup.POST("", s.createClip)
+		clipGroup.GET("/:id", s.getClip)
+		clipGroup.DELETE("/:id", s.deleteClip)
+		clipGroup.GET("/:id/download", s.downloadClip)
+		clipGroup.GET("/:id/stream", s.streamClip)
+	}
+
+	// ============ Offline Downloads API ============
+	offline := r.Group("/api/offline")
+	offline.Use(s.authRequired())
+	{
+		offline.POST("/request", s.requestOfflineDownload)
+		offline.GET("/downloads", s.listOfflineDownloads)
+		offline.GET("/:id/stream", s.streamOfflineDownload)
+		offline.PUT("/:id/progress", s.updateOfflineProgress)
+		offline.PUT("/:id/watch-state", s.syncOfflineWatchState)
+		offline.DELETE("/:id", s.deleteOfflineDownload)
+		offline.GET("/settings", s.getOfflineSettings)
+		offline.PUT("/settings", s.adminRequired(), s.updateOfflineSettings)
+	}
+
 	// ============ Server Preferences ============
 	// Plex uses /:/prefs - we use /-/prefs
 	plex.GET("/prefs", s.getServerPrefs)
@@ -780,6 +1405,11 @@ func (s *Server) setupRouter() {
 	r.GET("/transcode/universal/start.m3u8", s.authRequired(), s.transcodeStart)
 	r.GET("/transcode/universal/session/:sessionId/:segment", s.authRequired(), s.transcodeSegment)
 
+	// DASH Transcode
+	r.GET("/video/-/transcode/dash/start.mpd", s.authRequired(), s.dashStart)
+	r.GET("/video/-/transcode/dash/session/:sessionId/:segment", s.authRequired(), s.dashSegment)
+	r.GET("/video/-/transcode/dash/session/:sessionId/manifest.mpd", s.authRequired(), s.dashManifest)
+
 	// ============ Playback Decision API ============
 	// Smart playback mode selection
 	playbackAPI := r.Group("/api/playback")
@@ -794,6 +1424,95 @@ func (s *Server) setupRouter() {
 		playbackAPI.GET("/decide/:fileId", s.getPlaybackDecision)
 		playbackAPI.POST("/decide/:fileId", s.getPlaybackDecision) // POST with capabilities in body
 		playbackAPI.GET("/options/:mediaId", s.getMediaPlaybackOptions)
+
+		// Bandwidth management (adaptive bitrate)
+		playbackAPI.POST("/bandwidth", s.reportBandwidth)
+		playbackAPI.GET("/bandwidth/server", s.adminRequired(), s.getServerBandwidth)
+		playbackAPI.PUT("/bandwidth/server/limit", s.adminRequired(), s.setServerBandwidthLimit)
+		playbackAPI.GET("/bandwidth/:clientId", s.getClientBandwidth)
+		playbackAPI.PUT("/bandwidth/:clientId/cap", s.setClientBandwidthCap)
+
+		// Skip markers and settings
+		playbackAPI.GET("/:id/markers", s.getSkipMarkers)
+		playbackAPI.GET("/:id/markers/library", s.getLibrarySkipMarkers)
+		playbackAPI.POST("/:id/skip", s.reportSkip)
+		playbackAPI.GET("/skip-settings", s.getSkipSettings)
+		playbackAPI.PUT("/skip-settings", s.updateSkipSettings)
+
+		// Audio/Subtitle track selection
+		playbackAPI.GET("/:id/tracks", s.getMediaTracks)
+		playbackAPI.PUT("/:id/tracks/select", s.selectMediaTracks)
+		playbackAPI.GET("/track-preferences", s.getTrackPreferences)
+		playbackAPI.PUT("/track-preferences", s.updateTrackPreferences)
+
+		// Playback speed
+		playbackAPI.GET("/speed-presets", s.getSpeedPresets)
+		playbackAPI.PUT("/speed", s.setPlaybackSpeed)
+		playbackAPI.GET("/sessions/:sessionId/speed", s.getSessionSpeed)
+		playbackAPI.PUT("/sessions/:sessionId/speed", s.setSessionSpeed)
+
+		// Frame rate matching
+		playbackAPI.GET("/:id/framerate", s.getMediaFrameRate)
+		playbackAPI.GET("/framerate-settings", s.getFrameRateSettings)
+		playbackAPI.PUT("/framerate-settings", s.adminRequired(), s.updateFrameRateSettings)
+	}
+
+	// ============ Scheduled Tasks API (admin only) ============
+	schedulerGroup := r.Group("/api/scheduler")
+	schedulerGroup.Use(s.authRequired(), s.adminRequired())
+	{
+		schedulerGroup.GET("/tasks", s.listScheduledTasks)
+		schedulerGroup.GET("/tasks/:id", s.getScheduledTask)
+		schedulerGroup.PUT("/tasks/:id", s.updateScheduledTask)
+		schedulerGroup.POST("/tasks/:id/run", s.triggerScheduledTask)
+		schedulerGroup.GET("/history", s.getSchedulerHistory)
+	}
+
+	// ============ Subtitles API (OpenSubtitles) ============
+	subtitleGroup := r.Group("/api/subtitles")
+	subtitleGroup.Use(s.authRequired())
+	{
+		subtitleGroup.GET("/search", s.searchSubtitles)
+		subtitleGroup.POST("/download", s.downloadSubtitle)
+		subtitleGroup.GET("/config", s.getSubtitleConfig)
+		subtitleGroup.PUT("/config", s.adminRequired(), s.updateSubtitleConfig)
+		subtitleGroup.GET("/:mediaId", s.getSubtitlesForMedia)
+		subtitleGroup.DELETE("/:mediaId/:lang", s.deleteSubtitle)
+	}
+
+	// ============ Guide Data API (admin only) ============
+	guideAdmin := r.Group("/api/guide")
+	guideAdmin.Use(s.authRequired(), s.adminRequired())
+	{
+		guideAdmin.POST("/refresh", s.refreshGuideData)
+		guideAdmin.POST("/rebuild", s.rebuildGuideData)
+	}
+
+	// ============ Global Client Settings API (admin only) ============
+	clientSettingsAdmin := r.Group("/api/client-settings")
+	clientSettingsAdmin.Use(s.authRequired(), s.adminRequired())
+	{
+		clientSettingsAdmin.GET("", s.getGlobalClientSettings)
+		clientSettingsAdmin.PUT("", s.updateGlobalClientSettings)
+		clientSettingsAdmin.DELETE("/:key", s.deleteGlobalClientSetting)
+	}
+
+	// ============ Device Management API ============
+	// Authenticated (any user) endpoints
+	devices := r.Group("/api/devices")
+	devices.Use(s.authRequired())
+	{
+		devices.POST("/register", s.registerDevice)
+		devices.GET("/my-settings", s.getMyDeviceSettings)
+	}
+	// Admin-only endpoints
+	adminDevices := r.Group("/api/devices")
+	adminDevices.Use(s.authRequired(), s.adminRequired())
+	{
+		adminDevices.GET("", s.listDevices)
+		adminDevices.GET("/:id", s.getDevice)
+		adminDevices.PUT("/:id", s.updateDevice)
+		adminDevices.DELETE("/:id", s.deleteDevice)
 	}
 
 	// Images - support both /thumb/:id and /thumb (simple)
@@ -801,6 +1520,9 @@ func (s *Server) setupRouter() {
 	r.GET("/library/metadata/:key/thumb", s.getThumbSimple)
 	r.GET("/library/metadata/:key/art/:artId", s.getArt)
 	r.GET("/library/metadata/:key/art", s.getArtSimple)
+
+	// ============ API Documentation ============
+	s.registerSwaggerRoutes(r)
 
 	s.router = r
 }
@@ -831,7 +1553,7 @@ func (s *Server) corsMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.Header("Access-Control-Allow-Origin", "*")
 		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-		c.Header("Access-Control-Allow-Headers", "Origin, Content-Type, Accept, Authorization, X-Plex-Token, X-Plex-Client-Identifier, X-Plex-Product, X-Plex-Version, X-Plex-Platform, Range")
+		c.Header("Access-Control-Allow-Headers", "Origin, Content-Type, Accept, Authorization, X-Plex-Token, X-Plex-Client-Identifier, X-Plex-Product, X-Plex-Version, X-Plex-Platform, X-Device-ID, Range")
 		c.Header("Access-Control-Expose-Headers", "Content-Range, Content-Length, Content-Type")
 
 		if c.Request.Method == "OPTIONS" {
@@ -1023,7 +1745,7 @@ func (s *Server) getRemoteAccessStatus(c *gin.Context) {
 		"tailscaleHostname": status.Hostname,
 		"magicDnsName":      status.TailscaleURL,
 		"backendState":      status.Status,
-		"loginUrl":          nil,
+		"loginUrl":          status.LoginURL,
 		"lastSeen":          status.LastChecked,
 		"error":             status.Error,
 	})
@@ -1055,7 +1777,7 @@ func (s *Server) enableRemoteAccess(c *gin.Context) {
 			"tailscaleHostname": status.Hostname,
 			"magicDnsName":      status.TailscaleURL,
 			"backendState":      status.Status,
-			"loginUrl":          nil,
+			"loginUrl":          status.LoginURL,
 			"lastSeen":          status.LastChecked,
 			"error":             status.Error,
 		},
@@ -1083,7 +1805,7 @@ func (s *Server) disableRemoteAccess(c *gin.Context) {
 			"tailscaleHostname": status.Hostname,
 			"magicDnsName":      status.TailscaleURL,
 			"backendState":      status.Status,
-			"loginUrl":          nil,
+			"loginUrl":          status.LoginURL,
 			"lastSeen":          status.LastChecked,
 			"error":             status.Error,
 		},

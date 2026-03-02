@@ -15,15 +15,16 @@ import (
 
 // RemoteAccessStatus represents the current remote access status
 type RemoteAccessStatus struct {
-	Enabled       bool     `json:"enabled"`
-	Status        string   `json:"status"` // connected, disconnected, connecting, error
-	TailscaleIP   string   `json:"tailscaleIp,omitempty"`
-	TailscaleURL  string   `json:"tailscaleUrl,omitempty"`
-	Hostname      string   `json:"hostname,omitempty"`
-	LocalIP       string   `json:"localIp,omitempty"`
-	ExternalURL   string   `json:"externalUrl,omitempty"`
-	Error         string   `json:"error,omitempty"`
-	LastChecked   time.Time `json:"lastChecked"`
+	Enabled      bool      `json:"enabled"`
+	Status       string    `json:"status"` // connected, disconnected, connecting, needs_login, error
+	TailscaleIP  string    `json:"tailscaleIp,omitempty"`
+	TailscaleURL string    `json:"tailscaleUrl,omitempty"`
+	Hostname     string    `json:"hostname,omitempty"`
+	LocalIP      string    `json:"localIp,omitempty"`
+	ExternalURL  string    `json:"externalUrl,omitempty"`
+	LoginURL     string    `json:"loginUrl,omitempty"`
+	Error        string    `json:"error,omitempty"`
+	LastChecked  time.Time `json:"lastChecked"`
 }
 
 // TailscaleConfig holds Tailscale configuration
@@ -33,6 +34,9 @@ type TailscaleConfig struct {
 	Hostname  string `json:"hostname,omitempty"`
 	Port      int    `json:"port"`
 }
+
+// tailscaleSocket is the socket path used by the in-container tailscaled
+const tailscaleSocket = "/var/run/tailscale/tailscaled.sock"
 
 // RemoteAccessManager manages remote access through Tailscale
 type RemoteAccessManager struct {
@@ -70,8 +74,8 @@ func (ram *RemoteAccessManager) RefreshStatus() *RemoteAccessStatus {
 		return &ram.status
 	}
 
-	// Check Tailscale status
-	cmd := exec.Command(tailscalePath, "status", "--json")
+	// Check Tailscale status — use explicit socket so we talk to the in-container daemon
+	cmd := exec.Command(tailscalePath, "--socket="+tailscaleSocket, "status", "--json")
 	output, err := cmd.Output()
 	if err != nil {
 		ram.status.Status = "disconnected"
@@ -82,11 +86,12 @@ func (ram *RemoteAccessManager) RefreshStatus() *RemoteAccessStatus {
 	// Parse JSON status
 	var tailscaleStatus struct {
 		BackendState string `json:"BackendState"`
+		AuthURL      string `json:"AuthURL"`
 		Self         struct {
-			DNSName    string   `json:"DNSName"`
+			DNSName      string   `json:"DNSName"`
 			TailscaleIPs []string `json:"TailscaleIPs"`
-			HostName   string   `json:"HostName"`
-			Online     bool     `json:"Online"`
+			HostName     string   `json:"HostName"`
+			Online       bool     `json:"Online"`
 		} `json:"Self"`
 		TailnetName string `json:"CurrentTailnet,omitempty"`
 	}
@@ -131,6 +136,9 @@ func (ram *RemoteAccessManager) RefreshStatus() *RemoteAccessStatus {
 		ram.status.ExternalURL = fmt.Sprintf("http://%s:%d", ram.status.TailscaleIP, ram.config.Port)
 	}
 
+	// Store login URL if Tailscale needs authentication
+	ram.status.LoginURL = tailscaleStatus.AuthURL
+
 	ram.status.Enabled = ram.status.Status == "connected"
 
 	logger.Log.WithFields(map[string]interface{}{
@@ -147,14 +155,17 @@ func (ram *RemoteAccessManager) GetStatus() *RemoteAccessStatus {
 	return &ram.status
 }
 
-// Enable enables Tailscale with optional auth key
+// Enable enables Tailscale with optional auth key.
+// If an authKey is provided the command runs synchronously (automated setup).
+// Without an authKey, tailscale up is launched in the background so it doesn't
+// block the HTTP handler — the caller should poll RefreshStatus() for the login URL.
 func (ram *RemoteAccessManager) Enable(authKey string) error {
 	tailscalePath, err := exec.LookPath("tailscale")
 	if err != nil {
 		return fmt.Errorf("tailscale is not installed")
 	}
 
-	args := []string{"up", "--accept-routes"}
+	args := []string{"--socket=" + tailscaleSocket, "up", "--accept-routes"}
 
 	if authKey != "" {
 		args = append(args, "--authkey="+authKey)
@@ -164,12 +175,29 @@ func (ram *RemoteAccessManager) Enable(authKey string) error {
 		args = append(args, "--hostname="+ram.config.Hostname)
 	}
 
-	cmd := exec.Command(tailscalePath, args...)
-	if output, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("failed to enable Tailscale: %s - %s", err.Error(), string(output))
+	if authKey != "" {
+		// Synchronous path: auth key means no interactive login required
+		cmd := exec.Command(tailscalePath, args...)
+		if output, err := cmd.CombinedOutput(); err != nil {
+			return fmt.Errorf("failed to enable Tailscale: %s - %s", err.Error(), string(output))
+		}
+		ram.RefreshStatus()
+	} else {
+		// Non-blocking path: tailscale up will wait for browser login.
+		// Launch in background so the HTTP handler returns immediately.
+		// The frontend polls /remote-access/status to get the login URL.
+		go func() {
+			cmd := exec.Command(tailscalePath, args...)
+			cmd.Run() //nolint:errcheck
+			ram.RefreshStatus()
+		}()
+		// Give tailscaled a moment to generate the AuthURL, then refresh
+		go func() {
+			time.Sleep(2 * time.Second)
+			ram.RefreshStatus()
+		}()
 	}
 
-	ram.RefreshStatus()
 	return nil
 }
 
@@ -180,7 +208,7 @@ func (ram *RemoteAccessManager) Disable() error {
 		return fmt.Errorf("tailscale is not installed")
 	}
 
-	cmd := exec.Command(tailscalePath, "down")
+	cmd := exec.Command(tailscalePath, "--socket="+tailscaleSocket, "down")
 	if output, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("failed to disable Tailscale: %s - %s", err.Error(), string(output))
 	}
@@ -189,25 +217,14 @@ func (ram *RemoteAccessManager) Disable() error {
 	return nil
 }
 
-// GetLoginURL returns a login URL for interactive authentication
+// GetLoginURL returns a login URL for interactive authentication.
+// It reads the AuthURL from tailscale status JSON — no blocking calls.
 func (ram *RemoteAccessManager) GetLoginURL() (string, error) {
-	tailscalePath, err := exec.LookPath("tailscale")
-	if err != nil {
-		return "", fmt.Errorf("tailscale is not installed")
+	ram.RefreshStatus()
+	if ram.status.LoginURL != "" {
+		return ram.status.LoginURL, nil
 	}
-
-	cmd := exec.Command(tailscalePath, "up", "--qr")
-	output, _ := cmd.CombinedOutput()
-
-	// Parse output for login URL
-	outputStr := string(output)
-	for _, line := range strings.Split(outputStr, "\n") {
-		if strings.Contains(line, "https://") {
-			return strings.TrimSpace(line), nil
-		}
-	}
-
-	return "", fmt.Errorf("could not get login URL")
+	return "", fmt.Errorf("no login URL available — Tailscale may already be authenticated")
 }
 
 // GetConnectionInfo returns connection information for the client

@@ -1,0 +1,34 @@
+platform :ios, '17.0'
+use_frameworks!
+
+target 'OpenFlix' do
+  pod 'MobileVLCKit', '~> 3.6'
+end
+
+post_install do |installer|
+  installer.pods_project.targets.each do |target|
+    target.build_configurations.each do |config|
+      # MobileVLCKit has no simulator slice — exclude arm64 from sim so it uses x86_64 (Rosetta)
+      config.build_settings['EXCLUDED_ARCHS[sdk=iphonesimulator*]'] = 'arm64'
+    end
+  end
+
+  # Strip MobileVLCKit from linker flags when building for simulator
+  installer.aggregate_targets.each do |target|
+    target.xcconfigs.each do |config_name, xcconfig|
+      xcconfig_path = target.client_root + target.xcconfig_relative_path(config_name)
+      next unless File.exist?(xcconfig_path.to_s)
+      content = File.read(xcconfig_path.to_s)
+      # Add a SDK-conditional that removes the framework on simulator
+      unless content.include?('OTHER_LDFLAGS[sdk=iphonesimulator')
+        stripped = content
+          .scan(/OTHER_LDFLAGS\s*=\s*(.+)/).flatten.first.to_s
+          .gsub('-framework "MobileVLCKit"', '')
+          .gsub('-framework MobileVLCKit', '')
+          .strip
+        content += "\nOTHER_LDFLAGS[sdk=iphonesimulator*] = #{stripped}\n"
+        File.write(xcconfig_path.to_s, content)
+      end
+    end
+  end
+end

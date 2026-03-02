@@ -460,6 +460,9 @@ type Program struct {
 	Teams  string `gorm:"size:500" json:"teams,omitempty"`  // Comma-separated team names
 	League string `gorm:"size:50" json:"league,omitempty"`  // NFL, NBA, MLB, NHL, MLS, etc.
 
+	// Source tracking
+	EPGSourceID *uint `gorm:"index" json:"epgSourceId,omitempty"` // Which EPG source imported this program
+
 	// External IDs
 	SeriesID    string `gorm:"size:100" json:"seriesId,omitempty"`
 	ProgramID   string `gorm:"size:100" json:"programId,omitempty"`
@@ -506,6 +509,18 @@ type Recording struct {
 	ChannelName     string     `gorm:"size:200" json:"channelName,omitempty"`    // Cached channel name
 	ChannelLogo     string     `gorm:"size:500" json:"channelLogo,omitempty"`    // Cached channel logo
 	ViewOffset      *int64     `json:"viewOffset,omitempty"`                     // Watch progress in ms
+	// File browser state
+	IsWatched       bool       `gorm:"default:false" json:"isWatched"`            // Marked as watched
+	IsFavorite      bool       `gorm:"default:false" json:"isFavorite"`           // Marked as favorite
+	KeepForever     bool       `gorm:"default:false" json:"keepForever"`          // Keep forever (skip auto-delete)
+	IsDeleted       bool       `gorm:"default:false;index" json:"isDeleted"`      // Soft-deleted (trash)
+	DeletedAt       *time.Time `json:"deletedAt,omitempty"`                       // When it was trashed
+	ContentType     string     `gorm:"size:20;default:show" json:"contentType"`   // show, movie, video, image, unmatched
+	VideoCodec      string     `gorm:"size:50" json:"videoCodec,omitempty"`       // h264, hevc, etc.
+	AudioCodec      string     `gorm:"size:50" json:"audioCodec,omitempty"`       // aac, ac3, eac3, etc.
+	VideoResolution string     `gorm:"size:20" json:"videoResolution,omitempty"`  // 1080i, 720p, 480i, etc.
+	HasCC           bool       `gorm:"default:false" json:"hasCC"`                // Has closed captions
+	HasDVS          bool       `gorm:"default:false" json:"hasDVS"`               // Has descriptive audio
 	// Retry handling
 	RetryCount int    `gorm:"default:0" json:"retryCount"`
 	MaxRetries int    `gorm:"default:3" json:"maxRetries"`
@@ -549,10 +564,14 @@ type TeamPass struct {
 	League      string    `gorm:"size:50" json:"league"`               // NFL, NBA, MLB, NHL, MLS, etc.
 	ChannelIDs  string    `gorm:"size:500" json:"channelIds,omitempty"` // Comma-separated channel IDs (empty = all)
 	PrePadding  int       `gorm:"default:5" json:"prePadding"`         // Minutes before start
-	PostPadding int       `gorm:"default:60" json:"postPadding"`       // Minutes after end (games run long)
-	KeepCount   int       `gorm:"default:0" json:"keepCount"`          // 0 = keep all
-	Priority    int       `gorm:"default:0" json:"priority"`           // For conflict resolution
-	Enabled     bool      `gorm:"default:true" json:"enabled"`
+	PostPadding     int       `gorm:"default:60" json:"postPadding"`       // Minutes after end (games run long)
+	RecordPreGame   bool      `gorm:"default:false" json:"recordPreGame"`  // Auto-detect and record pre-game show
+	RecordPostGame  bool      `gorm:"default:false" json:"recordPostGame"` // Auto-detect and record post-game show
+	PreGameMinutes  int       `gorm:"default:30" json:"preGameMinutes"`    // Max pre-game minutes to look for
+	PostGameMinutes int       `gorm:"default:60" json:"postGameMinutes"`   // Max post-game minutes to look for
+	KeepCount       int       `gorm:"default:0" json:"keepCount"`          // 0 = keep all
+	Priority        int       `gorm:"default:0" json:"priority"`           // For conflict resolution
+	Enabled         bool      `gorm:"default:true" json:"enabled"`
 	CreatedAt   time.Time `json:"createdAt"`
 	UpdatedAt   time.Time `json:"updatedAt"`
 }
@@ -561,6 +580,7 @@ type TeamPass struct {
 type CommercialSegment struct {
 	ID          uint    `gorm:"primaryKey" json:"id"`
 	RecordingID uint    `gorm:"index" json:"recordingId"`
+	FileID      *uint   `gorm:"index" json:"fileId,omitempty"` // DVR v2 link
 	StartTime   float64 `json:"startTime"`  // seconds from beginning
 	EndTime     float64 `json:"endTime"`    // seconds from beginning
 	Duration    float64 `json:"duration"`   // seconds
@@ -644,6 +664,7 @@ type PlaybackSession struct {
 	Transcoding     bool      `json:"transcoding"`
 	TranscodeSession string   `gorm:"size:100" json:"transcodeSession,omitempty"`
 	Quality         string    `gorm:"size:20" json:"quality,omitempty"`
+	PlaybackSpeed   float64   `json:"playbackSpeed" gorm:"default:1.0"`
 	ClientName      string    `gorm:"size:100" json:"player,omitempty"`
 	ClientPlatform  string    `gorm:"size:50" json:"platform,omitempty"`
 	ClientAddress   string    `gorm:"size:50" json:"address,omitempty"`
@@ -663,4 +684,103 @@ type Setting struct {
 	Value     string `gorm:"type:text" json:"value"`
 	CreatedAt time.Time
 	UpdatedAt time.Time
+}
+
+// ========== Offline Download Models ==========
+
+// OfflineDownload tracks a media item downloaded to a client device for offline viewing
+type OfflineDownload struct {
+	ID          uint      `json:"id" gorm:"primaryKey"`
+	UserID      uint      `json:"userId" gorm:"index"`
+	DeviceID    string    `json:"deviceId" gorm:"index"`  // client device identifier
+	MediaItemID uint      `json:"mediaItemId"`
+	MediaFileID uint      `json:"mediaFileId"`
+
+	Title       string    `json:"title"`
+	Quality     string    `json:"quality"`     // original, high, medium, low
+	FileSize    int64     `json:"fileSize"`    // estimated size in bytes
+
+	Status      string    `json:"status" gorm:"default:'pending'"` // pending, downloading, completed, expired, deleted
+	Progress    float64   `json:"progress"`    // 0.0 - 1.0
+	ExpiresAt   time.Time `json:"expiresAt"`   // when the download expires (e.g., 30 days)
+
+	// Watch state sync
+	WatchedPosition int64 `json:"watchedPosition"` // ms position synced back from device
+	Watched         bool  `json:"watched"`
+
+	CreatedAt time.Time `json:"createdAt"`
+	UpdatedAt time.Time `json:"updatedAt"`
+}
+
+// ========== Client Device Management ==========
+
+// ClientDevice represents a registered client device with server-managed settings
+type ClientDevice struct {
+	ID          uint      `json:"id" gorm:"primaryKey"`
+	DeviceID    string    `json:"deviceId" gorm:"uniqueIndex;not null"` // unique device identifier from client
+	DisplayName string    `json:"displayName"`                          // user-friendly name (e.g., "Living Room Apple TV")
+	Platform    string    `json:"platform"`                             // apple_tv, android_tv, fire_tv, ios, android, web
+	LastSeen    time.Time `json:"lastSeen"`
+	IPAddress   string    `json:"ipAddress"`
+	AppVersion  string    `json:"appVersion"`
+
+	// Extended device info (populated from client registration)
+	DeviceModel    string `json:"deviceModel"`                           // e.g., "Apple TV 4K (3rd gen)", "Pixel 7"
+	OSVersion      string `json:"osVersion"`                             // e.g., "tvOS 17.2", "Android 14"
+	ConnectionType string `json:"connectionType" gorm:"default:'local'"` // local, remote
+
+	// Channel collection assignment
+	ChannelCollectionID uint `json:"channelCollectionId"` // 0 means all channels
+
+	// Server-controlled settings
+	KioskMode    bool   `json:"kioskMode"`    // hide settings/admin on this device
+	KidsOnlyMode bool   `json:"kidsOnlyMode"` // restrict to kids-rated content only
+	MaxRating    string `json:"maxRating"`     // max content rating (G, PG, PG-13, R, etc.) - overrides user profile
+
+	// Playback defaults for this device
+	DefaultQuality string `json:"defaultQuality"` // original, high, medium, low
+	MaxBitrate     int    `json:"maxBitrate"`      // max bitrate in kbps (0 = unlimited)
+
+	// Display preferences
+	StartupSection string `json:"startupSection"` // what section to show on launch (home, livetv, dvr, kids, sports)
+	Theme          string `json:"theme"`           // dark, light, auto
+
+	// Sidebar navigation visibility
+	SidebarSections string `json:"sidebarSections"` // comma-separated: "home,livetv,dvr,movies,shows,kids,sports,search"
+
+	// Feature toggles
+	EnableDVR       bool `json:"enableDVR" gorm:"default:true"`
+	EnableLiveTV    bool `json:"enableLiveTV" gorm:"default:true"`
+	EnableDownloads bool `json:"enableDownloads" gorm:"default:true"`
+
+	CreatedAt time.Time `json:"createdAt"`
+	UpdatedAt time.Time `json:"updatedAt"`
+}
+
+// ========== Personal Section Models ==========
+
+// PersonalSection represents a user-curated section for the client sidebar
+type PersonalSection struct {
+	ID          uint           `gorm:"primaryKey" json:"id"`
+	UserID      uint           `gorm:"index" json:"userId"`
+	Name        string         `gorm:"size:255" json:"name"`
+	Description string         `gorm:"type:text" json:"description,omitempty"`
+	SectionType string         `gorm:"size:20;default:manual" json:"sectionType"` // "smart" or "manual"
+	SmartFilter string         `gorm:"type:text" json:"smartFilter,omitempty"`    // JSON filter criteria for smart sections
+	Position    int            `json:"position"`
+	ItemCount   int            `gorm:"-" json:"itemCount"`
+	CreatedAt   time.Time      `json:"createdAt"`
+	UpdatedAt   time.Time      `json:"updatedAt"`
+	DeletedAt   gorm.DeletedAt `gorm:"index" json:"-"`
+
+	Items []PersonalSectionItem `gorm:"foreignKey:SectionID" json:"items,omitempty"`
+}
+
+// PersonalSectionItem represents an item in a personal section
+type PersonalSectionItem struct {
+	ID        uint      `gorm:"primaryKey" json:"id"`
+	SectionID uint      `gorm:"index" json:"sectionId"`
+	MediaID   uint      `gorm:"index" json:"mediaId"`
+	Position  int       `json:"position"`
+	CreatedAt time.Time `json:"createdAt"`
 }

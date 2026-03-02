@@ -3,6 +3,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Search, Check, X } from 'lucide-react'
 import { api } from '../api/client'
 
+const isAbsoluteUrl = (url?: string) => url ? /^https?:\/\//i.test(url) : false
+
 interface Channel {
   id: number
   sourceId: number
@@ -964,7 +966,7 @@ export function EPGEditorSimplePage() {
                               onChange={() => toggleChannelSelection(channel.id)}
                               className="w-4 h-4 rounded border-gray-500 bg-gray-600 text-indigo-600 focus:ring-indigo-500"
                             />
-                            {channel.logo && (
+                            {isAbsoluteUrl(channel.logo) && (
                               <img src={channel.logo} alt="" className="w-8 h-8 rounded object-cover" />
                             )}
                             <div className="flex-1">
@@ -998,7 +1000,7 @@ export function EPGEditorSimplePage() {
                         onChange={() => toggleChannelSelection(channel.id)}
                         className="w-4 h-4 rounded border-gray-500 bg-gray-600 text-indigo-600 focus:ring-indigo-500"
                       />
-                      {channel.logo && (
+                      {isAbsoluteUrl(channel.logo) && (
                         <img src={channel.logo} alt="" className="w-8 h-8 rounded object-cover" />
                       )}
                       <div className="flex-1">
@@ -1101,7 +1103,7 @@ export function EPGEditorSimplePage() {
                             }}
                             className="w-full flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors bg-gray-700/50 hover:bg-indigo-900/40 hover:border-indigo-600 border-2 border-transparent"
                           >
-                            {channel.logo && (
+                            {isAbsoluteUrl(channel.logo) && (
                               <img src={channel.logo} alt="" className="w-8 h-8 rounded object-cover" />
                             )}
                             <div className="flex-1 text-left">
@@ -1129,7 +1131,7 @@ export function EPGEditorSimplePage() {
                       }}
                       className="w-full flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors bg-gray-700/50 hover:bg-indigo-900/40 hover:border-indigo-600 border-2 border-transparent"
                     >
-                      {channel.logo && (
+                      {isAbsoluteUrl(channel.logo) && (
                         <img src={channel.logo} alt="" className="w-8 h-8 rounded object-cover" />
                       )}
                       <div className="flex-1 text-left">

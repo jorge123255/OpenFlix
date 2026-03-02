@@ -75,6 +75,163 @@ func (e *EPGEnricher) EnrichPrograms(start, end time.Time, limit int) (int, erro
 	return enriched, nil
 }
 
+// EnrichSportsPrograms scans sports programs and populates teams, league, and artwork fields
+// This uses the local sports team database (no TMDB needed)
+func (e *EPGEnricher) EnrichSportsPrograms(start, end time.Time, limit int) (int, error) {
+	// Find sports programs without team data in the time range
+	var programs []models.Program
+	query := e.db.Where("start >= ? AND start < ? AND is_sports = 1 AND (teams IS NULL OR teams = '')", start, end).
+		Order("start ASC")
+
+	if limit > 0 {
+		query = query.Limit(limit)
+	}
+
+	if err := query.Find(&programs).Error; err != nil {
+		return 0, err
+	}
+
+	if len(programs) == 0 {
+		return 0, nil
+	}
+
+	log.WithField("count", len(programs)).Info("Found sports programs to enrich with team data")
+
+	enriched := 0
+	// Cache title->result to batch update programs with same title
+	titleCache := make(map[string]*sportsEnrichResult)
+
+	for _, p := range programs {
+		titleKey := strings.ToLower(p.Title)
+
+		// Check title cache
+		if cached, ok := titleCache[titleKey]; ok {
+			if cached != nil {
+				enriched++
+			}
+			continue // Already processed (batch update handled it)
+		}
+
+		// Search for team names in title and subtitle only
+		// (description is too noisy and causes false positives)
+		searchText := p.Title
+		if p.Subtitle != "" {
+			searchText += " " + p.Subtitle
+		}
+
+		teams := FindTeamInText(searchText)
+		if len(teams) == 0 {
+			// Also try to detect league from title patterns
+			league := detectLeagueFromTitle(p.Title)
+			if league != "" {
+				// At least set the league even if we can't identify specific teams
+				result := e.db.Model(&models.Program{}).
+					Where("title = ? AND is_sports = 1 AND (league IS NULL OR league = '')", p.Title).
+					Update("league", league)
+				if result.Error == nil && result.RowsAffected > 0 {
+					enriched++
+				}
+			}
+			titleCache[titleKey] = nil
+			continue
+		}
+
+		// Build team names and determine league
+		var teamNames []string
+		var leagues []string
+		var logoURL string
+		seenLeagues := make(map[string]bool)
+
+		for _, team := range teams {
+			teamNames = append(teamNames, team.Name)
+			if !seenLeagues[team.League] {
+				leagues = append(leagues, team.League)
+				seenLeagues[team.League] = true
+			}
+			// Use first team's logo as artwork if no icon exists
+			if logoURL == "" {
+				logoURL = team.GetLogoURL()
+			}
+		}
+
+		teamsStr := strings.Join(teamNames, ", ")
+		leagueStr := strings.Join(leagues, ", ")
+
+		// Batch update teams and league
+		result := e.db.Model(&models.Program{}).
+			Where("title = ? AND is_sports = 1 AND (teams IS NULL OR teams = '')", p.Title).
+			Updates(map[string]interface{}{
+				"teams":  teamsStr,
+				"league": leagueStr,
+			})
+
+		// Set icon to team logo for programs without artwork
+		if logoURL != "" {
+			e.db.Model(&models.Program{}).
+				Where("title = ? AND is_sports = 1 AND (icon IS NULL OR icon = '')", p.Title).
+				Update("icon", logoURL)
+		}
+
+		if result.Error != nil {
+			log.WithError(result.Error).WithField("title", p.Title).Debug("Failed to update sports program")
+			titleCache[titleKey] = nil
+			continue
+		}
+
+		titleCache[titleKey] = &sportsEnrichResult{
+			teams:  strings.Join(teamNames, ", "),
+			league: strings.Join(leagues, ", "),
+		}
+		enriched++
+
+		if result.RowsAffected > 1 {
+			log.WithFields(log.Fields{
+				"title":   p.Title,
+				"teams":   strings.Join(teamNames, ", "),
+				"league":  strings.Join(leagues, ", "),
+				"updated": result.RowsAffected,
+			}).Debug("Batch updated sports programs")
+		}
+	}
+
+	return enriched, nil
+}
+
+type sportsEnrichResult struct {
+	teams  string
+	league string
+}
+
+// detectLeagueFromTitle detects a sports league from common title patterns
+func detectLeagueFromTitle(title string) string {
+	titleLower := strings.ToLower(title)
+
+	leaguePatterns := map[string][]string{
+		"NFL":    {"nfl", "nfl football", "monday night football", "sunday night football", "thursday night football", "nfl live", "nfl draft"},
+		"NBA":    {"nba", "nba basketball", "nba today", "nba pregame", "nba tip-off"},
+		"MLB":    {"mlb", "mlb baseball"},
+		"NHL":    {"nhl", "nhl hockey"},
+		"MLS":    {"mls", "mls soccer"},
+		"NCAA":   {"ncaa", "college football", "college basketball", "march madness"},
+		"PGA":    {"pga", "pga tour", "tgl golf"},
+		"UFC":    {"ufc"},
+		"NASCAR": {"nascar"},
+		"F1":     {"formula 1", "formula one", "f1 racing"},
+		"ATP":    {"atp"},
+		"FIFA":   {"fifa", "fifa world cup"},
+	}
+
+	for league, patterns := range leaguePatterns {
+		for _, pattern := range patterns {
+			if containsWord(titleLower, pattern) {
+				return league
+			}
+		}
+	}
+
+	return ""
+}
+
 // skipTitles are generic titles that shouldn't be enriched (would match wrong content)
 var skipTitles = map[string]bool{
 	"to be announced":       true,
@@ -102,11 +259,6 @@ var skipTitles = map[string]bool{
 
 // enrichProgram enriches a single program with TMDB artwork
 func (e *EPGEnricher) enrichProgram(p *models.Program) error {
-	// Skip sports, news, and content that won't be in TMDB
-	if p.IsSports || p.IsNews {
-		return nil
-	}
-
 	// Generate cache key from title (normalized)
 	cacheKey := e.normalizeTitle(p.Title)
 
@@ -306,13 +458,22 @@ func (e *EPGEnricher) cacheResult(key, url string) {
 
 // EnrichAllFuturePrograms enriches all future programs (background job)
 func (e *EPGEnricher) EnrichAllFuturePrograms() {
-	if e.tmdb == nil || !e.tmdb.IsConfigured() {
-		log.Warn("TMDB not configured, skipping EPG enrichment")
-		return
-	}
-
 	start := time.Now()
 	end := start.Add(7 * 24 * time.Hour) // Next 7 days
+
+	// Sports enrichment (no TMDB needed)
+	sportsEnriched, err := e.EnrichSportsPrograms(start, end, 500)
+	if err != nil {
+		log.WithError(err).Error("Failed to enrich sports programs")
+	} else if sportsEnriched > 0 {
+		log.WithField("enriched", sportsEnriched).Info("Sports enrichment completed")
+	}
+
+	// TMDB enrichment
+	if e.tmdb == nil || !e.tmdb.IsConfigured() {
+		log.Debug("TMDB not configured, skipping TMDB enrichment (sports enrichment still runs)")
+		return
+	}
 
 	enriched, err := e.EnrichPrograms(start, end, 500) // Limit to 500 per run
 	if err != nil {
@@ -320,7 +481,7 @@ func (e *EPGEnricher) EnrichAllFuturePrograms() {
 		return
 	}
 
-	log.WithField("enriched", enriched).Info("EPG enrichment completed")
+	log.WithField("enriched", enriched).Info("TMDB enrichment completed")
 }
 
 // StartBackgroundEnrichment starts a background goroutine that continuously enriches programs
@@ -360,35 +521,44 @@ func (e *EPGEnricher) StartBackgroundEnrichment() {
 
 // runEnrichmentCycle runs a single enrichment cycle
 func (e *EPGEnricher) runEnrichmentCycle() {
+	start := time.Now()
+	end := start.Add(7 * 24 * time.Hour)
+
+	// Always run sports enrichment (doesn't need TMDB)
+	sportsEnriched, err := e.EnrichSportsPrograms(start, end, 500)
+	if err != nil {
+		log.WithError(err).Error("Sports enrichment failed")
+	} else if sportsEnriched > 0 {
+		log.WithField("enriched", sportsEnriched).Info("Sports team enrichment completed")
+	}
+
+	// TMDB enrichment for non-sports programs (needs API key)
 	if e.tmdb == nil || !e.tmdb.IsConfigured() {
 		return
 	}
 
-	start := time.Now()
-	end := start.Add(7 * 24 * time.Hour)
-
 	// Count unique titles without artwork
 	var count int64
 	e.db.Model(&models.Program{}).
-		Where("start >= ? AND start < ? AND (icon IS NULL OR icon = '') AND is_sports = 0 AND is_news = 0", start, end).
+		Where("start >= ? AND start < ? AND (icon IS NULL OR icon = '')", start, end).
 		Distinct("title").
 		Count(&count)
 
 	if count == 0 {
-		log.Debug("No programs need enrichment")
+		log.Debug("No programs need TMDB enrichment")
 		return
 	}
 
-	log.WithField("unique_titles", count).Info("Starting EPG enrichment cycle")
+	log.WithField("unique_titles", count).Info("Starting TMDB enrichment cycle")
 
 	// Process up to 200 unique titles per cycle (each will batch update all programs with same title)
 	enriched, err := e.EnrichPrograms(start, end, 200)
 	if err != nil {
-		log.WithError(err).Error("EPG enrichment cycle failed")
+		log.WithError(err).Error("TMDB enrichment cycle failed")
 		return
 	}
 
-	log.WithField("enriched", enriched).Info("EPG enrichment cycle completed")
+	log.WithField("enriched", enriched).Info("TMDB enrichment cycle completed")
 }
 
 // StopBackgroundEnrichment stops the background enrichment

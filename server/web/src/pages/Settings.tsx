@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
-import { Save, CheckCircle, XCircle, Loader, Download, Upload, AlertCircle } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { Save, CheckCircle, XCircle, Loader, Download, Upload, AlertCircle, Server, Globe, Play } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { api, type ServerSettings, type DVRSettings, type ImportResult, type ConfigStats } from '../api/client'
+import { api, type ServerSettings, type ImportResult, type ConfigStats } from '../api/client'
 
 function useServerConfig() {
   return useQuery({
@@ -11,10 +12,13 @@ function useServerConfig() {
   })
 }
 
-function SettingSection({ title, children }: { title: string; children: React.ReactNode }) {
+function SettingSection({ title, icon, children }: { title: string; icon?: React.ReactNode; children: React.ReactNode }) {
   return (
     <div className="bg-gray-800 rounded-xl p-6 mb-6">
-      <h2 className="text-lg font-semibold text-white mb-4">{title}</h2>
+      <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+        {icon}
+        {title}
+      </h2>
       <div className="space-y-4">{children}</div>
     </div>
   )
@@ -38,130 +42,6 @@ function SettingField({
   )
 }
 
-function DVRSettingsSection() {
-  const queryClient = useQueryClient()
-  const [saved, setSaved] = useState(false)
-
-  const { data: dvrSettings, isLoading, error } = useQuery({
-    queryKey: ['dvrSettings'],
-    queryFn: () => api.getDVRSettings(),
-    retry: 1,
-  })
-
-  const { data: commercialStatus } = useQuery({
-    queryKey: ['commercialDetectionStatus'],
-    queryFn: () => api.getCommercialDetectionStatus(),
-    retry: 1,
-  })
-
-  const [maxConcurrent, setMaxConcurrent] = useState(0)
-
-  useEffect(() => {
-    if (dvrSettings) {
-      setMaxConcurrent(dvrSettings.maxConcurrentRecordings)
-    }
-  }, [dvrSettings])
-
-  const updateSettings = useMutation({
-    mutationFn: (data: Partial<DVRSettings>) => api.updateDVRSettings(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['dvrSettings'] })
-      setSaved(true)
-      setTimeout(() => setSaved(false), 3000)
-    },
-  })
-
-  const handleSave = () => {
-    updateSettings.mutate({ maxConcurrentRecordings: maxConcurrent })
-  }
-
-  if (isLoading) {
-    return (
-      <div className="bg-gray-800 rounded-xl p-6 mb-6">
-        <h2 className="text-lg font-semibold text-white mb-4">DVR Settings</h2>
-        <div className="text-gray-400">Loading...</div>
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="bg-gray-800 rounded-xl p-6 mb-6">
-        <h2 className="text-lg font-semibold text-white mb-4">DVR Settings</h2>
-        <div className="text-red-400 text-sm">Failed to load DVR settings</div>
-      </div>
-    )
-  }
-
-  return (
-    <div className="bg-gray-800 rounded-xl p-6 mb-6">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold text-white">DVR Settings</h2>
-        <button
-          onClick={handleSave}
-          disabled={updateSettings.isPending}
-          className="flex items-center gap-2 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-800 text-white text-sm rounded-lg"
-        >
-          <Save className="h-3.5 w-3.5" />
-          {updateSettings.isPending ? 'Saving...' : saved ? 'Saved!' : 'Save'}
-        </button>
-      </div>
-      <div className="space-y-4">
-        <SettingField
-          label="Max Concurrent Recordings"
-          description="Maximum number of recordings that can run at the same time. Set to 0 for unlimited."
-        >
-          <div className="flex items-center gap-3">
-            <input
-              type="number"
-              min="0"
-              value={maxConcurrent}
-              onChange={(e) => setMaxConcurrent(Number(e.target.value))}
-              className="w-32 px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
-            />
-            <span className="text-gray-400 text-sm">
-              {maxConcurrent === 0 ? '(Unlimited)' : `(Max ${maxConcurrent} at once)`}
-            </span>
-          </div>
-        </SettingField>
-        <p className="text-xs text-gray-500">
-          If you have limited tuners or bandwidth, you may want to set a limit.
-          When conflicts occur, higher priority recordings will be preferred.
-        </p>
-
-        {/* Commercial Detection Status */}
-        <div className="pt-4 border-t border-gray-700">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-sm font-medium text-gray-300">Commercial Detection</h3>
-              <p className="text-xs text-gray-500 mt-1">
-                Automatically detect and skip commercials in recordings using Comskip
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              {commercialStatus?.enabled ? (
-                <>
-                  <CheckCircle className="h-4 w-4 text-green-400" />
-                  <span className="text-sm text-green-400">Enabled</span>
-                </>
-              ) : (
-                <>
-                  <XCircle className="h-4 w-4 text-gray-500" />
-                  <span className="text-sm text-gray-500">Not Available</span>
-                </>
-              )}
-            </div>
-          </div>
-          {!commercialStatus?.enabled && (
-            <p className="text-xs text-gray-500 mt-2">
-              Comskip is not installed. Commercial detection will be enabled automatically when Comskip is available.
-            </p>
-          )}
-        </div>
-      </div>
-    </div>
-  )
-}
 
 function VODSettingsSection({
   vodApiUrl,
@@ -512,6 +392,12 @@ function ConfigBackupSection() {
   )
 }
 
+
+const inputClass = "w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
+const selectClass = "w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
+const numberInputClass = "w-32 px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
+const readOnlyClass = "w-full px-4 py-2 bg-gray-900 border border-gray-700 rounded-lg text-gray-400 cursor-not-allowed"
+
 export function SettingsPage() {
   const { data: config, isLoading, error } = useServerConfig()
   const queryClient = useQueryClient()
@@ -599,7 +485,7 @@ transcode:
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between mb-2">
         <div>
           <h1 className="text-2xl font-bold text-white">Settings</h1>
           <p className="text-gray-400 mt-1">Configure your OpenFlix server</p>
@@ -614,13 +500,91 @@ transcode:
         </button>
       </div>
 
+      {/* Settings Tab Navigation */}
+      <div className="flex gap-1 mb-8 bg-gray-800 rounded-lg p-1 w-fit">
+        <Link
+          to="/ui/settings"
+          className="px-4 py-2 rounded-md text-sm font-medium bg-indigo-600 text-white"
+        >
+          General
+        </Link>
+        <Link
+          to="/ui/settings/sources"
+          className="px-4 py-2 rounded-md text-sm font-medium text-gray-400 hover:text-white hover:bg-gray-700 transition-colors"
+        >
+          Sources
+        </Link>
+        <Link
+          to="/ui/settings/livetv-dvr"
+          className="px-4 py-2 rounded-md text-sm font-medium text-gray-400 hover:text-white hover:bg-gray-700 transition-colors"
+        >
+          Live TV & DVR
+        </Link>
+        <Link
+          to="/ui/settings/advanced"
+          className="px-4 py-2 rounded-md text-sm font-medium text-gray-400 hover:text-white hover:bg-gray-700 transition-colors"
+        >
+          Advanced
+        </Link>
+        <Link
+          to="/ui/settings/status"
+          className="px-4 py-2 rounded-md text-sm font-medium text-gray-400 hover:text-white hover:bg-gray-700 transition-colors"
+        >
+          Status
+        </Link>
+      </div>
+
+      {/* 1. Server Settings */}
+      <SettingSection title="Server Settings" icon={<Server className="h-5 w-5 text-indigo-400" />}>
+        <SettingField label="Server Name" description="Friendly name shown to clients on your network">
+          <input
+            type="text"
+            value={formData.server_name || ''}
+            onChange={(e) => updateField('server_name', e.target.value)}
+            className={inputClass}
+            placeholder="OpenFlix Server"
+          />
+        </SettingField>
+        <SettingField label="Server Port" description="Port the server listens on. Requires restart to take effect.">
+          <input
+            type="number"
+            min="1"
+            max="65535"
+            value={formData.server_port || 32400}
+            onChange={(e) => updateField('server_port', Number(e.target.value))}
+            className={numberInputClass}
+          />
+        </SettingField>
+        <SettingField label="Log Level" description="Controls the verbosity of server logs">
+          <select
+            value={formData.log_level || 'info'}
+            onChange={(e) => updateField('log_level', e.target.value)}
+            className={selectClass}
+          >
+            <option value="debug">Debug</option>
+            <option value="info">Info</option>
+            <option value="warn">Warning</option>
+            <option value="error">Error</option>
+          </select>
+        </SettingField>
+        <SettingField label="Data Directory" description="Where OpenFlix stores its database, cache, and media files">
+          <input
+            type="text"
+            value={formData.data_dir || ''}
+            readOnly
+            className={readOnlyClass}
+          />
+        </SettingField>
+      </SettingSection>
+
+      {/* Metadata (existing) */}
       <SettingSection title="Metadata">
         <SettingField label="TMDB API Key" description="For movie and TV show metadata (get yours at themoviedb.org)">
           <input
             type="password"
             value={formData.tmdb_api_key || ''}
             onChange={(e) => updateField('tmdb_api_key', e.target.value)}
-            className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
+            className={inputClass}
             placeholder="Enter your TMDB API key"
           />
         </SettingField>
@@ -629,7 +593,7 @@ transcode:
             type="password"
             value={formData.tvdb_api_key || ''}
             onChange={(e) => updateField('tvdb_api_key', e.target.value)}
-            className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
+            className={inputClass}
             placeholder="Enter your TVDB API key"
           />
         </SettingField>
@@ -637,7 +601,7 @@ transcode:
           <select
             value={formData.metadata_lang || 'en'}
             onChange={(e) => updateField('metadata_lang', e.target.value)}
-            className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
+            className={selectClass}
           >
             <option value="en">English</option>
             <option value="es">Spanish</option>
@@ -655,29 +619,110 @@ transcode:
             type="number"
             value={formData.scan_interval || 60}
             onChange={(e) => updateField('scan_interval', Number(e.target.value))}
-            className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
+            className={numberInputClass}
           />
         </SettingField>
       </SettingSection>
 
-      <DVRSettingsSection />
 
+      {/* 6. Playback Defaults */}
+      <SettingSection title="Playback Defaults" icon={<Play className="h-5 w-5 text-purple-400" />}>
+        <SettingField label="Default Playback Speed" description="Default speed for video playback">
+          <select
+            value={formData.default_playback_speed || '1.0'}
+            onChange={(e) => updateField('default_playback_speed', e.target.value)}
+            className={selectClass}
+          >
+            <option value="0.5">0.5x</option>
+            <option value="0.75">0.75x</option>
+            <option value="1.0">1.0x (Normal)</option>
+            <option value="1.25">1.25x</option>
+            <option value="1.5">1.5x</option>
+            <option value="1.75">1.75x</option>
+            <option value="2.0">2.0x</option>
+          </select>
+        </SettingField>
+        <SettingField label="Frame Rate Matching" description="Match display refresh rate to content frame rate">
+          <select
+            value={formData.frame_rate_match_mode || 'auto'}
+            onChange={(e) => updateField('frame_rate_match_mode', e.target.value)}
+            className={selectClass}
+          >
+            <option value="auto">Auto</option>
+            <option value="always">Always</option>
+            <option value="never">Never</option>
+          </select>
+        </SettingField>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <SettingField label="Default Subtitle Language" description="Preferred language for subtitles">
+            <select
+              value={formData.default_subtitle_language || ''}
+              onChange={(e) => updateField('default_subtitle_language', e.target.value)}
+              className={selectClass}
+            >
+              <option value="">None (Off)</option>
+              <option value="en">English</option>
+              <option value="es">Spanish</option>
+              <option value="fr">French</option>
+              <option value="de">German</option>
+              <option value="it">Italian</option>
+              <option value="pt">Portuguese</option>
+              <option value="ja">Japanese</option>
+              <option value="ko">Korean</option>
+              <option value="zh">Chinese</option>
+              <option value="ar">Arabic</option>
+              <option value="ru">Russian</option>
+              <option value="hi">Hindi</option>
+            </select>
+          </SettingField>
+          <SettingField label="Default Audio Language" description="Preferred language for audio tracks">
+            <select
+              value={formData.default_audio_language || 'en'}
+              onChange={(e) => updateField('default_audio_language', e.target.value)}
+              className={selectClass}
+            >
+              <option value="en">English</option>
+              <option value="es">Spanish</option>
+              <option value="fr">French</option>
+              <option value="de">German</option>
+              <option value="it">Italian</option>
+              <option value="pt">Portuguese</option>
+              <option value="ja">Japanese</option>
+              <option value="ko">Korean</option>
+              <option value="zh">Chinese</option>
+              <option value="ar">Arabic</option>
+              <option value="ru">Russian</option>
+              <option value="hi">Hindi</option>
+            </select>
+          </SettingField>
+        </div>
+      </SettingSection>
+
+      {/* VOD (existing) */}
       <VODSettingsSection
         vodApiUrl={formData.vod_api_url || ''}
         onUrlChange={(url) => updateField('vod_api_url', url)}
       />
 
-      <ConfigBackupSection />
-
-      <div className="bg-gray-800 rounded-xl p-6">
-        <h2 className="text-lg font-semibold text-white mb-4">Other Settings</h2>
-        <p className="text-gray-400 text-sm">
-          Additional server settings (Live TV, Transcoding) can be configured via the <code className="bg-gray-700 px-2 py-1 rounded">config.yaml</code> file.
-        </p>
-        <p className="text-gray-500 text-sm mt-2">
-          Location: <code className="bg-gray-700 px-2 py-1 rounded">~/.openflix/config.yaml</code>
-        </p>
+      {/* Remote Access link card */}
+      <div className="bg-gray-800 rounded-xl p-6 mb-6 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Globe className="h-6 w-6 text-green-400 flex-shrink-0" />
+          <div>
+            <h2 className="text-base font-semibold text-white">Remote Access & Cloud Discovery</h2>
+            <p className="text-sm text-gray-400 mt-0.5">Configure Tailscale, cloud discovery, and away-from-home access</p>
+          </div>
+        </div>
+        <Link
+          to="/ui/remote-access"
+          className="flex items-center gap-2 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-gray-300 hover:text-white rounded-lg text-sm transition-colors whitespace-nowrap"
+        >
+          Configure →
+        </Link>
       </div>
+
+      {/* Config Backup (existing) */}
+      <ConfigBackupSection />
     </div>
   )
 }

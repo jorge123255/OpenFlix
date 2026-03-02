@@ -173,6 +173,17 @@ func (s *Server) scheduleRecording(c *gin.Context) {
 		return
 	}
 
+	// Check for duplicate recording (same title + overlapping time window)
+	var existing models.Recording
+	if err := s.db.Where("user_id = ? AND status IN ? AND title = ? AND start_time < ? AND end_time > ?",
+		userID, []string{"scheduled", "recording"}, req.Title, req.EndTime, req.StartTime).First(&existing).Error; err == nil {
+		c.JSON(http.StatusConflict, gin.H{
+			"error":       "A recording for this program already exists",
+			"recordingId": existing.ID,
+		})
+		return
+	}
+
 	// Check for conflicts before creating
 	var conflicts []models.Recording
 	s.db.Where("user_id = ? AND status IN ? AND start_time < ? AND end_time > ?",
@@ -250,28 +261,54 @@ func (s *Server) scheduleRecording(c *gin.Context) {
 func (s *Server) recordFromProgram(c *gin.Context) {
 	userID := c.GetUint("userID")
 
-	var req struct {
-		ChannelID    uint `json:"channelId" binding:"required"`
-		ProgramID    uint `json:"programId" binding:"required"`
-		SeriesRecord bool `json:"seriesRecord"`
-		Priority     *int `json:"priority"` // 0-100, higher = more important (default 50)
-	}
-	if err := c.ShouldBindJSON(&req); err != nil {
+	var raw map[string]interface{}
+	if err := c.ShouldBindJSON(&raw); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
+	channelID, err := parseUintField(raw, "channelId")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "channelId is required and must be a number"})
+		return
+	}
+	programID, err := parseUintField(raw, "programId")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "programId is required and must be a number"})
+		return
+	}
+	seriesRecord, _ := raw["seriesRecord"].(bool)
+
+	var priority *int
+	if p, ok := raw["priority"]; ok && p != nil {
+		if pf, ok := p.(float64); ok {
+			pi := int(pf)
+			priority = &pi
+		}
+	}
+
 	// Validate channel exists
 	var channel models.Channel
-	if err := s.db.First(&channel, req.ChannelID).Error; err != nil {
+	if err := s.db.First(&channel, channelID).Error; err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Channel not found"})
 		return
 	}
 
 	// Get the program
 	var program models.Program
-	if err := s.db.First(&program, req.ProgramID).Error; err != nil {
+	if err := s.db.First(&program, programID).Error; err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Program not found"})
+		return
+	}
+
+	// Check for duplicate recording (same title + overlapping time = already scheduled)
+	var existingRec models.Recording
+	if err := s.db.Where("user_id = ? AND status IN ? AND title = ? AND start_time = ? AND end_time = ?",
+		userID, []string{"scheduled", "recording", "completed"}, program.Title, program.Start, program.End).First(&existingRec).Error; err == nil {
+		c.JSON(http.StatusConflict, gin.H{
+			"error":       "A recording for this program already exists",
+			"recordingId": existingRec.ID,
+		})
 		return
 	}
 
@@ -281,27 +318,28 @@ func (s *Server) recordFromProgram(c *gin.Context) {
 		userID, []string{"scheduled", "recording"}, program.End, program.Start).Find(&conflicts)
 
 	// Set priority (default 50)
-	priority := 50
-	if req.Priority != nil {
-		if *req.Priority < 0 || *req.Priority > 100 {
+	prio := 50
+	if priority != nil {
+		if *priority < 0 || *priority > 100 {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Priority must be between 0 and 100"})
 			return
 		}
-		priority = *req.Priority
+		prio = *priority
 	}
 
 	// Create the recording with program metadata
+	progID := uint(programID)
 	recording := models.Recording{
 		UserID:       userID,
-		ChannelID:    req.ChannelID,
-		ProgramID:    &req.ProgramID,
+		ChannelID:    uint(channelID),
+		ProgramID:    &progID,
 		Title:        program.Title,
 		Subtitle:     program.Subtitle,
 		Description:  program.Description,
 		StartTime:    program.Start,
 		EndTime:      program.End,
 		Status:       "scheduled",
-		SeriesRecord: req.SeriesRecord,
+		SeriesRecord: seriesRecord,
 		Category:     program.Category,
 		EpisodeNum:   program.EpisodeNum,
 		Thumb:        program.Icon,        // Use program icon as initial thumb
@@ -309,7 +347,7 @@ func (s *Server) recordFromProgram(c *gin.Context) {
 		ChannelName:  channel.Name,
 		ChannelLogo:  channel.Logo,
 		IsMovie:      program.IsMovie,
-		Priority:     priority,
+		Priority:     prio,
 	}
 
 	if err := s.db.Create(&recording).Error; err != nil {
@@ -327,7 +365,7 @@ func (s *Server) recordFromProgram(c *gin.Context) {
 	}
 
 	// If series recording is requested, schedule future episodes
-	if req.SeriesRecord && program.Title != "" {
+	if seriesRecord && program.Title != "" {
 		go s.scheduleFutureSeriesRecordings(userID, channel.ChannelID, program.Title, recording.ID)
 	}
 
@@ -436,11 +474,29 @@ func (s *Server) deleteRecording(c *gin.Context) {
 		return
 	}
 
-	// If recording is in progress, we'd need to stop it
-	// For now, just mark as cancelled if scheduled, or delete if completed/failed
+	// If recording is in progress, stop it first
 	if recording.Status == "recording" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Cannot delete recording in progress"})
-		return
+		if s.recorder != nil {
+			if err := s.recorder.CancelRecording(recording.ID); err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Failed to stop recording: %v", err)})
+				return
+			}
+		} else {
+			recording.Status = "cancelled"
+			s.db.Save(&recording)
+		}
+	}
+
+	// Remove the physical file and its EDL sidecar from disk
+	if recording.FilePath != "" {
+		if err := os.Remove(recording.FilePath); err != nil && !os.IsNotExist(err) {
+			logger.WithError(err).WithField("filePath", recording.FilePath).Warn("Failed to remove recording file from disk")
+		}
+		// Remove .edl sidecar (same name, different extension)
+		edlPath := strings.TrimSuffix(recording.FilePath, filepath.Ext(recording.FilePath)) + ".edl"
+		if err := os.Remove(edlPath); err != nil && !os.IsNotExist(err) {
+			logger.WithError(err).WithField("edlPath", edlPath).Warn("Failed to remove EDL file from disk")
+		}
 	}
 
 	if err := s.db.Delete(&recording).Error; err != nil {
@@ -449,6 +505,38 @@ func (s *Server) deleteRecording(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Recording deleted"})
+}
+
+// stopRecording stops an in-progress recording
+func (s *Server) stopRecording(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid recording ID"})
+		return
+	}
+
+	var recording models.Recording
+	if err := s.db.First(&recording, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Recording not found"})
+		return
+	}
+
+	if recording.Status != "recording" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Recording is not in progress"})
+		return
+	}
+
+	if s.recorder != nil {
+		if err := s.recorder.CancelRecording(recording.ID); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Failed to stop recording: %v", err)})
+			return
+		}
+	} else {
+		recording.Status = "cancelled"
+		s.db.Save(&recording)
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Recording stopped"})
 }
 
 // updateRecording updates a recording's metadata (title, description, category)
@@ -497,6 +585,71 @@ func (s *Server) updateRecording(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, recording)
+}
+
+// applyRecordingMatch applies a TMDB match to a recording (for fixing unmatched recordings)
+func (s *Server) applyRecordingMatch(c *gin.Context) {
+	userID := c.GetUint("userID")
+	isAdmin := c.GetBool("isAdmin")
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid recording ID"})
+		return
+	}
+
+	var recording models.Recording
+	query := s.db.Where("id = ?", id)
+	if !isAdmin {
+		query = query.Where("user_id IN ?", []uint{userID, 0})
+	}
+	if err := query.First(&recording).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Recording not found"})
+		return
+	}
+
+	var req struct {
+		TMDBId    int    `json:"tmdb_id" binding:"required"`
+		MediaType string `json:"media_type"` // "movie" or "tv"
+		Title     string `json:"title"`
+		Poster    string `json:"poster"`
+		Backdrop  string `json:"backdrop"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Update TMDB ID
+	recording.TMDBId = &req.TMDBId
+
+	// Update content type based on media type
+	if req.MediaType == "movie" {
+		recording.IsMovie = true
+		recording.ContentType = "movie"
+	} else if req.MediaType == "tv" {
+		recording.IsMovie = false
+		recording.ContentType = "show"
+	}
+
+	// Update title if provided
+	if req.Title != "" {
+		recording.Title = req.Title
+	}
+
+	// Update poster/backdrop if provided
+	if req.Poster != "" {
+		recording.Thumb = "https://image.tmdb.org/t/p/w500" + req.Poster
+	}
+	if req.Backdrop != "" {
+		recording.Art = "https://image.tmdb.org/t/p/w1280" + req.Backdrop
+	}
+
+	if err := s.db.Save(&recording).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update recording"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Match applied successfully", "recording": recording})
 }
 
 // updateRecordingPriority updates the priority of a scheduled recording
@@ -1065,9 +1218,17 @@ func (s *Server) getRecordingStreamUrl(c *gin.Context) {
 		return
 	}
 
-	// Return HLS URL for browser playback (browsers don't support raw .ts)
-	streamUrl := fmt.Sprintf("/dvr/recordings/%d/hls/master.m3u8", recording.ID)
-	c.JSON(http.StatusOK, gin.H{"url": streamUrl})
+	// Return stream URLs for playback
+	// HLS URL for browser playback (browsers don't support raw .ts)
+	hlsUrl := fmt.Sprintf("/dvr/recordings/%d/hls/master.m3u8", recording.ID)
+	// Direct stream URL for native apps (AVPlayer/ExoPlayer handle .ts natively)
+	directUrl := fmt.Sprintf("/dvr/stream/%d", recording.ID)
+	c.JSON(http.StatusOK, gin.H{
+		"url":       hlsUrl,
+		"hlsUrl":    hlsUrl,
+		"directUrl": directUrl,
+		"format":    "ts",
+	})
 }
 
 // getRecordingHLSPlaylist generates an HLS playlist for a recording
@@ -1496,4 +1657,323 @@ func (s *Server) updateRecordingProgress(c *gin.Context) {
 		"id":         recording.ID,
 		"viewOffset": req.ViewOffset,
 	})
+}
+
+// ============ Recordings Manager Endpoints ============
+
+// getRecordingsManager returns recordings formatted for the file-browser UI
+func (s *Server) getRecordingsManager(c *gin.Context) {
+	isAdmin := c.GetBool("isAdmin")
+	userID := c.GetUint("userID")
+
+	var query *gorm.DB
+	if isAdmin {
+		query = s.db.Model(&models.Recording{})
+	} else {
+		query = s.db.Where("user_id IN ?", []uint{userID, 0})
+	}
+
+	// Exclude soft-deleted recordings by default
+	includeDeleted := c.Query("includeDeleted") == "true"
+	if !includeDeleted {
+		query = query.Where("is_deleted = ? OR is_deleted IS NULL", false)
+	}
+
+	// Filter by content type (show, movie, video, image, unmatched)
+	if contentType := c.Query("contentType"); contentType != "" {
+		switch contentType {
+		case "show":
+			query = query.Where("is_movie = ? AND (content_type = ? OR content_type = '' OR content_type IS NULL)", false, "show")
+		case "movie":
+			query = query.Where("is_movie = ? OR content_type = ?", true, "movie")
+		case "video":
+			query = query.Where("content_type = ?", "video")
+		case "image":
+			query = query.Where("content_type = ?", "image")
+		case "unmatched":
+			query = query.Where("content_type = ? OR (tmdb_id IS NULL AND thumb = '' AND art = '')", "unmatched")
+		}
+	}
+
+	// Only completed recordings for the file browser
+	if status := c.Query("status"); status != "" {
+		query = query.Where("status = ?", status)
+	} else {
+		query = query.Where("status = ?", "completed")
+	}
+
+	// Filter by watched state
+	if watched := c.Query("watched"); watched != "" {
+		if watched == "true" {
+			query = query.Where("is_watched = ?", true)
+		} else {
+			query = query.Where("is_watched = ? OR is_watched IS NULL", false)
+		}
+	}
+
+	// Filter by favorite
+	if favorite := c.Query("favorite"); favorite != "" {
+		if favorite == "true" {
+			query = query.Where("is_favorite = ?", true)
+		}
+	}
+
+	// Filter by content rating
+	if rating := c.Query("contentRating"); rating != "" {
+		query = query.Where("content_rating = ?", rating)
+	}
+
+	// Search by title
+	if search := c.Query("search"); search != "" {
+		query = query.Where("title LIKE ? OR subtitle LIKE ? OR description LIKE ?",
+			"%"+search+"%", "%"+search+"%", "%"+search+"%")
+	}
+
+	// Filter by show title (for "All Shows" dropdown)
+	if showTitle := c.Query("showTitle"); showTitle != "" {
+		query = query.Where("title = ?", showTitle)
+	}
+
+	// Sorting
+	sortBy := c.DefaultQuery("sortBy", "date_added")
+	sortDir := c.DefaultQuery("sortDir", "desc")
+	if sortDir != "asc" && sortDir != "desc" {
+		sortDir = "desc"
+	}
+	switch sortBy {
+	case "name":
+		query = query.Order("title " + sortDir)
+	case "duration":
+		query = query.Order("duration " + sortDir)
+	case "size":
+		query = query.Order("file_size " + sortDir)
+	default: // date_added
+		query = query.Order("created_at " + sortDir)
+	}
+
+	var recordings []models.Recording
+	if err := query.Preload("Commercials").Find(&recordings).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch recordings"})
+		return
+	}
+
+	// Convert to response format
+	responses := make([]RecordingResponse, len(recordings))
+	for i, r := range recordings {
+		responses[i] = toRecordingResponse(r)
+	}
+
+	// Get distinct show titles for filter dropdown
+	var showTitles []string
+	s.db.Model(&models.Recording{}).
+		Where("status = ? AND (is_deleted = ? OR is_deleted IS NULL) AND is_movie = ?", "completed", false, false).
+		Distinct("title").Pluck("title", &showTitles)
+
+	// Get distinct content ratings
+	var contentRatings []string
+	s.db.Model(&models.Recording{}).
+		Where("status = ? AND (is_deleted = ? OR is_deleted IS NULL) AND content_rating != ''", "completed", false).
+		Distinct("content_rating").Pluck("content_rating", &contentRatings)
+
+	c.JSON(http.StatusOK, gin.H{
+		"recordings":     responses,
+		"totalCount":     len(responses),
+		"showTitles":     showTitles,
+		"contentRatings": contentRatings,
+	})
+}
+
+// toggleRecordingWatched toggles the watched state of a recording
+func (s *Server) toggleRecordingWatched(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid recording ID"})
+		return
+	}
+
+	var recording models.Recording
+	if err := s.db.First(&recording, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Recording not found"})
+		return
+	}
+
+	// Toggle or set explicit value
+	var req struct {
+		Watched *bool `json:"watched"`
+	}
+	if err := c.ShouldBindJSON(&req); err == nil && req.Watched != nil {
+		recording.IsWatched = *req.Watched
+	} else {
+		recording.IsWatched = !recording.IsWatched
+	}
+
+	if err := s.db.Save(&recording).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update recording"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"id":        recording.ID,
+		"isWatched": recording.IsWatched,
+	})
+}
+
+// toggleRecordingFavorite toggles the favorite state of a recording
+func (s *Server) toggleRecordingFavorite(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid recording ID"})
+		return
+	}
+
+	var recording models.Recording
+	if err := s.db.First(&recording, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Recording not found"})
+		return
+	}
+
+	var req struct {
+		Favorite *bool `json:"favorite"`
+	}
+	if err := c.ShouldBindJSON(&req); err == nil && req.Favorite != nil {
+		recording.IsFavorite = *req.Favorite
+	} else {
+		recording.IsFavorite = !recording.IsFavorite
+	}
+
+	if err := s.db.Save(&recording).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update recording"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"id":         recording.ID,
+		"isFavorite": recording.IsFavorite,
+	})
+}
+
+// toggleRecordingKeep toggles the keep-forever state of a recording
+func (s *Server) toggleRecordingKeep(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid recording ID"})
+		return
+	}
+
+	var recording models.Recording
+	if err := s.db.First(&recording, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Recording not found"})
+		return
+	}
+
+	var req struct {
+		KeepForever *bool `json:"keepForever"`
+	}
+	if err := c.ShouldBindJSON(&req); err == nil && req.KeepForever != nil {
+		recording.KeepForever = *req.KeepForever
+	} else {
+		recording.KeepForever = !recording.KeepForever
+	}
+
+	if err := s.db.Save(&recording).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update recording"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"id":          recording.ID,
+		"keepForever": recording.KeepForever,
+	})
+}
+
+// trashRecording soft-deletes a recording (move to trash)
+func (s *Server) trashRecording(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid recording ID"})
+		return
+	}
+
+	var recording models.Recording
+	if err := s.db.First(&recording, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Recording not found"})
+		return
+	}
+
+	now := time.Now()
+	recording.IsDeleted = true
+	recording.DeletedAt = &now
+
+	if err := s.db.Save(&recording).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to trash recording"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"id":      recording.ID,
+		"message": "Recording moved to trash",
+	})
+}
+
+// bulkRecordingAction performs bulk actions on multiple recordings
+func (s *Server) bulkRecordingAction(c *gin.Context) {
+	var req struct {
+		IDs    []uint `json:"ids" binding:"required"`
+		Action string `json:"action" binding:"required"` // delete, watched, unwatched, keep_forever
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if len(req.IDs) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "No recording IDs provided"})
+		return
+	}
+
+	var affected int64
+	switch req.Action {
+	case "delete":
+		now := time.Now()
+		result := s.db.Model(&models.Recording{}).Where("id IN ?", req.IDs).
+			Updates(map[string]interface{}{"is_deleted": true, "deleted_at": now})
+		affected = result.RowsAffected
+	case "watched":
+		result := s.db.Model(&models.Recording{}).Where("id IN ?", req.IDs).
+			Update("is_watched", true)
+		affected = result.RowsAffected
+	case "unwatched":
+		result := s.db.Model(&models.Recording{}).Where("id IN ?", req.IDs).
+			Update("is_watched", false)
+		affected = result.RowsAffected
+	case "keep_forever":
+		result := s.db.Model(&models.Recording{}).Where("id IN ?", req.IDs).
+			Update("keep_forever", true)
+		affected = result.RowsAffected
+	default:
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid action: " + req.Action})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"action":   req.Action,
+		"affected": affected,
+		"message":  fmt.Sprintf("%d recordings updated", affected),
+	})
+}
+
+// parseUintField extracts a uint64 from a map field that may be a JSON number or string.
+func parseUintField(m map[string]interface{}, key string) (uint64, error) {
+	val, ok := m[key]
+	if !ok || val == nil {
+		return 0, fmt.Errorf("%s is required", key)
+	}
+	switch v := val.(type) {
+	case float64:
+		return uint64(v), nil
+	case string:
+		return strconv.ParseUint(v, 10, 64)
+	default:
+		return 0, fmt.Errorf("%s must be a number", key)
+	}
 }
