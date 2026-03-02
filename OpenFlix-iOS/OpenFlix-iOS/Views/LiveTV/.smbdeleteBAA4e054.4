@@ -1,0 +1,2342 @@
+import SwiftUI
+
+extension Notification.Name {
+    static let switchTab = Notification.Name("switchTab")
+}
+
+// Scroll offset preference key for the landscape EPG grid
+private struct LandscapeScrollOffsetKey: PreferenceKey {
+    static var defaultValue: CGPoint = .zero
+    static func reduce(value: inout CGPoint, nextValue: () -> CGPoint) { value = nextValue() }
+}
+
+// MARK: - Program Detail Context
+
+struct ProgramDetailContext: Identifiable {
+    var id: String { program.id }
+    let program: Program
+    let channel: Channel
+}
+
+// MARK: - Xfinity-Style Live TV View (Simple List)
+
+struct XfinityLiveTVView: View {
+    @StateObject private var viewModel = LiveTVViewModel()
+    @State private var selectedFilter: ChannelFilter = .all
+    @State private var selectedDay: DayFilter = .today
+    @State private var selectedChannel: Channel?
+    @State private var showFullGuide = false
+    @State private var programDetailContext: ProgramDetailContext?
+    @State private var recordingToast: String?
+    @State private var showRecordingToast = false
+
+    // Feature navigation
+    @State private var showCatchup = false
+    @State private var showOnLater = false
+    @State private var showTeamPass = false
+    @State private var showChannelGroups = false
+    @State private var showChannelSurfing = false
+
+    // Landscape EPG
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @State private var isLandscape = UIDevice.current.orientation.isLandscape
+    @State private var guideDate = Date()
+    @State private var landscapeScrollOffset: CGPoint = .zero
+
+    private let dvrRepository = DVRRepository()
+    
+    enum ChannelFilter: String, CaseIterable {
+        case all = "All channels"
+        case favorites = "Favorites"
+        case sports = "Sports"
+        case news = "News"
+        case movies = "Movies"
+        case kids = "Kids"
+    }
+    
+    enum DayFilter: String, CaseIterable {
+        case today = "Today"
+        case tomorrow = "Tomorrow"
+    }
+    
+    // Xfinity colors
+    private let bgColor = Color(red: 17/255, green: 12/255, blue: 33/255)
+    private let accentPurple = Color(red: 97/255, green: 56/255, blue: 245/255)
+    private let cardBg = Color(red: 26/255, green: 20/255, blue: 46/255)
+    
+    var body: some View {
+        Group {
+            if isLandscape {
+                landscapeGuide
+            } else {
+                portraitView
+            }
+        }
+        .background(bgColor.ignoresSafeArea())
+        .onReceive(NotificationCenter.default.publisher(for: UIDevice.orientationDidChangeNotification)) { _ in
+            let orientation = UIDevice.current.orientation
+            if orientation.isLandscape || orientation.isPortrait {
+                withAnimation(.easeInOut(duration: 0.25)) {
+                    isLandscape = orientation.isLandscape
+                }
+            }
+        }
+        .navigationTitle(selectedFilter.rawValue)
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button {
+                    showFullGuide = true
+                } label: {
+                    Image(systemName: "calendar")
+                        .foregroundColor(.white)
+                }
+            }
+        }
+        .sheet(isPresented: $showFullGuide) {
+            EPGGuideView(viewModel: viewModel)
+        }
+        .sheet(item: $programDetailContext) { context in
+            ModernProgramDetailSheet(
+                program: context.program,
+                channel: context.channel,
+                onPlay: {
+                    programDetailContext = nil
+                    selectedChannel = context.channel
+                },
+                onRecord: {
+                    programDetailContext = nil
+                    recordProgram(context.program, channel: context.channel)
+                },
+                onCreatePass: { options in
+                    programDetailContext = nil
+                    createSeriesPass(context.program, channel: context.channel, options: options)
+                },
+                onDismiss: {
+                    programDetailContext = nil
+                }
+            )
+            .presentationDetents([.medium, .large])
+        }
+        .overlay(alignment: .top) {
+            if showRecordingToast, let message = recordingToast {
+                Text(message)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                    .background(Color.red.opacity(0.9))
+                    .cornerRadius(8)
+                    .padding(.top, 8)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                    .animation(.easeInOut, value: showRecordingToast)
+            }
+        }
+        .navigationDestination(isPresented: $showCatchup) {
+            CatchupView()
+        }
+        .navigationDestination(isPresented: $showOnLater) {
+            OnLaterView()
+        }
+        .navigationDestination(isPresented: $showTeamPass) {
+            TeamPassView()
+        }
+        .navigationDestination(isPresented: $showChannelGroups) {
+            ChannelGroupsView()
+        }
+        .navigationDestination(isPresented: $showChannelSurfing) {
+            ChannelSurfingView()
+        }
+        .fullScreenCover(item: $selectedChannel) { channel in
+            LiveChannelPlayerView(
+                channel: channel,
+                viewModel: viewModel,
+                channels: filteredChannels
+            ) {
+                selectedChannel = nil
+            }
+        }
+        .task {
+            await viewModel.loadChannels()
+            await viewModel.loadGuide()
+        }
+    }
+    
+    // MARK: - Filter Bar
+    
+    // MARK: - Portrait View
+
+    private var portraitView: some View {
+        VStack(spacing: 0) {
+            featureBar
+            filterBar
+            timeHeader
+
+            if viewModel.isLoading {
+                Spacer()
+                ProgressView().tint(.white)
+                Spacer()
+            } else if filteredChannels.isEmpty {
+                emptyState
+            } else {
+                channelList
+                    .refreshable {
+                        await viewModel.loadChannels()
+                        await viewModel.loadGuide()
+                    }
+            }
+        }
+    }
+
+    // MARK: - Landscape Full Guide
+
+    private let guideHourWidth: CGFloat = 240
+    private let guideChannelWidth: CGFloat = 120
+    private let guideRowHeight: CGFloat = 72
+
+    private var landscapeGuide: some View {
+        VStack(spacing: 0) {
+            landscapeDateStrip
+
+            if viewModel.isLoading {
+                Spacer()
+                ProgressView().tint(.white)
+                Spacer()
+            } else if filteredChannels.isEmpty {
+                emptyState
+            } else {
+                landscapeGrid
+            }
+        }
+        .ignoresSafeArea(.all, edges: .bottom)
+    }
+
+    // MARK: - Date Strip (14 days: 2 past + today + 11 future)
+
+    private var landscapeDateStrip: some View {
+        let today = Calendar.current.startOfDay(for: Date())
+        return ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 6) {
+                Color.clear.frame(width: 44) // space for menu button
+
+                ForEach(-2..<12, id: \.self) { offset in
+                    let date = Calendar.current.date(byAdding: .day, value: offset, to: today)!
+                    let isSelected = Calendar.current.isDate(date, inSameDayAs: guideDate)
+                    let isToday = Calendar.current.isDateInToday(date)
+
+                    Button {
+                        guideDate = date
+                        // Reset scroll offset when changing day
+                        landscapeScrollOffset = .zero
+                    } label: {
+                        VStack(spacing: 2) {
+                            Text(dayAbbrev(date))
+                                .font(.system(size: 9, weight: .medium))
+                                .foregroundStyle(isToday ? accentPurple : Color.gray)
+                            Text(dayNum(date))
+                                .font(.system(size: 13, weight: .bold))
+                                .foregroundStyle(.white)
+                        }
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
+                        .background(isSelected ? accentPurple : Color.white.opacity(0.1))
+                        .cornerRadius(8)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 8)
+                                .stroke(isToday && !isSelected ? accentPurple.opacity(0.5) : .clear, lineWidth: 1)
+                        )
+                    }
+                }
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 6)
+        }
+        .background(bgColor)
+    }
+
+    private func dayAbbrev(_ date: Date) -> String {
+        let f = DateFormatter()
+        f.dateFormat = "EEE"
+        return f.string(from: date).uppercased()
+    }
+
+    private func dayNum(_ date: Date) -> String {
+        let f = DateFormatter()
+        f.dateFormat = "d"
+        return f.string(from: date)
+    }
+
+    private var totalLandscapeWidth: CGFloat { guideHourWidth * 24 }
+    private let landscapeHeaderHeight: CGFloat = 36
+
+    // X position of "now" in the grid (pixels from midnight)
+    private var nowXPosition: CGFloat {
+        let midnight = Calendar.current.startOfDay(for: guideDate)
+        return CGFloat(Date().timeIntervalSince(midnight)) * (guideHourWidth / 3600.0)
+    }
+
+    private var landscapeGrid: some View {
+        GeometryReader { geo in
+            VStack(spacing: 0) {
+                // ── TOP ROW: corner cell (menu) + pinned time ruler ──
+                HStack(spacing: 0) {
+                    // Corner — contains the menu button
+                    landscapeCornerMenu
+                        .frame(width: guideChannelWidth, height: landscapeHeaderHeight)
+                        .background(Color(white: 0.08))
+
+                    // Time ruler — clipped viewport, slides with horizontal scroll
+                    landscapeTimeRuler
+                        .frame(width: totalLandscapeWidth)
+                        .offset(x: -landscapeScrollOffset.x)
+                        .frame(width: geo.size.width - guideChannelWidth, height: landscapeHeaderHeight, alignment: .leading)
+                        .clipped()
+                }
+                .background(Color(white: 0.07))
+                .zIndex(2)
+
+                // ── BOTTOM ROW: pinned channel column + scrollable program grid ──
+                HStack(spacing: 0) {
+                    // Channel column — clipped viewport, slides with vertical scroll
+                    VStack(spacing: 0) {
+                        ForEach(filteredChannels) { channel in
+                            landscapeChannelCell(channel)
+                                .frame(width: guideChannelWidth, height: guideRowHeight)
+                            Divider().background(Color.white.opacity(0.06))
+                        }
+                    }
+                    .offset(y: -landscapeScrollOffset.y)
+                    .frame(width: guideChannelWidth)
+                    .frame(height: geo.size.height - landscapeHeaderHeight, alignment: .top)
+                    .clipped()
+                    .background(Color(white: 0.07))
+                    .zIndex(1)
+
+                    // Main program grid — scrolls both axes, auto-jumps to "now"
+                    ScrollViewReader { proxy in
+                        ScrollView([.horizontal, .vertical], showsIndicators: false) {
+                            ZStack(alignment: .topLeading) {
+                                // Offset tracker
+                                GeometryReader { inner in
+                                    Color.clear.preference(
+                                        key: LandscapeScrollOffsetKey.self,
+                                        value: CGPoint(
+                                            x: -inner.frame(in: .named("landscapeGrid")).minX,
+                                            y: -inner.frame(in: .named("landscapeGrid")).minY
+                                        )
+                                    )
+                                }
+                                .frame(width: 1, height: 1)
+
+                                // Invisible anchor for "jump to now"
+                                Color.clear.frame(width: 1, height: 1)
+                                    .id("landscapeNow")
+                                    .offset(x: max(nowXPosition - 60, 0), y: 0)
+
+                                // Program rows
+                                LazyVStack(spacing: 0) {
+                                    ForEach(filteredChannels) { channel in
+                                        landscapeProgramRow(channel)
+                                            .frame(height: guideRowHeight)
+                                        Divider().background(Color.white.opacity(0.06))
+                                    }
+                                }
+                                .frame(width: totalLandscapeWidth)
+                            }
+                            .frame(width: totalLandscapeWidth)
+                        }
+                        .coordinateSpace(name: "landscapeGrid")
+                        .onPreferenceChange(LandscapeScrollOffsetKey.self) { offset in
+                            DispatchQueue.main.async { landscapeScrollOffset = offset }
+                        }
+                        .onAppear {
+                            // Auto-scroll to current time when viewing today
+                            if Calendar.current.isDateInToday(guideDate) {
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                                    proxy.scrollTo("landscapeNow", anchor: .leading)
+                                }
+                            }
+                        }
+                        .onChange(of: guideDate) { _ in
+                            // When switching to today, jump to now; otherwise go to start
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                                if Calendar.current.isDateInToday(guideDate) {
+                                    proxy.scrollTo("landscapeNow", anchor: .leading)
+                                } else {
+                                    proxy.scrollTo("landscapeNow", anchor: .leading)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Corner cell — compact menu button that doesn't crowd the layout
+    private var landscapeCornerMenu: some View {
+        Menu {
+            Section("Filter") {
+                ForEach(ChannelFilter.allCases, id: \.self) { filter in
+                    Button {
+                        selectedFilter = filter
+                    } label: {
+                        HStack {
+                            Text(filter.rawValue)
+                            if selectedFilter == filter { Image(systemName: "checkmark") }
+                        }
+                    }
+                }
+            }
+            Section("Navigate") {
+                Button { NotificationCenter.default.post(name: .switchTab, object: "forYou") } label: {
+                    Label("Home", systemImage: "house.fill")
+                }
+                Button { showCatchup = true } label: {
+                    Label("Catch Up", systemImage: "clock.arrow.circlepath")
+                }
+                Button { showOnLater = true } label: {
+                    Label("On Later", systemImage: "clock.badge.checkmark")
+                }
+            }
+            Section {
+                Button {
+                    Task { await viewModel.loadChannels(); await viewModel.loadGuide() }
+                } label: {
+                    Label("Refresh", systemImage: "arrow.clockwise")
+                }
+            }
+        } label: {
+            HStack(spacing: 4) {
+                Image(systemName: "line.3.horizontal")
+                    .font(.system(size: 12, weight: .semibold))
+                Text(selectedFilter == .all ? "All" : String(selectedFilter.rawValue.prefix(4)))
+                    .font(.system(size: 10, weight: .medium))
+            }
+            .foregroundStyle(Color.white)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+    }
+
+    private var landscapeTimeRuler: some View {
+        let calendar = Calendar.current
+        let midnight = calendar.startOfDay(for: guideDate)
+        let now = Date()
+        let isToday = calendar.isDateInToday(guideDate)
+        let formatter = DateFormatter()
+        formatter.dateFormat = "h a"
+
+        return HStack(spacing: 0) {
+            ForEach(0..<24, id: \.self) { hour in
+                let slotTime = midnight.addingTimeInterval(TimeInterval(hour * 3600))
+                let isCurrent = isToday && calendar.component(.hour, from: now) == hour
+                Text(formatter.string(from: slotTime))
+                    .font(.system(size: 11, weight: isCurrent ? .bold : .medium))
+                    .foregroundStyle(isCurrent ? accentPurple : Color.gray)
+                    .frame(width: guideHourWidth, alignment: .leading)
+                    .padding(.leading, 8)
+                    .background(isCurrent ? accentPurple.opacity(0.12) : Color.clear)
+            }
+        }
+        .background(bgColor)
+    }
+
+    private func landscapeChannelCell(_ channel: Channel) -> some View {
+        HStack(spacing: 6) {
+            if let logo = channel.logo {
+                AuthenticatedImage(path: logo, systemPlaceholder: "tv")
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 32, height: 20)
+            }
+
+            VStack(alignment: .leading, spacing: 1) {
+                if let number = channel.number {
+                    Text("\(number)")
+                        .font(.system(size: 10))
+                        .foregroundStyle(Color.gray)
+                }
+                Text(channel.name)
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(Color.white)
+                    .lineLimit(1)
+            }
+
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 8)
+        .background(bgColor)
+        .onTapGesture {
+            selectedChannel = channel
+        }
+    }
+
+    private func landscapeProgramRow(_ channel: Channel) -> some View {
+        let programs = programsForChannel(channel)
+        let calendar = Calendar.current
+        let midnight = calendar.startOfDay(for: guideDate)
+        let gridEnd = midnight.addingTimeInterval(24 * 3600)
+        let now = Date()
+        let pixelsPerSecond = guideHourWidth / 3600.0
+        let totalW = totalLandscapeWidth
+
+        let visible = programs.filter { $0.endTime > midnight && $0.startTime < gridEnd }
+
+        return ZStack(alignment: .leading) {
+            // "Now" indicator line (red vertical bar at current time)
+            if calendar.isDate(guideDate, inSameDayAs: now) {
+                let nowX = CGFloat(now.timeIntervalSince(midnight)) * pixelsPerSecond
+                Rectangle()
+                    .fill(Color.red.opacity(0.8))
+                    .frame(width: 2, height: guideRowHeight)
+                    .offset(x: nowX)
+                    .zIndex(10)
+            }
+
+            ForEach(visible) { program in
+                let clampedStart = max(program.startTime, midnight)
+                let clampedEnd   = min(program.endTime, gridEnd)
+                let xOffset      = CGFloat(clampedStart.timeIntervalSince(midnight)) * pixelsPerSecond
+                let width        = max(CGFloat(clampedEnd.timeIntervalSince(clampedStart)) * pixelsPerSecond - 2, 30)
+
+                let isNow   = program.startTime <= now && program.endTime > now
+                let isPast  = program.hasEnded
+                let cellWidth = max(width, 30)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    // Title
+                    Text(program.title)
+                        .font(.system(size: 13, weight: isNow ? .semibold : .regular))
+                        .foregroundStyle(isPast ? Color.gray : Color.white)
+                        .lineLimit(2)
+
+                    // Badges (only if cell is wide enough to show them)
+                    if cellWidth > 60 {
+                        landscapeProgramBadges(program)
+                    }
+
+                    // Progress bar for currently-airing programs
+                    if isNow {
+                        GeometryReader { g in
+                            ZStack(alignment: .leading) {
+                                Rectangle().fill(Color.white.opacity(0.15))
+                                Rectangle().fill(accentPurple).frame(width: g.size.width * program.progress)
+                            }
+                        }
+                        .frame(height: 3)
+                    }
+
+                    // Start time
+                    Text(timeLabel(program.startTime))
+                        .font(.system(size: 11))
+                        .foregroundStyle(isNow ? accentPurple : Color.gray)
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 6)
+                .frame(width: cellWidth, height: guideRowHeight - 6, alignment: .topLeading)
+                .background(
+                    isPast  ? cardBg.opacity(0.4) :
+                    isNow   ? accentPurple.opacity(0.25) : cardBg
+                )
+                .cornerRadius(6)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 6)
+                        .stroke(isNow ? accentPurple.opacity(0.5) : Color.white.opacity(0.06), lineWidth: isNow ? 1 : 0.5)
+                )
+                .offset(x: xOffset + 1)
+                .onTapGesture {
+                    programDetailContext = ProgramDetailContext(program: program, channel: channel)
+                }
+            }
+        }
+        .frame(width: totalW, alignment: .leading)
+        .clipped()
+    }
+
+    @ViewBuilder
+    private func landscapeProgramBadges(_ program: Program) -> some View {
+        let badges = epgBadges(program)
+        if !badges.isEmpty {
+            HStack(spacing: 3) {
+                ForEach(badges.prefix(2), id: \.label) { badge in
+                    Text(badge.label)
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 4)
+                        .padding(.vertical, 1)
+                        .background(badge.color)
+                        .cornerRadius(3)
+                }
+            }
+        }
+    }
+
+    private struct EPGBadge { let label: String; let color: Color }
+
+    private func epgBadges(_ program: Program) -> [EPGBadge] {
+        var result: [EPGBadge] = []
+        if program.isLive      { result.append(.init(label: "LIVE",    color: .red)) }
+        if program.isNew       { result.append(.init(label: "NEW",     color: Color(red: 0.1, green: 0.7, blue: 0.3))) }
+        if program.isPremiere  { result.append(.init(label: "PREM",    color: .purple)) }
+        if program.isFinale    { result.append(.init(label: "FINALE",  color: .orange)) }
+        if program.isSports    { result.append(.init(label: "SPORTS",  color: Color(red: 0.1, green: 0.5, blue: 0.9))) }
+        if program.category?.lowercased().contains("news") == true {
+                               result.append(.init(label: "NEWS",     color: Color(red: 0.5, green: 0.5, blue: 0.6))) }
+        if program.hasEnded    { result.append(.init(label: "PAST",    color: Color.gray.opacity(0.8))) }
+        return result
+    }
+
+    private func timeLabel(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "h:mm a"
+        return formatter.string(from: date)
+    }
+
+    // MARK: - Feature Bar
+
+    private var featureBar: some View {
+        HStack(spacing: 8) {
+            featureChip(icon: "clock.arrow.circlepath", title: "Catch Up") { showCatchup = true }
+            featureChip(icon: "clock.badge.checkmark", title: "On Later") { showOnLater = true }
+            featureChip(icon: "sportscourt", title: "Team Pass") { showTeamPass = true }
+            featureChip(icon: "rectangle.stack", title: "Groups") { showChannelGroups = true }
+            featureChip(icon: "arrow.left.arrow.right.circle", title: "Surfing") { showChannelSurfing = true }
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
+    }
+
+    private func featureChip(icon: String, title: String, action: @escaping () -> Void) -> some View {
+        HStack(spacing: 4) {
+            Image(systemName: icon)
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(Color.white)
+            Text(title)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(Color.white)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 7)
+        .background(Color(red: 97/255, green: 56/255, blue: 245/255).opacity(0.3))
+        .overlay(
+            Capsule()
+                .stroke(Color(red: 97/255, green: 56/255, blue: 245/255).opacity(0.6), lineWidth: 1)
+        )
+        .clipShape(Capsule())
+        .onTapGesture(perform: action)
+    }
+
+    // MARK: - Filter Bar
+
+    private var filterBar: some View {
+        HStack(spacing: 12) {
+            // Filter menu
+            Menu {
+                ForEach(ChannelFilter.allCases, id: \.self) { filter in
+                    Button {
+                        selectedFilter = filter
+                    } label: {
+                        HStack {
+                            Text(filter.rawValue)
+                            if selectedFilter == filter {
+                                Image(systemName: "checkmark")
+                            }
+                        }
+                    }
+                }
+            } label: {
+                HStack(spacing: 6) {
+                    Text("Filter")
+                        .font(.system(size: 14, weight: .medium))
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 10, weight: .semibold))
+                }
+                .foregroundColor(.white)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 8)
+                .background(cardBg)
+                .cornerRadius(8)
+            }
+            
+            // Day selector
+            HStack(spacing: 8) {
+                ForEach(DayFilter.allCases, id: \.self) { day in
+                    Button {
+                        selectedDay = day
+                    } label: {
+                        Text(day.rawValue)
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(selectedDay == day ? .white : .gray)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 8)
+                            .background(selectedDay == day ? cardBg : Color.clear)
+                            .cornerRadius(8)
+                    }
+                }
+            }
+            
+            Spacer()
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+    }
+    
+    // MARK: - Time Header
+    
+    private var timeHeader: some View {
+        HStack(spacing: 0) {
+            // Channel column spacer
+            Color.clear
+                .frame(width: 140)
+            
+            // Time slots
+            GeometryReader { geo in
+                HStack(spacing: 0) {
+                    ForEach(timeSlots, id: \.self) { slot in
+                        Text(slot)
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundColor(.gray)
+                            .frame(width: (geo.size.width) / CGFloat(timeSlots.count), alignment: .leading)
+                    }
+                }
+            }
+        }
+        .frame(height: 40)
+        .padding(.horizontal, 16)
+        .background(bgColor)
+    }
+    
+    private var timeSlots: [String] {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "h:mma"
+        
+        let now = Date()
+        let calendar = Calendar.current
+        
+        // Round to nearest 30 min
+        let minute = calendar.component(.minute, from: now)
+        let roundedMinute = (minute / 30) * 30
+        guard let startTime = calendar.date(bySettingHour: calendar.component(.hour, from: now),
+                                            minute: roundedMinute,
+                                            second: 0,
+                                            of: now) else {
+            return ["Now"]
+        }
+        
+        var slots: [String] = []
+        slots.append("Now - \(formatter.string(from: startTime.addingTimeInterval(30 * 60)).lowercased())")
+        
+        for i in 1..<4 {
+            let time = startTime.addingTimeInterval(TimeInterval(i * 30 * 60))
+            slots.append(formatter.string(from: time).lowercased())
+        }
+        
+        return slots
+    }
+    
+    // MARK: - Channel List
+    
+    private var channelList: some View {
+        ScrollView(.vertical, showsIndicators: false) {
+            LazyVStack(spacing: 0) {
+                ForEach(filteredChannels) { channel in
+                    XfinityChannelRow(
+                        channel: channel,
+                        programs: programsForChannel(channel),
+                        accentColor: accentPurple,
+                        onChannelTap: {
+                            selectedChannel = channel
+                        },
+                        onProgramTap: { program in
+                            programDetailContext = ProgramDetailContext(program: program, channel: channel)
+                        }
+                    )
+
+                    Divider()
+                        .background(Color.white.opacity(0.1))
+                }
+            }
+        }
+    }
+    
+    private var filteredChannels: [Channel] {
+        switch selectedFilter {
+        case .all:
+            return viewModel.channels
+        case .favorites:
+            return viewModel.channels.filter { $0.isFavorite }
+        case .sports:
+            return viewModel.channels.filter { $0.group?.lowercased().contains("sport") ?? false }
+        case .news:
+            return viewModel.channels.filter { $0.group?.lowercased().contains("news") ?? false }
+        case .movies:
+            return viewModel.channels.filter { $0.group?.lowercased().contains("movie") ?? false }
+        case .kids:
+            return viewModel.channels.filter { $0.group?.lowercased().contains("kid") ?? false }
+        }
+    }
+    
+    private func programsForChannel(_ channel: Channel) -> [Program] {
+        viewModel.guide.first { $0.channel.id == channel.id }?.programs ?? []
+    }
+    
+    // MARK: - Empty State
+    
+    private var emptyState: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "tv.slash")
+                .font(.system(size: 48))
+                .foregroundColor(.gray)
+            
+            Text("No channels available")
+                .font(.headline)
+                .foregroundColor(.white)
+            
+            Text("Check your server connection")
+                .font(.subheadline)
+                .foregroundColor(.gray)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    // MARK: - DVR Actions
+
+    private func recordProgram(_ program: Program, channel: Channel) {
+        Task {
+            do {
+                _ = try await dvrRepository.recordProgram(channelId: channel.id, programId: program.id)
+                recordingToast = "Recording: \(program.title)"
+                showRecordingToast = true
+                try? await Task.sleep(nanoseconds: 3_000_000_000)
+                showRecordingToast = false
+            } catch {
+                recordingToast = "Record failed: \(error.localizedDescription)"
+                showRecordingToast = true
+                try? await Task.sleep(nanoseconds: 3_000_000_000)
+                showRecordingToast = false
+            }
+        }
+    }
+
+    private func createSeriesPass(_ program: Program, channel: Channel, options: SeriesPassOptions) {
+        Task {
+            do {
+                let channelId = options.channelMode == .thisChannel ? channel.id : nil
+                try await dvrRepository.createSeriesRule(
+                    title: program.title,
+                    channelId: channelId,
+                    prePadding: options.startRecording.seconds,
+                    postPadding: options.endRecording.seconds,
+                    keepCount: options.keepMode.keepCount
+                )
+                recordingToast = "Series Pass created: \(program.title)"
+                showRecordingToast = true
+                try? await Task.sleep(nanoseconds: 3_000_000_000)
+                showRecordingToast = false
+            } catch {
+                recordingToast = "Pass failed: \(error.localizedDescription)"
+                showRecordingToast = true
+                try? await Task.sleep(nanoseconds: 3_000_000_000)
+                showRecordingToast = false
+            }
+        }
+    }
+}
+
+// MARK: - Channel Row
+
+struct XfinityChannelRow: View {
+    let channel: Channel
+    let programs: [Program]
+    let accentColor: Color
+    let onChannelTap: () -> Void
+    let onProgramTap: (Program) -> Void
+
+    private var currentProgram: Program? {
+        let now = Date()
+        return programs.first { $0.startTime <= now && $0.endTime > now }
+    }
+
+    private var nextProgram: Program? {
+        guard let current = currentProgram else { return programs.first }
+        return programs.first { $0.startTime >= current.endTime }
+    }
+
+    private var progress: Double {
+        guard let program = currentProgram else { return 0 }
+        let total = program.endTime.timeIntervalSince(program.startTime)
+        let elapsed = Date().timeIntervalSince(program.startTime)
+        return min(max(elapsed / total, 0), 1)
+    }
+
+    var body: some View {
+        HStack(spacing: 0) {
+            // Channel logo area → plays channel
+            Button(action: onChannelTap) {
+                channelInfo
+                    .frame(width: 140)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+
+            // Program area → shows detail popup
+            Button {
+                if let program = currentProgram {
+                    onProgramTap(program)
+                } else {
+                    onChannelTap()
+                }
+            } label: {
+                HStack(spacing: 0) {
+                    // Current program
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(currentProgram?.title ?? "No data")
+                            .font(.system(size: 15))
+                            .foregroundColor(.white)
+                            .lineLimit(2)
+
+                        // Progress bar
+                        GeometryReader { geo in
+                            ZStack(alignment: .leading) {
+                                Rectangle()
+                                    .fill(Color.white.opacity(0.2))
+                                    .frame(height: 3)
+
+                                Rectangle()
+                                    .fill(accentColor)
+                                    .frame(width: geo.size.width * progress, height: 3)
+                            }
+                        }
+                        .frame(height: 3)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.trailing, 16)
+
+                    // Next program
+                    Text(nextProgram?.title ?? "")
+                        .font(.system(size: 15))
+                        .foregroundColor(.gray)
+                        .lineLimit(2)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.vertical, 16)
+        .padding(.horizontal, 16)
+    }
+
+    private var channelInfo: some View {
+        HStack(spacing: 10) {
+            // Favorite star
+            Image(systemName: channel.isFavorite ? "star.fill" : "star")
+                .font(.system(size: 14))
+                .foregroundColor(channel.isFavorite ? .yellow : .gray.opacity(0.5))
+
+            // Channel logo
+            if let logo = channel.logo {
+                AuthenticatedImage(path: logo, systemPlaceholder: "tv")
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 40, height: 24)
+            } else {
+                Text(channel.name.prefix(3).uppercased())
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundColor(.white)
+                    .frame(width: 40)
+            }
+
+            // Channel number
+            if let number = channel.number {
+                Text("\(number)")
+                    .font(.system(size: 13))
+                    .foregroundColor(.gray)
+            }
+        }
+    }
+}
+
+// MARK: - Live Channel Player (wrapper)
+
+struct LiveChannelPlayerView: View {
+    @State var channel: Channel
+    @ObservedObject var viewModel: LiveTVViewModel
+    let channels: [Channel]
+    let onDismiss: () -> Void
+    @StateObject private var vlcPlayer = VLCPlayerViewModel()
+    @StateObject private var dvrRepository = DVRRepository()
+    @State private var showControls = true
+    @State private var controlsHideTask: Task<Void, Never>?
+    @State private var showSleepPicker = false
+    @State private var toastMessage: String?
+    @State private var toastIcon: String?
+    @State private var userPaused = false
+    @State private var behindLive = false
+    @State private var nowPlaying: Program?
+    @State private var upNext: Program?
+    @State private var epgRefreshTask: Task<Void, Never>?
+    @State private var showVolumeSlider = false
+    @State private var volumeLevel: Double = 100
+    @State private var volumeHideTask: Task<Void, Never>?
+    @State private var streamInfoExtracted = false
+    @State private var previousChannel: Channel?
+    @State private var showChannelBanner = false
+    @State private var channelBannerTask: Task<Void, Never>?
+    @State private var showCatchUpSheet = false
+    @State private var watchingCatchUp = false
+    @State private var catchUpTitle: String?
+
+    var body: some View {
+        ZStack {
+            Color.black.ignoresSafeArea()
+
+            if let streamUrl = channel.streamUrl, let url = URL(string: streamUrl) {
+                VLCPlayerView(viewModel: vlcPlayer)
+                    .ignoresSafeArea()
+            } else {
+                VStack {
+                    Image(systemName: "tv.slash")
+                        .font(.system(size: 48))
+                        .foregroundColor(.gray)
+                    Text("No stream available")
+                        .foregroundColor(.white)
+                }
+            }
+
+            // Loading state (only when controls hidden)
+            if vlcPlayer.isLoading && !showControls {
+                VStack {
+                    ProgressView()
+                        .scaleEffect(1.5)
+                        .tint(.white)
+                    Text("Loading \(channel.name)...")
+                        .foregroundColor(.white)
+                        .padding(.top)
+                }
+            }
+
+            // Error state
+            if let error = vlcPlayer.error {
+                VStack(spacing: 12) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.system(size: 40))
+                        .foregroundColor(.orange)
+                    Text("Playback Error")
+                        .font(.headline)
+                        .foregroundColor(.white)
+                    Text(error)
+                        .font(.caption)
+                        .foregroundColor(.gray)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal)
+                }
+            }
+
+            // Tap to toggle controls
+            Color.clear
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    if showVolumeSlider {
+                        withAnimation { showVolumeSlider = false }
+                        return
+                    }
+                    withAnimation(.easeInOut(duration: 0.25)) {
+                        showControls.toggle()
+                    }
+                    if showControls {
+                        scheduleAutoHide()
+                    }
+                }
+                .gesture(
+                    DragGesture(minimumDistance: 50)
+                        .onEnded { value in
+                            let horizontal = value.translation.width
+                            let vertical = value.translation.height
+                            if abs(vertical) > abs(horizontal) {
+                                // Vertical swipe → channel change
+                                if vertical < -50 {
+                                    switchChannel(direction: .up)
+                                } else if vertical > 50 {
+                                    switchChannel(direction: .down)
+                                }
+                            } else if behindLive {
+                                // Horizontal swipe → seek (only when behind live)
+                                if horizontal > 50 {
+                                    seekLive(seconds: 10)
+                                    showToast(message: "+10s", icon: "goforward.10")
+                                } else if horizontal < -50 {
+                                    seekLive(seconds: -10)
+                                    showToast(message: "-10s", icon: "gobackward.10")
+                                }
+                            }
+                        }
+                )
+
+            // Controls overlay
+            if showControls {
+                LiveChannelControlsOverlay(
+                    channel: channel,
+                    vlcPlayer: vlcPlayer,
+                    userPaused: userPaused,
+                    behindLive: behindLive,
+                    watchingCatchUp: watchingCatchUp,
+                    catchUpTitle: catchUpTitle,
+                    nowPlaying: nowPlaying,
+                    upNext: upNext,
+                    dvrRepository: dvrRepository,
+                    showVolumeSlider: $showVolumeSlider,
+                    volumeLevel: $volumeLevel,
+                    onDismiss: {
+                        vlcPlayer.stop()
+                        onDismiss()
+                    },
+                    onTogglePlayPause: {
+                        if userPaused {
+                            vlcPlayer.mediaPlayer.play()
+                            userPaused = false
+                        } else {
+                            vlcPlayer.pause()
+                            userPaused = true
+                            behindLive = true
+                        }
+                    },
+                    onSeekForward: {
+                        scheduleAutoHide()
+                        seekLive(seconds: 10)
+                        behindLive = true
+                    },
+                    onSeekBackward: {
+                        scheduleAutoHide()
+                        seekLive(seconds: -10)
+                        behindLive = true
+                    },
+                    onGoLive: {
+                        if watchingCatchUp {
+                            goBackToLive()
+                        } else if let streamUrl = channel.streamUrl, let url = URL(string: streamUrl) {
+                            vlcPlayer.stop()
+                            vlcPlayer.play(url: url)
+                            userPaused = false
+                            behindLive = false
+                        }
+                    },
+                    onChannelUp: { switchChannel(direction: .up) },
+                    onChannelDown: { switchChannel(direction: .down) },
+                    onPreviousChannel: previousChannel != nil ? { switchToPreviousChannel() } : nil,
+                    onRecord: { recordCurrentProgram() },
+                    onCatchUp: channel.archiveEnabled ? {
+                        showControls = false
+                        showCatchUpSheet = true
+                    } : nil,
+                    onShowSleepPicker: { showSleepPicker = true },
+                    onShowToast: { message, icon in
+                        showToast(message: message, icon: icon)
+                    },
+                    onInteraction: { scheduleAutoHide() },
+                    onVolumeChanged: { newVolume in
+                        vlcPlayer.setVolume(Int32(newVolume))
+                        scheduleVolumeHide()
+                    }
+                )
+                .transition(.opacity)
+            }
+
+            // Channel banner (TV-style info bar on switch)
+            if showChannelBanner {
+                VStack {
+                    Spacer()
+                    channelBannerView
+                        .padding(.horizontal, 20)
+                        .padding(.bottom, 40)
+                }
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+                .zIndex(9)
+            }
+
+            // Toast notification
+            if let message = toastMessage {
+                VStack {
+                    HStack(spacing: 8) {
+                        if let icon = toastIcon {
+                            Image(systemName: icon)
+                                .font(.system(size: 14, weight: .semibold))
+                        }
+                        Text(message)
+                            .font(.system(size: 14, weight: .medium))
+                    }
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                    .background(Color.black.opacity(0.75))
+                    .cornerRadius(20)
+                    .padding(.top, 60)
+
+                    Spacer()
+                }
+                .transition(.move(edge: .top).combined(with: .opacity))
+                .zIndex(10)
+            }
+
+            // Catch-Up "Back to Live" banner
+            if watchingCatchUp && !showControls {
+                VStack {
+                    HStack(spacing: 8) {
+                        Image(systemName: "clock.arrow.circlepath")
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundColor(Color(red: 139/255, green: 92/255, blue: 246/255))
+                        Text(catchUpTitle ?? "Catch Up")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundColor(.white)
+                            .lineLimit(1)
+                        Spacer()
+                        Text("BACK TO LIVE")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 5)
+                            .background(Color.red)
+                            .cornerRadius(12)
+                            .onTapGesture { goBackToLive() }
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                    .background(Color.black.opacity(0.7))
+                    Spacer()
+                }
+                .padding(.top, 50)
+                .zIndex(8)
+            }
+        }
+        .onAppear {
+            if let streamUrl = channel.streamUrl, let url = URL(string: streamUrl) {
+                vlcPlayer.play(url: url)
+            }
+            viewModel.selectChannel(channel)
+            scheduleAutoHide()
+            loadEPGInfo()
+            startEPGRefresh()
+            notifyInstantSwitch(channelId: channel.id)
+        }
+        .onDisappear {
+            vlcPlayer.stop()
+            controlsHideTask?.cancel()
+            epgRefreshTask?.cancel()
+            volumeHideTask?.cancel()
+            channelBannerTask?.cancel()
+        }
+        .onChange(of: vlcPlayer.isPlaying) { playing in
+            if playing && !streamInfoExtracted {
+                // Extract stream info once playback starts
+                Task {
+                    try? await Task.sleep(nanoseconds: 1_500_000_000)
+                    vlcPlayer.extractStreamInfo()
+                    streamInfoExtracted = true
+                }
+            }
+        }
+        .sheet(isPresented: $showSleepPicker) {
+            SleepTimerPickerSheet(vlcPlayer: vlcPlayer) { option in
+                showToast(message: option == .off ? "Sleep Timer Off" : "Sleep Timer: \(option.label)", icon: "moon.fill")
+            }
+            .presentationDetents([.medium])
+        }
+        .sheet(isPresented: $showCatchUpSheet) {
+            CatchUpProgramsSheet(
+                channel: channel,
+                onSelectProgram: { archiveId, title, streamUrl in
+                    showCatchUpSheet = false
+                    playCatchUpProgram(archiveId: archiveId, title: title, streamUrl: streamUrl)
+                }
+            )
+            .presentationDetents([.large])
+        }
+    }
+
+    private func playCatchUpProgram(archiveId: String, title: String, streamUrl: URL) {
+        vlcPlayer.stop()
+        vlcPlayer.play(url: streamUrl)
+        watchingCatchUp = true
+        catchUpTitle = title
+        userPaused = false
+        behindLive = false
+        showToast(message: "Catch Up: \(title)", icon: "clock.arrow.circlepath")
+    }
+
+    private func goBackToLive() {
+        watchingCatchUp = false
+        catchUpTitle = nil
+        if let streamUrl = channel.streamUrl, let url = URL(string: streamUrl) {
+            vlcPlayer.stop()
+            vlcPlayer.play(url: url)
+            userPaused = false
+            behindLive = false
+            showToast(message: "Back to Live", icon: "dot.radiowaves.left.and.right")
+        }
+    }
+
+    // MARK: - Seek (works while paused)
+
+    private func seekLive(seconds: Int32) {
+        if vlcPlayer.duration > 0 {
+            // VOD/recording: use standard seek
+            if seconds > 0 { vlcPlayer.skipForward() } else { vlcPlayer.skipBackward() }
+        } else if userPaused {
+            // Live stream while paused: resume briefly, jump, re-pause
+            vlcPlayer.mediaPlayer.play()
+            vlcPlayer.mediaPlayer.jumpForward(seconds)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                vlcPlayer.pause()
+            }
+        } else {
+            // Live stream, playing: jump directly
+            vlcPlayer.mediaPlayer.jumpForward(seconds)
+        }
+    }
+
+    // MARK: - Channel Switching
+
+    private enum ChannelDirection { case up, down }
+
+    private func switchChannel(direction: ChannelDirection) {
+        guard channels.count > 1 else { return }
+        guard let currentIndex = channels.firstIndex(where: { $0.id == channel.id }) else { return }
+
+        let newIndex: Int
+        switch direction {
+        case .up:
+            newIndex = (currentIndex + 1) % channels.count
+        case .down:
+            newIndex = (currentIndex - 1 + channels.count) % channels.count
+        }
+
+        switchToChannel(channels[newIndex])
+    }
+
+    private func switchToPreviousChannel() {
+        guard let prev = previousChannel else { return }
+        switchToChannel(prev)
+    }
+
+    private func switchToChannel(_ newChannel: Channel) {
+        let oldChannel = channel
+        vlcPlayer.stop()
+        streamInfoExtracted = false
+        previousChannel = oldChannel
+        channel = newChannel
+        viewModel.selectChannel(newChannel)
+
+        if let streamUrl = newChannel.streamUrl, let url = URL(string: streamUrl) {
+            vlcPlayer.play(url: url)
+        }
+
+        userPaused = false
+        behindLive = false
+        loadEPGInfo()
+        showChannelBannerOverlay()
+
+        // Notify server for prebuffering adjacent channels
+        notifyInstantSwitch(channelId: newChannel.id)
+    }
+
+    private func notifyInstantSwitch(channelId: String) {
+        Task {
+            let api = OpenFlixAPI.shared
+            _ = try? await api.instantSwitchChannel(channelId: channelId)
+        }
+    }
+
+    private var channelBannerView: some View {
+        HStack(spacing: 14) {
+            // Channel logo
+            if let logo = channel.logo {
+                AuthenticatedImage(path: logo, systemPlaceholder: "tv")
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 48, height: 36)
+                    .clipShape(RoundedRectangle(cornerRadius: 6))
+            }
+
+            VStack(alignment: .leading, spacing: 4) {
+                // Channel number + name
+                HStack(spacing: 8) {
+                    if let number = channel.number {
+                        Text("\(number)")
+                            .font(.system(size: 28, weight: .bold, design: .rounded))
+                            .foregroundColor(.white)
+                    }
+                    Text(channel.name)
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundColor(.white)
+                        .lineLimit(1)
+                }
+
+                // Now playing info
+                if let program = nowPlaying {
+                    HStack(spacing: 6) {
+                        Text(program.title)
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundColor(.white.opacity(0.9))
+                            .lineLimit(1)
+
+                        if !program.timeRangeFormatted.isEmpty {
+                            Text("·")
+                                .foregroundColor(.white.opacity(0.5))
+                            Text(program.timeRangeFormatted)
+                                .font(.system(size: 12))
+                                .foregroundColor(.white.opacity(0.6))
+                        }
+                    }
+
+                    // Progress bar
+                    GeometryReader { geo in
+                        ZStack(alignment: .leading) {
+                            Rectangle()
+                                .fill(Color.white.opacity(0.2))
+                                .frame(height: 3)
+                            Rectangle()
+                                .fill(Color.red)
+                                .frame(width: geo.size.width * program.progress, height: 3)
+                        }
+                        .cornerRadius(1.5)
+                    }
+                    .frame(height: 3)
+                }
+
+                // Up next
+                if let next = upNext {
+                    Text("Up Next: \(next.title)")
+                        .font(.system(size: 11))
+                        .foregroundColor(.white.opacity(0.5))
+                        .lineLimit(1)
+                }
+            }
+
+            Spacer()
+        }
+        .padding(16)
+        .background(
+            LinearGradient(
+                colors: [Color.black.opacity(0.85), Color.black.opacity(0.7)],
+                startPoint: .bottom,
+                endPoint: .top
+            )
+        )
+        .cornerRadius(12)
+    }
+
+    private func showChannelBannerOverlay() {
+        channelBannerTask?.cancel()
+        withAnimation(.easeInOut(duration: 0.2)) {
+            showChannelBanner = true
+        }
+        channelBannerTask = Task {
+            try? await Task.sleep(nanoseconds: 4_000_000_000)
+            if !Task.isCancelled {
+                withAnimation(.easeInOut(duration: 0.3)) {
+                    showChannelBanner = false
+                }
+            }
+        }
+    }
+
+    // MARK: - EPG Info
+
+    private func loadEPGInfo() {
+        // Try from guide data first
+        if let cwp = viewModel.guide.first(where: { $0.channel.id == channel.id }) {
+            nowPlaying = cwp.currentProgram
+            upNext = cwp.upcomingPrograms.first
+        } else {
+            nowPlaying = channel.nowPlaying
+            upNext = channel.nextProgram
+        }
+    }
+
+    private func startEPGRefresh() {
+        epgRefreshTask?.cancel()
+        epgRefreshTask = Task {
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 60_000_000_000)
+                if !Task.isCancelled {
+                    loadEPGInfo()
+                }
+            }
+        }
+    }
+
+    // MARK: - Recording
+
+    private func recordCurrentProgram() {
+        guard let program = nowPlaying else {
+            showToast(message: "No program info available", icon: "exclamationmark.circle")
+            return
+        }
+        Task {
+            do {
+                _ = try await dvrRepository.recordProgram(channelId: channel.id, programId: program.id)
+                showToast(message: "Recording: \(program.title)", icon: "record.circle")
+            } catch {
+                showToast(message: "Record failed", icon: "exclamationmark.circle")
+            }
+        }
+    }
+
+    // MARK: - Helpers
+
+    private func scheduleAutoHide() {
+        controlsHideTask?.cancel()
+        controlsHideTask = Task {
+            try? await Task.sleep(nanoseconds: 5_000_000_000)
+            if !Task.isCancelled {
+                withAnimation(.easeInOut(duration: 0.25)) {
+                    showControls = false
+                    showVolumeSlider = false
+                }
+            }
+        }
+    }
+
+    private func scheduleVolumeHide() {
+        volumeHideTask?.cancel()
+        volumeHideTask = Task {
+            try? await Task.sleep(nanoseconds: 3_000_000_000)
+            if !Task.isCancelled {
+                withAnimation { showVolumeSlider = false }
+            }
+        }
+    }
+
+    private func showToast(message: String, icon: String?) {
+        withAnimation(.easeInOut(duration: 0.2)) {
+            toastMessage = message
+            toastIcon = icon
+        }
+        Task {
+            try? await Task.sleep(nanoseconds: 2_000_000_000)
+            withAnimation(.easeInOut(duration: 0.2)) {
+                toastMessage = nil
+                toastIcon = nil
+            }
+        }
+    }
+}
+
+// MARK: - Live Channel Controls Overlay (iPhone)
+
+private struct LiveChannelControlsOverlay: View {
+    let channel: Channel
+    @ObservedObject var vlcPlayer: VLCPlayerViewModel
+    let userPaused: Bool
+    let behindLive: Bool
+    var watchingCatchUp: Bool = false
+    var catchUpTitle: String? = nil
+    let nowPlaying: Program?
+    let upNext: Program?
+    @ObservedObject var dvrRepository: DVRRepository
+    @Binding var showVolumeSlider: Bool
+    @Binding var volumeLevel: Double
+    let onDismiss: () -> Void
+    let onTogglePlayPause: () -> Void
+    let onSeekForward: () -> Void
+    let onSeekBackward: () -> Void
+    let onGoLive: () -> Void
+    let onChannelUp: () -> Void
+    let onChannelDown: () -> Void
+    let onPreviousChannel: (() -> Void)?
+    let onRecord: () -> Void
+    let onCatchUp: (() -> Void)?
+    let onShowSleepPicker: () -> Void
+    let onShowToast: (String, String?) -> Void
+    let onInteraction: () -> Void
+    let onVolumeChanged: (Double) -> Void
+
+    var body: some View {
+        ZStack {
+            // Semi-transparent background
+            Color.black.opacity(0.5)
+                .ignoresSafeArea()
+                .allowsHitTesting(false)
+
+            VStack(spacing: 0) {
+                // Top bar
+                topBar
+                    .padding(.horizontal, 20)
+                    .padding(.top, 8)
+
+                // Now playing info
+                if let program = nowPlaying {
+                    nowPlayingCard(program: program)
+                        .padding(.horizontal, 20)
+                        .padding(.top, 12)
+                }
+
+                Spacer()
+
+                // Center transport controls — always show seek ±10 buttons
+                centerTransportControls
+
+                Spacer()
+
+                // Seek bar (VOD only) or LIVE indicator
+                seekBarOrLiveIndicator
+                    .padding(.horizontal, 20)
+
+                // Bottom bar
+                bottomToolbar
+                    .padding(.top, 12)
+                    .padding(.bottom, 30)
+            }
+
+            // Volume slider overlay
+            if showVolumeSlider {
+                volumeSliderOverlay
+                    .transition(.opacity)
+            }
+        }
+    }
+
+    // MARK: - Top Bar
+
+    private var topBar: some View {
+        HStack(spacing: 12) {
+            Button {
+                onDismiss()
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundColor(.white)
+                    .frame(width: 36, height: 36)
+                    .background(Color.white.opacity(0.2))
+                    .clipShape(Circle())
+            }
+
+            Spacer()
+
+            // Channel logo + info
+            HStack(spacing: 8) {
+                AuthenticatedImage(path: channel.logo, systemPlaceholder: "tv")
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 28, height: 28)
+                    .clipShape(RoundedRectangle(cornerRadius: 6))
+
+                VStack(spacing: 1) {
+                    Text(channel.name)
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundColor(.white)
+                        .lineLimit(1)
+                    if let number = channel.number {
+                        Text("CH \(number)")
+                            .font(.system(size: 12))
+                            .foregroundColor(.white.opacity(0.7))
+                    }
+                }
+            }
+
+            // Stream resolution badge
+            if let label = vlcPlayer.streamInfo?.resolutionLabel {
+                Text(label)
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 3)
+                    .background(Color.white.opacity(0.25))
+                    .cornerRadius(4)
+            }
+
+            Spacer()
+
+            // Mute button (tap = toggle, long press = volume slider)
+            Image(systemName: vlcPlayer.isMuted ? "speaker.slash.fill" : "speaker.wave.2.fill")
+                .font(.system(size: 18))
+                .foregroundColor(.white)
+                .frame(width: 36, height: 36)
+                .background(Color.white.opacity(0.2))
+                .clipShape(Circle())
+                .onTapGesture {
+                    onInteraction()
+                    vlcPlayer.toggleMute()
+                    onShowToast(vlcPlayer.isMuted ? "Muted" : "Unmuted", vlcPlayer.isMuted ? "speaker.slash.fill" : "speaker.wave.2.fill")
+                }
+                .onLongPressGesture(minimumDuration: 0.5) {
+                    onInteraction()
+                    withAnimation { showVolumeSlider.toggle() }
+                }
+        }
+    }
+
+    // MARK: - Now Playing Card
+
+    private func nowPlayingCard(program: Program) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            // Title + badges
+            HStack(spacing: 6) {
+                Text(program.fullTitle)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(.white)
+                    .lineLimit(1)
+
+                ForEach(program.badges, id: \.self) { badge in
+                    Text(badge)
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundColor(badge == "LIVE" ? .red : badge == "REC" ? .red : .white)
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 2)
+                        .background(badge == "LIVE" || badge == "REC" ? Color.red.opacity(0.3) : Color.white.opacity(0.2))
+                        .cornerRadius(3)
+                }
+            }
+
+            // Time range + category
+            HStack(spacing: 8) {
+                Text(program.timeRangeFormatted)
+                    .font(.system(size: 12))
+                    .foregroundColor(.white.opacity(0.7))
+
+                if let category = program.category {
+                    HStack(spacing: 3) {
+                        Image(systemName: program.categoryIcon)
+                            .font(.system(size: 10))
+                        Text(category)
+                            .font(.system(size: 11))
+                    }
+                    .foregroundColor(.white.opacity(0.5))
+                }
+
+                if let rating = program.rating, !rating.isEmpty {
+                    Text(rating)
+                        .font(.system(size: 11))
+                        .foregroundColor(.white.opacity(0.5))
+                }
+            }
+
+            // Progress bar
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    Rectangle()
+                        .fill(Color.white.opacity(0.2))
+                        .frame(height: 3)
+                    Rectangle()
+                        .fill(Color.red)
+                        .frame(width: geo.size.width * program.progress, height: 3)
+                }
+            }
+            .frame(height: 3)
+
+            // Up next
+            if let next = upNext {
+                Text("Up Next: \(next.fullTitle)")
+                    .font(.system(size: 11))
+                    .foregroundColor(.white.opacity(0.5))
+                    .lineLimit(1)
+            }
+        }
+        .padding(12)
+        .background(Color.white.opacity(0.1))
+        .cornerRadius(10)
+    }
+
+    // MARK: - Center Transport Controls
+
+    private var centerTransportControls: some View {
+        Group {
+            if (vlcPlayer.isLoading || vlcPlayer.isBuffering) && !vlcPlayer.isPlaying && vlcPlayer.currentTime == 0 {
+                ProgressView()
+                    .scaleEffect(2.0)
+                    .tint(.white)
+                    .frame(width: 70, height: 70)
+            } else {
+                // Always show skip back / play-pause / skip forward
+                HStack(spacing: 40) {
+                    Button {
+                        onInteraction()
+                        onSeekBackward()
+                    } label: {
+                        Image(systemName: "gobackward.10")
+                            .font(.system(size: 28))
+                            .foregroundColor(.white)
+                            .frame(width: 50, height: 50)
+                    }
+
+                    Button {
+                        onInteraction()
+                        onTogglePlayPause()
+                    } label: {
+                        Image(systemName: (vlcPlayer.isPlaying && !userPaused) ? "pause.fill" : "play.fill")
+                            .font(.system(size: 30))
+                            .foregroundColor(.white)
+                            .frame(width: 70, height: 70)
+                            .background(Color.white.opacity(0.2))
+                            .clipShape(Circle())
+                    }
+
+                    Button {
+                        onInteraction()
+                        onSeekForward()
+                    } label: {
+                        Image(systemName: "goforward.10")
+                            .font(.system(size: 28))
+                            .foregroundColor(.white)
+                            .frame(width: 50, height: 50)
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: - Seek Bar / Live Indicator
+
+    private var seekBarOrLiveIndicator: some View {
+        Group {
+            if vlcPlayer.duration > 0 || watchingCatchUp {
+                VStack(spacing: 4) {
+                    if vlcPlayer.duration > 0 {
+                        Slider(
+                            value: Binding(
+                                get: { vlcPlayer.currentTime },
+                                set: { newValue in
+                                    onInteraction()
+                                    vlcPlayer.seek(to: newValue)
+                                }
+                            ),
+                            in: 0...max(vlcPlayer.duration, 1)
+                        )
+                        .tint(watchingCatchUp ? Color(red: 139/255, green: 92/255, blue: 246/255) : .white)
+
+                        HStack {
+                            Text(formatTime(vlcPlayer.currentTime))
+                                .font(.system(size: 11))
+                                .foregroundColor(.white.opacity(0.7))
+                            Spacer()
+                            Text(formatTime(vlcPlayer.duration))
+                                .font(.system(size: 11))
+                                .foregroundColor(.white.opacity(0.7))
+                        }
+                    }
+
+                    if watchingCatchUp {
+                        HStack(spacing: 6) {
+                            Image(systemName: "clock.arrow.circlepath")
+                                .font(.system(size: 11, weight: .bold))
+                                .foregroundColor(Color(red: 139/255, green: 92/255, blue: 246/255))
+                            Text(catchUpTitle ?? "Catch Up")
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundColor(.white)
+                                .lineLimit(1)
+                            Spacer()
+                            Button {
+                                onInteraction()
+                                onGoLive()
+                            } label: {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "dot.radiowaves.left.and.right")
+                                        .font(.system(size: 11, weight: .bold))
+                                    Text("BACK TO LIVE")
+                                        .font(.system(size: 11, weight: .bold))
+                                }
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 5)
+                                .background(Color.red)
+                                .cornerRadius(12)
+                            }
+                        }
+                    }
+                }
+            } else {
+                HStack(spacing: 6) {
+                    if behindLive {
+                        Button {
+                            onInteraction()
+                            onGoLive()
+                        } label: {
+                            HStack(spacing: 5) {
+                                Image(systemName: "arrow.counterclockwise")
+                                    .font(.system(size: 12, weight: .bold))
+                                Text("GO LIVE")
+                                    .font(.system(size: 12, weight: .bold))
+                            }
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(Color.red)
+                            .cornerRadius(14)
+                        }
+                    } else {
+                        Circle()
+                            .fill(Color.red)
+                            .frame(width: 8, height: 8)
+                        Text("LIVE")
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundColor(.red)
+                    }
+                    Spacer()
+                    Text(formatTime(vlcPlayer.currentTime))
+                        .font(.system(size: 11, design: .monospaced))
+                        .foregroundColor(.white.opacity(0.7))
+                }
+            }
+        }
+    }
+
+    // MARK: - Bottom Toolbar
+
+    private var bottomToolbar: some View {
+        HStack(spacing: 20) {
+            // Channel down
+            Button {
+                onInteraction()
+                onChannelDown()
+            } label: {
+                VStack(spacing: 4) {
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 20))
+                    Text("CH-")
+                        .font(.system(size: 10))
+                }
+                .foregroundColor(.white)
+            }
+
+            // Channel up
+            Button {
+                onInteraction()
+                onChannelUp()
+            } label: {
+                VStack(spacing: 4) {
+                    Image(systemName: "chevron.up")
+                        .font(.system(size: 20))
+                    Text("CH+")
+                        .font(.system(size: 10))
+                }
+                .foregroundColor(.white)
+            }
+
+            // Previous channel
+            if let onPrev = onPreviousChannel {
+                Button {
+                    onInteraction()
+                    onPrev()
+                } label: {
+                    VStack(spacing: 4) {
+                        Image(systemName: "arrow.uturn.left")
+                            .font(.system(size: 20))
+                        Text("Prev")
+                            .font(.system(size: 10))
+                    }
+                    .foregroundColor(.white)
+                }
+            }
+
+            // Record
+            Button {
+                onInteraction()
+                onRecord()
+            } label: {
+                VStack(spacing: 4) {
+                    Image(systemName: nowPlaying?.hasRecording == true ? "record.circle.fill" : "record.circle")
+                        .font(.system(size: 20))
+                    Text("Record")
+                        .font(.system(size: 10))
+                }
+                .foregroundColor(nowPlaying?.hasRecording == true ? .red : .white)
+            }
+
+            // Catch Up (only if channel has archive)
+            if let onCatchUp = onCatchUp {
+                Button {
+                    onInteraction()
+                    onCatchUp()
+                } label: {
+                    VStack(spacing: 4) {
+                        Image(systemName: "clock.arrow.circlepath")
+                            .font(.system(size: 20))
+                        Text("Catch Up")
+                            .font(.system(size: 10))
+                    }
+                    .foregroundColor(Color(red: 139/255, green: 92/255, blue: 246/255))
+                }
+            }
+
+            // Aspect ratio
+            Button {
+                onInteraction()
+                let mode = vlcPlayer.cycleAspectRatio()
+                onShowToast(mode.rawValue, mode.icon)
+            } label: {
+                VStack(spacing: 4) {
+                    Image(systemName: vlcPlayer.aspectRatioMode.icon)
+                        .font(.system(size: 20))
+                    Text("Aspect")
+                        .font(.system(size: 10))
+                }
+                .foregroundColor(.white)
+            }
+
+            // Audio track
+            Button {
+                onInteraction()
+                if let name = vlcPlayer.cycleAudioTrack() {
+                    onShowToast("Audio: \(name)", "waveform")
+                } else {
+                    onShowToast("No audio tracks", "waveform")
+                }
+            } label: {
+                VStack(spacing: 4) {
+                    Image(systemName: "waveform")
+                        .font(.system(size: 20))
+                    Text("Audio")
+                        .font(.system(size: 10))
+                }
+                .foregroundColor(.white)
+            }
+
+            // Subtitles
+            Button {
+                onInteraction()
+                if let name = vlcPlayer.cycleSubtitleTrack() {
+                    onShowToast("Subtitles: \(name)", "captions.bubble")
+                } else {
+                    onShowToast("Subtitles Off", "captions.bubble")
+                }
+            } label: {
+                VStack(spacing: 4) {
+                    Image(systemName: "captions.bubble")
+                        .font(.system(size: 20))
+                    Text("Subs")
+                        .font(.system(size: 10))
+                }
+                .foregroundColor(.white)
+            }
+
+            // Sleep timer
+            Button {
+                onInteraction()
+                onShowSleepPicker()
+            } label: {
+                VStack(spacing: 4) {
+                    Image(systemName: vlcPlayer.sleepTimerOption != .off ? "moon.fill" : "moon")
+                        .font(.system(size: 20))
+                    Text(vlcPlayer.sleepTimerOption != .off ? vlcPlayer.sleepTimerLabel : "Sleep")
+                        .font(.system(size: 10))
+                }
+                .foregroundColor(vlcPlayer.sleepTimerOption != .off ? .cyan : .white)
+            }
+        }
+    }
+
+    // MARK: - Volume Slider Overlay
+
+    private var volumeSliderOverlay: some View {
+        VStack {
+            Spacer()
+            HStack(spacing: 12) {
+                Image(systemName: "speaker.fill")
+                    .font(.system(size: 14))
+                    .foregroundColor(.white)
+                Slider(value: $volumeLevel, in: 0...200, step: 5) { editing in
+                    if !editing {
+                        onVolumeChanged(volumeLevel)
+                    }
+                }
+                .onChange(of: volumeLevel) { newValue in
+                    onVolumeChanged(newValue)
+                }
+                .tint(.white)
+                Image(systemName: "speaker.wave.3.fill")
+                    .font(.system(size: 14))
+                    .foregroundColor(.white)
+                Text("\(Int(volumeLevel))%")
+                    .font(.system(size: 12, design: .monospaced))
+                    .foregroundColor(.white.opacity(0.7))
+                    .frame(width: 45)
+            }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 12)
+            .background(Color.black.opacity(0.85))
+            .cornerRadius(12)
+            .padding(.horizontal, 20)
+            .padding(.bottom, 100)
+        }
+    }
+
+    // MARK: - Helpers
+
+    private func formatTime(_ seconds: Double) -> String {
+        let total = Int(max(0, seconds))
+        let h = total / 3600
+        let m = (total % 3600) / 60
+        let s = total % 60
+        if h > 0 {
+            return String(format: "%d:%02d:%02d", h, m, s)
+        }
+        return String(format: "%d:%02d", m, s)
+    }
+}
+
+// MARK: - Sleep Timer Picker Sheet
+
+private struct SleepTimerPickerSheet: View {
+    @ObservedObject var vlcPlayer: VLCPlayerViewModel
+    let onSelect: (SleepTimerOption) -> Void
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationView {
+            List {
+                ForEach(SleepTimerOption.allCases, id: \.rawValue) { option in
+                    Button {
+                        vlcPlayer.setSleepTimer(option)
+                        onSelect(option)
+                        dismiss()
+                    } label: {
+                        HStack {
+                            Text(option.label)
+                                .foregroundColor(.primary)
+                            Spacer()
+                            if vlcPlayer.sleepTimerOption == option {
+                                Image(systemName: "checkmark")
+                                    .foregroundColor(.blue)
+                            }
+                        }
+                    }
+                }
+            }
+            .navigationTitle("Sleep Timer")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Catch Up Programs Sheet
+
+private struct CatchUpProgramsSheet: View {
+    let channel: Channel
+    let onSelectProgram: (String, String, URL) -> Void  // (archiveId, title, streamUrl)
+    @StateObject private var viewModel = CatchUpSheetViewModel()
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationView {
+            ZStack {
+                Color(red: 13/255, green: 13/255, blue: 13/255).ignoresSafeArea()
+
+                if viewModel.isLoading {
+                    VStack(spacing: 12) {
+                        ProgressView()
+                            .tint(Color(red: 139/255, green: 92/255, blue: 246/255))
+                        Text("Loading past programs...")
+                            .foregroundColor(.gray)
+                    }
+                } else if viewModel.programs.isEmpty {
+                    VStack(spacing: 12) {
+                        Image(systemName: "clock.arrow.circlepath")
+                            .font(.system(size: 48))
+                            .foregroundColor(.gray)
+                        Text("No Catch-Up Programs Yet")
+                            .font(.headline)
+                            .foregroundColor(.white)
+                        Text("Programs will appear as they are recorded.\nThis channel just started archiving.")
+                            .font(.subheadline)
+                            .foregroundColor(.gray)
+                            .multilineTextAlignment(.center)
+                    }
+                } else {
+                    List {
+                        ForEach(viewModel.groupedByDate, id: \.0) { dateLabel, programs in
+                            Section {
+                                ForEach(programs, id: \.id) { program in
+                                    catchUpRow(program)
+                                }
+                            } header: {
+                                Text(dateLabel)
+                                    .foregroundColor(Color(red: 139/255, green: 92/255, blue: 246/255))
+                            }
+                        }
+                    }
+                    .listStyle(.plain)
+                }
+            }
+            .navigationTitle("Catch Up - \(channel.name)")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Close") { dismiss() }
+                        .foregroundColor(Color(red: 139/255, green: 92/255, blue: 246/255))
+                }
+            }
+        }
+        .onAppear {
+            viewModel.loadPrograms(channelId: channel.id)
+        }
+    }
+
+    private func catchUpRow(_ program: CatchUpSheetProgram) -> some View {
+        Button {
+            if let url = program.streamUrl {
+                onSelectProgram(program.id, program.title, url)
+            }
+        } label: {
+            HStack(spacing: 12) {
+                // Thumbnail or icon
+                if let icon = program.icon, let url = URL(string: icon) {
+                    AsyncImage(url: url) { image in
+                        image.resizable().scaledToFill()
+                    } placeholder: {
+                        Rectangle().fill(Color.gray.opacity(0.3))
+                    }
+                    .frame(width: 80, height: 45)
+                    .cornerRadius(6)
+                    .clipped()
+                } else {
+                    ZStack {
+                        Rectangle().fill(Color.gray.opacity(0.2))
+                        Image(systemName: "play.tv")
+                            .font(.system(size: 18))
+                            .foregroundColor(.gray)
+                    }
+                    .frame(width: 80, height: 45)
+                    .cornerRadius(6)
+                }
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(program.title)
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundColor(.white)
+                        .lineLimit(1)
+
+                    HStack(spacing: 6) {
+                        Text(program.timeFormatted)
+                            .font(.system(size: 12))
+                            .foregroundColor(.white.opacity(0.6))
+                        if !program.durationFormatted.isEmpty {
+                            Text("•")
+                                .foregroundColor(.white.opacity(0.4))
+                            Text(program.durationFormatted)
+                                .font(.system(size: 12))
+                                .foregroundColor(.white.opacity(0.6))
+                        }
+                    }
+
+                    if let desc = program.description, !desc.isEmpty {
+                        Text(desc)
+                            .font(.system(size: 11))
+                            .foregroundColor(.white.opacity(0.4))
+                            .lineLimit(2)
+                    }
+                }
+
+                Spacer()
+
+                Image(systemName: "play.circle.fill")
+                    .font(.system(size: 28))
+                    .foregroundColor(Color(red: 139/255, green: 92/255, blue: 246/255))
+            }
+            .padding(.vertical, 4)
+        }
+        .listRowBackground(Color.white.opacity(0.05))
+    }
+}
+
+// MARK: - Catch Up Sheet Models
+
+private struct CatchUpSheetProgram {
+    let id: String
+    let title: String
+    let description: String?
+    let icon: String?
+    let startTime: Date
+    let endTime: Date
+    let streamUrl: URL?
+
+    var timeFormatted: String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "h:mm a"
+        return formatter.string(from: startTime)
+    }
+
+    var durationFormatted: String {
+        let minutes = Int(endTime.timeIntervalSince(startTime) / 60)
+        if minutes >= 60 {
+            return "\(minutes / 60)h \(minutes % 60)m"
+        }
+        return "\(minutes) min"
+    }
+}
+
+// MARK: - Catch Up Sheet ViewModel
+
+@MainActor
+private class CatchUpSheetViewModel: ObservableObject {
+    private let api = OpenFlixAPI.shared
+    @Published var programs: [CatchUpSheetProgram] = []
+    @Published var isLoading = false
+
+    var groupedByDate: [(String, [CatchUpSheetProgram])] {
+        let grouped = Dictionary(grouping: programs) { program -> String in
+            let calendar = Calendar.current
+            if calendar.isDateInToday(program.startTime) { return "Today" }
+            if calendar.isDateInYesterday(program.startTime) { return "Yesterday" }
+            let formatter = DateFormatter()
+            formatter.dateFormat = "EEEE, MMM d"
+            return formatter.string(from: program.startTime)
+        }
+        return grouped.sorted { pair1, pair2 in
+            let date1 = pair1.1.first?.startTime ?? Date.distantPast
+            let date2 = pair2.1.first?.startTime ?? Date.distantPast
+            return date1 > date2
+        }
+    }
+
+    func loadPrograms(channelId: String) {
+        isLoading = true
+        Task {
+            do {
+                let response = try await api.getCatchupPrograms(channelId: channelId)
+                let isoFormatter = ISO8601DateFormatter()
+                isoFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+                let isoFormatterBasic = ISO8601DateFormatter()
+
+                // Pre-build stream URLs
+                var streamUrls: [String: URL] = [:]
+                for dto in response.programs {
+                    if let urlStr = dto.streamUrl, !urlStr.isEmpty {
+                        if urlStr.hasPrefix("http"), let url = URL(string: urlStr) {
+                            streamUrls[dto.id.stringValue] = url
+                        } else if let url = await api.buildURL(path: urlStr) {
+                            streamUrls[dto.id.stringValue] = url
+                        }
+                    }
+                }
+
+                programs = response.programs.compactMap { dto -> CatchUpSheetProgram? in
+                    guard let start = isoFormatter.date(from: dto.startTime) ?? isoFormatterBasic.date(from: dto.startTime),
+                          let end = isoFormatter.date(from: dto.endTime) ?? isoFormatterBasic.date(from: dto.endTime) else {
+                        return nil
+                    }
+
+                    return CatchUpSheetProgram(
+                        id: dto.id.stringValue,
+                        title: dto.title,
+                        description: dto.description,
+                        icon: dto.icon,
+                        startTime: start,
+                        endTime: end,
+                        streamUrl: streamUrls[dto.id.stringValue]
+                    )
+                }.sorted { $0.startTime > $1.startTime }
+            } catch {
+                print("Failed to load catch-up programs: \(error)")
+            }
+            isLoading = false
+        }
+    }
+}
+
+#Preview {
+    NavigationStack {
+        XfinityLiveTVView()
+    }
+}

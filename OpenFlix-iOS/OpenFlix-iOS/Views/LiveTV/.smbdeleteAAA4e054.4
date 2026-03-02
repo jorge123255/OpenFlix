@@ -1,0 +1,349 @@
+import SwiftUI
+
+private struct EPGScrollOffsetKey: PreferenceKey {
+    static var defaultValue: CGPoint = .zero
+    static func reduce(value: inout CGPoint, nextValue: () -> CGPoint) { value = nextValue() }
+}
+
+// MARK: - Exact Channels APK colors
+private extension Color {
+    static let epgBg      = Color(red: 0.098, green: 0.071, blue: 0.133) // #191222 background
+    static let epgCellBg  = Color(red: 0.184, green: 0.122, blue: 0.286) // #2f1f49 muted_dark_purple
+    static let epgCellNow = Color(red: 0.251, green: 0.141, blue: 0.424) // #40246c purple (airing now)
+    static let epgAccent  = Color(red: 0.608, green: 0.247, blue: 1.000) // #9b3fff tint
+    static let epgText    = Color(red: 0.839, green: 0.753, blue: 0.976) // #d6c0f9 extra_light_purple
+    static let epgTextDim = Color(red: 0.580, green: 0.498, blue: 0.698) // #947fb2 guide_subtitle
+    static let epgSep     = Color(red: 0.098, green: 0.071, blue: 0.133) // same as bg (border color)
+}
+
+struct EPGGuideView: View {
+    @ObservedObject var viewModel: LiveTVViewModel
+    @Environment(\.dismiss) var dismiss
+
+    @State private var guide: [ChannelWithPrograms] = []
+    @State private var isLoading = true
+    @State private var scrollOffset: CGPoint = .zero
+    @State private var selectedProgram: Program?
+    @State private var selectedChannel: Channel?
+
+    // Exact APK dimensions (dp → pt, 1:1 on iOS)
+    private let chanWidth: CGFloat = 50   // guide_channel_cell_width
+    private let rowHeight: CGFloat = 50   // guide_channel_row_height
+    private let timeBarH:  CGFloat = 25   // guide_timeline_row_height
+    private let cellBorder: CGFloat = 2   // guide_cell_border stroke
+    private let hourWidth: CGFloat = 180  // ~3 min per pixel, reasonable scroll
+
+    private var pps: CGFloat { hourWidth / 3600 }
+    private var totalW: CGFloat { hourWidth * 24 }
+    private var today: Date { Calendar.current.startOfDay(for: Date()) }
+
+    private var nowX: CGFloat {
+        CGFloat(Date().timeIntervalSince(today)) * pps
+    }
+
+    var body: some View {
+        NavigationStack {
+            Group {
+                if isLoading {
+                    LoadingView(message: "Loading guide...")
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .background(Color.epgBg)
+                } else if guide.isEmpty {
+                    EmptyStateView(
+                        icon: "list.bullet.rectangle",
+                        title: "No Guide Data",
+                        message: "EPG data is not available for your channels."
+                    )
+                    .background(Color.epgBg)
+                } else {
+                    guideGrid
+                }
+            }
+            .background(Color.epgBg.ignoresSafeArea())
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .principal) {
+                    Text("TV Guide")
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundColor(Color.epgText)
+                }
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Close") { dismiss() }
+                        .foregroundColor(Color.epgAccent)
+                }
+            }
+        }
+        .task { await loadGuide() }
+        .sheet(item: $selectedProgram) { program in
+            ProgramDetailView(program: program, channelName: selectedChannel?.name) {
+                selectedProgram = nil
+            }
+            .presentationDetents([.medium])
+        }
+    }
+
+    // MARK: - Guide Grid
+
+    private var guideGrid: some View {
+        GeometryReader { geo in
+            VStack(spacing: 0) {
+
+                // ── Time ruler row (pinned) ──
+                HStack(spacing: 0) {
+                    // Corner
+                    Color.epgBg.frame(width: chanWidth, height: timeBarH)
+
+                    // Scrolling time labels
+                    timeRuler
+                        .frame(width: totalW)
+                        .offset(x: -scrollOffset.x)
+                        .frame(width: geo.size.width - chanWidth, height: timeBarH, alignment: .leading)
+                        .clipped()
+                }
+                .background(Color.epgBg)
+                .zIndex(2)
+
+                // ── Body ──
+                HStack(spacing: 0) {
+
+                    // Pinned channel column
+                    channelCol
+                        .frame(width: chanWidth)
+                        .offset(y: -scrollOffset.y)
+                        .frame(height: geo.size.height - timeBarH, alignment: .top)
+                        .clipped()
+                        .background(Color.epgBg)
+                        .zIndex(1)
+
+                    // Scrollable grid
+                    ScrollViewReader { proxy in
+                        ScrollView([.horizontal, .vertical], showsIndicators: false) {
+                            ZStack(alignment: .topLeading) {
+                                // Offset tracker
+                                GeometryReader { inner in
+                                    Color.clear.preference(
+                                        key: EPGScrollOffsetKey.self,
+                                        value: CGPoint(
+                                            x: -inner.frame(in: .named("epg")).minX,
+                                            y: -inner.frame(in: .named("epg")).minY
+                                        )
+                                    )
+                                }
+                                .frame(width: 1, height: 1)
+
+                                // Program rows
+                                VStack(spacing: 0) {
+                                    ForEach(guide) { row in
+                                        programRow(row)
+                                            .frame(height: rowHeight)
+                                    }
+                                }
+                                .frame(width: totalW)
+
+                                // "Now" line
+                                Rectangle()
+                                    .fill(Color.red.opacity(0.9))
+                                    .frame(width: 2, height: rowHeight * CGFloat(guide.count))
+                                    .offset(x: nowX)
+                                    .zIndex(20)
+                                    .id("nowLine")
+                            }
+                            .frame(width: totalW)
+                        }
+                        .coordinateSpace(name: "epg")
+                        .onPreferenceChange(EPGScrollOffsetKey.self) { v in
+                            DispatchQueue.main.async { scrollOffset = v }
+                        }
+                        .onAppear {
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                                proxy.scrollTo("nowLine", anchor: UnitPoint(x: 0.2, y: 0))
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: - Time Ruler (APK: 11sp text, light purple)
+
+    private var timeRuler: some View {
+        ZStack(alignment: .topLeading) {
+            Color.epgBg.frame(width: totalW, height: timeBarH)
+
+            ForEach(0..<24, id: \.self) { hour in
+                let x = CGFloat(hour) * hourWidth
+                let d = Calendar.current.date(bySettingHour: hour, minute: 0, second: 0, of: today)!
+
+                // Tick mark
+                Rectangle()
+                    .fill(Color.epgCellBg)
+                    .frame(width: 1, height: timeBarH)
+                    .offset(x: x)
+
+                // Hour label (11sp, guide_subtitle color)
+                Text(Self.hourFmt.string(from: d))
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundColor(Color.epgTextDim)
+                    .offset(x: x + 4, y: 5)
+            }
+
+            // Now indicator in time ruler
+            Rectangle()
+                .fill(Color.red.opacity(0.9))
+                .frame(width: 2, height: timeBarH)
+                .offset(x: nowX)
+        }
+        .frame(width: totalW, height: timeBarH)
+    }
+
+    // MARK: - Channel Column (APK: 40x25 logo + 9sp number)
+
+    private var channelCol: some View {
+        VStack(spacing: 0) {
+            ForEach(guide) { row in
+                channelCell(row.channel)
+                    .frame(width: chanWidth, height: rowHeight)
+            }
+        }
+    }
+
+    private func channelCell(_ ch: Channel) -> some View {
+        VStack(spacing: 3) {
+            if let logo = ch.logo {
+                AsyncImage(url: logoURL(logo)) { phase in
+                    if case .success(let img) = phase {
+                        img.resizable().aspectRatio(contentMode: .fit)
+                    } else {
+                        channelPlaceholder(ch)
+                    }
+                }
+                .frame(width: 40, height: 25)
+            } else {
+                channelPlaceholder(ch)
+                    .frame(width: 40, height: 25)
+            }
+
+            if let num = ch.number {
+                Text("\(num)")
+                    .font(.system(size: 9, weight: .medium))
+                    .foregroundColor(Color.epgText)
+                    .lineLimit(1)
+            }
+        }
+        .frame(width: chanWidth, height: rowHeight)
+        .background(Color.epgBg)
+    }
+
+    private func channelPlaceholder(_ ch: Channel) -> some View {
+        Text(ch.name.prefix(3).uppercased())
+            .font(.system(size: 9, weight: .bold))
+            .foregroundColor(Color.epgTextDim)
+            .frame(width: 40, height: 25)
+    }
+
+    // MARK: - Program Row
+
+    private func programRow(_ channelRow: ChannelWithPrograms) -> some View {
+        let startOfDay = today
+        let endOfDay   = startOfDay.addingTimeInterval(86400)
+
+        let visible = channelRow.programs.filter {
+            $0.endTime > startOfDay && $0.startTime < endOfDay
+        }
+
+        return ZStack(alignment: .topLeading) {
+            // Row bg (full width background)
+            Color.epgBg.frame(width: totalW, height: rowHeight)
+
+            ForEach(visible) { p in
+                let cStart = max(p.startTime, startOfDay)
+                let cEnd   = min(p.endTime, endOfDay)
+                let xOff   = CGFloat(cStart.timeIntervalSince(startOfDay)) * pps
+                let cellW  = max(CGFloat(cEnd.timeIntervalSince(cStart)) * pps, 4)
+
+                programCell(p, width: cellW)
+                    .offset(x: xOff)
+                    .onTapGesture {
+                        selectedChannel = channelRow.channel
+                        selectedProgram = p
+                    }
+            }
+        }
+        .frame(width: totalW, height: rowHeight)
+        .clipped()
+    }
+
+    // MARK: - Program Cell (APK: title only 14sp + 1dp progress bar at bottom)
+
+    private func programCell(_ p: Program, width: CGFloat) -> some View {
+        let isNow  = p.isCurrentlyAiring
+        let isPast = p.hasEnded
+        let bg     = isNow ? Color.epgCellNow : Color.epgCellBg
+
+        // Progress through current program (0.0 – 1.0)
+        let progress: Double = isNow ? {
+            let total = p.endTime.timeIntervalSince(p.startTime)
+            let elapsed = Date().timeIntervalSince(p.startTime)
+            return total > 0 ? min(max(elapsed / total, 0), 1) : 0
+        }() : (isPast ? 1.0 : 0.0)
+
+        return ZStack(alignment: .bottomLeading) {
+            // Cell background with 2dp inset (APK: stroke of background color)
+            bg
+                .padding(cellBorder)
+                .background(Color.epgBg)
+
+            // Title (14sp, extra_light_purple, vertically centered, 6dp padding)
+            if width > 10 {
+                Text(p.title)
+                    .font(.system(size: 14))
+                    .foregroundColor(isPast ? Color.epgTextDim : Color.epgText)
+                    .lineLimit(1)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+                    .padding(.horizontal, 6 + cellBorder)
+                    .padding(.vertical, cellBorder)
+            }
+
+            // 1dp progress bar at very bottom (APK: ProgressBar height=1dp, tint color)
+            if isNow || isPast {
+                GeometryReader { _ in
+                    ZStack(alignment: .leading) {
+                        Color.epgCellBg.opacity(0.4)
+                            .frame(height: 2)
+                        Color.epgAccent
+                            .frame(width: max(CGFloat(progress) * (width - cellBorder * 2), 0), height: 2)
+                    }
+                }
+                .frame(height: 2)
+                .padding(.horizontal, cellBorder)
+                .padding(.bottom, cellBorder)
+            }
+        }
+        .frame(width: width, height: rowHeight)
+        .clipShape(Rectangle())
+    }
+
+    // MARK: - Helpers
+
+    private func loadGuide() async {
+        isLoading = true
+        defer { isLoading = false }
+        await viewModel.loadGuide()
+        guide = viewModel.guide
+    }
+
+    private func logoURL(_ logo: String) -> URL? {
+        if logo.hasPrefix("http") { return URL(string: logo) }
+        guard let base = UserDefaults.standard.serverURL else { return nil }
+        return base.appendingPathComponent(logo)
+    }
+
+    private static let hourFmt: DateFormatter = {
+        let f = DateFormatter(); f.dateFormat = "h a"; return f
+    }()
+}
+
+#Preview {
+    EPGGuideView(viewModel: LiveTVViewModel())
+}
