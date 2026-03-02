@@ -16,6 +16,9 @@ xcuserdata/
 # macOS
 .DS_Store
 
+# SMB/NAS temp files (created when editing over network share)
+.smbdelete*
+
 # SwiftPM
 .build/
 .swiftpm/
