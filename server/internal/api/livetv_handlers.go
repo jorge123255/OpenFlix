@@ -3255,7 +3255,7 @@ func (s *Server) refreshTVGuideEPG(source *models.EPGSource) error {
 		ProviderID:   source.TVGuideProviderID,
 		ZipCode:      source.TVGuideZipCode,
 		Hours:        days * 24,
-		FetchDetails: source.TVGuideFetchDetails,
+		FetchDetails: true, // Always fetch artwork, descriptions, genres for TVGuide
 	}
 
 	log.Printf("📺 TVGuide: Fetching %d days of listings for provider %s (zip: %s, details: %v)",
@@ -3307,28 +3307,46 @@ func (s *Server) refreshTVGuideEPG(source *models.EPGSource) error {
 		result := s.db.Where("channel_id = ? AND start = ?", p.ChannelID, p.Start).First(&existing)
 
 		if result.Error == nil {
-			// Update existing
+			// Update existing — only overwrite enriched fields if new value is non-empty
 			existing.End = p.End
 			existing.Title = p.Title
-			existing.Description = p.Description
-			existing.Subtitle = p.EpisodeTitle
-			existing.Category = p.Category
-			existing.Rating = p.Rating
+			if p.Description != "" {
+				existing.Description = p.Description
+			}
+			if p.EpisodeTitle != "" {
+				existing.Subtitle = p.EpisodeTitle
+			}
+			if p.Category != "" {
+				existing.Category = p.Category
+			}
+			if p.Rating != "" {
+				existing.Rating = p.Rating
+			}
 			existing.Icon = p.Icon
-			existing.Art = p.Art
+			if p.Art != "" {
+				existing.Art = p.Art
+			}
 			existing.CallSign = p.CallSign
 			existing.ChannelNo = p.ChannelNo
 			existing.AffiliateName = p.AffiliateName
-			existing.EpisodeNum = episodeNum
-			existing.SeasonNumber = p.SeasonNumber
-			existing.EpisodeNumber = p.EpisodeNumber
+			if episodeNum != "" {
+				existing.EpisodeNum = episodeNum
+			}
+			if p.SeasonNumber > 0 {
+				existing.SeasonNumber = p.SeasonNumber
+			}
+			if p.EpisodeNumber > 0 {
+				existing.EpisodeNumber = p.EpisodeNumber
+			}
 			existing.IsNew = p.IsNew
 			existing.IsLive = p.IsLive
 			existing.IsMovie = p.IsMovie
 			existing.IsSports = p.IsSports
 			existing.IsKids = p.IsKids
 			existing.IsNews = p.IsNews
-			existing.Genres = p.Genres
+			if p.Genres != "" {
+				existing.Genres = p.Genres
+			}
 			existing.HasCC = p.HasCC
 			existing.ProgramID = p.ProgramID
 			existing.EPGSourceID = &source.ID

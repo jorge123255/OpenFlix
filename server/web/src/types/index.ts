@@ -99,6 +99,7 @@ export interface FilesystemBrowseResponse {
   path: string
   parentPath?: string
   entries: FilesystemEntry[]
+  pinnedPaths?: FilesystemEntry[]
 }
 
 // Live TV types
@@ -121,13 +122,18 @@ export interface M3USource {
 export interface EPGSource {
   id: number
   name: string
-  providerType: 'xmltv' | 'gracenote'
+  providerType: 'xmltv' | 'gracenote' | 'tvguide'
   // XMLTV fields
   url?: string
   // Gracenote fields
   gracenoteAffiliate?: string
   gracenotePostalCode?: string
   gracenoteHours?: number
+  // TVGuide fields
+  tvguideProviderId?: string
+  tvguideZipCode?: string
+  tvguideDays?: number
+  tvguideFetchDetails?: boolean
   // Common fields
   lastFetched?: string
   programCount?: number
@@ -241,9 +247,14 @@ export interface Program {
   channelName?: string
   // Episode status flags
   isNew?: boolean
-  isPremiere?: boolean
   isLive?: boolean
+  isPremiere?: boolean
+  isSeasonPremiere?: boolean
+  isSeriesPremiere?: boolean
   isFinale?: boolean
+  isSeasonFinale?: boolean
+  isSeriesFinale?: boolean
+  originalAirDate?: string
   // Content type flags
   isMovie?: boolean
   isSports?: boolean
@@ -330,19 +341,25 @@ export interface CommercialsResponse {
 }
 
 export interface SeriesRule {
-  id: number
-  title: string
-  channelId?: number
-  anyChannel: boolean
-  anyTime: boolean
-  startTime?: string
-  endTime?: string
-  keepCount: number
-  priority: number
-  prePadding: number
-  postPadding: number
-  enabled: boolean
-  createdAt: string
+  ID: number
+  Name: string
+  Image?: string
+  Paused: boolean
+  Rerecord: boolean
+  KeepOnly: string   // "" = all, "unwatched" = unwatched only/+N, "last" = last N
+  KeepNum: number
+  PaddingStart: number  // seconds
+  PaddingEnd: number    // seconds
+  EQ?: Record<string, unknown>
+  NE?: Record<string, unknown>
+  IN?: Record<string, unknown>
+  NI?: Record<string, unknown>
+  GT?: Record<string, unknown>
+  LT?: Record<string, unknown>
+  Limit: number
+  Priority: number
+  NumJobs: number
+  UpdatedAt: string
 }
 
 // Server types
@@ -476,10 +493,15 @@ export interface OnLaterProgram {
   isSports?: boolean
   isKids?: boolean
   isNews?: boolean
-  isPremiere?: boolean
   isNew?: boolean
   isLive?: boolean
+  isPremiere?: boolean
+  isSeasonPremiere?: boolean
+  isSeriesPremiere?: boolean
   isFinale?: boolean
+  isSeasonFinale?: boolean
+  isSeriesFinale?: boolean
+  originalAirDate?: string
   teams?: string
   league?: string
   seriesId?: string
