@@ -1680,6 +1680,7 @@ func (s *Server) getGuide(c *gin.Context) {
 		IsSports    bool   `json:"isSports,omitempty"`
 		IsKids      bool   `json:"isKids,omitempty"`
 		IsNews      bool   `json:"isNews,omitempty"`
+		HasCC       bool   `json:"hasCC,omitempty"`
 	}
 
 	// Group programs by channelId (what frontend uses for lookup)
@@ -1706,6 +1707,7 @@ func (s *Server) getGuide(c *gin.Context) {
 			IsSports:    prog.IsSports,
 			IsKids:      prog.IsKids,
 			IsNews:      prog.IsNews,
+			HasCC:       prog.HasCC,
 		}
 		if chID, ok := programIDToChannelID[prog.ChannelID]; ok {
 			slim.ChannelID = chID
@@ -2730,6 +2732,9 @@ func (s *Server) addEPGSource(c *gin.Context) {
 
 	if req.ProviderType == "tvguide" && req.TVGuideDays == 0 {
 		req.TVGuideDays = 13 // Max available
+	}
+	if req.ProviderType == "tvguide" {
+		req.TVGuideFetchDetails = true // Always fetch artwork, descriptions, genres
 	}
 
 	source := models.EPGSource{
