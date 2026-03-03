@@ -285,7 +285,59 @@ struct StartOverInfoDTO: Codable {
 
 // MARK: - EPG Programs/Channels
 struct EPGProgramsResponse: Codable {
-    let programs: [ProgramDTO]; let total: Int?
+    let programs: [EPGSearchProgram]; let total: Int?
+}
+
+struct EPGSearchProgram: Codable, Identifiable {
+    // ProgramDTO fields (flat embed from server)
+    let programId: StringOrInt?
+    let channelId: String?
+    let title: String?
+    let subtitle: String?
+    let description: String?
+    let start: String?
+    let end: String?
+    let art: String?
+    let icon: String?
+    let category: String?
+    let rating: String?
+    let isNew: Bool?
+    let isLive: Bool?
+    let isSports: Bool?
+    let isMovie: Bool?
+    let isKids: Bool?
+    let seasonNumber: Int?
+    let episodeNumber: Int?
+    let episodeNum: String?
+    let hasCC: Bool?
+    // Channel info (enriched by server)
+    let channelName: String?
+    let channelLogo: String?
+    let channelNumber: Int?
+
+    var id: String { programId?.stringValue ?? UUID().uuidString }
+    var safeTitle: String { title ?? "Unknown" }
+    var safeChannelName: String { channelName ?? "" }
+    var startDate: Date? {
+        guard let s = start else { return nil }
+        return ISO8601DateFormatter().date(from: s)
+    }
+    var endDate: Date? {
+        guard let e = end else { return nil }
+        return ISO8601DateFormatter().date(from: e)
+    }
+    var isCurrentlyAiring: Bool {
+        guard let s = startDate, let e = endDate else { return false }
+        return s <= Date() && Date() < (endDate ?? Date())
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case programId = "id"
+        case channelId, title, subtitle, description, start, end
+        case art, icon, category, rating, isNew, isLive, isSports, isMovie, isKids
+        case seasonNumber, episodeNumber, episodeNum, hasCC
+        case channelName, channelLogo, channelNumber
+    }
 }
 struct EPGChannelsListResponse: Codable {
     let channels: [EPGChannelListDTO]

@@ -17,6 +17,7 @@ struct EPGGridViewModern: View {
     @State private var showQuickNav = true
     @State private var recordingToast: String?
     @State private var showRecordingToast = false
+    @State private var showSearch = false
 
     private let dvrRepository = DVRRepository()
     
@@ -47,7 +48,7 @@ struct EPGGridViewModern: View {
                         onJumpToNow: scrollToNow,
                         onJumpToPrimetime: scrollToPrimetime,
                         onShowCategories: { /* toggle filter */ },
-                        onSearch: { /* show search */ }
+                        onSearch: { showSearch = true }
                     )
                     .focused($focusedSection, equals: .quickNav)
                     .transition(.move(edge: .top).combined(with: .opacity))
@@ -87,6 +88,47 @@ struct EPGGridViewModern: View {
         }
         .animation(.spring(response: 0.4), value: showQuickNav)
         .animation(.spring(response: 0.4), value: showMiniPlayer)
+        .sheet(isPresented: $showSearch) {
+            EPGSearchView(
+                channels: viewModel.guide.map { $0.channel },
+                onChannelSelect: { channel in
+                    onChannelSelect(channel)
+                },
+                onProgramSelect: { searchProgram in
+                    // Find matching channel and convert to domain Program for detail sheet
+                    if let match = viewModel.guide.first(where: { $0.channel.id == searchProgram.channelId }) {
+                        let start = searchProgram.startDate ?? Date()
+                        let end = searchProgram.endDate ?? start.addingTimeInterval(1800)
+                        selectedProgram = Program(
+                            id: searchProgram.id,
+                            title: searchProgram.safeTitle,
+                            subtitle: searchProgram.subtitle,
+                            description: searchProgram.description,
+                            startTime: start,
+                            endTime: end,
+                            duration: Int(end.timeIntervalSince(start) / 60),
+                            icon: searchProgram.icon,
+                            art: searchProgram.art,
+                            rating: searchProgram.rating,
+                            category: searchProgram.category,
+                            isNew: searchProgram.isNew ?? false,
+                            isLive: searchProgram.isLive ?? false,
+                            isPremiere: false,
+                            isFinale: false,
+                            isSports: searchProgram.isSports ?? false,
+                            isKids: searchProgram.isKids ?? false,
+                            teams: nil,
+                            league: nil,
+                            hasRecording: false,
+                            recordingId: nil,
+                            hasCC: searchProgram.hasCC ?? false
+                        )
+                        selectedChannelForDetail = match.channel
+                        showProgramDetail = true
+                    }
+                }
+            )
+        }
         .sheet(isPresented: $showProgramDetail) {
             if let program = selectedProgram, let channel = selectedChannelForDetail {
                 ModernProgramDetailSheet(

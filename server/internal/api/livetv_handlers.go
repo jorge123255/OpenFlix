@@ -3477,23 +3477,32 @@ func (s *Server) getEPGPrograms(c *gin.Context) {
 	var channels []models.Channel
 	s.db.Where("channel_id IN ?", channelIDs).Find(&channels)
 
-	// Create a map of channel names
-	channelNames := make(map[string]string)
+	type channelMeta struct {
+		Name   string
+		Logo   string
+		Number int
+	}
+	channelInfo := make(map[string]channelMeta)
 	for _, ch := range channels {
-		channelNames[ch.ChannelID] = ch.Name
+		channelInfo[ch.ChannelID] = channelMeta{Name: ch.Name, Logo: ch.Logo, Number: ch.Number}
 	}
 
-	// Enrich programs with channel names
+	// Enrich programs with channel info
 	type ProgramResponse struct {
 		models.Program
-		ChannelName string `json:"channelName"`
+		ChannelName   string `json:"channelName"`
+		ChannelLogo   string `json:"channelLogo,omitempty"`
+		ChannelNumber int    `json:"channelNumber,omitempty"`
 	}
 
 	response := make([]ProgramResponse, len(programs))
 	for i, p := range programs {
+		meta := channelInfo[p.ChannelID]
 		response[i] = ProgramResponse{
-			Program:     p,
-			ChannelName: channelNames[p.ChannelID],
+			Program:       p,
+			ChannelName:   meta.Name,
+			ChannelLogo:   meta.Logo,
+			ChannelNumber: meta.Number,
 		}
 	}
 
