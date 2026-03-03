@@ -410,7 +410,7 @@ struct CreateDVRPassSheet: View {
                 "PaddingEnd": 0,
                 "Rerecord": false
             ]
-            if newEpisodesOnly { params["EQ"] = ["Tags": "New"] }
+            if newEpisodesOnly { params["EQ"] = ["isNew": "true"] }
             if let poster = result.posterUrl { params["Image"] = poster }
             if let tmdbId = result.tmdbId { params["TmdbId"] = tmdbId }
             if let mt = result.mediaType { params["MediaType"] = mt }
