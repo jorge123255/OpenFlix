@@ -86,13 +86,14 @@ struct ProgramDTO: Codable {
     let league: String?
     let hasRecording: Bool?
     let recordingId: StringOrInt?
+    let hasCC: Bool?
 
     enum CodingKeys: String, CodingKey {
         case idValue = "id"
         case title, subtitle, description, start, end
         case startTime, endTime, duration, icon, art, rating, category
         case isNew, isLive, isPremiere, isFinale, isSports, isKids
-        case teams, league, hasRecording, recordingId
+        case teams, league, hasRecording, recordingId, hasCC
     }
 
     var safeId: String { idValue?.stringValue ?? "" }

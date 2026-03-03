@@ -294,6 +294,10 @@ actor OpenFlixAPI {
     func refreshEPGSource(id: String) async throws { try await requestVoid(.refreshEPGSource(id: id)) }
 
     // MARK: - EPG Management
+    func searchGuidePrograms(query: String? = nil, limit: Int = 60) async throws -> EPGProgramsResponse {
+        try await request(.getEPGPrograms(channelId: nil, date: nil, search: query, limit: limit))
+    }
+
     func getEPGStats() async throws -> EPGStatsResponse { try await request(.getEPGStats) }
     func refreshAllEPG() async throws { try await requestVoid(.refreshAllEPG) }
     func getEPGSchedulerStatus() async throws -> EPGSchedulerStatusResponse { try await request(.getEPGSchedulerStatus) }
@@ -375,7 +379,15 @@ actor OpenFlixAPI {
     func getQualityPresets() async throws -> QualityPresetsResponse { try await request(.getQualityPresets) }
     func getDVRSettings() async throws -> DVRSettingsResponse { try await request(.getDVRSettings) }
     func updateDVRSettings(settings: [String: Any]) async throws { try await requestVoid(.updateDVRSettings(settings: settings)) }
+    func searchShowForPass(query: String, type: String? = "tv") async throws -> ShowSearchResultsResponse {
+        try await request(.searchShowForPass(query: query, type: type))
+    }
     func getDVRPasses() async throws -> DVRPassesResponse { try await request(.getDVRPasses) }
+    func createDVRPass(params: [String: Any]) async throws { try await requestVoid(.createDVRPass(params: params)) }
+    func updateDVRPass(id: Int, params: [String: Any]) async throws { try await requestVoid(.updateDVRPass(id: id, params: params)) }
+    func deleteDVRPass(id: Int) async throws { try await requestVoid(.deleteDVRPass(id: id)) }
+    func pauseDVRPass(id: Int) async throws { try await requestVoid(.pauseDVRPass(id: String(id))) }
+    func resumeDVRPass(id: Int) async throws { try await requestVoid(.resumeDVRPass(id: String(id))) }
     func getDVRSchedule() async throws -> DVRScheduleResponse { try await request(.getDVRSchedule) }
     func getDVRCalendar() async throws -> DVRCalendarResponse { try await request(.getDVRCalendar) }
     func getDVRLabels() async throws -> DVRLabelsResponse { try await request(.getDVRLabels) }

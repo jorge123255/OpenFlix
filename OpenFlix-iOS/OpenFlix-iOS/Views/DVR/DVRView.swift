@@ -677,14 +677,17 @@ struct ManageRecordingsSheet: View {
                 Picker("Tab", selection: $selectedTab) {
                     Text("Recordings").tag(0)
                     Text("Series Rules").tag(1)
+                    Text("Passes").tag(2)
                 }
                 .pickerStyle(.segmented)
                 .padding()
-                
+
                 if selectedTab == 0 {
                     recordingsList
-                } else {
+                } else if selectedTab == 1 {
                     seriesRulesList
+                } else {
+                    DVRPassesView(viewModel: viewModel)
                 }
             }
             .navigationTitle("Manage")

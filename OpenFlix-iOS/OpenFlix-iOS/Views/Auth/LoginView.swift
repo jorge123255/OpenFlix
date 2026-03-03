@@ -813,7 +813,7 @@ struct LoginView: View {
             defer { isResolvingInvite = false }
 
             // Ask cloud registry: any server registered with this invite token?
-            guard let baseURL = "https://discover.openflix.app" as String?,
+            guard let baseURL = "https://discover.openflix.io" as String?,
                   let url = URL(string: "\(baseURL)/servers?invite=\(inviteCode)") else {
                 authViewModel.error = "Could not contact discovery service"
                 return

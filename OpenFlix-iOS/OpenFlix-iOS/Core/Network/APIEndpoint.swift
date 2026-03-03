@@ -218,7 +218,7 @@ enum APIEndpoint {
     // MARK: - EPG Management
     case getEPGStats
     case refreshAllEPG
-    case getEPGPrograms(channelId: String?, date: String?)
+    case getEPGPrograms(channelId: String?, date: String?, search: String?, limit: Int?)
     case getEPGChannels
     case getEPGSchedulerStatus
     case forceEPGRefresh
@@ -332,7 +332,11 @@ enum APIEndpoint {
     case getQualityPresets
     case getDVRSettings
     case updateDVRSettings(settings: [String: Any])
+    case searchShowForPass(query: String, type: String?)
     case getDVRPasses
+    case createDVRPass(params: [String: Any])
+    case updateDVRPass(id: Int, params: [String: Any])
+    case deleteDVRPass(id: Int)
     case pauseDVRPass(id: String)
     case resumeDVRPass(id: String)
     case getDVRSchedule
@@ -958,7 +962,11 @@ enum APIEndpoint {
         case .getQualityPresets: return "/dvr/quality-presets"
         case .getDVRSettings: return "/dvr/settings"
         case .updateDVRSettings: return "/dvr/settings"
+        case .searchShowForPass: return "/dvr/show-search"
         case .getDVRPasses: return "/dvr/passes"
+        case .createDVRPass: return "/dvr/passes"
+        case .updateDVRPass(let id, _): return "/dvr/passes/\(id)"
+        case .deleteDVRPass(let id): return "/dvr/passes/\(id)"
         case .pauseDVRPass(let id): return "/dvr/passes/\(id)/pause"
         case .resumeDVRPass(let id): return "/dvr/passes/\(id)/resume"
         case .getDVRSchedule: return "/dvr/schedule"
@@ -1276,6 +1284,7 @@ enum APIEndpoint {
              .startTimeshift, .stopTimeshift,
              .enableArchive, .disableArchive,
              .enrichEPG,
+             .createDVRPass,
              .createTeamPass, .toggleTeamPass, .processTeamPasses,
              .scheduleRecording, .recordFromProgram, .bulkRecordingAction, .matchRecording,
              .detectCommercials, .reprocessRecording,
@@ -1337,7 +1346,7 @@ enum APIEndpoint {
              .updateRecording, .updateRecordingPriority, .updateRecordingProgress,
              .toggleRecordingWatched, .toggleRecordingFavorite, .toggleRecordingKeep,
              .updateDVRSettings,
-             .pauseDVRPass, .resumeDVRPass,
+             .pauseDVRPass, .resumeDVRPass, .updateDVRPass,
              .setRecordingLabels,
              .updateV2Job, .updateV2File,
              .updateV2FileState, .setV2FileLabels, .lockV2File,
@@ -1372,7 +1381,7 @@ enum APIEndpoint {
              .removeEPGMapping,
              .deleteChannelGroup, .removeChannelFromGroup,
              .deleteM3USource, .deleteXtreamSource, .deleteEPGSource,
-             .deleteTeamPass,
+             .deleteTeamPass, .deleteDVRPass,
              .deleteRecording, .trashRecording,
              .deleteSeriesRule,
              .deleteV2Job, .deleteV2File, .unlockV2File,
@@ -1449,10 +1458,12 @@ enum APIEndpoint {
             return [URLQueryItem(name: "url", value: url)]
         case .discoverGracenoteProviders(let zip):
             return [URLQueryItem(name: "zip", value: zip)]
-        case .getEPGPrograms(let channelId, let date):
+        case .getEPGPrograms(let channelId, let date, let search, let limit):
             var items: [URLQueryItem] = []
             if let c = channelId { items.append(URLQueryItem(name: "channelId", value: c)) }
             if let d = date { items.append(URLQueryItem(name: "date", value: d)) }
+            if let s = search { items.append(URLQueryItem(name: "search", value: s)) }
+            if let l = limit { items.append(URLQueryItem(name: "limit", value: String(l))) }
             return items.isEmpty ? nil : items
         case .checkV2Duplicate(let title, let startTime):
             return [URLQueryItem(name: "title", value: title), URLQueryItem(name: "startTime", value: startTime)]
@@ -1495,6 +1506,10 @@ enum APIEndpoint {
             if let c = channelId { items.append(URLQueryItem(name: "channel_id", value: c)) }
             if let n = count { items.append(URLQueryItem(name: "count", value: "\(n)")) }
             return items.isEmpty ? nil : items
+        case .searchShowForPass(let query, let type):
+            var items = [URLQueryItem(name: "q", value: query)]
+            if let t = type { items.append(URLQueryItem(name: "type", value: t)) }
+            return items
         default:
             return nil
         }
@@ -1800,6 +1815,10 @@ enum APIEndpoint {
             return jsonBody(["type": type, "destination": destination])
         case .setMetadataPrefs(_, let prefs):
             return jsonBody(prefs)
+        case .createDVRPass(let params):
+            return jsonBody(params)
+        case .updateDVRPass(_, let params):
+            return jsonBody(params)
         case .createSeriesRule(let title, let channelId, let prePadding, let postPadding, let keepCount):
             var d: [String: Any] = ["title": title]
             if let c = channelId { d["channelId"] = c }

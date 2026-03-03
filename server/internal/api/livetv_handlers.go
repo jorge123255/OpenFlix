@@ -15,6 +15,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/openflix/openflix-server/internal/epg/gracenote"
+	"github.com/openflix/openflix-server/internal/epg/tvguide"
 	"github.com/openflix/openflix-server/internal/livetv"
 	"github.com/openflix/openflix-server/internal/models"
 	"gorm.io/gorm"
@@ -2691,6 +2692,10 @@ func (s *Server) addEPGSource(c *gin.Context) {
 		GracenoteAffiliate  string `json:"gracenoteAffiliate"`              // For Gracenote
 		GracenotePostalCode string `json:"gracenotePostalCode"`             // For Gracenote
 		GracenoteHours      int    `json:"gracenoteHours"`                  // For Gracenote
+		TVGuideProviderID   string `json:"tvguideProviderId"`               // For TVGuide
+		TVGuideZipCode      string `json:"tvguideZipCode"`                  // For TVGuide
+		TVGuideDays         int    `json:"tvguideDays"`                     // For TVGuide (max 13)
+		TVGuideFetchDetails bool   `json:"tvguideFetchDetails"`             // For TVGuide
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -2698,8 +2703,8 @@ func (s *Server) addEPGSource(c *gin.Context) {
 	}
 
 	// Validate provider type
-	if req.ProviderType != "xmltv" && req.ProviderType != "gracenote" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "providerType must be 'xmltv' or 'gracenote'"})
+	if req.ProviderType != "xmltv" && req.ProviderType != "gracenote" && req.ProviderType != "tvguide" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "providerType must be 'xmltv', 'gracenote', or 'tvguide'"})
 		return
 	}
 
@@ -2713,9 +2718,18 @@ func (s *Server) addEPGSource(c *gin.Context) {
 		return
 	}
 
+	if req.ProviderType == "tvguide" && req.TVGuideProviderID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "tvguideProviderId is required for TVGuide provider"})
+		return
+	}
+
 	// Set default hours for Gracenote
 	if req.ProviderType == "gracenote" && req.GracenoteHours == 0 {
 		req.GracenoteHours = 6
+	}
+
+	if req.ProviderType == "tvguide" && req.TVGuideDays == 0 {
+		req.TVGuideDays = 13 // Max available
 	}
 
 	source := models.EPGSource{
@@ -2725,6 +2739,10 @@ func (s *Server) addEPGSource(c *gin.Context) {
 		GracenoteAffiliate:  req.GracenoteAffiliate,
 		GracenotePostalCode: req.GracenotePostalCode,
 		GracenoteHours:      req.GracenoteHours,
+		TVGuideProviderID:   req.TVGuideProviderID,
+		TVGuideZipCode:      req.TVGuideZipCode,
+		TVGuideDays:         req.TVGuideDays,
+		TVGuideFetchDetails: req.TVGuideFetchDetails,
 		Enabled:             true,
 	}
 
@@ -2733,10 +2751,18 @@ func (s *Server) addEPGSource(c *gin.Context) {
 		return
 	}
 
-	// Fetch and parse EPG in background
+	// Fetch and parse EPG in background (reload from DB so Save updates correct row)
+	sourceID := source.ID
 	go func() {
-		if err := s.refreshEPGSourceInternal(&source); err != nil {
-			println("Failed to refresh EPG source:", err.Error())
+		var src models.EPGSource
+		if err := s.db.First(&src, sourceID).Error; err != nil {
+			log.Printf("EPG auto-fetch: source %d not found: %v", sourceID, err)
+			return
+		}
+		if err := s.refreshEPGSourceInternal(&src); err != nil {
+			log.Printf("EPG auto-fetch failed for source %d (%s): %v", sourceID, src.Name, err)
+		} else {
+			log.Printf("EPG auto-fetch complete for source %d (%s): %d programs", sourceID, src.Name, src.ProgramCount)
 		}
 	}()
 
@@ -2763,6 +2789,10 @@ func (s *Server) updateEPGSource(c *gin.Context) {
 		GracenoteAffiliate  string `json:"gracenoteAffiliate"`
 		GracenotePostalCode string `json:"gracenotePostalCode"`
 		GracenoteHours      *int   `json:"gracenoteHours"`
+		TVGuideProviderID   string `json:"tvguideProviderId"`
+		TVGuideZipCode      string `json:"tvguideZipCode"`
+		TVGuideDays         *int   `json:"tvguideDays"`
+		TVGuideFetchDetails *bool  `json:"tvguideFetchDetails"`
 		Enabled             *bool  `json:"enabled"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -2784,6 +2814,18 @@ func (s *Server) updateEPGSource(c *gin.Context) {
 	}
 	if req.GracenoteHours != nil {
 		source.GracenoteHours = *req.GracenoteHours
+	}
+	if req.TVGuideProviderID != "" {
+		source.TVGuideProviderID = req.TVGuideProviderID
+	}
+	if req.TVGuideZipCode != "" {
+		source.TVGuideZipCode = req.TVGuideZipCode
+	}
+	if req.TVGuideDays != nil {
+		source.TVGuideDays = *req.TVGuideDays
+	}
+	if req.TVGuideFetchDetails != nil {
+		source.TVGuideFetchDetails = *req.TVGuideFetchDetails
 	}
 	if req.Enabled != nil {
 		source.Enabled = *req.Enabled
@@ -2867,9 +2909,12 @@ func (s *Server) refreshEPGSource(c *gin.Context) {
 // refreshEPGSourceInternal handles refresh for both XMLTV and Gracenote providers
 func (s *Server) refreshEPGSourceInternal(source *models.EPGSource) error {
 	var err error
-	if source.ProviderType == "gracenote" {
+	switch source.ProviderType {
+	case "gracenote":
 		err = s.refreshGracenoteEPG(source)
-	} else {
+	case "tvguide":
+		err = s.refreshTVGuideEPG(source)
+	default:
 		// Default to XMLTV
 		epgParser := livetv.NewEPGParser(s.db)
 		err = epgParser.RefreshEPGSource(source)
@@ -3190,12 +3235,158 @@ func (s *Server) refreshGracenoteEPG(source *models.EPGSource) error {
 }
 
 // getEPGPrograms fetches EPG programs with pagination and optional filtering
+
+// refreshTVGuideEPG fetches and imports EPG data from TVGuide.com
+func (s *Server) refreshTVGuideEPG(source *models.EPGSource) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+
+	days := source.TVGuideDays
+	if days <= 0 {
+		days = 13
+	}
+
+	config := tvguide.ProviderConfig{
+		ProviderID:   source.TVGuideProviderID,
+		ZipCode:      source.TVGuideZipCode,
+		Hours:        days * 24,
+		FetchDetails: source.TVGuideFetchDetails,
+	}
+
+	log.Printf("📺 TVGuide: Fetching %d days of listings for provider %s (zip: %s, details: %v)",
+		days, config.ProviderID, config.ZipCode, config.FetchDetails)
+
+	programs, channelCount, err := tvguide.FetchAndConvert(ctx, config)
+	if err != nil {
+		return fmt.Errorf("failed to fetch TVGuide data: %w", err)
+	}
+
+	log.Printf("📺 TVGuide: Got %d programs across %d channels", len(programs), channelCount)
+
+	// Build channel set for cleanup
+	channelSet := make(map[string]bool)
+	for _, p := range programs {
+		channelSet[p.ChannelID] = true
+	}
+
+	// Delete old programs for this source's channels
+	if len(channelSet) > 0 {
+		channelIDs := make([]string, 0, len(channelSet))
+		for chID := range channelSet {
+			channelIDs = append(channelIDs, chID)
+		}
+		s.db.Where("channel_id IN ? AND start < ?", channelIDs, time.Now().Add(-24*time.Hour)).Delete(&models.Program{})
+	}
+
+	// Import programs
+	now := time.Now()
+	imported := 0
+	updated := 0
+
+	for _, p := range programs {
+		// Skip past programs
+		if p.End.Before(now) {
+			continue
+		}
+
+		// Build episode number string
+		episodeNum := ""
+		if p.SeasonNumber > 0 && p.EpisodeNumber > 0 {
+			episodeNum = fmt.Sprintf("S%02dE%02d", p.SeasonNumber, p.EpisodeNumber)
+		} else if p.EpisodeNumber > 0 {
+			episodeNum = fmt.Sprintf("E%02d", p.EpisodeNumber)
+		}
+
+		// Check if program already exists
+		var existing models.Program
+		result := s.db.Where("channel_id = ? AND start = ?", p.ChannelID, p.Start).First(&existing)
+
+		if result.Error == nil {
+			// Update existing
+			existing.End = p.End
+			existing.Title = p.Title
+			existing.Description = p.Description
+			existing.Subtitle = p.EpisodeTitle
+			existing.Category = p.Category
+			existing.Rating = p.Rating
+			existing.Icon = p.Icon
+			existing.Art = p.Art
+			existing.CallSign = p.CallSign
+			existing.ChannelNo = p.ChannelNo
+			existing.AffiliateName = p.AffiliateName
+			existing.EpisodeNum = episodeNum
+			existing.SeasonNumber = p.SeasonNumber
+			existing.EpisodeNumber = p.EpisodeNumber
+			existing.IsNew = p.IsNew
+			existing.IsLive = p.IsLive
+			existing.IsMovie = p.IsMovie
+			existing.IsSports = p.IsSports
+			existing.IsKids = p.IsKids
+			existing.IsNews = p.IsNews
+			existing.Genres = p.Genres
+			existing.HasCC = p.HasCC
+			existing.ProgramID = p.ProgramID
+			existing.EPGSourceID = &source.ID
+			s.db.Save(&existing)
+			updated++
+		} else {
+			// Create new
+			program := models.Program{
+				ChannelID:     p.ChannelID,
+				CallSign:      p.CallSign,
+				ChannelNo:     p.ChannelNo,
+				AffiliateName: p.AffiliateName,
+				Title:         p.Title,
+				Subtitle:      p.EpisodeTitle,
+				Description:   p.Description,
+				Start:         p.Start,
+				End:           p.End,
+				Icon:          p.Icon,
+				Art:           p.Art,
+				Category:      p.Category,
+				EpisodeNum:    episodeNum,
+				SeasonNumber:  p.SeasonNumber,
+				EpisodeNumber: p.EpisodeNumber,
+				Rating:        p.Rating,
+				IsNew:         p.IsNew,
+				IsLive:        p.IsLive,
+				IsMovie:       p.IsMovie,
+				IsSports:      p.IsSports,
+				IsKids:        p.IsKids,
+				IsNews:        p.IsNews,
+				Genres:        p.Genres,
+				HasCC:         p.HasCC,
+				ProgramID:     p.ProgramID,
+				EPGSourceID:   &source.ID,
+			}
+			s.db.Create(&program)
+			imported++
+		}
+	}
+
+	log.Printf("📺 TVGuide: Imported %d new, updated %d existing programs", imported, updated)
+
+	// Update source metadata
+	nowTime := time.Now()
+	source.LastFetched = &nowTime
+	source.ProgramCount = imported + updated
+	source.ChannelCount = channelCount
+
+	// Invalidate guide cache
+	if s.guideCache != nil {
+		s.guideCache.InvalidateAll()
+	}
+
+	return s.db.Save(source).Error
+}
+
 func (s *Server) getEPGPrograms(c *gin.Context) {
 	// Parse query parameters
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "100"))
 	epgSourceID := c.Query("epgSourceId")
 	channelID := c.Query("channelId")
+	searchQuery := c.Query("search") // title keyword search for rule creation
 
 	if page < 1 {
 		page = 1
@@ -3240,13 +3431,19 @@ func (s *Server) getEPGPrograms(c *gin.Context) {
 		query = query.Where("channel_id = ?", channelID)
 	}
 
+	// Title keyword search (for rule creation guide search)
+	if searchQuery != "" {
+		query = query.Where("LOWER(title) LIKE ?", "%"+strings.ToLower(searchQuery)+"%").
+			Where("start > ?", time.Now())
+	}
+
 	// Get total count
 	var total int64
 	query.Count(&total)
 
 	// Fetch programs with pagination
 	var programs []models.Program
-	query.Order("start DESC").Limit(limit).Offset(offset).Find(&programs)
+	query.Order("start ASC").Limit(limit).Offset(offset).Find(&programs)
 
 	// Fetch channel names for these programs
 	channelIDs := make([]string, 0)
@@ -4416,4 +4613,27 @@ func fixProgramImageURL(val string) string {
 		return "https://www.tmsimg.com/assets/" + val + ".jpg"
 	}
 	return val
+}
+
+// getTVGuideProviders returns available TV providers for a zip code from TVGuide.com
+// GET /api/livetv/epg/tvguide/providers?zip=60601
+func (s *Server) getTVGuideProviders(c *gin.Context) {
+	zipCode := c.Query("zip")
+	if zipCode == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Missing 'zip' query parameter"})
+		return
+	}
+
+	client := tvguide.NewClient()
+	providers, err := client.GetProvidersByZip(c.Request.Context(), zipCode)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch providers: " + err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"zipCode":   zipCode,
+		"providers": providers,
+		"count":     len(providers),
+	})
 }

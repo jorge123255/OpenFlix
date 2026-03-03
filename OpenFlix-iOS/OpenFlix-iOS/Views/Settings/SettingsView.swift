@@ -7,6 +7,10 @@ struct SettingsView: View {
     @State private var showSources = false
     @State private var showLogoutConfirm = false
     @State private var showClaimTokenCopied = false
+    @State private var tmdbApiKey = ""
+    @State private var tmdbKeyIsSet = false   // server already has a key
+    @State private var isSavingTMDB = false
+    @State private var tmdbSaved = false
 
     var body: some View {
         NavigationStack {
@@ -238,6 +242,47 @@ struct SettingsView: View {
                     }
                 }
 
+                // Metadata Section
+                Section {
+                    if tmdbKeyIsSet && tmdbApiKey.isEmpty {
+                        HStack {
+                            Label("TMDB API Key", systemImage: "key.fill")
+                            Spacer()
+                            Text("Configured")
+                                .foregroundColor(.green)
+                                .font(.subheadline)
+                        }
+                        Button("Replace Key") {
+                            tmdbKeyIsSet = false
+                        }
+                        .font(.subheadline)
+                        .foregroundColor(.blue)
+                    } else {
+                        HStack {
+                            SecureField(tmdbKeyIsSet ? "Enter new key to replace" : "Enter TMDB API key", text: $tmdbApiKey)
+                                .autocorrectionDisabled()
+                                .textInputAutocapitalization(.never)
+                            Spacer()
+                            if isSavingTMDB {
+                                ProgressView().scaleEffect(0.8)
+                            } else if tmdbSaved {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .foregroundColor(.green)
+                            } else if !tmdbApiKey.isEmpty {
+                                Button("Save") {
+                                    saveTMDBKey()
+                                }
+                                .font(.caption.weight(.semibold))
+                                .foregroundColor(.blue)
+                            }
+                        }
+                    }
+                } header: {
+                    Text("Metadata")
+                } footer: {
+                    Text("TMDB API key enables movie & TV show posters in DVR pass search. Get a free key at themoviedb.org.")
+                }
+
                 // Live TV Section
                 if settingsViewModel.hasLiveTV {
                     Section("Live TV") {
@@ -319,6 +364,7 @@ struct SettingsView: View {
         .task {
             await settingsViewModel.loadServerInfo()
             await settingsViewModel.loadSources()
+            await loadServerSettings()
         }
         .confirmationDialog("Sign Out", isPresented: $showLogoutConfirm) {
             Button("Sign Out", role: .destructive) {
@@ -327,6 +373,37 @@ struct SettingsView: View {
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("Are you sure you want to sign out?")
+        }
+    }
+
+    private func loadServerSettings() async {
+        do {
+            let response = try await OpenFlixAPI.shared.getAdminSettings()
+            if let key = response.settings["TMDBApiKey"]?.value as? String, !key.isEmpty {
+                await MainActor.run { tmdbKeyIsSet = true }
+            }
+        } catch {
+            // Non-admin users won't have access — silently ignore
+        }
+    }
+
+    private func saveTMDBKey() {
+        guard !tmdbApiKey.isEmpty else { return }
+        isSavingTMDB = true
+        Task {
+            do {
+                try await OpenFlixAPI.shared.updateAdminSettings(settings: ["TMDBApiKey": tmdbApiKey])
+                await MainActor.run {
+                    isSavingTMDB = false
+                    tmdbSaved = true
+                    tmdbKeyIsSet = true
+                    tmdbApiKey = ""
+                }
+                try? await Task.sleep(nanoseconds: 2_000_000_000)
+                await MainActor.run { tmdbSaved = false }
+            } catch {
+                await MainActor.run { isSavingTMDB = false }
+            }
         }
     }
 

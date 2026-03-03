@@ -471,10 +471,12 @@ struct XfinityProfileCard: View {
 // MARK: - Library Wrapper (Saved Tab)
 struct XfinityLibraryWrapper: View {
     @State private var selectedSection: LibrarySection = .recordings
+    @StateObject private var passesViewModel = DVRViewModel()
     
     enum LibrarySection: String, CaseIterable {
         case recordings = "Recordings"
         case scheduled = "Scheduled"
+        case passes = "Passes"
         case downloads = "Downloads"
         case watchlist = "Watchlist"
     }
@@ -508,6 +510,8 @@ struct XfinityLibraryWrapper: View {
                     DVRRecordingsContent()
                 case .scheduled:
                     DVRScheduledContent()
+                case .passes:
+                    DVRPassesView(viewModel: passesViewModel)
                 case .downloads:
                     DownloadsPlaceholder()
                 case .watchlist:

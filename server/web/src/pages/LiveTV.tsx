@@ -43,10 +43,17 @@ function AddSourceModal({
   const createEPG = useCreateEPGSource()
   const [name, setName] = useState('')
   const [url, setUrl] = useState('')
-  const [providerType, setProviderType] = useState<'xmltv' | 'gracenote'>('xmltv')
+  const [providerType, setProviderType] = useState<'xmltv' | 'gracenote' | 'tvguide'>('tvguide')
   const [gracenoteAffiliate, setGracenoteAffiliate] = useState('')
   const [gracenotePostalCode, setGracenotePostalCode] = useState('')
   const [gracenoteHours, setGracenoteHours] = useState(6)
+  // TVGuide state
+  const [tvguideZipCode, setTvguideZipCode] = useState('')
+  const [tvguideProviders, setTvguideProviders] = useState<Array<{ id: number; name: string; type: string; city?: string; state?: string }>>([])
+  const [tvguideSelectedProvider, setTvguideSelectedProvider] = useState<{ id: number; name: string; type: string; city?: string; state?: string } | null>(null)
+  const [tvguideDays, setTvguideDays] = useState(13)
+  const [isSearchingTVGuide, setIsSearchingTVGuide] = useState(false)
+  const [tvguideSearched, setTvguideSearched] = useState(false)
   const [preview, setPreview] = useState<any>(null)
   const [isPreviewing, setIsPreviewing] = useState(false)
   const [previewError, setPreviewError] = useState('')
@@ -147,7 +154,19 @@ function AddSourceModal({
       })
     } else {
       // EPG source with provider type selection
-      if (providerType === 'xmltv') {
+      if (providerType === 'tvguide') {
+        if (!tvguideSelectedProvider) {
+          setPreviewError('Please select a TV provider')
+          return
+        }
+        await createEPG.mutateAsync({
+          name,
+          providerType: 'tvguide',
+          tvguideProviderId: String(tvguideSelectedProvider.id),
+          tvguideZipCode,
+          tvguideDays,
+        })
+      } else if (providerType === 'xmltv') {
         await createEPG.mutateAsync({ name, providerType: 'xmltv', url })
       } else {
         // Validate Gracenote requirements
@@ -193,6 +212,17 @@ function AddSourceModal({
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-300 mb-2">Provider</label>
               <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setProviderType('tvguide')}
+                  className={`flex-1 py-2 px-4 rounded-lg border transition-colors ${
+                    providerType === 'tvguide'
+                      ? 'bg-indigo-600 border-indigo-600 text-white'
+                      : 'bg-gray-700 border-gray-600 text-gray-300 hover:border-gray-500'
+                  }`}
+                >
+                  TVGuide.com
+                </button>
                 <button
                   type="button"
                   onClick={() => setProviderType('xmltv')}
@@ -288,6 +318,115 @@ function AddSourceModal({
                   )}
                 </div>
               </div>
+            </>
+          )}
+
+          {type === 'epg' && providerType === 'tvguide' && (
+            <>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  ZIP Code <span className="text-red-400">*</span>
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={tvguideZipCode}
+                    onChange={(e) => setTvguideZipCode(e.target.value.replace(/\D/g, '').slice(0, 5))}
+                    className="flex-1 px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
+                    placeholder="60601"
+                    maxLength={5}
+                  />
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      setIsSearchingTVGuide(true)
+                      setPreviewError('')
+                      try {
+                        const result = await api.discoverTVGuideProviders(tvguideZipCode)
+                        setTvguideProviders(result.providers)
+                        setTvguideSearched(true)
+                        setTvguideSelectedProvider(null)
+                      } catch (err: any) {
+                        setPreviewError(err.message || 'Failed to search providers')
+                      }
+                      setIsSearchingTVGuide(false)
+                    }}
+                    disabled={isSearchingTVGuide || tvguideZipCode.length < 5}
+                    className="px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg flex items-center gap-2"
+                  >
+                    {isSearchingTVGuide ? (
+                      <RefreshCw className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Search className="h-4 w-4" />
+                    )}
+                    Search
+                  </button>
+                </div>
+              </div>
+
+              {previewError && <p className="text-sm text-red-400 mb-4">{previewError}</p>}
+
+              {tvguideSearched && (
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Select Provider ({tvguideProviders.length} found)
+                  </label>
+                  {tvguideProviders.length === 0 ? (
+                    <p className="text-sm text-gray-500">No providers found for this ZIP code</p>
+                  ) : (
+                    <div className="space-y-1 max-h-48 overflow-y-auto">
+                      {tvguideProviders.map((provider) => (
+                        <button
+                          key={provider.id}
+                          type="button"
+                          onClick={() => {
+                            setTvguideSelectedProvider(provider)
+                            if (!name) setName(provider.name)
+                          }}
+                          className={`w-full text-left px-4 py-3 rounded-lg border transition-colors ${
+                            tvguideSelectedProvider?.id === provider.id
+                              ? 'bg-purple-600/20 border-purple-500 text-white'
+                              : 'bg-gray-700/50 border-gray-600 text-gray-300 hover:border-gray-500 hover:bg-gray-700'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <span className="font-medium">{provider.name}</span>
+                              <span className="text-gray-400 ml-2 text-sm">
+                                {provider.city && provider.state ? ` • ${provider.city}, ${provider.state}` : ''}
+                              </span>
+                              <span className="ml-2 px-1.5 py-0.5 bg-purple-500/20 text-purple-300 text-xs rounded">
+                                {provider.type}
+                              </span>
+                            </div>
+                            {tvguideSelectedProvider?.id === provider.id && (
+                              <Check className="h-4 w-4 text-purple-400" />
+                            )}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {tvguideSelectedProvider && (
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Days of Guide Data</label>
+                  <select
+                    value={tvguideDays}
+                    onChange={(e) => setTvguideDays(Number(e.target.value))}
+                    className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
+                  >
+                    <option value={3}>3 days</option>
+                    <option value={7}>7 days</option>
+                    <option value={13}>13 days (maximum)</option>
+                  </select>
+                  <p className="text-xs text-gray-500 mt-1">
+                    TV Guide provides up to 13 days of program data with full artwork, ratings, and episode info.
+                  </p>
+                </div>
+              )}
             </>
           )}
 

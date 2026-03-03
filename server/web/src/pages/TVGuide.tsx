@@ -43,6 +43,8 @@ interface Program {
   isSports?: boolean
   isKids?: boolean
   isNews?: boolean
+  // Accessibility
+  hasCC?: boolean
 }
 
 interface EPGSource {
@@ -180,7 +182,7 @@ function ProgramBlock({
         const showLive = program.isLive
         const showFinale = program.isFinale
 
-        if (!showNew && !showPremiere && !showFinale && !showLive) return null
+        if (!showNew && !showPremiere && !showFinale && !showLive && !program.hasCC) return null
 
         return (
           <div className="absolute top-1 left-1 z-10 flex gap-0.5">
@@ -195,6 +197,9 @@ function ProgramBlock({
             )}
             {showFinale && (
               <span className="px-1 py-0.5 bg-purple-500 text-white text-[8px] font-bold rounded uppercase leading-none">Finale</span>
+            )}
+            {program.hasCC && (
+              <span className="px-1 py-0.5 bg-gray-600 text-white text-[8px] font-bold rounded uppercase leading-none">CC</span>
             )}
           </div>
         )
@@ -317,6 +322,11 @@ function ProgramModal({
                   {program.isLive && (
                     <span className="px-2.5 py-1 bg-red-500 text-white text-xs font-bold rounded uppercase animate-pulse">
                       Live
+                    </span>
+                  )}
+                  {program.hasCC && (
+                    <span className="px-2.5 py-1 bg-gray-600 text-white text-xs font-bold rounded uppercase">
+                      CC
                     </span>
                   )}
                 </>

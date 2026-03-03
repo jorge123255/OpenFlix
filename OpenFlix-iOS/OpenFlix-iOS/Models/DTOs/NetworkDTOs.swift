@@ -299,3 +299,32 @@ struct EPGChannelListDTO: Codable {
 struct CommercialDetectionStatusResponse: Codable {
     let enabled: Bool; let processing: Int; let queued: Int; let completed: Int
 }
+
+// MARK: - Show Search (TMDB-first, for Create Pass)
+struct ShowSearchResult: Codable, Identifiable {
+    let tmdbId: Int?
+    let title: String
+    let overview: String?
+    let year: Int?
+    let mediaType: String?
+    let posterUrl: String?
+    let nextAiring: ShowNextAiring?
+
+    var id: String { "\(tmdbId ?? 0)-\(title)" }
+}
+
+struct ShowNextAiring: Codable {
+    let start: String
+    let channelName: String?
+}
+
+// The endpoint returns a JSON array directly, but we wrap it for convenience
+typealias ShowSearchResultsResponse = [ShowSearchResult]
+
+// Tracker info embedded in pass listings
+struct ShowTrackerInfo: Codable {
+    let tmdbId: Int?
+    let posterUrl: String?
+    let nextSeasonNumber: Int?
+    let nextEpisodeAirDate: String?
+}

@@ -407,3 +407,23 @@ type ChapterMarker struct {
 }
 
 func (ChapterMarker) TableName() string { return "chapter_markers" }
+
+// ShowTracker tracks a TMDB show for new season/episode notifications.
+// Created automatically when a user creates a pass from a TMDB search result.
+type ShowTracker struct {
+	ID                 uint       `gorm:"primarykey" json:"id"`
+	UserID             uint       `gorm:"index;uniqueIndex:idx_user_tmdb" json:"userId"`
+	DVRRuleID          *uint      `gorm:"index" json:"dvrRuleId,omitempty"` // linked SeriesRule
+	TMDBId             int        `gorm:"index;uniqueIndex:idx_user_tmdb" json:"tmdbId"`
+	MediaType          string     `gorm:"default:tv" json:"mediaType"`
+	ShowTitle          string     `json:"showTitle"`
+	PosterURL          string     `json:"posterUrl,omitempty"`
+	LastSeasonCount    int        `json:"lastSeasonCount"`
+	LastEpisodeCount   int        `json:"lastEpisodeCount"`
+	NextEpisodeAirDate string     `json:"nextEpisodeAirDate,omitempty"` // ISO8601 from TMDB
+	NextSeasonNumber   int        `json:"nextSeasonNumber,omitempty"`
+	LastCheckedAt      *time.Time `json:"lastCheckedAt,omitempty"`
+	CreatedAt          time.Time  `json:"createdAt"`
+}
+
+func (ShowTracker) TableName() string { return "show_trackers" }

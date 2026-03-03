@@ -178,7 +178,11 @@ struct EPGProgramCellModern: View {
             if program.hasRecording {
                 recordingIndicator
             }
-            
+
+            if program.hasCC {
+                modernBadge("CC", color: .gray)
+            }
+
             Spacer()
         }
     }

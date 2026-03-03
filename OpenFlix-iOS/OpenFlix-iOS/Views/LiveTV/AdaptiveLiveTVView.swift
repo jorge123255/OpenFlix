@@ -1,17 +1,26 @@
 import SwiftUI
 import AVKit
 
-/// Transform DVR stream URL to HLS proxy URL for iOS compatibility.
-/// The proxy host/port are configured via server settings, not hardcoded.
-func transformToHLSProxy(_ url: URL, proxyHost: String, proxyPort: Int) -> URL {
-    let path = url.path
+// MARK: - HLS Proxy Configuration
+// Bob's HLS transcoding proxy for iOS MPEG-TS compatibility
+private let hlsProxyHost = "192.168.1.152"  // Bob's Mac
+private let hlsProxyPort = 8888
+
+/// Transform DVR stream URL to HLS proxy URL for iOS compatibility
+/// e.g., http://192.168.1.39:7070/stream/DTV-8635 -> http://192.168.1.152:8888/hls/DTV-8635/index.m3u8
+func transformToHLSProxy(_ url: URL) -> URL {
+    let path = url.path  // e.g., /stream/DTV-8635
+    
+    // Extract channel ID from path
     if path.hasPrefix("/stream/") {
         let channelId = String(path.dropFirst("/stream/".count))
-        let hlsUrlString = "http://\(proxyHost):\(proxyPort)/hls/\(channelId)/index.m3u8"
+        let hlsUrlString = "http://\(hlsProxyHost):\(hlsProxyPort)/hls/\(channelId)/index.m3u8"
         if let hlsUrl = URL(string: hlsUrlString) {
             return hlsUrl
         }
     }
+    
+    // Fallback: return original URL
     return url
 }
 

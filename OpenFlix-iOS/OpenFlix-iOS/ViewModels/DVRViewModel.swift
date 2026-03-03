@@ -8,6 +8,7 @@ class DVRViewModel: ObservableObject {
     @Published var recordings: [Recording] = []
     @Published var scheduledRecordings: [Recording] = []
     @Published var seriesRules: [SeriesRule] = []
+    @Published var dvrPasses: [DVRPass] = []
     @Published var selectedTab = DVRTab.recordings
     @Published var isLoading = false
     @Published var error: String?
@@ -40,6 +41,15 @@ class DVRViewModel: ObservableObject {
         do {
             try await dvrRepository.loadSeriesRules()
             seriesRules = dvrRepository.seriesRules
+        } catch {
+            // Silently fail
+        }
+    }
+
+    func loadDVRPasses() async {
+        do {
+            try await dvrRepository.loadDVRPasses()
+            dvrPasses = dvrRepository.dvrPasses
         } catch {
             // Silently fail
         }
@@ -121,6 +131,57 @@ class DVRViewModel: ObservableObject {
             seriesRules = dvrRepository.seriesRules
         } catch {
             // Silently fail
+        }
+    }
+
+    // MARK: - DVR Pass Actions
+
+    func createDVRPass(name: String, keepOnly: String, keepNum: Int, paddingStart: Int, paddingEnd: Int, rerecord: Bool) async {
+        do {
+            try await dvrRepository.createDVRPass(name: name, keepOnly: keepOnly, keepNum: keepNum, paddingStart: paddingStart, paddingEnd: paddingEnd, rerecord: rerecord)
+            dvrPasses = dvrRepository.dvrPasses
+        } catch {
+            self.error = error.localizedDescription
+        }
+    }
+
+    func createDVRPassWithParams(_ params: [String: Any]) async {
+        do {
+            try await dvrRepository.createDVRPassWithParams(params)
+            dvrPasses = dvrRepository.dvrPasses
+        } catch {
+            self.error = error.localizedDescription
+        }
+    }
+
+    func updateDVRPassWithParams(_ pass: DVRPass, params: [String: Any]) async {
+        do {
+            try await dvrRepository.updateDVRPassWithParams(id: pass.id, params: params)
+            dvrPasses = dvrRepository.dvrPasses
+        } catch {
+            self.error = error.localizedDescription
+        }
+    }
+
+    func toggleDVRPass(_ pass: DVRPass) async {
+        do {
+            if pass.paused {
+                try await dvrRepository.resumeDVRPass(id: pass.id)
+            } else {
+                try await dvrRepository.pauseDVRPass(id: pass.id)
+            }
+            dvrPasses = dvrRepository.dvrPasses
+        } catch {
+            self.error = error.localizedDescription
+        }
+    }
+
+    func deleteDVRPass(_ pass: DVRPass) async {
+        do {
+            try await dvrRepository.deleteDVRPass(id: pass.id)
+            dvrPasses = dvrRepository.dvrPasses
+        } catch {
+            self.error = error.localizedDescription
         }
     }
 

@@ -1,5 +1,12 @@
 import SwiftUI
 
+// Atomic context passed to the program detail sheet — prevents grey-screen race condition
+private struct ProgramDetailContext: Identifiable {
+    let id = UUID()
+    let program: Program
+    let channel: Channel
+}
+
 // MARK: - Xfinity-Style Live TV View (Simple List)
 
 struct XfinityLiveTVView: View {
@@ -8,11 +15,10 @@ struct XfinityLiveTVView: View {
     @State private var selectedChannel: Channel?
     @State private var viewingTime: Date = Date()
     @State private var programOffset: CGFloat = 0
-    @State private var showProgramDetail = false
-    @State private var selectedProgram: Program?
-    @State private var selectedChannelForDetail: Channel?
+    @State private var programDetail: ProgramDetailContext?
     @State private var recordingToast: String?
     @State private var showRecordingToast = false
+    @State private var showOnNow = false
     private let dvrRepository = DVRRepository()
     
     enum ChannelFilter: String, CaseIterable {
@@ -52,29 +58,35 @@ struct XfinityLiveTVView: View {
         .background(bgColor.ignoresSafeArea())
         .navigationTitle(selectedFilter.rawValue)
         .navigationBarTitleDisplayMode(.inline)
-        .sheet(isPresented: $showProgramDetail) {
-            if let program = selectedProgram, let channel = selectedChannelForDetail {
-                ModernProgramDetailSheet(
-                    program: program,
-                    channel: channel,
-                    onPlay: {
-                        showProgramDetail = false
-                        selectedChannel = channel
-                    },
-                    onRecord: {
-                        showProgramDetail = false
-                        recordProgram(program, channel: channel)
-                    },
-                    onCreatePass: { options in
-                        showProgramDetail = false
-                        createSeriesPass(program, channel: channel, options: options)
-                    },
-                    onDismiss: {
-                        showProgramDetail = false
-                    }
-                )
-                .presentationDetents([.medium, .large])
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                NavigationLink(destination: WhatsOnNowView()) {
+                    Label("On Now", systemImage: "tv.badge.wifi")
+                }
             }
+        }
+        .sheet(item: $programDetail) { ctx in
+            ModernProgramDetailSheet(
+                program: ctx.program,
+                channel: ctx.channel,
+                onPlay: {
+                    programDetail = nil
+                    selectedChannel = ctx.channel
+                },
+                onRecord: {
+                    programDetail = nil
+                    recordProgram(ctx.program, channel: ctx.channel)
+                },
+                onCreatePass: { options in
+                    programDetail = nil
+                    createSeriesPass(ctx.program, channel: ctx.channel, options: options)
+                },
+                onDismiss: {
+                    programDetail = nil
+                }
+            )
+            .presentationDetents([.medium, .large])
+            .presentationBackground(Color(red: 26/255, green: 20/255, blue: 46/255))
         }
         .overlay(alignment: .top) {
             if showRecordingToast, let message = recordingToast {
@@ -269,7 +281,7 @@ struct XfinityLiveTVView: View {
     }
     
     // MARK: - Channel List
-    
+
     private var channelList: some View {
         ScrollView(.vertical, showsIndicators: false) {
             LazyVStack(spacing: 0) {
@@ -284,9 +296,7 @@ struct XfinityLiveTVView: View {
                             selectedChannel = channel
                         },
                         onProgramTap: { program in
-                            selectedProgram = program
-                            selectedChannelForDetail = channel
-                            showProgramDetail = true
+                            programDetail = ProgramDetailContext(program: program, channel: channel)
                         }
                     )
 
@@ -465,7 +475,7 @@ struct XfinityChannelRow: View {
             }
             .buttonStyle(.plain)
 
-            // Program area → shows detail popup
+            // Program area → tap opens Watch/Record/Pass sheet
             Button {
                 if let program = currentProgram {
                     onProgramTap(program)

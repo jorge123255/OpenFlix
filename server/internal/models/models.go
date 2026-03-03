@@ -348,6 +348,12 @@ type EPGSource struct {
 	GracenotePostalCode  string `gorm:"size:20" json:"gracenotePostalCode,omitempty"`  // ZIP code
 	GracenoteHours       int    `gorm:"default:6" json:"gracenoteHours,omitempty"`     // Hours to fetch
 
+	// TVGuide settings
+	TVGuideProviderID  string `gorm:"size:50" json:"tvguideProviderId,omitempty"`     // Provider ID (e.g., 9166050689)
+	TVGuideZipCode     string `gorm:"size:20" json:"tvguideZipCode,omitempty"`        // ZIP code for provider lookup
+	TVGuideDays        int    `gorm:"default:13" json:"tvguideDays,omitempty"`        // Days of data (max 13)
+	TVGuideFetchDetails bool  `gorm:"default:false" json:"tvguideFetchDetails,omitempty"` // Fetch full program details (slower)
+
 	Enabled       bool       `gorm:"default:true" json:"enabled"`
 	Priority      int        `gorm:"default:0" json:"priority"` // Lower is higher priority for fallback
 	LastFetched   *time.Time `json:"lastFetched,omitempty"`
@@ -447,14 +453,23 @@ type Program struct {
 	Rating        string    `gorm:"size:20" json:"rating,omitempty"`        // TV-PG, TV-14, etc.
 
 	// Content classification flags
-	IsMovie     bool `gorm:"default:false;index" json:"isMovie"`
-	IsSports    bool `gorm:"default:false;index" json:"isSports"`
-	IsKids      bool `gorm:"default:false;index" json:"isKids"`
-	IsNews      bool `gorm:"default:false;index" json:"isNews"`
-	IsPremiere  bool `gorm:"default:false" json:"isPremiere"`
-	IsNew       bool `gorm:"default:false" json:"isNew"`
-	IsLive      bool `gorm:"default:false" json:"isLive"`
-	IsFinale    bool `gorm:"default:false" json:"isFinale"`
+	IsMovie          bool `gorm:"default:false;index" json:"isMovie"`
+	IsSports         bool `gorm:"default:false;index" json:"isSports"`
+	IsKids           bool `gorm:"default:false;index" json:"isKids"`
+	IsNews           bool `gorm:"default:false;index" json:"isNews"`
+	IsNew            bool `gorm:"default:false" json:"isNew"`
+	IsLive           bool `gorm:"default:false" json:"isLive"`
+	// Premiere flags — granular like Channels DVR
+	IsPremiere       bool `gorm:"default:false" json:"isPremiere"`       // any premiere (backward compat)
+	IsSeasonPremiere bool `gorm:"default:false" json:"isSeasonPremiere"` // first episode of a season
+	IsSeriesPremiere bool `gorm:"default:false" json:"isSeriesPremiere"` // very first episode ever
+	// Finale flags
+	IsFinale         bool `gorm:"default:false" json:"isFinale"`         // any finale (backward compat)
+	IsSeasonFinale   bool `gorm:"default:false" json:"isSeasonFinale"`   // last episode of a season
+	IsSeriesFinale   bool `gorm:"default:false" json:"isSeriesFinale"`   // last episode ever
+
+	// Original air date — used to detect new vs. repeat on plain XMLTV
+	OriginalAirDate *time.Time `gorm:"index" json:"originalAirDate,omitempty"`
 
 	// Sports-specific fields
 	Teams  string `gorm:"size:500" json:"teams,omitempty"`  // Comma-separated team names
@@ -462,6 +477,10 @@ type Program struct {
 
 	// Source tracking
 	EPGSourceID *uint `gorm:"index" json:"epgSourceId,omitempty"` // Which EPG source imported this program
+
+	// Genre / accessibility
+	Genres string `gorm:"size:500" json:"genres,omitempty"` // Comma-separated genres
+	HasCC  bool   `gorm:"default:false" json:"hasCC"`       // Closed captions available
 
 	// External IDs
 	SeriesID    string `gorm:"size:100" json:"seriesId,omitempty"`
@@ -538,21 +557,48 @@ type Recording struct {
 	Commercials []CommercialSegment `gorm:"foreignKey:RecordingID" json:"commercials,omitempty"`
 }
 
-// SeriesRule represents a series recording rule
+// SeriesRule represents a recording pass, matching Channels DVR's Rule struct exactly.
+// Conditions (EQ/NE/IN/NI/GT/LT) are stored as JSON text in the DB.
+// JSON field names are PascalCase to match Channels DVR's API format.
 type SeriesRule struct {
-	ID          uint      `gorm:"primaryKey" json:"id"`
-	UserID      uint      `gorm:"index" json:"userId"`
-	Title       string    `gorm:"size:500" json:"title"`
-	ChannelID   *uint     `gorm:"index" json:"channelId,omitempty"` // nil = any channel
-	Keywords    string    `gorm:"size:500" json:"keywords,omitempty"`
-	TimeSlot    string    `gorm:"size:20" json:"timeSlot,omitempty"`   // e.g., "20:00"
-	DaysOfWeek  string    `gorm:"size:20" json:"daysOfWeek,omitempty"` // e.g., "1,2,3,4,5"
-	KeepCount   int       `gorm:"default:0" json:"keepCount"`          // 0 = keep all
-	PrePadding  int       `json:"prePadding"`                          // minutes
-	PostPadding int       `json:"postPadding"`                         // minutes
-	Enabled     bool      `gorm:"default:true" json:"enabled"`
-	CreatedAt   time.Time `json:"createdAt"`
-	UpdatedAt   time.Time `json:"updatedAt"`
+	ID     uint `gorm:"primaryKey" json:"ID"`
+	UserID uint `gorm:"index"      json:"-"`
+
+	// Core identity
+	Name  string `gorm:"size:500"  json:"Name"`
+	Image string `gorm:"size:1000" json:"Image,omitempty"`
+
+	// State
+	Paused   bool `gorm:"default:false" json:"Paused"`
+	Rerecord bool `gorm:"default:false" json:"Rerecord"` // re-record deleted episodes
+
+	// Keep settings — matches Channels DVR exactly:
+	//   KeepOnly: "" = keep all, "unwatched" = unwatched only/+N, "last" = last N
+	//   KeepNum:  number used with "unwatched" or "last"
+	KeepOnly string `gorm:"size:20;default:''" json:"KeepOnly"`
+	KeepNum  int    `gorm:"default:0"         json:"KeepNum"`
+
+	// Padding in seconds (Channels DVR uses seconds)
+	PaddingStart int `gorm:"default:0" json:"PaddingStart"`
+	PaddingEnd   int `gorm:"default:0" json:"PaddingEnd"`
+
+	// Filter conditions — each is a JSON object: {"FieldName": value}
+	// IN/NI values may be arrays: {"Title": ["Foo", "Bar"]}
+	EQ string `gorm:"type:text" json:"-"` // field == value
+	NE string `gorm:"type:text" json:"-"` // field != value
+	IN string `gorm:"type:text" json:"-"` // field CONTAINS value
+	NI string `gorm:"type:text" json:"-"` // field EXCLUDES value
+	GT string `gorm:"type:text" json:"-"` // field > value (numeric)
+	LT string `gorm:"type:text" json:"-"` // field < value (numeric)
+
+	Limit    int `gorm:"default:0" json:"Limit"`    // max concurrent jobs, 0 = unlimited
+	Priority int `gorm:"default:0" json:"Priority"` // conflict resolution
+
+	// NumJobs is computed at query time, not stored.
+	NumJobs int `gorm:"-" json:"NumJobs"`
+
+	CreatedAt time.Time `json:"-"`
+	UpdatedAt time.Time `json:"UpdatedAt"`
 }
 
 // TeamPass represents an auto-recording rule for sports teams

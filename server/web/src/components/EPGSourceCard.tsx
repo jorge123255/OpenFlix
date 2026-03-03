@@ -7,6 +7,9 @@ interface EPGSource {
   providerType: string
   gracenoteAffiliate?: string
   gracenotePostalCode?: string
+  tvguideProviderId?: string
+  tvguideZipCode?: string
+  tvguideDays?: number
   url?: string
   enabled: boolean
   lastFetched?: string
@@ -74,6 +77,8 @@ export function EPGSourceCard({ source, onRefresh, onDelete, onEdit, isRefreshin
           <p className="text-sm text-gray-400">
             {source.providerType === 'gracenote'
               ? `${source.gracenoteAffiliate} • ${source.gracenotePostalCode}`
+              : source.providerType === 'tvguide'
+              ? `ZIP ${source.tvguideZipCode || ''} • ${source.tvguideDays || 13} days`
               : source.url
             }
           </p>
