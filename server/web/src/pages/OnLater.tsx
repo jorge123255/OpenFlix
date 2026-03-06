@@ -21,6 +21,9 @@ import {
   CalendarDays,
   LayoutGrid,
   ChevronRight,
+  Gift,
+  Ghost,
+  Zap,
 } from 'lucide-react'
 import { api } from '../api/client'
 
@@ -80,13 +83,16 @@ interface OnLaterStats {
   kids: number
   news: number
   premieres: number
+  holiday?: number
+  halloween?: number
+  seasonal?: number
 }
 
 // ---------------------------------------------------------------------------
 // Category config
 // ---------------------------------------------------------------------------
 
-type Category = 'all' | 'tvshows' | 'movies' | 'sports' | 'kids' | 'news'
+type Category = 'all' | 'tvshows' | 'movies' | 'sports' | 'kids' | 'news' | 'holiday' | 'halloween' | 'seasonal'
 
 const categories: { id: Category; name: string; icon: React.ElementType; color: string; activeText: string }[] = [
   { id: 'all',      name: 'All',       icon: LayoutGrid, color: 'bg-indigo-600',  activeText: 'text-white' },
@@ -95,6 +101,9 @@ const categories: { id: Category; name: string; icon: React.ElementType; color: 
   { id: 'sports',   name: 'Sports',    icon: Trophy,     color: 'bg-green-600',   activeText: 'text-white' },
   { id: 'kids',     name: 'Kids',      icon: Baby,       color: 'bg-orange-500',  activeText: 'text-white' },
   { id: 'news',     name: 'News',      icon: Newspaper,  color: 'bg-red-600',     activeText: 'text-white' },
+  { id: 'holiday',  name: 'Holiday',   icon: Gift,       color: 'bg-red-700',     activeText: 'text-white' },
+  { id: 'halloween',name: 'Halloween', icon: Ghost,      color: 'bg-orange-700',  activeText: 'text-white' },
+  { id: 'seasonal', name: 'Special Events', icon: Zap,  color: 'bg-yellow-600',  activeText: 'text-white' },
 ]
 
 // ---------------------------------------------------------------------------

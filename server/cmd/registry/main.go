@@ -49,6 +49,7 @@ type ServerEntry struct {
 	Port           int       `json:"port"`
 	LocalAddresses []string  `json:"localAddresses"`
 	PublicIP       string    `json:"publicIp"`
+	ExternalURL    string    `json:"externalUrl,omitempty"` // cloudflared tunnel or custom domain
 	ClaimToken     string    `json:"-"` // not exposed in lookup responses
 	InviteTokens   []string  `json:"-"` // active invite tokens from this server
 	ExpiresAt      time.Time `json:"-"`
@@ -62,6 +63,7 @@ type serverResponse struct {
 	Port           int      `json:"port"`
 	PublicIP       string   `json:"publicIp"`
 	LocalAddresses []string `json:"localAddresses"`
+	ExternalURL    string   `json:"externalUrl,omitempty"`
 }
 
 // registerPayload is what the home server sends on heartbeat.
@@ -74,6 +76,7 @@ type registerPayload struct {
 	ClaimToken     string   `json:"claimToken,omitempty"`
 	InviteTokens   []string `json:"inviteTokens,omitempty"`
 	LicenseKey     string   `json:"licenseKey,omitempty"`
+	ExternalURL    string   `json:"externalUrl,omitempty"`
 }
 
 // store is the in-memory registry.
@@ -430,6 +433,7 @@ func main() {
 			Port:           payload.Port,
 			LocalAddresses: addrs,
 			PublicIP:       publicIP,
+			ExternalURL:    payload.ExternalURL,
 			ClaimToken:     strings.ToUpper(payload.ClaimToken),
 			ExpiresAt:      time.Now().Add(entryTTL),
 		}
@@ -477,6 +481,7 @@ func main() {
 			Port:           entry.Port,
 			PublicIP:       entry.PublicIP,
 			LocalAddresses: entry.LocalAddresses,
+			ExternalURL:    entry.ExternalURL,
 		})
 	})
 
@@ -651,7 +656,7 @@ func main() {
 			return
 		}
 
-		result, err := db.Exec(`UPDATE licenses SET expires_at = $1 WHERE key = $2`, t, key)
+		result, err := db.Exec(`UPDATE licenses SET expires_at = $1, active = TRUE WHERE key = $2`, t, key)
 		if err != nil {
 			log.Printf("update license expiry error: %v", err)
 			http.Error(w, "internal error", http.StatusInternalServerError)
@@ -663,9 +668,9 @@ func main() {
 			return
 		}
 
-		log.Printf("ADMIN UPDATE EXPIRY key=%s expiresAt=%s", key, t.Format(time.RFC3339))
+		log.Printf("ADMIN UPDATE EXPIRY key=%s expiresAt=%s (reactivated)", key, t.Format(time.RFC3339))
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]any{"updated": true, "key": key, "expiresAt": t.Format(time.RFC3339)})
+		json.NewEncoder(w).Encode(map[string]any{"updated": true, "key": key, "expiresAt": t.Format(time.RFC3339), "active": true})
 	}))
 
 	// GET /admin/licenses — list all licenses

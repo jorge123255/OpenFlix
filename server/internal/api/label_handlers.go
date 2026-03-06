@@ -272,3 +272,75 @@ func (s *Server) getFilesByLabel(c *gin.Context) {
 		"totalCount": len(matched),
 	})
 }
+
+// setGroupLabels sets user-defined labels on a DVR group.
+// PUT /dvr/v2/groups/:id/labels
+func (s *Server) setGroupLabels(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid group ID"})
+		return
+	}
+
+	var req SetLabelsRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+		return
+	}
+
+	var group models.DVRGroup
+	if err := s.db.First(&group, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Group not found"})
+		return
+	}
+
+	seen := make(map[string]bool)
+	var cleaned []string
+	for _, l := range req.Labels {
+		trimmed := strings.TrimSpace(l)
+		if trimmed != "" && !seen[trimmed] {
+			seen[trimmed] = true
+			cleaned = append(cleaned, trimmed)
+		}
+	}
+	group.Labels = strings.Join(cleaned, ",")
+	if err := s.db.Save(&group).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update labels"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"labels": cleaned})
+}
+
+// setGroupVisibility sets the VisibilityMode on a DVR group.
+// PUT /dvr/v2/groups/:id/visibility
+// Body: {"visibilityMode": "both"|"kids"|"hidden"}
+func (s *Server) setGroupVisibility(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid group ID"})
+		return
+	}
+
+	var req struct {
+		VisibilityMode string `json:"visibilityMode"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+		return
+	}
+
+	switch req.VisibilityMode {
+	case "both", "kids", "hidden":
+		// valid
+	default:
+		c.JSON(http.StatusBadRequest, gin.H{"error": "visibilityMode must be 'both', 'kids', or 'hidden'"})
+		return
+	}
+
+	if err := s.db.Model(&models.DVRGroup{}).Where("id = ?", id).
+		Update("visibility_mode", req.VisibilityMode).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update visibility"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"visibilityMode": req.VisibilityMode})
+}

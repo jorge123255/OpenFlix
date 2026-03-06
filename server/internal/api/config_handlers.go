@@ -453,16 +453,24 @@ func (s *Server) importConfig(c *gin.Context) {
 	// Import Series Rules
 	for _, rule := range importData.SeriesRules {
 		var existing models.SeriesRule
-		if s.db.Where("title = ? AND user_id = ?", rule.Title, rule.UserID).First(&existing).Error == nil {
-			existing.Keywords = rule.Keywords
-			existing.TimeSlot = rule.TimeSlot
-			existing.DaysOfWeek = rule.DaysOfWeek
-			existing.KeepCount = rule.KeepCount
-			existing.PrePadding = rule.PrePadding
-			existing.PostPadding = rule.PostPadding
-			existing.Enabled = rule.Enabled
+		if s.db.Where("name = ? AND user_id = ?", rule.Name, rule.UserID).First(&existing).Error == nil {
+			existing.Image = rule.Image
+			existing.Paused = rule.Paused
+			existing.Rerecord = rule.Rerecord
+			existing.KeepOnly = rule.KeepOnly
+			existing.KeepNum = rule.KeepNum
+			existing.PaddingStart = rule.PaddingStart
+			existing.PaddingEnd = rule.PaddingEnd
+			existing.EQ = rule.EQ
+			existing.NE = rule.NE
+			existing.IN = rule.IN
+			existing.NI = rule.NI
+			existing.GT = rule.GT
+			existing.LT = rule.LT
+			existing.Limit = rule.Limit
+			existing.Priority = rule.Priority
 			if err := s.db.Save(&existing).Error; err != nil {
-				errors = append(errors, fmt.Sprintf("SeriesRule %s: %v", rule.Title, err))
+				errors = append(errors, fmt.Sprintf("SeriesRule %s: %v", rule.Name, err))
 			} else {
 				imported["seriesRules"]++
 			}
@@ -470,7 +478,7 @@ func (s *Server) importConfig(c *gin.Context) {
 			newRule := rule
 			newRule.ID = 0
 			if err := s.db.Create(&newRule).Error; err != nil {
-				errors = append(errors, fmt.Sprintf("SeriesRule %s: %v", rule.Title, err))
+				errors = append(errors, fmt.Sprintf("SeriesRule %s: %v", rule.Name, err))
 			} else {
 				imported["seriesRules"]++
 			}

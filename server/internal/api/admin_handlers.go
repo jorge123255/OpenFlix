@@ -8,6 +8,7 @@ import (
 	"unicode"
 
 	"github.com/gin-gonic/gin"
+	"github.com/openflix/openflix-server/internal/config"
 )
 
 // ============ License Key Handlers ============
@@ -90,10 +91,23 @@ func (s *Server) saveLicense(c *gin.Context) {
 	// Persist to environment (in-memory for the running process)
 	os.Setenv("OPENFLIX_LICENSE_KEY", key)
 
-	// Also update the live config so the running process uses it immediately
+	// Persist to DB so it survives container restarts
+	s.setSetting("license_key", key)
+
+	// Update the live config
 	s.config.Server.LicenseKey = key
 
-	// If cloud registry is running, update it
+	// Derive a stable machine ID from the license key so the server identity
+	// survives container rebuilds and fresh installs.
+	if key != "" {
+		derived := config.DeriveServerID(key)
+		s.config.Server.MachineID = derived
+		if s.cloudRegistry != nil {
+			s.cloudRegistry.UpdateMachineID(derived)
+		}
+	}
+
+	// If cloud registry is running, update license key
 	if s.cloudRegistry != nil {
 		s.cloudRegistry.SetLicenseKey(key)
 	}
@@ -106,6 +120,7 @@ func (s *Server) saveLicense(c *gin.Context) {
 
 // remoteAccessStatus is returned by GET /api/admin/remote-access
 type remoteAccessStatus struct {
+	Enabled        bool      `json:"enabled"`
 	CloudConnected bool      `json:"cloudConnected"`
 	CloudURL       string    `json:"cloudUrl"`
 	PublicIP       string    `json:"publicIp"`
@@ -118,6 +133,7 @@ type remoteAccessStatus struct {
 // GET /api/admin/remote-access
 func (s *Server) getCloudRegistryStatus(c *gin.Context) {
 	status := remoteAccessStatus{
+		Enabled:   s.getSettingBool("remote_access_enabled", false),
 		CloudURL:  s.config.Server.CloudRegistryURL,
 		MachineID: s.config.Server.MachineID,
 	}

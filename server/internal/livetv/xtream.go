@@ -229,7 +229,7 @@ type XtreamSeriesInfoDetails struct {
 	Genre          string   `json:"genre"`
 	ReleaseDate    string   `json:"releaseDate"`
 	LastModified   string   `json:"last_modified"`
-	Rating         string   `json:"rating"`
+	Rating         interface{} `json:"rating"`
 	Rating5Based   float64  `json:"rating_5based"`
 	BackdropPath   []string `json:"backdrop_path"`
 	YoutubeTrailer string   `json:"youtube_trailer"`
@@ -240,7 +240,7 @@ type XtreamSeriesInfoDetails struct {
 // XtreamEpisode represents an episode
 // Note: Added uses interface{} because Xtream providers return inconsistent types (string or number)
 type XtreamEpisode struct {
-	ID                 string `json:"id"`
+	ID                 interface{} `json:"id"`
 	EpisodeNum         int    `json:"episode_num"`
 	Title              string `json:"title"`
 	ContainerExtension string `json:"container_extension"`
@@ -548,8 +548,13 @@ func (c *XtreamClient) BuildVODStreamURL(source *models.XtreamSource, streamID i
 	if ext == "" {
 		ext = "mp4"
 	}
+	// Extract just scheme+host+port from ServerURL (ignore any path like /xtream)
+	baseURL := source.ServerURL
+	if u, err := url.Parse(source.ServerURL); err == nil {
+		baseURL = fmt.Sprintf("%s://%s", u.Scheme, u.Host)
+	}
 	return fmt.Sprintf("%s/movie/%s/%s/%d.%s",
-		strings.TrimRight(source.ServerURL, "/"),
+		baseURL,
 		source.Username,
 		source.Password,
 		streamID,
@@ -562,8 +567,13 @@ func (c *XtreamClient) BuildSeriesStreamURL(source *models.XtreamSource, streamI
 	if ext == "" {
 		ext = "mp4"
 	}
+	// Extract just scheme+host+port from ServerURL (ignore any path like /xtream)
+	baseURL := source.ServerURL
+	if u, err := url.Parse(source.ServerURL); err == nil {
+		baseURL = fmt.Sprintf("%s://%s", u.Scheme, u.Host)
+	}
 	return fmt.Sprintf("%s/series/%s/%s/%d.%s",
-		strings.TrimRight(source.ServerURL, "/"),
+		baseURL,
 		source.Username,
 		source.Password,
 		streamID,

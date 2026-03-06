@@ -67,6 +67,14 @@ export function ComskipSettingsPage() {
   const [generateThumbnails, setGenerateThumbnails] = useState(false)
   const [shareEdits, setShareEdits] = useState(false)
 
+  // ONNX AI detection
+  const [useOnnx, setUseOnnx] = useState(false)
+  const [onnxModelPath, setOnnxModelPath] = useState('/data/models/commercial_skip.onnx')
+
+  // AcoustID intro detection
+  const [useAcoustid, setUseAcoustid] = useState(false)
+  const [fpcalcPath, setFpcalcPath] = useState('fpcalc')
+
   useEffect(() => {
     if (settingsData?.settings) {
       const s = settingsData.settings
@@ -78,6 +86,10 @@ export function ComskipSettingsPage() {
       setDetectionWorkers(s.detection_workers ?? 2)
       setGenerateThumbnails(s.generate_thumbnails ?? false)
       setShareEdits(s.share_edits ?? false)
+      setUseOnnx((s as any).use_onnx ?? false)
+      setOnnxModelPath((s as any).onnx_model_path || '/data/models/commercial_skip.onnx')
+      setUseAcoustid((s as any).use_acoustid ?? false)
+      setFpcalcPath((s as any).fpcalc_path || 'fpcalc')
     }
   }, [settingsData])
 
@@ -381,6 +393,101 @@ export function ComskipSettingsPage() {
               )}
             </button>
           </div>
+        </div>
+      </div>
+
+      {/* ONNX AI Detection */}
+      <div className="bg-gray-800 rounded-xl p-6">
+        <h2 className="text-lg font-semibold text-white mb-1 flex items-center gap-2">
+          <span>🤖</span> ONNX AI Detection
+        </h2>
+        <p className="text-sm text-gray-400 mb-4">
+          Use a neural network model for more accurate commercial detection. Requires <code className="bg-gray-700 px-1 rounded">python3</code> + <code className="bg-gray-700 px-1 rounded">onnxruntime</code> and a trained <code className="bg-gray-700 px-1 rounded">.onnx</code> model file.
+        </p>
+
+        <div className="space-y-4">
+          {/* Enable toggle */}
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-sm font-medium text-gray-300">Enable ONNX AI Detection</div>
+              <div className="text-xs text-gray-500">AI results run alongside comskip for higher accuracy</div>
+            </div>
+            <button
+              type="button"
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                useOnnx ? 'bg-indigo-600 text-white' : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
+              }`}
+              onClick={() => setUseOnnx(!useOnnx)}
+            >
+              {useOnnx ? <><ToggleRight className="h-5 w-5" />On</> : <><ToggleLeft className="h-5 w-5" />Off</>}
+            </button>
+          </div>
+
+          {/* Model path */}
+          {useOnnx && (
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-1">Model Path</label>
+              <p className="text-xs text-gray-500 mb-2">
+                Path to the <code className="bg-gray-700 px-1 rounded">.onnx</code> model file on the server.{' '}
+                <a href="https://github.com/openflix/models" className="text-indigo-400 hover:underline" target="_blank" rel="noreferrer">
+                  Download a model →
+                </a>
+              </p>
+              <input
+                type="text"
+                value={onnxModelPath}
+                onChange={e => setOnnxModelPath(e.target.value)}
+                className="w-full bg-gray-700 text-white rounded-lg px-3 py-2 text-sm font-mono border border-gray-600 focus:outline-none focus:border-indigo-500"
+                placeholder="/data/models/commercial_skip.onnx"
+              />
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* AcoustID Intro Detection */}
+      <div className="bg-gray-800 rounded-xl p-6">
+        <h2 className="text-lg font-semibold text-white mb-1 flex items-center gap-2">
+          <span>🎵</span> Audio Fingerprint Intro Detection
+        </h2>
+        <p className="text-sm text-gray-400 mb-4">
+          Automatically detect episode intros by comparing audio fingerprints across episodes of the same series.
+          Uses <code className="bg-gray-700 px-1 rounded">fpcalc</code> (chromaprint).
+          Install with: <code className="bg-gray-700 px-1 rounded">apt-get install libchromaprint-tools</code>
+        </p>
+
+        <div className="space-y-4">
+          {/* Enable toggle */}
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-sm font-medium text-gray-300">Enable Audio Fingerprint Intro Detection</div>
+              <div className="text-xs text-gray-500">Compares audio across episodes to find &quot;Skip Intro&quot; boundaries</div>
+            </div>
+            <button
+              type="button"
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                useAcoustid ? 'bg-indigo-600 text-white' : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
+              }`}
+              onClick={() => setUseAcoustid(!useAcoustid)}
+            >
+              {useAcoustid ? <><ToggleRight className="h-5 w-5" />On</> : <><ToggleLeft className="h-5 w-5" />Off</>}
+            </button>
+          </div>
+
+          {/* fpcalc path */}
+          {useAcoustid && (
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-1">fpcalc Binary Path</label>
+              <p className="text-xs text-gray-500 mb-2">Leave as <code className="bg-gray-700 px-1 rounded">fpcalc</code> if it&apos;s in PATH</p>
+              <input
+                type="text"
+                value={fpcalcPath}
+                onChange={e => setFpcalcPath(e.target.value)}
+                className="w-full bg-gray-700 text-white rounded-lg px-3 py-2 text-sm font-mono border border-gray-600 focus:outline-none focus:border-indigo-500"
+                placeholder="fpcalc"
+              />
+            </div>
+          )}
         </div>
       </div>
 

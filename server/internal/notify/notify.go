@@ -659,6 +659,41 @@ func eventLabel(eventType string) string {
 	}
 }
 
+// DirectNotification is an ad-hoc notification for background tasks.
+type DirectNotification struct {
+	Title   string
+	Message string
+	Type    string // e.g. "new_season"
+}
+
+// DirectNotify dispatches a notification directly to all configured channels
+// without requiring a DVREvent on the EventBus.
+func (m *NotificationManager) DirectNotify(n DirectNotification) {
+	if m == nil {
+		return
+	}
+	m.mu.RLock()
+	cfg := m.config
+	m.mu.RUnlock()
+
+	evt := dvr.DVREvent{
+		Type:      dvr.DVREventType(n.Type),
+		Title:     n.Title,
+		Message:   n.Message,
+		Timestamp: time.Now(),
+	}
+
+	for chType, chCfg := range cfg.Channels {
+		if chCfg == nil || !chCfg.Enabled {
+			continue
+		}
+		cc := *chCfg // copy to avoid data race
+		go func(ct ChannelType, c ChannelConfig) {
+			m.dispatch(ct, &c, evt)
+		}(chType, cc)
+	}
+}
+
 // ConfigToJSON serialises Config to a JSON string.
 func ConfigToJSON(cfg Config) (string, error) {
 	data, err := json.Marshal(cfg)

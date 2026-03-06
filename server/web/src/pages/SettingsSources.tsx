@@ -4,12 +4,11 @@ import {
   Settings,
   FolderOpen,
   Loader,
-  Search,
   Film,
   Clapperboard,
   HardDrive,
 } from 'lucide-react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { api } from '../api/client'
 import type { Library } from '../types'
 
@@ -42,18 +41,9 @@ function SettingsTabNav({ active }: { active: 'general' | 'sources' | 'livetv-dv
 }
 
 function PersonalMediaSection() {
-  const queryClient = useQueryClient()
-
   const { data: libraries, isLoading } = useQuery({
     queryKey: ['libraries'],
     queryFn: () => api.getLibraries(),
-  })
-
-  const scanLibrary = useMutation({
-    mutationFn: (id: number) => api.scanLibrary(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['libraries'] })
-    },
   })
 
   // Group libraries by type
@@ -139,19 +129,7 @@ function PersonalMediaSection() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => scanLibrary.mutate(lib.id)}
-                        disabled={scanLibrary.isPending}
-                        className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-gray-700 hover:bg-gray-600 disabled:bg-gray-800 text-white rounded-lg"
-                        title="Scan library"
-                      >
-                        {scanLibrary.isPending ? (
-                          <Loader className="h-3.5 w-3.5 animate-spin" />
-                        ) : (
-                          <Search className="h-3.5 w-3.5" />
-                        )}
-                        Scan
-                      </button>
+                      <span className="text-xs text-gray-500">Scan from Libraries</span>
                     </div>
                   </div>
                 ))}

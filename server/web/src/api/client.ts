@@ -335,13 +335,21 @@ class ApiClient {
 
   async createEPGSource(data: {
     name: string
-    providerType: 'xmltv' | 'gracenote'
+    providerType: 'xmltv' | 'gracenote' | 'tvguide'
     url?: string
     gracenoteAffiliate?: string
     gracenotePostalCode?: string
     gracenoteHours?: number
+    tvguideProviderId?: string
+    tvguideZipCode?: string
+    tvguideDays?: number
   }): Promise<EPGSource> {
     const response = await this.client.post<EPGSource>('/livetv/epg/sources', data)
+    return response.data
+  }
+
+  async discoverTVGuideProviders(zip: string): Promise<{ zipCode: string; count: number; providers: Array<{ id: number; name: string; type: string; city?: string; state?: string }> }> {
+    const response = await this.client.get('/livetv/epg/tvguide/providers', { params: { zip } })
     return response.data
   }
 
@@ -380,6 +388,7 @@ class ApiClient {
     limit?: number
     epgSourceId?: number
     channelId?: string
+    search?: string
   }): Promise<ProgramsResponse> {
     const response = await this.client.get<ProgramsResponse>('/livetv/epg/programs', { params })
     return response.data
@@ -621,12 +630,94 @@ class ApiClient {
     return response.data.passes || []
   }
 
+  async createDVRPass(data: {
+    Type: 'series' | 'team'
+    Name?: string
+    Image?: string
+    Paused?: boolean
+    Rerecord?: boolean
+    KeepOnly?: string
+    KeepNum?: number
+    PaddingStart?: number
+    PaddingEnd?: number
+    EQ?: Record<string, unknown>
+    NE?: Record<string, unknown>
+    IN?: Record<string, unknown>
+    NI?: Record<string, unknown>
+    GT?: Record<string, unknown>
+    LT?: Record<string, unknown>
+    Limit?: number
+    Priority?: number
+    TmdbId?: number
+    MediaType?: string
+    TeamName?: string
+    League?: string
+  }): Promise<{ ID: number; Type: string }> {
+    const response = await this.client.post<{ ID: number; Type: string }>('/dvr/passes', data)
+    return response.data
+  }
+
+  async updateDVRPass(id: number, data: {
+    Type?: 'series' | 'team'
+    Name?: string
+    Image?: string
+    Paused?: boolean
+    Rerecord?: boolean
+    KeepOnly?: string
+    KeepNum?: number
+    PaddingStart?: number
+    PaddingEnd?: number
+    EQ?: Record<string, unknown>
+    NE?: Record<string, unknown>
+    IN?: Record<string, unknown>
+    NI?: Record<string, unknown>
+    GT?: Record<string, unknown>
+    LT?: Record<string, unknown>
+    Limit?: number
+    Priority?: number
+    TeamName?: string
+    League?: string
+  }): Promise<{ ID: number; Type: string }> {
+    const response = await this.client.put<{ ID: number; Type: string }>(`/dvr/passes/${id}`, data)
+    return response.data
+  }
+
+  async searchShowForPass(query: string, type?: string): Promise<ShowSearchResult[]> {
+    const response = await this.client.get<ShowSearchResult[]>('/dvr/show-search', {
+      params: { q: query, type: type || 'tv' },
+    })
+    return response.data || []
+  }
+
+  async testDVRPass(conditions: Pick<DVRPass, 'EQ' | 'NE' | 'IN' | 'NI' | 'GT' | 'LT'>): Promise<{ airings: PassTestAiring[]; count: number }> {
+    const response = await this.client.post<{ airings: PassTestAiring[]; count: number }>('/dvr/passes/test', conditions)
+    return response.data
+  }
+
   async pauseDVRPass(id: number, type: string): Promise<void> {
     await this.client.put(`/dvr/passes/${id}/pause`, null, { params: { type } })
   }
 
   async resumeDVRPass(id: number, type: string): Promise<void> {
     await this.client.put(`/dvr/passes/${id}/resume`, null, { params: { type } })
+  }
+
+  async getDVRGroups(): Promise<DVRGroup[]> {
+    const response = await this.client.get<{ groups: DVRGroup[] }>('/dvr/v2/groups')
+    return response.data.groups || []
+  }
+
+  async getFileRegions(id: number): Promise<MediaRegion[]> {
+    const response = await this.client.get<{ regions: MediaRegion[] }>(`/dvr/v2/files/${id}/regions`)
+    return response.data.regions || []
+  }
+
+  async setGroupLabels(id: number, labels: string[]): Promise<void> {
+    await this.client.put(`/dvr/v2/groups/${id}/labels`, { labels })
+  }
+
+  async setGroupVisibility(id: number, visibilityMode: 'both' | 'kids' | 'hidden'): Promise<void> {
+    await this.client.put(`/dvr/v2/groups/${id}/visibility`, { visibilityMode })
   }
 
   async getDVRSchedule(): Promise<DVRScheduleResponse> {
@@ -695,6 +786,12 @@ class ApiClient {
     return response.data
   }
 
+  // UPnP port mapping status
+  async getUpnpStatus(): Promise<{ active: boolean; externalIp: string; message?: string }> {
+    const response = await this.client.get<{ active: boolean; externalIp: string; message?: string }>('/api/upnp/status')
+    return response.data
+  }
+
   // Cloud registry / remote access status
   async getCloudRegistryStatus(): Promise<CloudRegistryStatus> {
     const response = await this.client.get<CloudRegistryStatus>('/admin/remote-access')
@@ -706,7 +803,7 @@ class ApiClient {
     const response = await this.client.get<CloudRegistryStatus>('/admin/remote-access')
     const data = response.data
     return {
-      enabled: data.cloudConnected,
+      enabled: data.enabled ?? data.cloudConnected,
       url: data.cloudUrl,
       connected: data.cloudConnected,
       publicIp: data.publicIp,
@@ -718,7 +815,7 @@ class ApiClient {
     const response = await this.client.get<CloudRegistryStatus>('/admin/remote-access')
     const data = response.data
     return {
-      enabled: data.cloudConnected,
+      enabled: data.enabled ?? data.cloudConnected,
       url: data.cloudUrl,
       connected: data.cloudConnected,
       publicIp: data.publicIp,
@@ -1325,28 +1422,71 @@ export interface DVRSettings {
   maxConcurrentRecordings: number  // 0 = unlimited
 }
 
+// Show search result (from GET /dvr/show-search)
+export interface ShowSearchResult {
+  tmdbId?: number
+  title: string
+  overview?: string
+  year?: number
+  mediaType?: string
+  posterUrl?: string
+  nextAiring?: {
+    start: string
+    channelName: string
+  }
+}
+
+export interface ShowTrackerInfo {
+  tmdbId?: number
+  posterUrl?: string
+  nextSeasonNumber?: number
+  nextEpisodeAirDate?: string
+}
+
 // DVR Management types
 export interface DVRPass {
-  id: number
-  type: 'series' | 'team'
-  name: string
-  thumb?: string
-  enabled: boolean
-  keepCount: number
-  priority: number
-  prePadding: number
-  postPadding: number
-  jobCount: number
-  createdAt: string
-  updatedAt: string
-  // Series-specific
-  keywords?: string
-  channelId?: number
-  timeSlot?: string
-  daysOfWeek?: string
+  ID: number
+  Type: 'series' | 'team'
+  Name: string
+  Image?: string
+  Paused: boolean
+  Rerecord: boolean
+  // Keep settings: "" = all, "unwatched" = unwatched only/+N, "last" = last N
+  KeepOnly: string
+  KeepNum: number
+  PaddingStart: number  // seconds
+  PaddingEnd: number    // seconds
+  EQ?: Record<string, unknown>
+  NE?: Record<string, unknown>
+  IN?: Record<string, unknown>
+  NI?: Record<string, unknown>
+  GT?: Record<string, unknown>
+  LT?: Record<string, unknown>
+  Limit: number
+  Priority: number
+  NumJobs: number
+  UpdatedAt: string
   // Team-specific
-  teamName?: string
-  league?: string
+  TeamName?: string
+  League?: string
+  // Tracker (set when TMDB tracker exists for this pass)
+  Tracker?: ShowTrackerInfo
+}
+
+export interface PassTestAiring {
+  programId: number
+  title: string
+  subtitle?: string
+  channelId: string
+  channelName: string
+  channelLogo?: string
+  start: string
+  end: string
+  isNew: boolean
+  isSports: boolean
+  isMovie: boolean
+  episodeNum?: string
+  category?: string
 }
 
 export interface DVRScheduleItem {
@@ -1365,6 +1505,51 @@ export interface DVRScheduleItem {
   art?: string
   isMovie: boolean
   day: string
+}
+
+// MediaRegion is a unified typed segment marker (ad, intro, outro, credits, content)
+// Merges CommercialSegment + DetectedSegment — matches Channels DVR's MediaRegions shape.
+export interface MediaRegion {
+  start: number    // seconds from start
+  end: number      // seconds from start
+  type: 'ad' | 'intro' | 'outro' | 'credits' | 'content' | 'commercial'
+  sources: string[]  // e.g. ["comskip:0", "intro_detector:0"]
+}
+
+export interface UpNextCursor {
+  fileId: number
+  title?: string
+  seasonNumber?: number
+  episodeNumber?: number
+  episodeNum?: string
+  originalDate?: string
+  playbackTime: number  // ms
+  playedAt?: string
+}
+
+export interface DVRGroup {
+  id: number
+  title: string
+  sortTitle?: string
+  description?: string
+  thumb?: string
+  art?: string
+  categories?: string
+  genres?: string
+  contentRating?: string
+  year?: number
+  tmdbId?: number
+  tmdbType?: string
+  fileCount: number
+  createdAt: string
+  updatedAt: string
+  // Visibility control
+  visibilityMode: 'both' | 'kids' | 'hidden'
+  // User-defined labels
+  labels?: string
+  // Per-profile fields
+  unwatchedCount: number
+  upNextCursor?: UpNextCursor
 }
 
 export interface DVRScheduleResponse {
@@ -1608,6 +1793,7 @@ export interface DiscoverySettings {
 
 // Cloud registry status types
 export interface CloudRegistryStatus {
+  enabled: boolean
   cloudConnected: boolean
   cloudUrl: string
   publicIp: string

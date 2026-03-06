@@ -17,6 +17,7 @@ import (
 	"github.com/openflix/openflix-server/internal/ddns"
 	"github.com/openflix/openflix-server/internal/discovery"
 	"github.com/openflix/openflix-server/internal/mdns"
+	"github.com/openflix/openflix-server/internal/upnp"
 	"github.com/openflix/openflix-server/internal/dvr"
 	"github.com/openflix/openflix-server/internal/health"
 	"github.com/openflix/openflix-server/internal/instant"
@@ -74,12 +75,19 @@ type Server struct {
 	cloudRegistry      *discovery.CloudRegistryClient
 	discoveryService   *discovery.DiscoveryService
 	mdnsService        *mdns.Service
+	upnpManager        *upnp.Manager
 }
 
 // NewServer creates a new API server
 func NewServer(cfg *config.Config, db *gorm.DB) *Server {
 	dataDir := cfg.GetDataDir()
 	scanner := library.NewScanner(db)
+
+	// Load TMDB key from DB settings (overrides config file, persists across restarts)
+	var tmdbKeyRow struct{ Value string }
+	if err := db.Raw("SELECT value FROM settings WHERE key = 'tmdb_api_key' LIMIT 1").Scan(&tmdbKeyRow).Error; err == nil && tmdbKeyRow.Value != "" {
+		cfg.Library.TMDBApiKey = tmdbKeyRow.Value
+	}
 
 	// Initialize TMDB agent and metadata scheduler if API key is configured
 	var metadataScheduler *metadata.Scheduler
@@ -382,6 +390,45 @@ func NewServer(cfg *config.Config, db *gorm.DB) *Server {
 		return nil
 	})
 
+	// Monitor tracked shows for new seasons (every 12 hours)
+	taskSched.RegisterTask("monitor_new_seasons", "Monitor New Seasons",
+		"Check TMDB for new seasons of tracked shows", "0 */12 * * *", 5*time.Minute,
+		func(ctx context.Context) error {
+			agent := scanner.GetTMDBAgent()
+			if agent == nil || !agent.IsConfigured() {
+				return nil
+			}
+			var notifyFn metadata.NotifyFn
+			if notifyManager != nil {
+				nm := notifyManager
+				notifyFn = func(title, message string) {
+					nm.DirectNotify(notify.DirectNotification{
+						Title:   title,
+						Message: message,
+						Type:    "new_season",
+					})
+				}
+			}
+			return metadata.MonitorNewSeasons(ctx, db, agent, notifyFn)
+		})
+
+	// If license key was saved via UI (not env var), load it from DB now and derive a stable machine ID.
+	// This ensures the machine ID survives container rebuilds as long as the same license key is used.
+	if cfg.Server.LicenseKey == "" {
+		var dbLicenseSetting models.Setting
+		if err := db.Where("key = ?", "license_key").First(&dbLicenseSetting).Error; err == nil && dbLicenseSetting.Value != "" {
+			cfg.Server.LicenseKey = dbLicenseSetting.Value
+			logger.Infof("Loaded license key from DB settings")
+		}
+	}
+	if cfg.Server.LicenseKey != "" {
+		derived := config.DeriveServerID(cfg.Server.LicenseKey)
+		if cfg.Server.MachineID != derived {
+			logger.Infof("Deriving stable machine ID from license key: %s", derived)
+			cfg.Server.MachineID = derived
+		}
+	}
+
 	s := &Server{
 		config:            cfg,
 		db:                db,
@@ -427,9 +474,19 @@ func NewServer(cfg *config.Config, db *gorm.DB) *Server {
 			if cfg.Server.LicenseKey != "" {
 				s.cloudRegistry.SetLicenseKey(cfg.Server.LicenseKey)
 			}
+			// If the user has configured a custom external URL (cloudflared tunnel or domain),
+			// broadcast it via the registry so iOS clients use it instead of the raw public IP.
+			if extURL := s.getSettingStr("remote_external_url", ""); extURL != "" {
+				s.cloudRegistry.SetExternalURL(extURL)
+			}
 			s.cloudRegistry.Start()
 		}
 	}
+
+	// Start UPnP port mapping for automatic remote access (no port forwarding needed)
+	upnpMgr := upnp.NewManager(cfg.Server.Port)
+	s.upnpManager = upnpMgr
+	upnpMgr.Start(nil)
 
 	// Start local network discovery (UDP broadcast + listener + mDNS)
 	if cfg.Server.DiscoveryEnabled {
@@ -631,6 +688,10 @@ func (s *Server) setupRouter() {
 	// ============ Universal Search API ============
 	r.GET("/api/search", s.authRequired(), s.handleUniversalSearch)
 
+	// ============ Show Search API ============
+	r.GET("/api/shows/search", s.authRequired(), s.handleShowSearch)
+	r.GET("/api/shows/:tmdb_id/airings", s.authRequired(), s.handleShowAirings)
+
 	// ============ Client Settings API (authenticated but not admin) ============
 	// This endpoint provides settings needed by client apps (TMDB API key for trailers, etc.)
 	r.GET("/api/client/settings", s.authRequired(), s.getClientSettings)
@@ -715,6 +776,7 @@ func (s *Server) setupRouter() {
 		libraryGroup.GET("/sections/:id/sorts", s.getLibrarySorts)
 		libraryGroup.GET("/sections/:id/collections", s.getLibraryCollections)
 		libraryGroup.GET("/sections/:id/refresh", s.refreshLibrary)
+		libraryGroup.POST("/genre-backfill", s.adminRequired(), s.handleGenreBackfill)
 		libraryGroup.GET("/sections/:id/folder", s.getLibraryFolders)
 
 		// Metadata
@@ -850,6 +912,7 @@ func (s *Server) setupRouter() {
 
 		// Channels
 		livetv.GET("/channels", s.getChannels)
+		livetv.GET("/on-now", s.getOnNowChannels) // Lightweight: only currently-airing channels for home screen
 		livetv.GET("/channels/:id", s.getChannel)
 		livetv.PUT("/channels/:id", s.updateChannel)
 		livetv.POST("/channels/bulk-map", s.bulkMapChannels)         // Bulk map multiple channels
@@ -860,6 +923,7 @@ func (s *Server) setupRouter() {
 		livetv.POST("/channels/:id/favorite", s.toggleChannelFavorite)
 		livetv.POST("/channels/:id/refresh-epg", s.refreshChannelEPG) // Refresh EPG mapping
 		livetv.GET("/channels/:id/stream", s.proxyChannelStream)        // Proxy channel stream for web playback
+		livetv.GET("/stream/:id", s.proxyChannelStream)                  // Short-form alias used by iOS app
 		livetv.GET("/channels/:id/hls-segment", s.proxyHLSSegment)    // Proxy HLS segments for web playback
 
 		// Channel Groups (Failover)
@@ -913,6 +977,9 @@ func (s *Server) setupRouter() {
 		livetv.GET("/epg/sources/health", s.getEPGSourceHealth)
 		livetv.POST("/epg/sources/fetch-fallback", s.fetchWithFallback)
 		livetv.POST("/epg/sources/:id/reset-health", s.resetSourceHealth)
+
+		// TVGuide provider discovery
+		livetv.GET("/epg/tvguide/providers", s.getTVGuideProviders) // GET ?zip=60601
 
 		// Gracenote provider discovery by zip code
 		livetv.GET("/gracenote/providers", s.discoverGracenoteProviders)
@@ -1019,11 +1086,18 @@ func (s *Server) setupRouter() {
 		dvrGroup.PUT("/settings", s.updateDVRSettings)
 
 		// DVR Management (Passes, Schedule, Calendar)
+		dvrGroup.GET("/show-search", s.searchShowForPass)
 		dvrGroup.GET("/passes", s.getDVRPasses)
+		dvrGroup.POST("/passes/test", s.testDVRPass)
+		dvrGroup.POST("/passes", s.createDVRPass)
+		dvrGroup.PUT("/passes/:id", s.updateDVRPass)
+		dvrGroup.DELETE("/passes/:id", s.deleteDVRPass)
 		dvrGroup.PUT("/passes/:id/pause", s.pauseDVRPass)
 		dvrGroup.PUT("/passes/:id/resume", s.resumeDVRPass)
 		dvrGroup.GET("/schedule", s.getDVRSchedule)
 		dvrGroup.GET("/calendar", s.getDVRCalendar)
+		dvrGroup.GET("/trackers", s.getShowTrackers)
+		dvrGroup.DELETE("/trackers/:tmdbId", s.deleteShowTracker)
 
 		// Labels / Tags management
 		dvrGroup.GET("/labels", s.getLabels)
@@ -1046,6 +1120,7 @@ func (s *Server) setupRouter() {
 			dvrV2.GET("/files", s.getFiles)
 			dvrV2.GET("/files/locked", s.getLockedFiles)
 			dvrV2.GET("/files/:id", s.getFile)
+			dvrV2.GET("/files/:id/regions", s.getFileRegions)
 			dvrV2.PUT("/files/:id", s.updateFile)
 			dvrV2.DELETE("/files/:id", s.deleteFile)
 			dvrV2.GET("/files/:id/stream", s.streamFile)
@@ -1064,6 +1139,8 @@ func (s *Server) setupRouter() {
 			dvrV2.GET("/groups/:id", s.getGroup)
 			dvrV2.DELETE("/groups/:id", s.deleteGroup)
 			dvrV2.PUT("/groups/:id/state", s.updateGroupState)
+			dvrV2.PUT("/groups/:id/labels", s.setGroupLabels)
+			dvrV2.PUT("/groups/:id/visibility", s.setGroupVisibility)
 			dvrV2.POST("/groups/regroup", s.groupUngroupedFiles)
 
 			// Rules
@@ -1183,6 +1260,9 @@ func (s *Server) setupRouter() {
 		onlater.GET("/kids", s.handleGetOnLaterKids)
 		onlater.GET("/news", s.handleGetOnLaterNews)
 		onlater.GET("/premieres", s.handleGetOnLaterPremieres)
+		onlater.GET("/holiday", s.handleGetOnLaterHoliday)       // holiday-themed programming
+		onlater.GET("/halloween", s.handleGetOnLaterHalloween)   // halloween/horror programming
+		onlater.GET("/seasonal", s.handleGetOnLaterSeasonal)     // special events (olympics, awards, etc.)
 		onlater.GET("/tonight", s.handleGetOnLaterTonight)
 		onlater.GET("/week", s.handleGetOnLaterWeek)
 		onlater.GET("/search", s.handleSearchOnLater)
@@ -1314,6 +1394,9 @@ func (s *Server) setupRouter() {
 		speedtestGroup.GET("/results/:id", s.speedTestResults)
 	}
 
+	// UPnP status (unauthenticated — just returns public IP, no secrets)
+	r.GET("/api/upnp/status", s.getUPnPStatus)
+
 	// ============ Stream Health Monitoring API ============
 	healthGroup := r.Group("/api/health")
 	healthGroup.Use(s.authRequired())
@@ -1337,6 +1420,7 @@ func (s *Server) setupRouter() {
 		tunerGroup.POST("", s.addTuner)
 		tunerGroup.POST("/discover", s.discoverTuners)
 		tunerGroup.DELETE("/:id", s.removeTuner)
+		tunerGroup.PUT("/:id", s.updateTuner)
 		tunerGroup.GET("/:id/lineup", s.getTunerLineup)
 		tunerGroup.GET("/:id/status", s.getTunerStatus)
 		tunerGroup.POST("/:id/import", s.importTunerChannels)

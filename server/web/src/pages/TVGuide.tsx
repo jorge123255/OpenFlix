@@ -18,6 +18,9 @@ interface Channel {
   sourceName?: string
   enabled?: boolean
   epgSourceId?: number
+  epgCallSign?: string   // Currently mapped EPG call sign
+  epgChannelNo?: string  // Currently mapped EPG channel number
+  epgAffiliate?: string  // Currently mapped EPG affiliate/network
   streamUrl?: string
 }
 
@@ -448,12 +451,12 @@ function LiveTVPlayer({
 
     // Use absolute proxy URL for web worker compatibility
     const proxyUrl = `${window.location.origin}/livetv/channels/${channel.id}/stream`
-    console.log('[LiveTVPlayer] Loading stream:', proxyUrl, 'Original URL:', channel.streamUrl)
+    // // console.log('[LiveTVPlayer] Loading stream:', proxyUrl, 'Original URL:', channel.streamUrl)
 
     // Try mpegts.js first since most live TV streams are MPEG-TS
     // Fall back to HLS.js if mpegts fails
     if (mpegts.isSupported()) {
-      console.log('[LiveTVPlayer] Trying mpegts.js first (most live TV is MPEG-TS)')
+      // // console.log('[LiveTVPlayer] Trying mpegts.js first (most live TV is MPEG-TS)')
       let mpegtsWorked = false
 
       const player = mpegts.createPlayer({
@@ -477,7 +480,7 @@ function LiveTVPlayer({
       player.load()
 
       player.on(mpegts.Events.MEDIA_INFO, () => {
-        console.log('[LiveTVPlayer] mpegts media info received - stream is MPEG-TS')
+        // // console.log('[LiveTVPlayer] mpegts media info received - stream is MPEG-TS')
         mpegtsWorked = true
         if (loadingTimeoutRef.current) {
           clearTimeout(loadingTimeoutRef.current)
@@ -490,7 +493,7 @@ function LiveTVPlayer({
       player.on(mpegts.Events.ERROR, (errorType: string, errorDetail: string) => {
         console.error('[LiveTVPlayer] mpegts error:', errorType, errorDetail)
         if (!mpegtsWorked) {
-          console.log('[LiveTVPlayer] mpegts failed, trying HLS.js...')
+          // // console.log('[LiveTVPlayer] mpegts failed, trying HLS.js...')
           player.destroy()
           mpegtsRef.current = null
 
@@ -502,7 +505,7 @@ function LiveTVPlayer({
             hlsRef.current = hls
 
             hls.on(Hls.Events.MANIFEST_PARSED, () => {
-              console.log('[LiveTVPlayer] HLS manifest parsed successfully')
+              // // console.log('[LiveTVPlayer] HLS manifest parsed successfully')
               if (loadingTimeoutRef.current) {
                 clearTimeout(loadingTimeoutRef.current)
                 loadingTimeoutRef.current = null
@@ -531,7 +534,7 @@ function LiveTVPlayer({
         }
       })
     } else if (Hls.isSupported()) {
-      console.log('[LiveTVPlayer] Using HLS.js (mpegts not supported)')
+      // // console.log('[LiveTVPlayer] Using HLS.js (mpegts not supported)')
       const hls = new Hls({
         enableWorker: true,
         lowLatencyMode: true,
@@ -539,7 +542,7 @@ function LiveTVPlayer({
       hlsRef.current = hls
 
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
-        console.log('[LiveTVPlayer] HLS manifest parsed successfully')
+        // // console.log('[LiveTVPlayer] HLS manifest parsed successfully')
         if (loadingTimeoutRef.current) {
           clearTimeout(loadingTimeoutRef.current)
           loadingTimeoutRef.current = null
@@ -559,10 +562,10 @@ function LiveTVPlayer({
       hls.loadSource(proxyUrl)
       hls.attachMedia(video)
     } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-      console.log('[LiveTVPlayer] Using native HLS (Safari)')
+      // // console.log('[LiveTVPlayer] Using native HLS (Safari)')
       video.src = proxyUrl
       video.addEventListener('loadedmetadata', () => {
-        console.log('[LiveTVPlayer] Native HLS loaded')
+        // // console.log('[LiveTVPlayer] Native HLS loaded')
         if (loadingTimeoutRef.current) {
           clearTimeout(loadingTimeoutRef.current)
           loadingTimeoutRef.current = null
@@ -1504,6 +1507,11 @@ export function TVGuidePage() {
                       <div className="text-xs font-medium text-gray-200 truncate leading-tight">{channel.name}</div>
                       <div className="text-[10px] text-gray-500 flex items-center gap-1 flex-wrap leading-tight">
                         <span>{channel.number}</span>
+                        {hasEPG && channel.epgCallSign && (
+                          <span className="text-green-500 truncate max-w-[80px]" title={channel.epgCallSign}>
+                            → {channel.epgCallSign}
+                          </span>
+                        )}
                         <button
                           onClick={(e) => {
                             e.stopPropagation()
@@ -1514,7 +1522,7 @@ export function TVGuidePage() {
                               ? 'text-green-400 hover:text-green-300 hover:bg-gray-700'
                               : 'bg-indigo-600 hover:bg-indigo-700 text-white'
                           }`}
-                          title={hasEPG ? "Remap EPG channel" : "Map to EPG channel"}
+                          title={hasEPG ? `Remap EPG channel (currently: ${channel.epgCallSign || channel.epgChannelNo || 'mapped'})` : "Map to EPG channel"}
                         >
                           <Link2 className="h-2.5 w-2.5" />
                           {hasEPG ? 'Remap' : 'Map'}
@@ -1846,11 +1854,17 @@ export function TVGuidePage() {
                 <div>
                   <h2 className="text-xl font-bold text-white flex items-center gap-2">
                     <Link2 className="h-5 w-5" />
-                    Map EPG Channel
+                    {channelHasEPG(mappingChannel) ? 'Remap EPG Channel' : 'Map EPG Channel'}
                   </h2>
                   <p className="text-sm text-gray-400 mt-1">
-                    Map <span className="text-indigo-400 font-medium">Ch {mappingChannel.number} - {mappingChannel.name}</span> to an EPG channel
+                    <span className="text-indigo-400 font-medium">Ch {mappingChannel.number} - {mappingChannel.name}</span>
                   </p>
+                  {channelHasEPG(mappingChannel) && (mappingChannel.epgCallSign || mappingChannel.epgChannelNo) && (
+                    <p className="text-xs text-green-400 mt-0.5 flex items-center gap-1">
+                      <Link2 className="h-3 w-3" />
+                      Currently mapped to: <span className="font-medium">{mappingChannel.epgCallSign || mappingChannel.epgChannelNo}{mappingChannel.epgChannelNo && mappingChannel.epgCallSign ? ` (Ch ${mappingChannel.epgChannelNo})` : ''}</span>
+                    </p>
+                  )}
                 </div>
                 <div className="flex items-center gap-2">
                   {channelHasEPG(mappingChannel) && (
@@ -1923,7 +1937,13 @@ export function TVGuidePage() {
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {filteredEpgChannels.slice(0, 100).map((epgChannel) => (
+                  {filteredEpgChannels.slice(0, 100).map((epgChannel) => {
+                    const isCurrent = mappingChannel.epgCallSign
+                      ? epgChannel.callSign === mappingChannel.epgCallSign
+                      : mappingChannel.epgChannelNo
+                        ? epgChannel.channelNo === mappingChannel.epgChannelNo
+                        : false
+                    return (
                     <button
                       key={epgChannel.channelId}
                       onClick={() => {
@@ -1936,24 +1956,32 @@ export function TVGuidePage() {
                         }
                       }}
                       disabled={mapChannel.isPending}
-                      className="w-full p-3 bg-gray-700 hover:bg-gray-600 rounded-lg text-left transition-colors disabled:opacity-50"
+                      className={`w-full p-3 rounded-lg text-left transition-colors disabled:opacity-50 ${
+                        isCurrent
+                          ? 'bg-green-900/40 border border-green-600/50 hover:bg-green-900/60'
+                          : 'bg-gray-700 hover:bg-gray-600'
+                      }`}
                     >
                       <div className="flex items-center justify-between">
                         <div className="min-w-0 flex-1">
-                          <div className="text-white font-medium">
+                          <div className="text-white font-medium flex items-center gap-2">
                             {epgChannel.callSign || epgChannel.channelId}
                             {epgChannel.channelNo && (
-                              <span className="text-gray-400 font-normal ml-2">Ch {epgChannel.channelNo}</span>
+                              <span className="text-gray-400 font-normal">Ch {epgChannel.channelNo}</span>
+                            )}
+                            {isCurrent && (
+                              <span className="text-xs bg-green-600 text-white px-1.5 py-0.5 rounded font-normal">Current</span>
                             )}
                           </div>
                           <div className="text-sm text-gray-400 truncate">
                             {epgChannel.sampleTitle}
                           </div>
                         </div>
-                        <Link2 className="h-4 w-4 text-gray-500 flex-shrink-0 ml-2" />
+                        <Link2 className={`h-4 w-4 flex-shrink-0 ml-2 ${isCurrent ? 'text-green-400' : 'text-gray-500'}`} />
                       </div>
                     </button>
-                  ))}
+                    )
+                  })}
                   {filteredEpgChannels.length > 100 && (
                     <p className="text-center text-sm text-gray-500 py-2">
                       Showing first 100 results. Use search to narrow down.

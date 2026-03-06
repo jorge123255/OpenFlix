@@ -128,6 +128,19 @@ RUN apt-get update && apt-get install -y \
     && make install \
     && rm -rf /tmp/comskip
 
+# Install Python + AI deps for ONNX-based commercial detection
+RUN apt-get update && apt-get install -y \
+    python3 \
+    python3-pip \
+    python3-dev \
+    libsndfile1 \
+    && rm -rf /var/lib/apt/lists/* \
+    && pip3 install --no-cache-dir \
+        onnxruntime \
+        librosa \
+        scikit-learn \
+        numpy
+
 # Install Tailscale for remote access
 RUN curl -fsSL https://pkgs.tailscale.com/stable/ubuntu/jammy.noarmor.gpg | tee /usr/share/keyrings/tailscale-archive-keyring.gpg >/dev/null \
     && curl -fsSL https://pkgs.tailscale.com/stable/ubuntu/jammy.tailscale-keyring.list | tee /etc/apt/sources.list.d/tailscale.list \

@@ -7,6 +7,21 @@ import (
 	"github.com/openflix/openflix-server/internal/health"
 )
 
+// getUPnPStatus returns the current UPnP port mapping status.
+//
+// GET /api/upnp/status
+func (s *Server) getUPnPStatus(c *gin.Context) {
+	if s.upnpManager == nil {
+		c.JSON(http.StatusOK, gin.H{"active": false, "externalIp": "", "message": "UPnP not initialized"})
+		return
+	}
+	ip := s.upnpManager.ExternalIP()
+	c.JSON(http.StatusOK, gin.H{
+		"active":     ip != "",
+		"externalIp": ip,
+	})
+}
+
 // ============ Stream Health Monitoring Handlers ============
 
 // getHealthStreams returns all active streams with health scores.

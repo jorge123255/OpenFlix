@@ -165,6 +165,7 @@ function AddSourceModal({
           tvguideProviderId: String(tvguideSelectedProvider.id),
           tvguideZipCode,
           tvguideDays,
+          tvguideFetchDetails: true,
         })
       } else if (providerType === 'xmltv') {
         await createEPG.mutateAsync({ name, providerType: 'xmltv', url })
@@ -3935,11 +3936,32 @@ export function LiveTVPage() {
               </div>
             </div>
           ) : (
-            <div className="text-center py-8 bg-gray-800 rounded-xl">
+            <div className="text-center py-10 bg-gray-800 rounded-xl">
               <Radio className="h-10 w-10 text-gray-600 mx-auto mb-3" />
-              <p className="text-gray-400">
+              <p className="text-gray-300 font-medium mb-1">
                 {channelSearch ? 'No channels match your search' : 'No channels loaded'}
               </p>
+              {!channelSearch && (
+                <p className="text-sm text-gray-400 mb-4">
+                  Add an HDHomeRun tuner or M3U playlist to get started.
+                </p>
+              )}
+              {!channelSearch && (
+                <div className="flex justify-center gap-3">
+                  <a
+                    href="/ui/tuners"
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm rounded-lg"
+                  >
+                    Add HDHomeRun Tuner
+                  </a>
+                  <a
+                    href="/ui/setup"
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white text-sm rounded-lg"
+                  >
+                    Setup Wizard
+                  </a>
+                </div>
+              )}
             </div>
           )}
         </div>

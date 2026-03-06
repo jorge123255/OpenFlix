@@ -9,10 +9,14 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
+	"sort"
+	"sync"
 	"time"
+	"unicode"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -250,6 +254,10 @@ func (s *Server) getTranscodeInfo(c *gin.Context) {
 
 // Track server start time for uptime
 var serverStartTime = time.Now()
+
+// activeScansMu protects activeScans across goroutines.
+var activeScansMu sync.Mutex
+var activeScans = map[uint]bool{}
 
 // ============ Logs Handlers ============
 
@@ -966,11 +974,22 @@ func (s *Server) getLibrarySections(c *gin.Context) {
 		return
 	}
 
+	// Batch-fetch item counts for all libraries in one query
+	var countRows []struct {
+		LibraryID uint
+		Count     int64
+	}
+	s.db.Model(&models.MediaItem{}).
+		Select("library_id, COUNT(*) as count").
+		Group("library_id").
+		Scan(&countRows)
+	countMap := make(map[uint]int64, len(countRows))
+	for _, row := range countRows {
+		countMap[row.LibraryID] = row.Count
+	}
+
 	sections := make([]gin.H, len(libraries))
 	for i, lib := range libraries {
-		// Get item count for this library
-		count := s.libraryService.GetMediaItemCount(lib.ID)
-
 		sections[i] = gin.H{
 			"key":       strconv.Itoa(int(lib.ID)),
 			"title":     lib.Title,
@@ -981,13 +1000,35 @@ func (s *Server) getLibrarySections(c *gin.Context) {
 			"uuid":      lib.UUID,
 			"updatedAt": lib.UpdatedAt.Unix(),
 			"createdAt": lib.CreatedAt.Unix(),
-			"count":     count,
+			"count":     countMap[lib.ID],
 		}
 		if lib.ScannedAt != nil {
 			sections[i]["scannedAt"] = lib.ScannedAt.Unix()
 		}
 	}
 	s.respondWithDirectory(c, sections, len(sections))
+}
+
+// batchLoadLibraries fetches all distinct libraries needed by a slice of media items
+// in a single query, returning a map of libraryID → *Library. Returns nil pointer for missing IDs.
+func (s *Server) batchLoadLibraries(items []models.MediaItem) map[uint]*models.Library {
+	idSet := make(map[uint]struct{}, len(items))
+	for _, item := range items {
+		idSet[item.LibraryID] = struct{}{}
+	}
+	ids := make([]uint, 0, len(idSet))
+	for id := range idSet {
+		ids = append(ids, id)
+	}
+	var libs []models.Library
+	if len(ids) > 0 {
+		s.db.Where("id IN ?", ids).Find(&libs)
+	}
+	libMap := make(map[uint]*models.Library, len(libs))
+	for i := range libs {
+		libMap[libs[i].ID] = &libs[i]
+	}
+	return libMap
 }
 
 func (s *Server) getLibraryContent(c *gin.Context) {
@@ -997,6 +1038,7 @@ func (s *Server) getLibraryContent(c *gin.Context) {
 		return
 	}
 
+	groupMode := strings.EqualFold(c.Query("group"), "true")
 	offset, limit := s.getPaginationParams(c)
 
 	// Get the library to determine its type
@@ -1038,15 +1080,115 @@ func (s *Server) getLibraryContent(c *gin.Context) {
 	}
 
 	// Convert to Plex-compatible format
-	metadata := make([]gin.H, len(items))
-	for i, item := range items {
-		metadata[i] = s.mediaItemToMetadata(&item, lib)
+	var metadata []gin.H
+	responseTotal := totalCount
+	if groupMode {
+		yearParenRegex := regexp.MustCompile(`\(\s*\d{4}\s*\)`)
+		trailingYearRegex := regexp.MustCompile(`\s+\d{4}\s*$`)
+		normalizeTitle := func(title string) string {
+			normalized := strings.ToLower(strings.TrimSpace(title))
+			normalized = yearParenRegex.ReplaceAllString(normalized, "")
+			normalized = trailingYearRegex.ReplaceAllString(normalized, "")
+			var b strings.Builder
+			b.Grow(len(normalized))
+			for _, r := range normalized {
+				if unicode.IsLetter(r) || unicode.IsNumber(r) || unicode.IsSpace(r) {
+					b.WriteRune(r)
+				}
+			}
+			return strings.Join(strings.Fields(b.String()), " ")
+		}
+
+		type groupInfo struct {
+			best     models.MediaItem
+			altIDs   []uint
+			altIDSet map[uint]struct{}
+			minIndex int
+		}
+
+		addAlt := func(g *groupInfo, id uint) {
+			if g.altIDSet == nil {
+				g.altIDSet = make(map[uint]struct{})
+			}
+			if _, exists := g.altIDSet[id]; exists {
+				return
+			}
+			g.altIDSet[id] = struct{}{}
+			g.altIDs = append(g.altIDs, id)
+		}
+
+		isBetter := func(candidate, current *models.MediaItem) bool {
+			// Prefer items with children (seasons/episodes) — critical for dedup
+			cHasChildren := candidate.ChildCount > 0 || candidate.LeafCount > 0
+			bHasChildren := current.ChildCount > 0 || current.LeafCount > 0
+			if cHasChildren != bHasChildren {
+				return cHasChildren
+			}
+			cHasThumb := candidate.Thumb != ""
+			bHasThumb := current.Thumb != ""
+			if cHasThumb != bHasThumb {
+				return cHasThumb
+			}
+			cHasGenres := len(candidate.Genres) > 0
+			bHasGenres := len(current.Genres) > 0
+			if cHasGenres != bHasGenres {
+				return cHasGenres
+			}
+			return candidate.AddedAt.After(current.AddedAt)
+		}
+
+		groupMap := make(map[string]*groupInfo, len(items))
+		for i, item := range items {
+			key := fmt.Sprintf("%s|%d", normalizeTitle(item.Title), item.Year)
+			group, exists := groupMap[key]
+			if !exists {
+				groupMap[key] = &groupInfo{
+					best:     item,
+					altIDs:   nil,
+					altIDSet: make(map[uint]struct{}),
+					minIndex: i,
+				}
+				continue
+			}
+			if i < group.minIndex {
+				group.minIndex = i
+			}
+			if isBetter(&item, &group.best) {
+				addAlt(group, group.best.ID)
+				group.best = item
+			} else {
+				addAlt(group, item.ID)
+			}
+		}
+
+		groups := make([]*groupInfo, 0, len(groupMap))
+		for _, group := range groupMap {
+			groups = append(groups, group)
+		}
+		sort.Slice(groups, func(i, j int) bool {
+			return groups[i].minIndex < groups[j].minIndex
+		})
+
+		metadata = make([]gin.H, len(groups))
+		for i, group := range groups {
+			m := s.mediaItemToMetadata(&group.best, lib)
+			alternateIDs := group.altIDs
+			m["alternateIds"] = alternateIDs
+			m["sourceCount"] = len(alternateIDs) + 1
+			metadata[i] = m
+		}
+		responseTotal = int64(len(metadata))
+	} else {
+		metadata = make([]gin.H, len(items))
+		for i, item := range items {
+			metadata[i] = s.mediaItemToMetadata(&item, lib)
+		}
 	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"MediaContainer": gin.H{
 			"size":             len(metadata),
-			"totalSize":        totalCount,
+			"totalSize":        responseTotal,
 			"offset":           offset,
 			"librarySectionID": libraryID,
 			"Metadata":         metadata,
@@ -1264,7 +1406,7 @@ func (s *Server) getLibraryHubs(c *gin.Context) {
 	hubLimit := 20
 
 	// 1. Continue Watching Hub (for movies and episodes)
-	continueWatchingItems := s.getContinueWatchingItems(uint(libraryID), userID, profileID, hubLimit)
+	continueWatchingItems := s.getContinueWatchingItems(&lib, userID, profileID, hubLimit)
 	if len(continueWatchingItems) > 0 {
 		hubs = append(hubs, gin.H{
 			"key":           fmt.Sprintf("/hubs/sections/%d/continueWatching", libraryID),
@@ -1280,7 +1422,7 @@ func (s *Server) getLibraryHubs(c *gin.Context) {
 	}
 
 	// 2. Recently Added Hub
-	recentlyAddedItems := s.getRecentlyAddedItems(uint(libraryID), lib.Type, hubLimit)
+	recentlyAddedItems := s.getRecentlyAddedItems(&lib, hubLimit)
 	if len(recentlyAddedItems) > 0 {
 		hubs = append(hubs, gin.H{
 			"key":           fmt.Sprintf("/hubs/sections/%d/recentlyAdded", libraryID),
@@ -1295,7 +1437,7 @@ func (s *Server) getLibraryHubs(c *gin.Context) {
 	}
 
 	// 3. Unwatched Hub (only for movie libraries and shows)
-	unwatchedItems := s.getUnwatchedItems(uint(libraryID), lib.Type, userID, profileID, hubLimit)
+	unwatchedItems := s.getUnwatchedItems(&lib, userID, profileID, hubLimit)
 	if len(unwatchedItems) > 0 {
 		hubTitle := "Unwatched"
 		if lib.Type == "show" {
@@ -1315,7 +1457,7 @@ func (s *Server) getLibraryHubs(c *gin.Context) {
 
 	// 4. Recently Released (based on release date, not added date)
 	if lib.Type == "movie" || lib.Type == "show" {
-		recentlyReleasedItems := s.getRecentlyReleasedItems(uint(libraryID), lib.Type, hubLimit)
+		recentlyReleasedItems := s.getRecentlyReleasedItems(&lib, hubLimit)
 		if len(recentlyReleasedItems) > 0 {
 			hubs = append(hubs, gin.H{
 				"key":           fmt.Sprintf("/hubs/sections/%d/recentlyReleased", libraryID),
@@ -1331,7 +1473,7 @@ func (s *Server) getLibraryHubs(c *gin.Context) {
 	}
 
 	// 5. Top Rated Hub
-	topRatedItems := s.getTopRatedItems(uint(libraryID), lib.Type, hubLimit)
+	topRatedItems := s.getTopRatedItems(&lib, hubLimit)
 	if len(topRatedItems) > 0 {
 		hubs = append(hubs, gin.H{
 			"key":           fmt.Sprintf("/hubs/sections/%d/topRated", libraryID),
@@ -1346,11 +1488,11 @@ func (s *Server) getLibraryHubs(c *gin.Context) {
 	}
 
 	// 6. Streaming Service Hubs (Netflix, Disney+, etc.) - get top 8
-	serviceHubs := s.getStreamingServiceHubs(uint(libraryID), lib.Type, hubLimit, 8)
+	serviceHubs := s.getStreamingServiceHubs(&lib, hubLimit, 8)
 	hubs = append(hubs, serviceHubs...)
 
 	// 7. By Genre Hubs (get top 3 genres)
-	genreHubs := s.getGenreHubs(uint(libraryID), lib.Type, hubLimit, 3)
+	genreHubs := s.getGenreHubs(&lib, hubLimit, 3)
 	hubs = append(hubs, genreHubs...)
 
 	c.JSON(http.StatusOK, gin.H{
@@ -1364,7 +1506,7 @@ func (s *Server) getLibraryHubs(c *gin.Context) {
 
 // Smart Collection Helper Functions
 
-func (s *Server) getContinueWatchingItems(libraryID uint, userID interface{}, profileID uint, limit int) []gin.H {
+func (s *Server) getContinueWatchingItems(lib *models.Library, userID interface{}, profileID uint, limit int) []gin.H {
 	if userID == nil {
 		return []gin.H{}
 	}
@@ -1374,7 +1516,7 @@ func (s *Server) getContinueWatchingItems(libraryID uint, userID interface{}, pr
 	query := s.db.Model(&models.MediaItem{}).
 		Select("media_items.*").
 		Joins("JOIN watch_histories ON watch_histories.media_item_id = media_items.id").
-		Where("media_items.library_id = ?", libraryID).
+		Where("media_items.library_id = ?", lib.ID).
 		Where("watch_histories.user_id = ?", userID).
 		Where("watch_histories.completed = ?", false).
 		Where("watch_histories.view_offset > ?", 0).
@@ -1388,56 +1530,53 @@ func (s *Server) getContinueWatchingItems(libraryID uint, userID interface{}, pr
 
 	query.Find(&items)
 
-	// Get library for metadata
-	var lib models.Library
-	s.db.First(&lib, libraryID)
+	if len(items) == 0 {
+		return []gin.H{}
+	}
+
+	// Batch-fetch watch histories for all items in one query
+	itemIDs := make([]uint, len(items))
+	for i, item := range items {
+		itemIDs[i] = item.ID
+	}
+	var histories []models.WatchHistory
+	s.db.Where("media_item_id IN ? AND user_id = ?", itemIDs, userID).Find(&histories)
+	historyMap := make(map[uint]models.WatchHistory, len(histories))
+	for _, h := range histories {
+		historyMap[h.MediaItemID] = h
+	}
 
 	result := make([]gin.H, len(items))
 	for i, item := range items {
-		result[i] = s.mediaItemToMetadata(&item, &lib)
-		// Add view offset
-		var history models.WatchHistory
-		s.db.Where("media_item_id = ? AND user_id = ?", item.ID, userID).First(&history)
-		result[i]["viewOffset"] = history.ViewOffset
+		result[i] = s.mediaItemToMetadata(&item, lib)
+		if h, ok := historyMap[item.ID]; ok {
+			result[i]["viewOffset"] = h.ViewOffset
+		}
 	}
 	return result
 }
 
-func (s *Server) getRecentlyAddedItems(libraryID uint, libType string, limit int) []gin.H {
+func (s *Server) getRecentlyAddedItems(lib *models.Library, limit int) []gin.H {
 	var items []models.MediaItem
 
-	// For TV shows, get recently added shows (not episodes)
-	itemType := libType
-	if libType == "show" {
-		itemType = "show"
-	}
-
 	s.db.Preload("Genres").
-		Where("library_id = ? AND type = ?", libraryID, itemType).
+		Where("library_id = ? AND type = ?", lib.ID, lib.Type).
 		Order("added_at DESC").
 		Limit(limit).
 		Find(&items)
 
-	var lib models.Library
-	s.db.First(&lib, libraryID)
-
 	result := make([]gin.H, len(items))
 	for i, item := range items {
-		result[i] = s.mediaItemToMetadata(&item, &lib)
+		result[i] = s.mediaItemToMetadata(&item, lib)
 	}
 	return result
 }
 
-func (s *Server) getUnwatchedItems(libraryID uint, libType string, userID interface{}, profileID uint, limit int) []gin.H {
+func (s *Server) getUnwatchedItems(lib *models.Library, userID interface{}, profileID uint, limit int) []gin.H {
 	var items []models.MediaItem
 
-	itemType := libType
-	if libType == "show" {
-		itemType = "show"
-	}
-
 	query := s.db.Preload("Genres").
-		Where("library_id = ? AND type = ?", libraryID, itemType)
+		Where("library_id = ? AND type = ?", lib.ID, lib.Type)
 
 	// Filter out watched items if user is logged in
 	if userID != nil {
@@ -1452,73 +1591,49 @@ func (s *Server) getUnwatchedItems(libraryID uint, libType string, userID interf
 
 	query.Order("added_at DESC").Limit(limit).Find(&items)
 
-	var lib models.Library
-	s.db.First(&lib, libraryID)
-
 	result := make([]gin.H, len(items))
 	for i, item := range items {
-		result[i] = s.mediaItemToMetadata(&item, &lib)
+		result[i] = s.mediaItemToMetadata(&item, lib)
 	}
 	return result
 }
 
-func (s *Server) getRecentlyReleasedItems(libraryID uint, libType string, limit int) []gin.H {
+func (s *Server) getRecentlyReleasedItems(lib *models.Library, limit int) []gin.H {
 	var items []models.MediaItem
-
-	itemType := libType
-	if libType == "show" {
-		itemType = "show"
-	}
 
 	// Get items released in the last 6 months
 	sixMonthsAgo := time.Now().AddDate(0, -6, 0)
 
 	s.db.Preload("Genres").
-		Where("library_id = ? AND type = ? AND originally_available_at > ?", libraryID, itemType, sixMonthsAgo).
+		Where("library_id = ? AND type = ? AND originally_available_at > ?", lib.ID, lib.Type, sixMonthsAgo).
 		Order("originally_available_at DESC").
 		Limit(limit).
 		Find(&items)
 
-	var lib models.Library
-	s.db.First(&lib, libraryID)
-
 	result := make([]gin.H, len(items))
 	for i, item := range items {
-		result[i] = s.mediaItemToMetadata(&item, &lib)
+		result[i] = s.mediaItemToMetadata(&item, lib)
 	}
 	return result
 }
 
-func (s *Server) getTopRatedItems(libraryID uint, libType string, limit int) []gin.H {
+func (s *Server) getTopRatedItems(lib *models.Library, limit int) []gin.H {
 	var items []models.MediaItem
 
-	itemType := libType
-	if libType == "show" {
-		itemType = "show"
-	}
-
 	s.db.Preload("Genres").
-		Where("library_id = ? AND type = ? AND rating > ?", libraryID, itemType, 7.0).
+		Where("library_id = ? AND type = ? AND rating > ?", lib.ID, lib.Type, 7.0).
 		Order("rating DESC").
 		Limit(limit).
 		Find(&items)
 
-	var lib models.Library
-	s.db.First(&lib, libraryID)
-
 	result := make([]gin.H, len(items))
 	for i, item := range items {
-		result[i] = s.mediaItemToMetadata(&item, &lib)
+		result[i] = s.mediaItemToMetadata(&item, lib)
 	}
 	return result
 }
 
-func (s *Server) getGenreHubs(libraryID uint, libType string, itemLimit int, genreLimit int) []gin.H {
-	itemType := libType
-	if libType == "show" {
-		itemType = "show"
-	}
-
+func (s *Server) getGenreHubs(lib *models.Library, itemLimit int, genreLimit int) []gin.H {
 	// Get the most popular genres in this library
 	var genreStats []struct {
 		GenreID uint
@@ -1530,14 +1645,11 @@ func (s *Server) getGenreHubs(libraryID uint, libType string, itemLimit int, gen
 		Select("genres.id as genre_id, genres.tag, COUNT(*) as count").
 		Joins("JOIN media_genres ON media_genres.genre_id = genres.id").
 		Joins("JOIN media_items ON media_items.id = media_genres.media_item_id").
-		Where("media_items.library_id = ? AND media_items.type = ?", libraryID, itemType).
+		Where("media_items.library_id = ? AND media_items.type = ?", lib.ID, lib.Type).
 		Group("genres.id, genres.tag").
 		Order("count DESC").
 		Limit(genreLimit).
 		Scan(&genreStats)
-
-	var lib models.Library
-	s.db.First(&lib, libraryID)
 
 	hubs := []gin.H{}
 
@@ -1546,7 +1658,7 @@ func (s *Server) getGenreHubs(libraryID uint, libType string, itemLimit int, gen
 		s.db.Preload("Genres").
 			Joins("JOIN media_genres ON media_genres.media_item_id = media_items.id").
 			Where("media_items.library_id = ? AND media_items.type = ? AND media_genres.genre_id = ?",
-				libraryID, itemType, gs.GenreID).
+				lib.ID, lib.Type, gs.GenreID).
 			Order("rating DESC, added_at DESC").
 			Limit(itemLimit).
 			Find(&items)
@@ -1554,13 +1666,13 @@ func (s *Server) getGenreHubs(libraryID uint, libType string, itemLimit int, gen
 		if len(items) > 0 {
 			metadata := make([]gin.H, len(items))
 			for i, item := range items {
-				metadata[i] = s.mediaItemToMetadata(&item, &lib)
+				metadata[i] = s.mediaItemToMetadata(&item, lib)
 			}
 
 			hubs = append(hubs, gin.H{
-				"key":           fmt.Sprintf("/hubs/sections/%d/genre/%d", libraryID, gs.GenreID),
+				"key":           fmt.Sprintf("/hubs/sections/%d/genre/%d", lib.ID, gs.GenreID),
 				"hubIdentifier": fmt.Sprintf("genre.%d", gs.GenreID),
-				"type":          libType,
+				"type":          lib.Type,
 				"title":         gs.Tag,
 				"context":       "hub.genre",
 				"size":          len(items),
@@ -1590,7 +1702,7 @@ func (s *Server) getStreamingServices(c *gin.Context) {
 
 	hubLimit := 20
 	serviceLimit := 20 // Get more services
-	serviceHubs := s.getStreamingServiceHubs(uint(libraryID), lib.Type, hubLimit, serviceLimit)
+	serviceHubs := s.getStreamingServiceHubs(&lib, hubLimit, serviceLimit)
 
 	c.JSON(http.StatusOK, gin.H{
 		"MediaContainer": gin.H{
@@ -1611,8 +1723,8 @@ func (s *Server) getAllStreamingServices(c *gin.Context) {
 	hubLimit := 20
 	serviceLimit := 10 // Top 10 per library
 
-	for _, lib := range libraries {
-		serviceHubs := s.getStreamingServiceHubs(lib.ID, lib.Type, hubLimit, serviceLimit)
+	for i := range libraries {
+		serviceHubs := s.getStreamingServiceHubs(&libraries[i], hubLimit, serviceLimit)
 		allHubs = append(allHubs, serviceHubs...)
 	}
 
@@ -1646,12 +1758,7 @@ func (s *Server) getAllStreamingServices(c *gin.Context) {
 }
 
 // getStreamingServiceHubs returns hubs for streaming services (Netflix, Disney+, etc.)
-func (s *Server) getStreamingServiceHubs(libraryID uint, libType string, itemLimit int, serviceLimit int) []gin.H {
-	itemType := libType
-	if libType == "show" {
-		itemType = "show"
-	}
-
+func (s *Server) getStreamingServiceHubs(lib *models.Library, itemLimit int, serviceLimit int) []gin.H {
 	// Get distinct parent categories (streaming services) with item counts
 	var serviceStats []struct {
 		ParentCategoryID string
@@ -1661,14 +1768,11 @@ func (s *Server) getStreamingServiceHubs(libraryID uint, libType string, itemLim
 
 	s.db.Model(&models.MediaItem{}).
 		Select("xtream_parent_category_id as parent_category_id, xtream_parent_category as parent_category, COUNT(*) as count").
-		Where("library_id = ? AND type = ? AND xtream_parent_category != ''", libraryID, itemType).
+		Where("library_id = ? AND type = ? AND xtream_parent_category != ''", lib.ID, lib.Type).
 		Group("xtream_parent_category_id, xtream_parent_category").
 		Order("count DESC").
 		Limit(serviceLimit).
 		Scan(&serviceStats)
-
-	var lib models.Library
-	s.db.First(&lib, libraryID)
 
 	hubs := []gin.H{}
 
@@ -1680,7 +1784,7 @@ func (s *Server) getStreamingServiceHubs(libraryID uint, libType string, itemLim
 		var items []models.MediaItem
 		s.db.Preload("Genres").
 			Where("library_id = ? AND type = ? AND xtream_parent_category_id = ?",
-				libraryID, itemType, ss.ParentCategoryID).
+				lib.ID, lib.Type, ss.ParentCategoryID).
 			Order("rating DESC, added_at DESC").
 			Limit(itemLimit).
 			Find(&items)
@@ -1688,13 +1792,13 @@ func (s *Server) getStreamingServiceHubs(libraryID uint, libType string, itemLim
 		if len(items) > 0 {
 			metadata := make([]gin.H, len(items))
 			for i, item := range items {
-				metadata[i] = s.mediaItemToMetadata(&item, &lib)
+				metadata[i] = s.mediaItemToMetadata(&item, lib)
 			}
 
 			hubs = append(hubs, gin.H{
-				"key":           fmt.Sprintf("/hubs/sections/%d/service/%s", libraryID, ss.ParentCategoryID),
+				"key":           fmt.Sprintf("/hubs/sections/%d/service/%s", lib.ID, ss.ParentCategoryID),
 				"hubIdentifier": fmt.Sprintf("service.%s", ss.ParentCategoryID),
-				"type":          libType,
+				"type":          lib.Type,
 				"title":         ss.ParentCategory,
 				"context":       "hub.streamingService",
 				"size":          len(items),
@@ -1871,8 +1975,21 @@ func (s *Server) mediaItemToMetadata(item *models.MediaItem, lib *models.Library
 	}
 
 	// Add stream URL for external/M3U/Xtream content
+	// For Xtream items, use server-relative URL so it works regardless of source IP
 	if item.StreamURL != "" {
-		metadata["streamUrl"] = item.StreamURL
+		hasXtreamFile := false
+		for _, f := range item.MediaFiles {
+			if strings.HasPrefix(f.FilePath, "xtream://") {
+				hasXtreamFile = true
+				// Use server-proxied URL: /library/parts/{id}/file
+				// This goes through streamXtreamVOD which resolves dynamically from xtream_sources
+				metadata["streamUrl"] = fmt.Sprintf("/library/parts/%d/file", f.ID)
+				break
+			}
+		}
+		if !hasXtreamFile {
+			metadata["streamUrl"] = item.StreamURL
+		}
 	}
 
 	return metadata
@@ -2102,9 +2219,12 @@ func (s *Server) getRecentlyAdded(c *gin.Context) {
 		return
 	}
 
+	// Batch-fetch all distinct libraries needed
+	libMap := s.batchLoadLibraries(items)
+
 	metadata := make([]gin.H, len(items))
 	for i, item := range items {
-		lib, _ := s.libraryService.GetLibrary(item.LibraryID)
+		lib := libMap[item.LibraryID]
 		metadata[i] = s.mediaItemToMetadata(&item, lib)
 	}
 
@@ -2138,13 +2258,14 @@ func (s *Server) getOnDeck(c *gin.Context) {
 	var items []models.MediaItem
 	s.db.Preload("Files").Where("id IN ?", itemIDs).Find(&items)
 
+	// Batch-fetch all distinct libraries needed
+	libMap := s.batchLoadLibraries(items)
+
 	// Build response with view offset
 	metadata := make([]gin.H, 0, len(items))
 	for _, item := range items {
-		var lib models.Library
-		s.db.First(&lib, item.LibraryID)
-
-		m := s.mediaItemToMetadata(&item, &lib)
+		lib := libMap[item.LibraryID]
+		m := s.mediaItemToMetadata(&item, lib)
 		// Add view offset from history
 		if h, ok := historyMap[item.ID]; ok {
 			m["viewOffset"] = h.ViewOffset
@@ -2194,6 +2315,10 @@ func (s *Server) search(c *gin.Context) {
 		Limit(limit).
 		Find(&shows)
 
+	// Batch-fetch libraries for all results
+	allItems := append(movies, shows...)
+	libMap := s.batchLoadLibraries(allItems)
+
 	// Build hubs (grouped results by type)
 	hubs := []gin.H{}
 
@@ -2201,9 +2326,7 @@ func (s *Server) search(c *gin.Context) {
 	if len(movies) > 0 {
 		movieMetadata := make([]gin.H, len(movies))
 		for i, movie := range movies {
-			var lib models.Library
-			s.db.First(&lib, movie.LibraryID)
-			movieMetadata[i] = s.mediaItemToMetadata(&movie, &lib)
+			movieMetadata[i] = s.mediaItemToMetadata(&movie, libMap[movie.LibraryID])
 		}
 		hubs = append(hubs, gin.H{
 			"type":          "movie",
@@ -2218,9 +2341,7 @@ func (s *Server) search(c *gin.Context) {
 	if len(shows) > 0 {
 		showMetadata := make([]gin.H, len(shows))
 		for i, show := range shows {
-			var lib models.Library
-			s.db.First(&lib, show.LibraryID)
-			showMetadata[i] = s.mediaItemToMetadata(&show, &lib)
+			showMetadata[i] = s.mediaItemToMetadata(&show, libMap[show.LibraryID])
 		}
 		hubs = append(hubs, gin.H{
 			"type":          "show",
@@ -3520,6 +3641,12 @@ func (s *Server) transcodeStart(c *gin.Context) {
 	offset, _ := strconv.ParseInt(c.Query("offset"), 10, 64)
 	quality := c.DefaultQuery("videoQuality", "original")
 
+	// For Xtream VOD items, proxy through streamXtreamVOD (resolves URL dynamically from xtream_sources)
+	if strings.HasPrefix(file.FilePath, "xtream://") {
+		s.streamXtreamVOD(c, &file)
+		return
+	}
+
 	// For remote M3U VOD items, redirect directly to the stream URL (avoids unnecessary transcoding)
 	if file.IsRemote && file.RemoteURL != "" {
 		c.Redirect(http.StatusFound, file.RemoteURL)
@@ -3804,6 +3931,10 @@ func (s *Server) adminGetLibraries(c *gin.Context) {
 			paths[j] = gin.H{"id": p.ID, "path": p.Path}
 		}
 
+		activeScansMu.Lock()
+		scanning := activeScans[lib.ID]
+		activeScansMu.Unlock()
+
 		result[i] = gin.H{
 			"id":        lib.ID,
 			"uuid":      lib.UUID,
@@ -3815,6 +3946,7 @@ func (s *Server) adminGetLibraries(c *gin.Context) {
 			"hidden":    lib.Hidden,
 			"paths":     paths,
 			"itemCount": s.libraryService.GetMediaItemCount(lib.ID),
+			"isScanning": scanning,
 			"createdAt": lib.CreatedAt.Unix(),
 			"updatedAt": lib.UpdatedAt.Unix(),
 		}
@@ -4031,20 +4163,34 @@ func (s *Server) adminScanLibrary(c *gin.Context) {
 		return
 	}
 
-	// Run scan (this could be async in production)
-	result, err := s.scanner.ScanLibrary(lib)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	// Mark as scanning
+	activeScansMu.Lock()
+	if activeScans[lib.ID] {
+		activeScansMu.Unlock()
+		c.JSON(http.StatusOK, gin.H{"message": "Scan already in progress", "libraryId": lib.ID})
 		return
 	}
+	activeScans[lib.ID] = true
+	activeScansMu.Unlock()
 
-	c.JSON(http.StatusOK, gin.H{
-		"libraryId":    result.LibraryID,
-		"filesFound":   result.FilesFound,
-		"filesAdded":   result.FilesAdded,
-		"filesUpdated": result.FilesUpdated,
-		"filesRemoved": result.FilesRemoved,
-		"errors":       result.Errors,
+	// Run scan in background so the HTTP request returns immediately
+	go func() {
+		defer func() {
+			activeScansMu.Lock()
+			delete(activeScans, lib.ID)
+			activeScansMu.Unlock()
+		}()
+		if res, err := s.scanner.ScanLibrary(lib); err != nil {
+			logger.Warnf("Background scan failed for library %d: %v", lib.ID, err)
+		} else if res.FilesRelocated > 0 {
+			logger.Infof("Library %d scan: %d added, %d updated, %d removed, %d relocated",
+				lib.ID, res.FilesAdded, res.FilesUpdated, res.FilesRemoved, res.FilesRelocated)
+		}
+	}()
+
+	c.JSON(http.StatusAccepted, gin.H{
+		"message":   "Scan started",
+		"libraryId": lib.ID,
 	})
 }
 
@@ -4120,12 +4266,15 @@ type FileSystemEntry struct {
 func (s *Server) adminBrowseFilesystem(c *gin.Context) {
 	path := c.DefaultQuery("path", "")
 
+	pinned := getPinnedPaths()
+
 	// If no path specified, return common root paths
 	if path == "" {
 		roots := getSystemRoots()
 		c.JSON(http.StatusOK, gin.H{
-			"path":    "/",
-			"entries": roots,
+			"path":        "/",
+			"entries":     roots,
+			"pinnedPaths": pinned,
 		})
 		return
 	}
@@ -4190,10 +4339,38 @@ func (s *Server) adminBrowseFilesystem(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"path":       cleanPath,
-		"parentPath": parentPath,
-		"entries":    result,
+		"path":        cleanPath,
+		"parentPath":  parentPath,
+		"entries":     result,
+		"pinnedPaths": pinned,
 	})
+}
+
+// getPinnedPaths returns well-known container/media paths that actually exist on disk.
+// These are shown as shortcuts in the file browser regardless of current directory.
+func getPinnedPaths() []FileSystemEntry {
+	candidates := []struct {
+		name string
+		path string
+	}{
+		{"Movies", "/movies"},
+		{"TV Shows", "/tv"},
+		{"Recordings", "/data/recordings"},
+		{"Transcode", "/app/transcode"},
+		{"Downloads", "/app/downloads"},
+		{"Data", "/data"},
+	}
+	var pinned []FileSystemEntry
+	for _, c := range candidates {
+		if info, err := os.Stat(c.path); err == nil && info.IsDir() {
+			pinned = append(pinned, FileSystemEntry{
+				Name:  c.name,
+				Path:  c.path,
+				IsDir: true,
+			})
+		}
+	}
+	return pinned
 }
 
 // getSystemRoots returns common root paths based on OS
@@ -4491,11 +4668,12 @@ func (s *Server) adminUpdateSettings(c *gin.Context) {
 	}
 
 	// ---- Metadata ----
-	if input.TMDBApiKey != "" && !strings.HasPrefix(input.TMDBApiKey, "****") {
+	if input.TMDBApiKey != "" && !strings.Contains(input.TMDBApiKey, "****") {
 		s.config.Library.TMDBApiKey = input.TMDBApiKey
+		s.setSetting("tmdb_api_key", input.TMDBApiKey)
 		s.reinitializeTMDBAgent()
 	}
-	if input.TVDBApiKey != "" && !strings.HasPrefix(input.TVDBApiKey, "****") {
+	if input.TVDBApiKey != "" && !strings.Contains(input.TVDBApiKey, "****") {
 		s.config.Library.TVDBApiKey = input.TVDBApiKey
 	}
 	if input.MetadataLang != "" {
@@ -4598,8 +4776,18 @@ func (s *Server) adminUpdateSettings(c *gin.Context) {
 
 	// ---- Remote Access ----
 	s.setSetting("remote_access_enabled", fmt.Sprintf("%t", input.RemoteAccessEnabled))
+	if s.cloudRegistry != nil {
+		if input.RemoteAccessEnabled {
+			s.cloudRegistry.Start()
+		} else {
+			s.cloudRegistry.Stop()
+		}
+	}
 	if input.ExternalURL != "" {
 		s.setSetting("remote_external_url", input.ExternalURL)
+		if s.cloudRegistry != nil {
+			s.cloudRegistry.SetExternalURL(input.ExternalURL)
+		}
 	}
 
 	// ---- Playback Defaults ----
@@ -4649,6 +4837,73 @@ func (s *Server) adminUpdateSettings(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"message":  "Settings updated successfully",
 		"settings": s.buildFullSettings(),
+	})
+}
+
+
+// handleGenreBackfill runs a batch TMDB genre backfill for movies/shows without genres
+// POST /library/genre-backfill?limit=500&type=movie
+func (s *Server) handleGenreBackfill(c *gin.Context) {
+	limitStr := c.DefaultQuery("limit", "500")
+	itemType := c.DefaultQuery("type", "movie")
+	limit, _ := strconv.Atoi(limitStr)
+	if limit <= 0 || limit > 5000 {
+		limit = 500
+	}
+
+	// Find items without genres
+	var items []models.MediaItem
+	subQuery := s.db.Table("media_genres").Select("media_item_id")
+	s.db.Where("type = ? AND id NOT IN (?)", itemType, subQuery).
+		Order("added_at DESC").
+		Limit(limit).
+		Find(&items)
+
+	if len(items) == 0 {
+		c.JSON(http.StatusOK, gin.H{
+			"message": "All items already have genres",
+			"updated": 0,
+			"total":   0,
+		})
+		return
+	}
+
+	tmdbAgent := s.scanner.GetTMDBAgent()
+	if tmdbAgent == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "TMDB agent not initialized - check TMDB API key"})
+		return
+	}
+
+	// Process in background, return immediately
+	total := len(items)
+	go func() {
+		updated := 0
+		failed := 0
+		for i, item := range items {
+			var err error
+			if item.Type == "movie" {
+				err = tmdbAgent.UpdateMovieMetadata(&item)
+			} else if item.Type == "show" {
+				err = tmdbAgent.UpdateShowMetadata(&item)
+			}
+			if err != nil {
+				failed++
+			} else {
+				updated++
+			}
+			if (i+1)%100 == 0 {
+				log.Printf("Genre backfill progress: %d/%d (updated: %d, failed: %d)", i+1, total, updated, failed)
+			}
+			// Rate limit TMDB API calls (250ms = ~4 per second)
+			time.Sleep(250 * time.Millisecond)
+		}
+		log.Printf("Genre backfill complete: %d/%d updated, %d failed", updated, total, failed)
+	}()
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": fmt.Sprintf("Genre backfill started for %d %s items (newest first)", total, itemType),
+		"total":   total,
+		"status":  "processing",
 	})
 }
 

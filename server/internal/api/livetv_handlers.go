@@ -342,6 +342,12 @@ func (s *Server) getChannels(c *gin.Context) {
 		query = query.Where("enabled = ?", enabled == "true")
 	}
 
+	if limit := c.Query("limit"); limit != "" {
+		if n, err := strconv.Atoi(limit); err == nil && n > 0 {
+			query = query.Limit(n)
+		}
+	}
+
 	var channels []models.Channel
 	if err := query.Order("number, name").Find(&channels).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch channels"})
@@ -356,8 +362,50 @@ func (s *Server) getChannels(c *gin.Context) {
 		sourceNames[src.ID] = src.Name
 	}
 
-	// Enrich with current program info
-	epgParser := livetv.NewEPGParser(s.db)
+	// Collect all channel IDs that have EPG data
+	channelIDs := make([]string, 0, len(channels))
+	for _, ch := range channels {
+		if ch.ChannelID != "" {
+			channelIDs = append(channelIDs, ch.ChannelID)
+		}
+	}
+
+	// Batch-fetch current and next programs in 2 queries instead of N*2
+	nowStr := time.Now().UTC().Format("2006-01-02 15:04:05+00:00")
+	nowMap := make(map[string]*models.Program, len(channelIDs))
+	nextMap := make(map[string]*models.Program, len(channelIDs))
+
+	if len(channelIDs) > 0 {
+		// Current programs: one row per channel_id (latest start ≤ now AND end > now)
+		var nowPrograms []models.Program
+		s.db.Where("channel_id IN ? AND start <= ? AND \"end\" > ?", channelIDs, nowStr, nowStr).
+			Find(&nowPrograms)
+		for i := range nowPrograms {
+			p := &nowPrograms[i]
+			// Keep the most recently started program per channel
+			if existing, ok := nowMap[p.ChannelID]; !ok || p.Start.After(existing.Start) {
+				p.Icon = fixProgramImageURL(p.Icon)
+				p.Art = fixProgramImageURL(p.Art)
+				nowMap[p.ChannelID] = p
+			}
+		}
+
+		// Next programs: earliest start > now per channel_id
+		// Use a subquery approach: fetch all upcoming, then pick earliest per channel in Go
+		var nextPrograms []models.Program
+		s.db.Where("channel_id IN ? AND start > ?", channelIDs, nowStr).
+			Order("start ASC").
+			Find(&nextPrograms)
+		for i := range nextPrograms {
+			p := &nextPrograms[i]
+			if _, ok := nextMap[p.ChannelID]; !ok {
+				p.Icon = fixProgramImageURL(p.Icon)
+				p.Art = fixProgramImageURL(p.Art)
+				nextMap[p.ChannelID] = p
+			}
+		}
+	}
+
 	type ChannelWithProgram struct {
 		models.Channel
 		SourceName  string          `json:"sourceName,omitempty"`
@@ -370,20 +418,98 @@ func (s *Server) getChannels(c *gin.Context) {
 		enrichedChannels[i].Channel = ch
 		enrichedChannels[i].SourceName = sourceNames[ch.M3USourceID]
 		if ch.ChannelID != "" {
-			if program, err := epgParser.GetCurrentProgram(ch.ChannelID); err == nil {
-				program.Icon = fixProgramImageURL(program.Icon)
-				program.Art = fixProgramImageURL(program.Art)
-				enrichedChannels[i].NowPlaying = program
-			}
-			if program, err := epgParser.GetNextProgram(ch.ChannelID); err == nil {
-				program.Icon = fixProgramImageURL(program.Icon)
-				program.Art = fixProgramImageURL(program.Art)
-				enrichedChannels[i].NextProgram = program
-			}
+			enrichedChannels[i].NowPlaying = nowMap[ch.ChannelID]
+			enrichedChannels[i].NextProgram = nextMap[ch.ChannelID]
 		}
 	}
 
 	c.JSON(http.StatusOK, gin.H{"channels": enrichedChannels})
+}
+
+// getOnNowChannels returns channels that currently have a program airing, limited for home screen use.
+// GET /livetv/on-now?limit=20
+func (s *Server) getOnNowChannels(c *gin.Context) {
+	limit := 20
+	if l := c.Query("limit"); l != "" {
+		if n, err := strconv.Atoi(l); err == nil && n > 0 && n <= 200 {
+			limit = n
+		}
+	}
+
+	nowStr := time.Now().UTC().Format("2006-01-02 15:04:05+00:00")
+
+	// Fetch currently airing programs (limited)
+	var nowPrograms []models.Program
+	s.db.Where("start <= ? AND \"end\" > ?", nowStr, nowStr).
+		Order("start DESC").
+		Limit(limit * 3). // over-fetch to handle dedup
+		Find(&nowPrograms)
+
+	// Deduplicate: one program per channel_id, pick most recently started
+	nowMap := make(map[string]*models.Program, len(nowPrograms))
+	for i := range nowPrograms {
+		p := &nowPrograms[i]
+		if existing, ok := nowMap[p.ChannelID]; !ok || p.Start.After(existing.Start) {
+			p.Icon = fixProgramImageURL(p.Icon)
+			p.Art = fixProgramImageURL(p.Art)
+			nowMap[p.ChannelID] = p
+		}
+	}
+
+	if len(nowMap) == 0 {
+		c.JSON(http.StatusOK, gin.H{"channels": []interface{}{}})
+		return
+	}
+
+	// Fetch the matching channels
+	channelIDs := make([]string, 0, len(nowMap))
+	for id := range nowMap {
+		channelIDs = append(channelIDs, id)
+	}
+
+	var channels []models.Channel
+	s.db.Where("channel_id IN ? AND enabled = ?", channelIDs, true).
+		Order("number, name").
+		Limit(limit).
+		Find(&channels)
+
+	// Fetch next programs for the matched channels in one query
+	nextMap := make(map[string]*models.Program, len(channels))
+	if len(channels) > 0 {
+		ids := make([]string, len(channels))
+		for i, ch := range channels {
+			ids[i] = ch.ChannelID
+		}
+		var nextPrograms []models.Program
+		s.db.Where("channel_id IN ? AND start > ?", ids, nowStr).
+			Order("start ASC").
+			Find(&nextPrograms)
+		for i := range nextPrograms {
+			p := &nextPrograms[i]
+			if _, ok := nextMap[p.ChannelID]; !ok {
+				p.Icon = fixProgramImageURL(p.Icon)
+				p.Art = fixProgramImageURL(p.Art)
+				nextMap[p.ChannelID] = p
+			}
+		}
+	}
+
+	type ChannelWithProgram struct {
+		models.Channel
+		NowPlaying  *models.Program `json:"nowPlaying,omitempty"`
+		NextProgram *models.Program `json:"nextProgram,omitempty"`
+	}
+
+	result := make([]ChannelWithProgram, 0, len(channels))
+	for _, ch := range channels {
+		result = append(result, ChannelWithProgram{
+			Channel:     ch,
+			NowPlaying:  nowMap[ch.ChannelID],
+			NextProgram: nextMap[ch.ChannelID],
+		})
+	}
+
+	c.JSON(http.StatusOK, gin.H{"channels": result})
 }
 
 // getChannel returns a single channel with EPG info
@@ -4669,3 +4795,4 @@ func (s *Server) getTVGuideProviders(c *gin.Context) {
 		"count":     len(providers),
 	})
 }
+

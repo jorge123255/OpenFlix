@@ -6,6 +6,11 @@ export function useLibraries() {
   return useQuery({
     queryKey: ['libraries'],
     queryFn: () => api.getLibraries(),
+    refetchInterval: (query) => {
+      const libs = query.state.data as Library[] | undefined
+      const anyScanning = libs?.some((l) => (l as Library & { isScanning?: boolean }).isScanning)
+      return anyScanning ? 2000 : false
+    },
   })
 }
 

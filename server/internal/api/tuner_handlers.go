@@ -12,6 +12,7 @@ import (
 	"github.com/openflix/openflix-server/internal/logger"
 	"github.com/openflix/openflix-server/internal/models"
 	"github.com/openflix/openflix-server/internal/tuner"
+	"gorm.io/gorm"
 )
 
 // Package-level singleton for the tuner manager so that handlers can share
@@ -19,9 +20,9 @@ import (
 var tunerMgr *tuner.TunerManager
 var tunerOnce sync.Once
 
-func getTunerManager() *tuner.TunerManager {
+func getTunerManager(db *gorm.DB) *tuner.TunerManager {
 	tunerOnce.Do(func() {
-		tunerMgr = tuner.NewTunerManager()
+		tunerMgr = tuner.NewTunerManager(db)
 	})
 	return tunerMgr
 }
@@ -31,7 +32,7 @@ func getTunerManager() *tuner.TunerManager {
 // discoverTuners scans the local network for HDHomeRun devices.
 // POST /api/tuners/discover
 func (s *Server) discoverTuners(c *gin.Context) {
-	mgr := getTunerManager()
+	mgr := getTunerManager(s.db)
 
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
 	defer cancel()
@@ -46,6 +47,20 @@ func (s *Server) discoverTuners(c *gin.Context) {
 		return
 	}
 
+	// Auto-import channels for each discovered device that has none yet
+	for _, dev := range devices {
+		var count int64
+		s.db.Model(&models.Channel{}).Where("channel_id LIKE ?", "hdhr-"+dev.DeviceID+"-%").Count(&count)
+		if count == 0 {
+			imported, skipped, err := s.importChannelsForDevice(dev.DeviceID)
+			if err != nil {
+				logger.Warnf("Auto-import failed for device %s: %v", dev.DeviceID, err)
+			} else {
+				logger.Infof("Auto-imported %d channels from discovered device %s (%d skipped)", imported, dev.DeviceID, skipped)
+			}
+		}
+	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"devices": devices,
 		"count":   len(devices),
@@ -55,7 +70,7 @@ func (s *Server) discoverTuners(c *gin.Context) {
 // getTuners returns all currently known tuner devices.
 // GET /api/tuners
 func (s *Server) getTuners(c *gin.Context) {
-	mgr := getTunerManager()
+	mgr := getTunerManager(s.db)
 	devices := mgr.GetDevices()
 
 	c.JSON(http.StatusOK, gin.H{
@@ -75,7 +90,7 @@ func (s *Server) addTuner(c *gin.Context) {
 		return
 	}
 
-	mgr := getTunerManager()
+	mgr := getTunerManager(s.db)
 	device, err := mgr.AddDevice(req.URL)
 	if err != nil {
 		logger.Errorf("Failed to add tuner at %s: %v", req.URL, err)
@@ -86,8 +101,18 @@ func (s *Server) addTuner(c *gin.Context) {
 		return
 	}
 
+	// Auto-import channels for the newly added device
+	imported, skipped, err := s.importChannelsForDevice(device.DeviceID)
+	if err != nil {
+		logger.Warnf("Auto-import failed for device %s: %v", device.DeviceID, err)
+	} else {
+		logger.Infof("Auto-imported %d channels from added device %s (%d skipped)", imported, device.DeviceID, skipped)
+	}
+
 	c.JSON(http.StatusCreated, gin.H{
-		"device": device,
+		"device":   device,
+		"imported": imported,
+		"skipped":  skipped,
 	})
 }
 
@@ -100,11 +125,66 @@ func (s *Server) removeTuner(c *gin.Context) {
 		return
 	}
 
-	mgr := getTunerManager()
+	// Delete imported channels and their programs in a transaction first
+	var channelsDeleted, programsDeleted int64
+	channelIDPrefix := "hdhr-" + deviceID + "-%"
+	_ = s.db.Transaction(func(tx *gorm.DB) error {
+		var channelIDs []string
+		tx.Model(&models.Channel{}).Where("channel_id LIKE ?", channelIDPrefix).Pluck("channel_id", &channelIDs)
+		if len(channelIDs) > 0 {
+			result := tx.Where("channel_id IN ?", channelIDs).Delete(&models.Program{})
+			programsDeleted = result.RowsAffected
+		}
+		result := tx.Where("channel_id LIKE ?", channelIDPrefix).Delete(&models.Channel{})
+		channelsDeleted = result.RowsAffected
+		return nil
+	})
+
+	mgr := getTunerManager(s.db)
 	mgr.RemoveDevice(deviceID)
 
+	logger.Infof("Removed tuner %s: deleted %d channels, %d programs", deviceID, channelsDeleted, programsDeleted)
 	c.JSON(http.StatusOK, gin.H{
-		"message": "Device removed",
+		"message":         "Device removed",
+		"channelsDeleted": channelsDeleted,
+		"programsDeleted": programsDeleted,
+	})
+}
+
+// updateTuner updates tuner settings such as priority.
+// PUT /api/tuners/:id
+func (s *Server) updateTuner(c *gin.Context) {
+	deviceID := c.Param("id")
+	if deviceID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Device ID is required"})
+		return
+	}
+
+	var req struct {
+		Priority *int `json:"priority"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid JSON body"})
+		return
+	}
+	if req.Priority == nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Priority is required"})
+		return
+	}
+
+	mgr := getTunerManager(s.db)
+	if err := mgr.SetPriority(deviceID, *req.Priority); err != nil {
+		c.JSON(http.StatusNotFound, gin.H{
+			"error":   "Device not found",
+			"message": err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message":  "Tuner updated",
+		"deviceId": deviceID,
+		"priority": *req.Priority,
 	})
 }
 
@@ -117,7 +197,7 @@ func (s *Server) getTunerLineup(c *gin.Context) {
 		return
 	}
 
-	mgr := getTunerManager()
+	mgr := getTunerManager(s.db)
 	channels, err := mgr.GetLineup(deviceID)
 	if err != nil {
 		logger.Errorf("Failed to get lineup for device %s: %v", deviceID, err)
@@ -143,7 +223,7 @@ func (s *Server) getTunerStatus(c *gin.Context) {
 		return
 	}
 
-	mgr := getTunerManager()
+	mgr := getTunerManager(s.db)
 	statuses, err := mgr.GetTunerStatus(deviceID)
 	if err != nil {
 		logger.Errorf("Failed to get status for device %s: %v", deviceID, err)
@@ -160,42 +240,23 @@ func (s *Server) getTunerStatus(c *gin.Context) {
 	})
 }
 
-// importTunerChannels imports the channel lineup from an HDHomeRun device into
-// the Live TV channels database as Channel records.
-// POST /api/tuners/:id/import
-func (s *Server) importTunerChannels(c *gin.Context) {
-	deviceID := c.Param("id")
-	if deviceID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Device ID is required"})
-		return
-	}
+// importChannelsForDevice fetches the lineup from an HDHomeRun device and
+// inserts new Channel records into the database. Returns imported/skipped counts.
+func (s *Server) importChannelsForDevice(deviceID string) (imported, skipped int, err error) {
+	mgr := getTunerManager(s.db)
 
-	mgr := getTunerManager()
-
-	// Fetch the lineup from the device
 	lineup, err := mgr.GetLineup(deviceID)
 	if err != nil {
-		logger.Errorf("Failed to get lineup for import from device %s: %v", deviceID, err)
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error":   "Failed to get lineup",
-			"message": err.Error(),
-		})
-		return
+		return 0, 0, fmt.Errorf("get lineup: %w", err)
 	}
 
 	if len(lineup) == 0 {
-		c.JSON(http.StatusOK, gin.H{
-			"message":  "No channels found in lineup",
-			"imported": 0,
-			"skipped":  0,
-		})
-		return
+		return 0, 0, nil
 	}
 
 	// Get device info for source naming
-	devices := mgr.GetDevices()
 	var deviceName string
-	for _, d := range devices {
+	for _, d := range mgr.GetDevices() {
 		if d.DeviceID == deviceID {
 			deviceName = d.ModelNumber
 			if deviceName == "" {
@@ -206,44 +267,35 @@ func (s *Server) importTunerChannels(c *gin.Context) {
 	}
 	sourceName := "HDHomeRun " + deviceName
 
-	imported := 0
-	skipped := 0
-
 	for _, ch := range lineup {
-		// Skip DRM-protected channels
 		if ch.DRM != 0 {
 			skipped++
 			continue
 		}
 
-		// Build the stream URL from the device
 		streamURL := ch.URL
 		if streamURL == "" {
 			streamURL = mgr.GetStreamURL(deviceID, ch.GuideNumber)
 		}
 
-		// Parse the channel number
 		channelNum, _ := strconv.Atoi(ch.GuideNumber)
 		if channelNum == 0 {
-			// Try parsing as float for sub-channels like "5.1"
-			if f, err := strconv.ParseFloat(ch.GuideNumber, 64); err == nil {
+			if f, ferr := strconv.ParseFloat(ch.GuideNumber, 64); ferr == nil {
 				channelNum = int(f)
 			}
 		}
 
-		// Check if this channel already exists (by stream URL or name + number)
 		var existing models.Channel
-		result := s.db.Where("stream_url = ?", streamURL).First(&existing)
-		if result.Error == nil {
-			// Channel already exists with this stream URL
+		if s.db.Where("stream_url = ?", streamURL).First(&existing).Error == nil {
 			skipped++
 			continue
 		}
 
-		// Determine HD status
-		isHD := ch.HD == 1
+		group := "SD"
+		if ch.HD == 1 {
+			group = "HD"
+		}
 
-		// Create the channel record
 		channel := models.Channel{
 			ChannelID:  fmt.Sprintf("hdhr-%s-%s", deviceID, ch.GuideNumber),
 			Number:     channelNum,
@@ -252,22 +304,38 @@ func (s *Server) importTunerChannels(c *gin.Context) {
 			Enabled:    true,
 			SourceType: "hdhr",
 			SourceName: sourceName,
+			Group:      group,
 		}
 
-		// Set the group based on HD status
-		if isHD {
-			channel.Group = "HD"
-		} else {
-			channel.Group = "SD"
-		}
-
-		if err := s.db.Create(&channel).Error; err != nil {
-			logger.Warnf("Failed to import channel %s (%s): %v", ch.GuideNumber, ch.GuideName, err)
+		if createErr := s.db.Create(&channel).Error; createErr != nil {
+			logger.Warnf("Failed to import channel %s (%s): %v", ch.GuideNumber, ch.GuideName, createErr)
 			skipped++
 			continue
 		}
-
 		imported++
+	}
+
+	return imported, skipped, nil
+}
+
+// importTunerChannels imports the channel lineup from an HDHomeRun device into
+// the Live TV channels database as Channel records.
+// POST /api/tuners/:id/import
+func (s *Server) importTunerChannels(c *gin.Context) {
+	deviceID := c.Param("id")
+	if deviceID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Device ID is required"})
+		return
+	}
+
+	imported, skipped, err := s.importChannelsForDevice(deviceID)
+	if err != nil {
+		logger.Errorf("Failed to import channels for device %s: %v", deviceID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":   "Failed to get lineup",
+			"message": err.Error(),
+		})
+		return
 	}
 
 	logger.Infof("Imported %d channels from HDHomeRun device %s (%d skipped)", imported, deviceID, skipped)
@@ -276,7 +344,6 @@ func (s *Server) importTunerChannels(c *gin.Context) {
 		"message":  "Channel import complete",
 		"imported": imported,
 		"skipped":  skipped,
-		"total":    len(lineup),
 	})
 }
 
@@ -289,7 +356,7 @@ func (s *Server) scanTunerChannels(c *gin.Context) {
 		return
 	}
 
-	mgr := getTunerManager()
+	mgr := getTunerManager(s.db)
 	if err := mgr.ScanChannels(deviceID); err != nil {
 		logger.Errorf("Failed to start channel scan on device %s: %v", deviceID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{

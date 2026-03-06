@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useLocation } from 'react-router-dom'
 import { Link } from 'react-router-dom'
 import { FileBrowser } from '../components/FileBrowser'
 import {
@@ -13,9 +14,217 @@ import {
   SkipForward,
   Calendar,
   Trash2,
+  Search,
+  Plus,
+  AlertCircle,
 } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api, type ServerSettings, type DVRSettings } from '../api/client'
+
+// ---------------------------------------------------------------------------
+// Inline Guide Source Manager (replaces the old read-only display)
+// ---------------------------------------------------------------------------
+
+interface EPGSource {
+  id: number
+  name: string
+  providerType?: string
+  type?: string
+  url?: string
+}
+
+interface TVGuideProvider {
+  id: number
+  name: string
+  type: string
+  city?: string
+  state?: string
+}
+
+function GuideSourceManager() {
+  const queryClient = useQueryClient()
+  const authHeaders: Record<string, string> = {
+    'X-Plex-Token': localStorage.getItem('openflix_token') || '',
+    'Content-Type': 'application/json',
+  }
+
+  const [zip, setZip] = useState('')
+  const [providers, setProviders] = useState<TVGuideProvider[]>([])
+  const [selectedProvider, setSelectedProvider] = useState<TVGuideProvider | null>(null)
+  const [searching, setSearching] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [searchError, setSearchError] = useState<string | null>(null)
+  const [saveSuccess, setSaveSuccess] = useState(false)
+
+  const { data: sources = [], refetch: refetchSources } = useQuery<EPGSource[]>({
+    queryKey: ['epgSources'],
+    queryFn: async () => {
+      const res = await fetch('/livetv/epg/sources', { headers: authHeaders })
+      if (!res.ok) return []
+      return res.json()
+    },
+  })
+
+  const handleSearch = async () => {
+    if (!zip.trim()) return
+    setSearching(true)
+    setSearchError(null)
+    setProviders([])
+    setSelectedProvider(null)
+    try {
+      const res = await fetch(`/livetv/epg/tvguide/providers?zip=${encodeURIComponent(zip.trim())}`, {
+        headers: authHeaders,
+      })
+      if (!res.ok) throw new Error('No providers found for that ZIP code')
+      const data = await res.json() as { providers?: TVGuideProvider[] } | TVGuideProvider[]
+      const list = Array.isArray(data) ? data : (data.providers ?? [])
+      if (list.length === 0) throw new Error('No providers found for that ZIP code')
+      setProviders(list)
+    } catch (e) {
+      setSearchError(e instanceof Error ? e.message : 'Search failed')
+    } finally {
+      setSearching(false)
+    }
+  }
+
+  const handleSave = async () => {
+    if (!selectedProvider) return
+    setSaving(true)
+    try {
+      await fetch('/livetv/epg/sources', {
+        method: 'POST',
+        headers: authHeaders,
+        body: JSON.stringify({
+          name: selectedProvider.name,
+          providerType: 'tvguide',
+          tvguideProviderId: String(selectedProvider.id),
+          tvguideZipCode: zip.trim(),
+          tvguideDays: 7,
+        }),
+      })
+      setSaveSuccess(true)
+      setProviders([])
+      setSelectedProvider(null)
+      setZip('')
+      refetchSources()
+      queryClient.invalidateQueries({ queryKey: ['epgSources'] })
+      setTimeout(() => setSaveSuccess(false), 4000)
+    } catch {
+      setSearchError('Failed to save guide source')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleDelete = async (id: number) => {
+    await fetch(`/livetv/epg/sources/${id}`, { method: 'DELETE', headers: authHeaders })
+    refetchSources()
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Active sources */}
+      {sources.length > 0 ? (
+        <div className="space-y-2">
+          <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">Active Sources</p>
+          {sources.map((src) => (
+            <div key={src.id} className="flex items-center justify-between p-3 bg-gray-900 rounded-lg">
+              <div className="flex items-center gap-2">
+                <Radio className="h-4 w-4 text-green-400" />
+                <span className="text-sm text-white">{src.name}</span>
+                {src.providerType && (
+                  <span className="text-xs text-gray-500 bg-gray-700 px-1.5 py-0.5 rounded">
+                    {src.providerType}
+                  </span>
+                )}
+              </div>
+              <button
+                onClick={() => handleDelete(src.id)}
+                className="p-1 text-gray-500 hover:text-red-400 transition-colors"
+                title="Remove source"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="p-3 bg-gray-900 rounded-lg text-sm text-gray-500">
+          No guide sources configured.
+        </div>
+      )}
+
+      {saveSuccess && (
+        <div className="flex items-center gap-2 p-3 bg-green-500/10 border border-green-500/30 rounded-lg">
+          <CheckCircle className="h-4 w-4 text-green-400" />
+          <span className="text-sm text-green-400">Guide source added successfully.</span>
+        </div>
+      )}
+
+      {/* Add TVGuide source */}
+      <div className="border-t border-gray-700 pt-4 space-y-3">
+        <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">Add TVGuide Source</p>
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={zip}
+            onChange={(e) => setZip(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+            placeholder="ZIP code (e.g. 90210)"
+            className="flex-1 px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-500 text-sm focus:outline-none focus:border-indigo-500"
+          />
+          <button
+            onClick={handleSearch}
+            disabled={searching || !zip.trim()}
+            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm rounded-lg transition-colors"
+          >
+            {searching ? <Loader className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+            Find Providers
+          </button>
+        </div>
+
+        {searchError && (
+          <div className="flex items-center gap-2 text-red-400 text-sm">
+            <AlertCircle className="h-4 w-4" />
+            {searchError}
+          </div>
+        )}
+
+        {providers.length > 0 && (
+          <div className="space-y-1 max-h-48 overflow-y-auto">
+            {providers.map((p) => (
+              <button
+                key={p.id}
+                onClick={() => setSelectedProvider(p)}
+                className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
+                  selectedProvider?.id === p.id
+                    ? 'bg-indigo-600 text-white'
+                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                }`}
+              >
+                {p.name}
+                {(p.city || p.state) && (
+                  <span className="text-xs ml-2 opacity-70">{[p.city, p.state].filter(Boolean).join(', ')}</span>
+                )}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {selectedProvider && (
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white text-sm rounded-lg transition-colors"
+          >
+            {saving ? <Loader className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+            {saving ? 'Saving...' : `Add "${selectedProvider.name}"`}
+          </button>
+        )}
+      </div>
+    </div>
+  )
+}
 
 function SettingsTabNav({ active }: { active: 'general' | 'sources' | 'livetv-dvr' | 'advanced' | 'status' }) {
   const tabs = [
@@ -57,7 +266,7 @@ function SettingSection({
   children: React.ReactNode
 }) {
   return (
-    <div className="bg-gray-800 rounded-xl p-6 mb-6">
+    <div id={title.toLowerCase().replace(/[^a-z0-9]+/g, '-')} className="bg-gray-800 rounded-xl p-6 mb-6 scroll-mt-4">
       <div className="mb-4">
         <h2 className="text-lg font-semibold text-white flex items-center gap-2">
           {icon}
@@ -178,6 +387,26 @@ export function SettingsLiveTVDVRPage() {
       setFormData(config)
     }
   }, [config])
+
+  // Scroll to section from hash (e.g. #live-tv-streaming)
+  const location = useLocation()
+  useEffect(() => {
+    const hash = location.hash.replace('#', '')
+    if (!hash) return
+    const tryScroll = (attempts: number) => {
+      const el = document.getElementById(hash)
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        el.style.outline = '2px solid rgba(139, 92, 246, 0.6)'
+        el.style.outlineOffset = '4px'
+        el.style.borderRadius = '12px'
+        setTimeout(() => { el.style.outline = ''; el.style.outlineOffset = '' }, 2000)
+      } else if (attempts > 0) {
+        setTimeout(() => tryScroll(attempts - 1), 200)
+      }
+    }
+    setTimeout(() => tryScroll(10), 100)
+  }, [location.hash, location.state])
 
   const updateConfig = useMutation({
     mutationFn: (data: Partial<ServerSettings>) => api.updateServerConfig(data),
@@ -468,16 +697,7 @@ export function SettingsLiveTVDVRPage() {
         </SettingField>
 
         <div className="py-2">
-          <p className="text-sm font-medium text-gray-300 mb-1">Guide Data Source</p>
-          <div className="flex items-center gap-2 p-3 bg-gray-900 rounded-lg">
-            <Radio className="h-4 w-4 text-green-400" />
-            <span className="text-sm text-gray-300">
-              {formData.guide_data_source === 'gracenote' ? 'Gracenote (OTA)' : 'XMLTV'}
-            </span>
-            <span className="text-xs text-gray-500 ml-auto">
-              Configured via Sources tab
-            </span>
-          </div>
+          <GuideSourceManager />
         </div>
 
         <div className="flex gap-3 pt-2">

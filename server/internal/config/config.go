@@ -2,11 +2,13 @@ package config
 
 import (
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 )
@@ -16,6 +18,14 @@ func generateMachineID() string {
 	bytes := make([]byte, 16)
 	rand.Read(bytes)
 	return hex.EncodeToString(bytes)
+}
+
+// DeriveServerID deterministically derives a stable server identity from a license key.
+// This guarantees the same machine ID survives container rebuilds and fresh installs
+// as long as the same license key is used.
+func DeriveServerID(licenseKey string) string {
+	h := sha256.Sum256([]byte("openflix-server-id-v1:" + licenseKey))
+	return hex.EncodeToString(h[:16])
 }
 
 // Config holds all application configuration
@@ -48,7 +58,7 @@ type ServerConfig struct {
 	Name             string `yaml:"name"`                // Friendly server name
 	MachineID        string `yaml:"machine_id"`          // Unique server identifier
 	DiscoveryEnabled bool   `yaml:"discovery_enabled"`   // Enable UDP discovery
-	CloudRegistryURL string `yaml:"cloud_registry_url"`  // Cloud discovery registry URL (e.g. "https://discover.openflix.app")
+	CloudRegistryURL string `yaml:"cloud_registry_url"`  // Cloud discovery registry URL (e.g. "https://discover.openflix.io")
 	ClaimToken       string `yaml:"claim_token"`         // Current 4-char pairing code (auto-generated)
 	LicenseKey       string `yaml:"license_key"`         // OpenFlix license key
 }
@@ -126,7 +136,7 @@ func DefaultConfig() *Config {
 			Name:             "OpenFlix Server",
 			MachineID:        generateMachineID(),
 			DiscoveryEnabled: true,
-			CloudRegistryURL: "", // Set via OPENFLIX_CLOUD_REGISTRY_URL for cloud discovery
+			CloudRegistryURL: "https://discover.openflix.io", // Self-hosters can override or blank to disable
 		},
 		Database: DatabaseConfig{
 			Driver: "sqlite",
@@ -186,6 +196,7 @@ func Load() (*Config, error) {
 
 	// Try to load from config file
 	configPaths := []string{
+		"/data/config.yaml",
 		"config.yaml",
 		"/etc/openflix/config.yaml",
 		filepath.Join(os.Getenv("HOME"), ".openflix", "config.yaml"),
@@ -203,12 +214,56 @@ func Load() (*Config, error) {
 	// Override with environment variables
 	loadEnvOverrides(cfg)
 
+	// Persist machine ID: read from data dir file, or save current one.
+	// This ensures the machine ID survives container recreates even without config.yaml.
+	persistMachineID(cfg)
+
 	// Ensure data directories exist
 	if err := ensureDirectories(cfg); err != nil {
 		return nil, err
 	}
 
 	return cfg, nil
+}
+
+// persistMachineID ensures the machine ID is stable across restarts.
+// If a license key is available, the machine ID is deterministically derived from it —
+// this guarantees the same ID survives any container rebuild or fresh install.
+// Otherwise it falls back to a file in /data/machine-id or ~/.openflix/machine-id.
+func persistMachineID(cfg *Config) {
+	// If we already have a license key at load time (from env var or config.yaml),
+	// derive the machine ID from it. This is the stable, rebuild-proof path.
+	if cfg.Server.LicenseKey != "" {
+		cfg.Server.MachineID = DeriveServerID(cfg.Server.LicenseKey)
+		return
+	}
+
+	machineIDPaths := []string{
+		"/data/machine-id",
+		filepath.Join(os.Getenv("HOME"), ".openflix", "machine-id"),
+	}
+
+	// Try to load existing persisted machine ID
+	for _, path := range machineIDPaths {
+		if data, err := os.ReadFile(path); err == nil {
+			id := strings.TrimSpace(string(data))
+			if len(id) >= 16 { // valid hex machine ID
+				cfg.Server.MachineID = id
+				return
+			}
+		}
+	}
+
+	// No persisted ID found — save the current one (from config.yaml or freshly generated)
+	for _, path := range machineIDPaths {
+		dir := filepath.Dir(path)
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			continue
+		}
+		if err := os.WriteFile(path, []byte(cfg.Server.MachineID), 0644); err == nil {
+			return // saved successfully
+		}
+	}
 }
 
 // loadEnvOverrides overrides config values from environment variables

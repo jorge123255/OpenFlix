@@ -31,7 +31,7 @@ func Initialize(cfg config.DatabaseConfig) (*gorm.DB, error) {
 	}
 
 	db, err := gorm.Open(dialector, &gorm.Config{
-		Logger: logger.Default.LogMode(logger.Info),
+		Logger: logger.Default.LogMode(logger.Warn),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to database: %w", err)
@@ -73,6 +73,9 @@ func Migrate(db *gorm.DB) error {
 		&models.Collection{},
 		&models.CollectionItem{},
 		&models.WatchlistItem{},
+
+		// Tuner Devices
+		&models.TunerDevice{},
 
 		// Live TV
 		&models.M3USource{},
@@ -132,6 +135,9 @@ func Migrate(db *gorm.DB) error {
 		// Personal Sections
 		&models.PersonalSection{},
 		&models.PersonalSectionItem{},
+
+		// Show Trackers (new season notifications)
+		&models.ShowTracker{},
 	)
 	if err != nil {
 		return err
@@ -142,5 +148,30 @@ func Migrate(db *gorm.DB) error {
 		log.Printf("Warning: DVR migration had issues: %v", err)
 	}
 
+	// Ensure performance indexes exist (idempotent — IF NOT EXISTS).
+	// Run in background so startup isn't blocked on slow NAS-backed SQLite.
+	go ensureIndexes(db)
+
 	return nil
+}
+
+// ensureIndexes creates indexes that GORM's AutoMigrate doesn't handle well,
+// particularly for text search patterns on large tables like programs.
+func ensureIndexes(db *gorm.DB) {
+	indexes := []string{
+		// Programs: title search (LIKE '%query%' still can't use B-tree, but
+		// this index helps exact/prefix lookups and ORDER BY start)
+		`CREATE INDEX IF NOT EXISTS idx_programs_title_lower ON programs (LOWER(title))`,
+		`CREATE INDEX IF NOT EXISTS idx_programs_start ON programs (start)`,
+		`CREATE INDEX IF NOT EXISTS idx_programs_end ON programs ("end")`,
+		// Composite index for the common pattern: future programs by channel
+		`CREATE INDEX IF NOT EXISTS idx_programs_channel_start ON programs (channel_id, start)`,
+		// DVR jobs: watchdog query (orphaned jobs with legacy_recording_id set)
+		`CREATE INDEX IF NOT EXISTS idx_dvr_jobs_status_legacy ON dvr_jobs (status, legacy_recording_id)`,
+	}
+	for _, idx := range indexes {
+		if err := db.Exec(idx).Error; err != nil {
+			log.Printf("Warning: failed to create index: %v", err)
+		}
+	}
 }

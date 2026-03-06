@@ -294,30 +294,23 @@ func migrateSeriesRules(db *gorm.DB) {
 	for _, sr := range rules {
 		legacyID := sr.ID
 
-		// Build Query DSL from SeriesRule fields
-		query := `[{"field":"title","op":"LIKE","value":"` + escapeJSON(sr.Title) + `"}`
-		if sr.Keywords != "" {
-			query += `,{"field":"title","op":"LIKE","value":"` + escapeJSON(sr.Keywords) + `"}`
+		// Build Query DSL from the rule's Name as a title filter
+		// Conditions (EQ/NE/IN/NI/GT/LT) are already in Channels DVR JSON format
+		query := `[{"field":"title","op":"LIKE","value":"` + escapeJSON(sr.Name) + `"}]`
+
+		// If the rule has EQ conditions set, prefer those as the query
+		if sr.EQ != "" {
+			query = sr.EQ
 		}
-		if sr.ChannelID != nil {
-			query += fmt.Sprintf(`,{"field":"channel","op":"EQ","value":"%d"}`, *sr.ChannelID)
-		}
-		if sr.TimeSlot != "" {
-			query += `,{"field":"timeSlot","op":"EQ","value":"` + sr.TimeSlot + `"}`
-		}
-		if sr.DaysOfWeek != "" {
-			query += `,{"field":"dayOfWeek","op":"IN","value":"` + sr.DaysOfWeek + `"}`
-		}
-		query += `]`
 
 		dvrRule := models.DVRRule{
 			UserID:             sr.UserID,
-			Name:               sr.Title,
+			Name:               sr.Name,
 			Query:              query,
-			KeepNum:            sr.KeepCount,
-			PaddingStart:       sr.PrePadding * 60,  // minutes to seconds
-			PaddingEnd:         sr.PostPadding * 60,
-			Enabled:            sr.Enabled,
+			KeepNum:            sr.KeepNum,
+			PaddingStart:       sr.PaddingStart, // already in seconds
+			PaddingEnd:         sr.PaddingEnd,
+			Enabled:            !sr.Paused,
 			LegacySeriesRuleID: &legacyID,
 			CreatedAt:          sr.CreatedAt,
 			UpdatedAt:          sr.UpdatedAt,

@@ -257,6 +257,117 @@ func (t *TMDBAgent) GetMovieCredits(tmdbID int) (*tmdbCredits, error) {
 	return &credits, nil
 }
 
+// SearchTVMulti searches TMDB for TV shows by title and returns up to 10 results
+func (t *TMDBAgent) SearchTVMulti(title string, year int) ([]tmdbShow, error) {
+	if !t.IsConfigured() {
+		return nil, fmt.Errorf("TMDB API key not configured")
+	}
+
+	params := url.Values{}
+	params.Set("api_key", t.apiKey)
+	params.Set("query", title)
+	if year > 0 {
+		params.Set("first_air_date_year", strconv.Itoa(year))
+	}
+
+	resp, err := t.httpClient.Get(fmt.Sprintf("%s/search/tv?%s", tmdbBaseURL, params.Encode()))
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("TMDB API error: %d", resp.StatusCode)
+	}
+
+	var result tmdbTVSearchResult
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, err
+	}
+
+	if len(result.Results) > 10 {
+		return result.Results[:10], nil
+	}
+	return result.Results, nil
+}
+
+// SearchMovieMulti searches TMDB for movies by title and returns up to 10 results
+func (t *TMDBAgent) SearchMovieMulti(title string, year int) ([]tmdbMovie, error) {
+	if !t.IsConfigured() {
+		return nil, fmt.Errorf("TMDB API key not configured")
+	}
+
+	params := url.Values{}
+	params.Set("api_key", t.apiKey)
+	params.Set("query", title)
+	params.Set("include_adult", "false")
+	if year > 0 {
+		params.Set("year", strconv.Itoa(year))
+	}
+
+	resp, err := t.httpClient.Get(fmt.Sprintf("%s/search/movie?%s", tmdbBaseURL, params.Encode()))
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("TMDB API error: %d", resp.StatusCode)
+	}
+
+	var result tmdbSearchResult
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, err
+	}
+
+	if len(result.Results) > 10 {
+		return result.Results[:10], nil
+	}
+	return result.Results, nil
+}
+
+// GetTVDetailsFull fetches full TV details including next_episode_to_air (for tracker)
+func (t *TMDBAgent) GetTVDetailsFull(tmdbID int) (*TMDBShowDetails, error) {
+	if !t.IsConfigured() {
+		return nil, fmt.Errorf("TMDB API key not configured")
+	}
+
+	params := url.Values{}
+	params.Set("api_key", t.apiKey)
+
+	resp, err := t.httpClient.Get(fmt.Sprintf("%s/tv/%d?%s", tmdbBaseURL, tmdbID, params.Encode()))
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("TMDB API error: %d", resp.StatusCode)
+	}
+
+	var details TMDBShowDetails
+	if err := json.NewDecoder(resp.Body).Decode(&details); err != nil {
+		return nil, err
+	}
+
+	return &details, nil
+}
+
+// TMDBShowDetails is a richer TV show response that includes next_episode_to_air
+type TMDBShowDetails struct {
+	ID               int    `json:"id"`
+	Name             string `json:"name"`
+	NumberOfSeasons  int    `json:"number_of_seasons"`
+	NumberOfEpisodes int    `json:"number_of_episodes"`
+	Status           string `json:"status"`
+	NextEpisodeToAir *struct {
+		AirDate       string `json:"air_date"`
+		SeasonNumber  int    `json:"season_number"`
+		EpisodeNumber int    `json:"episode_number"`
+		Name          string `json:"name"`
+	} `json:"next_episode_to_air"`
+}
+
 // SearchTV searches TMDB for a TV show by title and optional year
 func (t *TMDBAgent) SearchTV(title string, year int) (*tmdbShow, error) {
 	if !t.IsConfigured() {

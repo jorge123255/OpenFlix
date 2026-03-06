@@ -124,3 +124,6 @@ android-native/app/play-service-account.json
 .claude/
 currentwork.txt
 *.claude-worktree
+android-native/app/build/
+android-native/.gradle/
+android-native/.idea/

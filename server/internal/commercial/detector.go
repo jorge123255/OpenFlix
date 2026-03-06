@@ -47,6 +47,9 @@ type DetectorConfig struct {
 	UseBlackFrame    bool    `json:"use_black_frame"`
 	UseAudioAnalysis bool    `json:"use_audio_analysis"`
 	UseLogoDetection bool    `json:"use_logo_detection"`
+	UseONNX          bool    `json:"use_onnx"`           // AI-based detection via ONNX model
+	ONNXModelPath    string  `json:"onnx_model_path"`    // path to .onnx model file
+	ONNXScriptPath   string  `json:"onnx_script_path"`   // path to Python inference script
 
 	// Thresholds
 	BlackFrameThreshold float64 `json:"black_frame_threshold"` // 0-1, lower = darker
@@ -78,6 +81,9 @@ func DefaultDetectorConfig() DetectorConfig {
 		UseBlackFrame:       true,
 		UseAudioAnalysis:    true,
 		UseLogoDetection:    false, // requires ML model
+		UseONNX:             false, // requires onnxruntime + trained model
+		ONNXModelPath:       "/data/models/commercial_skip.onnx",
+		ONNXScriptPath:      "/data/models/commercial_detect.py",
 		BlackFrameThreshold: 0.05,
 		SilenceThreshold:    -50,
 		MinCommercialLength: 15,
@@ -141,6 +147,25 @@ func (cd *CommercialDetector) DetectCommercials(ctx context.Context, recordingID
 		if err == nil && len(breaks) > 0 {
 			allBreaks = cd.mergeBreaks(allBreaks, breaks)
 			methods = append(methods, "audio")
+		}
+	}
+
+	// Method 4: ONNX AI detection (runs last, highest priority on overlap)
+	if cd.Config.UseONNX {
+		onnx := &ONNXDetector{
+			ModelPath:  cd.Config.ONNXModelPath,
+			ScriptPath: cd.Config.ONNXScriptPath,
+		}
+		if onnx.ModelAvailable() {
+			breaks, err := onnx.Detect(ctx, videoPath)
+			if err == nil && len(breaks) > 0 {
+				// ONNX results get a confidence boost
+				for i := range breaks {
+					breaks[i].Confidence = minF64(breaks[i].Confidence*1.2, 1.0)
+				}
+				allBreaks = cd.mergeBreaks(allBreaks, breaks)
+				methods = append(methods, "onnx")
+			}
 		}
 	}
 
@@ -570,6 +595,15 @@ func minFloat(a, b float64) float64 {
 
 func maxFloat(a, b float64) float64 {
 	if a > b {
+		return a
+	}
+	return b
+}
+
+// min returns the smaller of two float64 values.
+// (Go 1.21+ provides a built-in; this helper ensures compat with older versions.)
+func minF64(a, b float64) float64 {
+	if a < b {
 		return a
 	}
 	return b

@@ -333,6 +333,9 @@ func (v *VODImporter) ImportXtreamSeries(sourceID uint) (*ImportResult, error) {
 			continue
 		}
 
+		// Rate limit to avoid hammering the Xtream API
+		time.Sleep(200 * time.Millisecond)
+
 		// Get series details (seasons and episodes)
 		seriesInfo, err := v.xtreamClient.GetSeriesInfo(&source, seriesID)
 		if err != nil {
@@ -342,6 +345,13 @@ func (v *VODImporter) ImportXtreamSeries(sourceID uint) (*ImportResult, error) {
 
 		// Import seasons and episodes
 		v.importSeasonsAndEpisodes(&source, showID, series.Name, seriesInfo)
+
+		// Log progress every 100
+		processed := result.Added + result.Updated + result.Errors
+		if processed % 100 == 0 {
+			log.Printf("[import-series] Progress: %d/%d processed (%d added, %d updated, %d errors)",
+				processed, result.Total, result.Added, result.Updated, result.Errors)
+		}
 	}
 
 	// Update source stats
@@ -440,8 +450,9 @@ func (v *VODImporter) importEpisode(source *models.XtreamSource, showID, seasonI
 		return
 	}
 
-	// Parse episode ID
-	epStreamID, _ := strconv.Atoi(ep.ID)
+	// Parse episode ID (can be string or number from Xtream API)
+	epIDStr := interfaceToString(ep.ID)
+	epStreamID, _ := strconv.Atoi(epIDStr)
 
 	// Check if episode exists
 	var existing models.MediaItem
@@ -482,7 +493,7 @@ func (v *VODImporter) importEpisode(source *models.XtreamSource, showID, seasonI
 		// Create media file
 		mediaFile := models.MediaFile{
 			MediaItemID:     episodeItem.ID,
-			FilePath:        fmt.Sprintf("xtream://series/%d/%s.%s", source.ID, ep.ID, ep.ContainerExtension),
+			FilePath:        fmt.Sprintf("xtream://series/%d/%s.%s", source.ID, epIDStr, ep.ContainerExtension),
 			Container:       ep.ContainerExtension,
 			Duration:        int64(ep.Info.DurationSecs * 1000),
 			Bitrate:         ep.Info.Bitrate,

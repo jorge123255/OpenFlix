@@ -369,13 +369,15 @@ function EditLibraryModal({
   )
 }
 
-function LibraryCard({ library }: { library: Library }) {
+function LibraryCard({ library }: { library: Library & { isScanning?: boolean } }) {
   const deleteLibrary = useDeleteLibrary()
   const scanLibrary = useScanLibrary()
   const [expanded, setExpanded] = useState(false)
   const [showEdit, setShowEdit] = useState(false)
+  const [toast, setToast] = useState<string | null>(null)
 
   const Icon = libraryTypeIcons[library.type] || FolderOpen
+  const isScanning = library.isScanning || scanLibrary.isPending
 
   const handleDelete = async () => {
     if (confirm('Are you sure you want to delete this library? This will remove all associated metadata.')) {
@@ -385,11 +387,25 @@ function LibraryCard({ library }: { library: Library }) {
 
   const handleScan = async () => {
     await scanLibrary.mutateAsync(library.id)
+    setToast(`Scanning "${library.title}"...`)
+    setTimeout(() => setToast(null), 4000)
   }
 
   return (
     <>
+      {toast && (
+        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3 px-4 py-3 bg-indigo-600 text-white rounded-lg shadow-lg text-sm">
+          <RefreshCw className="h-4 w-4 animate-spin flex-shrink-0" />
+          {toast}
+        </div>
+      )}
       <div className="bg-gray-800 rounded-xl p-6">
+        {isScanning && (
+          <div className="mb-4 flex items-center gap-2 px-3 py-2 bg-indigo-500/10 border border-indigo-500/30 rounded-lg text-sm text-indigo-400">
+            <RefreshCw className="h-4 w-4 animate-spin flex-shrink-0" />
+            Scanning library for new files...
+          </div>
+        )}
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-4">
             <div className="p-3 bg-gray-700 rounded-lg">
@@ -410,13 +426,15 @@ function LibraryCard({ library }: { library: Library }) {
             </button>
             <button
               onClick={handleScan}
-              disabled={scanLibrary.isPending}
-              className="p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg"
-              title="Scan Library"
+              disabled={isScanning}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg ${
+                isScanning
+                  ? 'text-indigo-400 bg-indigo-500/10 cursor-default'
+                  : 'text-gray-300 hover:text-white hover:bg-gray-700'
+              }`}
             >
-              <RefreshCw
-                className={`h-4 w-4 ${scanLibrary.isPending ? 'animate-spin' : ''}`}
-              />
+              <RefreshCw className={`h-4 w-4 ${isScanning ? 'animate-spin' : ''}`} />
+              {isScanning ? 'Scanning...' : 'Scan'}
             </button>
             <button
               onClick={handleDelete}

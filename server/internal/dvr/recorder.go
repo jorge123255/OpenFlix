@@ -200,7 +200,7 @@ func (r *Recorder) checkScheduledRecordings() {
 // processSeriesRules checks series rules and creates recordings
 func (r *Recorder) processSeriesRules() {
 	var rules []models.SeriesRule
-	r.db.Where("enabled = ?", true).Find(&rules)
+	r.db.Where("paused = ?", false).Find(&rules)
 
 	// Use UTC for database queries since times are stored in UTC
 	now := time.Now().UTC()
@@ -210,16 +210,15 @@ func (r *Recorder) processSeriesRules() {
 		var programs []models.Program
 		query := r.db.Where("start > ? AND start < ?", now, now.Add(24*time.Hour))
 
-		if rule.ChannelID != nil {
-			// Get channel's EPG ID
-			var channel models.Channel
-			if r.db.First(&channel, *rule.ChannelID).Error == nil {
-				query = query.Where("channel_id = ?", channel.ChannelID)
-			}
+		// Apply EQ conditions if present (e.g. channel filter via EQ.Channel)
+		// Conditions are stored as JSON — basic title match via Name as fallback
+		if rule.Name != "" {
+			query = query.Where("title LIKE ?", "%"+rule.Name+"%")
 		}
 
-		if rule.Keywords != "" {
-			query = query.Where("title LIKE ?", "%"+rule.Keywords+"%")
+		// Filter for new episodes only if rule requires it
+		if rule.NewOnly {
+			query = query.Where("is_new = ?", true)
 		}
 
 		query.Find(&programs)
@@ -237,9 +236,9 @@ func (r *Recorder) processSeriesRules() {
 				continue
 			}
 
-			// Apply padding
-			startTime := prog.Start.Add(-time.Duration(rule.PrePadding) * time.Minute)
-			endTime := prog.End.Add(time.Duration(rule.PostPadding) * time.Minute)
+			// Apply padding (PaddingStart/PaddingEnd are in seconds)
+			startTime := prog.Start.Add(-time.Duration(rule.PaddingStart) * time.Second)
+			endTime := prog.End.Add(time.Duration(rule.PaddingEnd) * time.Second)
 
 			recording := models.Recording{
 				UserID:       rule.UserID,
@@ -259,12 +258,12 @@ func (r *Recorder) processSeriesRules() {
 			}
 		}
 
-		// Clean up old recordings if KeepCount is set
-		if rule.KeepCount > 0 {
+		// Clean up old recordings if KeepOnly="last" and KeepNum is set
+		if rule.KeepOnly == "last" && rule.KeepNum > 0 {
 			var recordings []models.Recording
 			r.db.Where("series_rule_id = ? AND status = ?", rule.ID, "completed").
 				Order("start_time DESC").
-				Offset(rule.KeepCount).
+				Offset(rule.KeepNum).
 				Find(&recordings)
 
 			for _, rec := range recordings {
@@ -1268,7 +1267,9 @@ func (r *Recorder) onRecordingComplete(recordingID uint) {
 		recording.Status = "failed"
 		errMsg := session.Error.Error()
 		if session.ErrorOutput != "" {
-			errMsg = session.ErrorOutput
+			// FFmpeg stderr includes progress lines before the actual error.
+			// Keep only the last 8 non-empty lines so the DB gets a readable message.
+			errMsg = ffmpegErrorSummary(session.ErrorOutput)
 		}
 		recording.LastError = errMsg
 	} else {
@@ -1772,6 +1773,38 @@ func (r *Recorder) postProcessDVRFile(file *models.DVRFile) {
 // checkScheduledDVRJobs checks the dvr_jobs table for jobs that need to start.
 // This handles jobs created directly via the v2 API (not via legacy Recording).
 func (r *Recorder) checkScheduledDVRJobs(now time.Time) {
+	// Watchdog: find jobs that were dispatched to a legacy recording but the
+	// recording is now gone (server crash/restart during recording). Without this,
+	// they stay "scheduled" forever since the main query filters legacy_recording_id IS NULL.
+	var orphanedJobs []models.DVRJob
+	r.db.Where("status = ? AND legacy_recording_id IS NOT NULL", "scheduled").Find(&orphanedJobs)
+	for _, job := range orphanedJobs {
+		var rec models.Recording
+		recGone := r.db.First(&rec, *job.LegacyRecordingID).Error != nil
+		if recGone {
+			// Recording row is gone — check if a completed dvr_file was created for this job
+			var file models.DVRFile
+			if r.db.Where("job_id = ?", job.ID).First(&file).Error == nil && file.Completed {
+				job.Status = "completed"
+			} else {
+				job.Status = "failed"
+				job.LastError = "recording session lost (server restarted during recording)"
+			}
+			r.db.Save(&job)
+			logger.Log.WithFields(map[string]interface{}{
+				"dvr_job_id":          job.ID,
+				"title":               job.Title,
+				"legacy_recording_id": *job.LegacyRecordingID,
+				"resolved_status":     job.Status,
+			}).Warn("Resolved orphaned DVR job (recording row gone after restart)")
+		} else if rec.Status == "failed" || rec.Status == "completed" || rec.Status == "cancelled" {
+			// Recording exists but finished — sync status back to dvr_job
+			job.Status = rec.Status
+			job.LastError = rec.LastError
+			r.db.Save(&job)
+		}
+	}
+
 	var jobs []models.DVRJob
 	r.db.Where("status = ? AND start_time <= ? AND legacy_recording_id IS NULL", "scheduled", now).Find(&jobs)
 
@@ -2331,6 +2364,20 @@ func minUint(a, b uint) uint {
 		return a
 	}
 	return b
+}
+
+// ffmpegErrorSummary extracts the last N non-empty lines from ffmpeg stderr.
+// FFmpeg emits many progress lines before the actual error; we only want the tail.
+func ffmpegErrorSummary(output string) string {
+	lines := strings.Split(strings.TrimSpace(output), "\n")
+	var tail []string
+	for i := len(lines) - 1; i >= 0 && len(tail) < 8; i-- {
+		line := strings.TrimSpace(lines[i])
+		if line != "" {
+			tail = append([]string{line}, tail...)
+		}
+	}
+	return strings.Join(tail, "\n")
 }
 
 func maxUint(a, b uint) uint {

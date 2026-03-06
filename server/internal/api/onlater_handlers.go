@@ -5,6 +5,8 @@ import (
 	"strconv"
 	"time"
 
+	"strings"
+
 	"github.com/gin-gonic/gin"
 	"github.com/openflix/openflix-server/internal/livetv"
 	"github.com/openflix/openflix-server/internal/models"
@@ -254,9 +256,12 @@ func (s *Server) handleSearchOnLater(c *gin.Context) {
 
 	start, end := s.getOnLaterTimeRange(c)
 
+	// Search by title only (not description) — description LIKE with leading wildcard
+	// prevents the time-range index from being used, causing full-table scans.
+	// The time range bounds (start/end) let SQLite use idx_programs_start to prune first.
 	var programs []models.Program
-	s.db.Where("(title LIKE ? OR description LIKE ?) AND start >= ? AND start < ?",
-		"%"+query+"%", "%"+query+"%", start, end).
+	s.db.Where("LOWER(title) LIKE ? AND start >= ? AND start < ?",
+		"%"+strings.ToLower(query)+"%", start, end).
 		Order("start ASC").
 		Limit(100).
 		Find(&programs)
@@ -515,5 +520,138 @@ func (s *Server) handleEnrichEPG(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"message": "EPG enrichment started",
 		"limit":   limit,
+	})
+}
+
+// ---- Seasonal / Event Categories ----
+
+// holidayKeywords are used to match holiday-themed programming
+var holidayKeywords = []string{
+	"christmas", "holiday", "xmas", "hanukkah", "hannukah", "kwanzaa",
+	"thanksgiving", "new year", "new years", "winter special", "holiday special",
+	"christmas movie", "christmas special",
+}
+
+// halloweenKeywords match halloween/horror content
+var halloweenKeywords = []string{
+	"halloween", "horror", "spooky", "haunted", "ghost", "witch", "vampire",
+	"zombie", "fright", "scary", "trick or treat", "thriller",
+}
+
+// specialEventKeywords match sporting events and other special programming
+var specialEventKeywords = []string{
+	"olympics", "olympic", "world cup", "super bowl", "championship", "playoffs",
+	"masters", "wimbledon", "world series", "stanley cup finals",
+	"emmy", "oscar", "grammy", "golden globe", "academy award",
+}
+
+// buildLikeQuery returns a GORM WHERE clause for keyword matching across title+description
+func buildKeywordQuery(db interface{}, keywords []string) interface{} {
+	// This returns the db with WHERE conditions — actual usage is in each handler
+	return db
+}
+
+// handleGetOnLaterHoliday returns upcoming holiday-themed programming
+// GET /api/onlater/holiday
+func (s *Server) handleGetOnLaterHoliday(c *gin.Context) {
+	start, end := s.getOnLaterTimeRange(c)
+
+	var programs []models.Program
+	query := s.db.Where("start >= ? AND start < ?", start, end)
+
+	// Build OR conditions for all holiday keywords
+	var orConds []string
+	var orArgs []interface{}
+	for _, kw := range holidayKeywords {
+		orConds = append(orConds, "LOWER(title) LIKE ? OR LOWER(description) LIKE ?")
+		orArgs = append(orArgs, "%"+kw+"%", "%"+kw+"%")
+	}
+	if len(orConds) > 0 {
+		query = query.Where(strings.Join(orConds, " OR "), orArgs...)
+	}
+
+	query.Order("start ASC").Limit(200).Find(&programs)
+
+	items := s.enrichOnLaterItems(programs)
+	c.JSON(http.StatusOK, OnLaterResponse{
+		Items:      items,
+		TotalCount: len(items),
+		StartTime:  start,
+		EndTime:    end,
+	})
+}
+
+// handleGetOnLaterHalloween returns upcoming Halloween/horror programming
+// GET /api/onlater/halloween
+func (s *Server) handleGetOnLaterHalloween(c *gin.Context) {
+	start, end := s.getOnLaterTimeRange(c)
+
+	var programs []models.Program
+	query := s.db.Where("start >= ? AND start < ?", start, end)
+
+	var orConds []string
+	var orArgs []interface{}
+	for _, kw := range halloweenKeywords {
+		orConds = append(orConds, "LOWER(title) LIKE ? OR LOWER(description) LIKE ?")
+		orArgs = append(orArgs, "%"+kw+"%", "%"+kw+"%")
+	}
+	if len(orConds) > 0 {
+		query = query.Where(strings.Join(orConds, " OR "), orArgs...)
+	}
+
+	query.Order("start ASC").Limit(200).Find(&programs)
+
+	items := s.enrichOnLaterItems(programs)
+	c.JSON(http.StatusOK, OnLaterResponse{
+		Items:      items,
+		TotalCount: len(items),
+		StartTime:  start,
+		EndTime:    end,
+	})
+}
+
+// handleGetOnLaterSeasonal returns upcoming special events programming
+// Supports optional ?event= query param (holiday|halloween|olympics|awards)
+// GET /api/onlater/seasonal
+func (s *Server) handleGetOnLaterSeasonal(c *gin.Context) {
+	event := strings.ToLower(c.Query("event"))
+	start, end := s.getOnLaterTimeRange(c)
+
+	var keywords []string
+	switch event {
+	case "holiday":
+		keywords = holidayKeywords
+	case "halloween":
+		keywords = halloweenKeywords
+	case "olympics", "world_cup", "awards":
+		keywords = specialEventKeywords
+	default:
+		// All special events combined
+		keywords = append(keywords, holidayKeywords...)
+		keywords = append(keywords, halloweenKeywords...)
+		keywords = append(keywords, specialEventKeywords...)
+	}
+
+	var programs []models.Program
+	query := s.db.Where("start >= ? AND start < ?", start, end)
+
+	var orConds []string
+	var orArgs []interface{}
+	for _, kw := range keywords {
+		orConds = append(orConds, "LOWER(title) LIKE ? OR LOWER(description) LIKE ?")
+		orArgs = append(orArgs, "%"+kw+"%", "%"+kw+"%")
+	}
+	if len(orConds) > 0 {
+		query = query.Where(strings.Join(orConds, " OR "), orArgs...)
+	}
+
+	query.Order("start ASC").Limit(200).Find(&programs)
+
+	items := s.enrichOnLaterItems(programs)
+	c.JSON(http.StatusOK, OnLaterResponse{
+		Items:      items,
+		TotalCount: len(items),
+		StartTime:  start,
+		EndTime:    end,
 	})
 }

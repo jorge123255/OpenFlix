@@ -12,6 +12,7 @@ import {
   Copy,
   ExternalLink,
   Save,
+  Router,
 } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api, type LicenseStatus, type DiscoverySettings } from '../api/client'
@@ -50,6 +51,87 @@ function CopyButton({ text }: { text: string }) {
       {copied ? <CheckCircle className="h-3.5 w-3.5 text-green-400" /> : <Copy className="h-3.5 w-3.5" />}
       {copied ? 'Copied!' : 'Copy'}
     </button>
+  )
+}
+
+function UPnPSection() {
+  const { data: upnp, isLoading } = useQuery({
+    queryKey: ['upnpStatus'],
+    queryFn: () => api.getUpnpStatus(),
+    refetchInterval: 60000,
+    retry: 1,
+  })
+
+  return (
+    <SettingSection
+      title="Automatic Port Mapping (UPnP)"
+      icon={<Router className="h-5 w-5 text-indigo-400" />}
+    >
+      {isLoading ? (
+        <div className="flex items-center gap-2 text-gray-400 text-sm">
+          <Loader className="h-4 w-4 animate-spin" />
+          Checking router...
+        </div>
+      ) : upnp?.active ? (
+        <div className="flex items-start gap-3 p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
+          <CheckCircle className="h-5 w-5 text-green-400 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-medium text-green-400">Port mapped automatically</p>
+            <p className="text-xs text-gray-400 mt-0.5">
+              Your router opened port {window.location.port || '32400'} via UPnP.
+              {upnp.externalIp && <> External IP: <span className="font-mono text-gray-300">{upnp.externalIp}</span></>}
+            </p>
+            <p className="text-xs text-gray-500 mt-1">
+              Direct remote access is available without any manual configuration.
+            </p>
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          <div className="flex items-start gap-3 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+            <XCircle className="h-5 w-5 text-yellow-400 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-medium text-yellow-400">UPnP not available on your router</p>
+              <p className="text-xs text-gray-400 mt-0.5">
+                {upnp?.message || 'Your router does not support automatic port mapping (UPnP/IGD).'}
+              </p>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <p className="text-sm font-medium text-gray-300">Choose a remote access method:</p>
+
+            {/* Option A: Tailscale (recommended) */}
+            <div className="p-3 bg-gray-900 border border-gray-700 rounded-lg">
+              <p className="text-sm font-medium text-white mb-1">Option A — Tailscale VPN <span className="text-xs text-indigo-400 font-normal">(recommended, free)</span></p>
+              <p className="text-xs text-gray-400">Enable Tailscale below. No port forwarding needed — creates a private encrypted tunnel directly to your device.</p>
+            </div>
+
+            {/* Option B: Port forward manually */}
+            <div className="p-3 bg-gray-900 border border-gray-700 rounded-lg">
+              <p className="text-sm font-medium text-white mb-1">Option B — Manual port forwarding</p>
+              <p className="text-xs text-gray-400 mb-2">Forward TCP port <span className="font-mono text-gray-300">{window.location.port || '32400'}</span> on your router to this server's LAN IP.</p>
+              <div className="text-xs text-gray-500 space-y-0.5">
+                <p className="font-medium text-gray-400">Ubiquiti / UniFi routers:</p>
+                <p>Settings → Firewall &amp; Security → Port Forwarding → Add Rule</p>
+                <p>Protocol: TCP, External Port: {window.location.port || '32400'}, Internal IP: (this server's IP), Internal Port: {window.location.port || '32400'}</p>
+              </div>
+            </div>
+
+            {/* Option C: Cloudflared tunnel */}
+            <div className="p-3 bg-gray-900 border border-gray-700 rounded-lg">
+              <p className="text-sm font-medium text-white mb-1">Option C — Cloudflare Tunnel <span className="text-xs text-gray-400 font-normal">(no port forwarding)</span></p>
+              <p className="text-xs text-gray-400 mb-2">
+                Run a free Cloudflare Tunnel (cloudflared) to expose this server via a stable HTTPS URL. Set the URL it generates in "External URL Override" below.
+              </p>
+              <div className="p-2 bg-gray-950 rounded text-xs font-mono text-gray-300">
+                docker run -d cloudflare/cloudflared:latest tunnel --url http://YOUR_SERVER_IP:{window.location.port || '32400'}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </SettingSection>
   )
 }
 
@@ -521,8 +603,11 @@ function ExternalUrlSection() {
       {/* Explanation */}
       <div className="p-4 rounded-lg bg-gray-900 border border-gray-700 text-sm text-gray-400 space-y-1">
         <p className="text-gray-300 font-medium">When do you need this?</p>
-        <p>Most users don't need to set this. It's only needed if you have a custom domain or reverse proxy (e.g. <span className="text-gray-300 font-mono">openflix.yourdomain.com</span>) and want the app to connect via that address instead of your local or Tailscale IP.</p>
-        <p className="text-xs text-gray-500 mt-1">If you're using Tailscale, the Tailscale IP/MagicDNS URL is used automatically — no override needed.</p>
+        <p>Set this if you're using a Cloudflare Tunnel or custom domain for remote access. The app will connect via this URL instead of your public IP — so it works even if your ISP rotates your IP address.</p>
+        <p className="text-xs text-gray-500 mt-1">
+          Example: paste your <span className="text-gray-300 font-mono">https://xxxx.trycloudflare.com</span> tunnel URL here. Once saved, it's broadcast to the cloud registry so all your devices reconnect automatically.
+        </p>
+        <p className="text-xs text-gray-500">If you're using Tailscale, the Tailscale IP/MagicDNS URL is used automatically — no override needed.</p>
       </div>
       <div>
         <label className="block text-sm font-medium text-gray-300 mb-1">Custom External URL</label>
@@ -578,6 +663,7 @@ export function RemoteAccessPage() {
         </p>
       </div>
 
+      <UPnPSection />
       <CloudDiscoverySection />
       <TailscaleSection />
       <ExternalUrlSection />

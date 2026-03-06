@@ -720,14 +720,16 @@ func (s *Server) createSeriesRule(c *gin.Context) {
 	userID := c.GetUint("userID")
 
 	var req struct {
-		Title       string `json:"title" binding:"required"`
-		ChannelID   *uint  `json:"channelId"`
-		Keywords    string `json:"keywords"`
-		TimeSlot    string `json:"timeSlot"`
-		DaysOfWeek  string `json:"daysOfWeek"`
-		KeepCount   int    `json:"keepCount"`
-		PrePadding  int    `json:"prePadding"`
-		PostPadding int    `json:"postPadding"`
+		Name         string `json:"Name" binding:"required"`
+		Image        string `json:"Image"`
+		KeepOnly     string `json:"KeepOnly"`
+		KeepNum      int    `json:"KeepNum"`
+		PaddingStart int    `json:"PaddingStart"`
+		PaddingEnd   int    `json:"PaddingEnd"`
+		Rerecord     bool   `json:"Rerecord"`
+		Limit        int    `json:"Limit"`
+		Priority     int    `json:"Priority"`
+		NewOnly      bool   `json:"NewOnly"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -735,16 +737,17 @@ func (s *Server) createSeriesRule(c *gin.Context) {
 	}
 
 	rule := models.SeriesRule{
-		UserID:      userID,
-		Title:       req.Title,
-		ChannelID:   req.ChannelID,
-		Keywords:    req.Keywords,
-		TimeSlot:    req.TimeSlot,
-		DaysOfWeek:  req.DaysOfWeek,
-		KeepCount:   req.KeepCount,
-		PrePadding:  req.PrePadding,
-		PostPadding: req.PostPadding,
-		Enabled:     true,
+		UserID:       userID,
+		Name:         req.Name,
+		Image:        req.Image,
+		KeepOnly:     req.KeepOnly,
+		KeepNum:      req.KeepNum,
+		PaddingStart: req.PaddingStart,
+		PaddingEnd:   req.PaddingEnd,
+		Rerecord:     req.Rerecord,
+		Limit:        req.Limit,
+		Priority:     req.Priority,
+		NewOnly:      req.NewOnly,
 	}
 
 	if err := s.db.Create(&rule).Error; err != nil {
@@ -771,47 +774,55 @@ func (s *Server) updateSeriesRule(c *gin.Context) {
 	}
 
 	var req struct {
-		Title       string `json:"title"`
-		ChannelID   *uint  `json:"channelId"`
-		Keywords    string `json:"keywords"`
-		TimeSlot    string `json:"timeSlot"`
-		DaysOfWeek  string `json:"daysOfWeek"`
-		KeepCount   *int   `json:"keepCount"`
-		PrePadding  *int   `json:"prePadding"`
-		PostPadding *int   `json:"postPadding"`
-		Enabled     *bool  `json:"enabled"`
+		Name         string `json:"Name"`
+		Image        string `json:"Image"`
+		Paused       *bool  `json:"Paused"`
+		Rerecord     *bool  `json:"Rerecord"`
+		NewOnly      *bool  `json:"NewOnly"`
+		KeepOnly     string `json:"KeepOnly"`
+		KeepNum      *int   `json:"KeepNum"`
+		PaddingStart *int   `json:"PaddingStart"`
+		PaddingEnd   *int   `json:"PaddingEnd"`
+		Limit        *int   `json:"Limit"`
+		Priority     *int   `json:"Priority"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	if req.Title != "" {
-		rule.Title = req.Title
+	if req.Name != "" {
+		rule.Name = req.Name
 	}
-	if req.ChannelID != nil {
-		rule.ChannelID = req.ChannelID
+	if req.Image != "" {
+		rule.Image = req.Image
 	}
-	if req.Keywords != "" {
-		rule.Keywords = req.Keywords
+	if req.Paused != nil {
+		rule.Paused = *req.Paused
 	}
-	if req.TimeSlot != "" {
-		rule.TimeSlot = req.TimeSlot
+	if req.Rerecord != nil {
+		rule.Rerecord = *req.Rerecord
 	}
-	if req.DaysOfWeek != "" {
-		rule.DaysOfWeek = req.DaysOfWeek
+	if req.NewOnly != nil {
+		rule.NewOnly = *req.NewOnly
 	}
-	if req.KeepCount != nil {
-		rule.KeepCount = *req.KeepCount
+	if req.KeepOnly != "" {
+		rule.KeepOnly = req.KeepOnly
 	}
-	if req.PrePadding != nil {
-		rule.PrePadding = *req.PrePadding
+	if req.KeepNum != nil {
+		rule.KeepNum = *req.KeepNum
 	}
-	if req.PostPadding != nil {
-		rule.PostPadding = *req.PostPadding
+	if req.PaddingStart != nil {
+		rule.PaddingStart = *req.PaddingStart
 	}
-	if req.Enabled != nil {
-		rule.Enabled = *req.Enabled
+	if req.PaddingEnd != nil {
+		rule.PaddingEnd = *req.PaddingEnd
+	}
+	if req.Limit != nil {
+		rule.Limit = *req.Limit
+	}
+	if req.Priority != nil {
+		rule.Priority = *req.Priority
 	}
 
 	if err := s.db.Save(&rule).Error; err != nil {

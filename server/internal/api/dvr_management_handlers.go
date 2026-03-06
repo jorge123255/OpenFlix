@@ -257,25 +257,42 @@ func (s *Server) searchShowForPass(c *gin.Context) {
 	// e.g. "chicagopd" matches "Chicago P.D.", "greys" matches "Grey's Anatomy"
 	normQ := normalizeQuery(q)
 
-	// Helper: find next guide airing for a title
-	nextAiring := func(title string) *showNextAiring {
+	now := time.Now().UTC()
+	window14d := now.AddDate(0, 0, 14).Format("2006-01-02 15:04:05")
+	nowStr := now.Format("2006-01-02 15:04:05")
+
+	// Batch next-airing lookup: one query for all titles instead of N+1.
+	batchNextAirings := func(titles []string) map[string]*showNextAiring {
+		if len(titles) == 0 {
+			return nil
+		}
 		type row struct {
+			Title string
 			Start string
 			Name  string
 		}
-		var r row
-		s.db.Raw(
-			`SELECT datetime(p.start) AS start, ch.name FROM programs p `+
-				`JOIN channels ch ON ch.channel_id = p.channel_id `+
-				`WHERE LOWER(p.title) = ? AND p.start > ? `+
-				`ORDER BY p.start ASC LIMIT 1`,
-			strings.ToLower(title), time.Now().UTC().Format("2006-01-02 15:04:05"),
-		).Scan(&r)
-		if r.Name == "" {
-			return nil
+		lowerTitles := make([]string, len(titles))
+		for i, t := range titles {
+			lowerTitles[i] = strings.ToLower(t)
 		}
-		t, _ := time.Parse("2006-01-02 15:04:05", r.Start)
-		return &showNextAiring{Start: t, ChannelName: r.Name}
+		// Use a single query with IN clause bounded by a 14-day window so the
+		// idx_programs_start index can prune the scan range first.
+		var rows []row
+		s.db.Raw(
+			`SELECT p.title, MIN(datetime(p.start)) AS start, ch.name `+
+				`FROM programs p `+
+				`JOIN channels ch ON ch.channel_id = p.channel_id `+
+				`WHERE p.start > ? AND p.start < ? AND LOWER(p.title) IN ? `+
+				`GROUP BY LOWER(p.title)`,
+			nowStr, window14d, lowerTitles,
+		).Scan(&rows)
+		m := make(map[string]*showNextAiring, len(rows))
+		for _, r := range rows {
+			t, _ := time.Parse("2006-01-02 15:04:05", r.Start)
+			key := strings.ToLower(r.Title)
+			m[key] = &showNextAiring{Start: t, ChannelName: r.Name}
+		}
+		return m
 	}
 
 	tmdbAgent := s.scanner.GetTMDBAgent()
@@ -285,6 +302,11 @@ func (s *Server) searchShowForPass(c *gin.Context) {
 		if mediaType == "movie" {
 			movies, err := tmdbAgent.SearchMovieMulti(q, 0)
 			if err == nil {
+				titles := make([]string, len(movies))
+				for i, m := range movies {
+					titles[i] = m.Title
+				}
+				airings := batchNextAirings(titles)
 				for _, m := range movies {
 					year := 0
 					if len(m.ReleaseDate) >= 4 {
@@ -296,19 +318,24 @@ func (s *Server) searchShowForPass(c *gin.Context) {
 					}
 					id := m.ID
 					results = append(results, showSearchResult{
-						TMDBId:    &id,
-						Title:     m.Title,
-						Overview:  m.Overview,
-						Year:      year,
-						MediaType: "movie",
-						PosterURL: posterURL,
-						NextAiring: nextAiring(m.Title),
+						TMDBId:     &id,
+						Title:      m.Title,
+						Overview:   m.Overview,
+						Year:       year,
+						MediaType:  "movie",
+						PosterURL:  posterURL,
+						NextAiring: airings[strings.ToLower(m.Title)],
 					})
 				}
 			}
 		} else {
 			shows, err := tmdbAgent.SearchTVMulti(q, 0)
 			if err == nil {
+				titles := make([]string, len(shows))
+				for i, s := range shows {
+					titles[i] = s.Name
+				}
+				airings := batchNextAirings(titles)
 				for _, show := range shows {
 					year := 0
 					if len(show.FirstAirDate) >= 4 {
@@ -320,13 +347,13 @@ func (s *Server) searchShowForPass(c *gin.Context) {
 					}
 					id := show.ID
 					results = append(results, showSearchResult{
-						TMDBId:    &id,
-						Title:     show.Name,
-						Overview:  show.Overview,
-						Year:      year,
-						MediaType: "tv",
-						PosterURL: posterURL,
-						NextAiring: nextAiring(show.Name),
+						TMDBId:     &id,
+						Title:      show.Name,
+						Overview:   show.Overview,
+						Year:       year,
+						MediaType:  "tv",
+						PosterURL:  posterURL,
+						NextAiring: airings[strings.ToLower(show.Name)],
 					})
 				}
 			}
@@ -336,7 +363,9 @@ func (s *Server) searchShowForPass(c *gin.Context) {
 		return
 	}
 
-	// Fallback: guide-only search (no TMDB key)
+	// Fallback: guide-only search (no TMDB key).
+	// Bound by a 14-day window so the idx_programs_start index limits the scan,
+	// then filter by title. Avoids full-table scan on the programs table.
 	type guideRow struct {
 		Title       string
 		Description string
@@ -345,18 +374,42 @@ func (s *Server) searchShowForPass(c *gin.Context) {
 		ChannelName string
 	}
 	var rows []guideRow
-	// Normalized SQLite expression strips spaces, dots, commas, hyphens, apostrophes, colons
-	normTitle := `REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(LOWER(p.title),' ',''),'.',''),',',''),'-',''),"'",''),':','')`
 	s.db.Raw(
-		`SELECT p.title, p.description, p.icon, datetime(p.start) AS start, ch.name AS channel_name `+
+		`SELECT p.title, p.description, p.icon, datetime(MIN(p.start)) AS start, ch.name AS channel_name `+
 			`FROM programs p `+
 			`JOIN channels ch ON ch.channel_id = p.channel_id `+
-			`WHERE (LOWER(p.title) LIKE ? OR `+normTitle+` LIKE ?) AND p.start > ? `+
-			`GROUP BY p.title `+
-			`ORDER BY p.start ASC `+
+			`WHERE p.start > ? AND p.start < ? AND LOWER(p.title) LIKE ? `+
+			`GROUP BY LOWER(p.title) `+
+			`ORDER BY start ASC `+
 			`LIMIT 20`,
-		"%"+strings.ToLower(q)+"%", "%"+normQ+"%", time.Now().UTC().Format("2006-01-02 15:04:05"),
+		nowStr, window14d, "%"+strings.ToLower(q)+"%",
 	).Scan(&rows)
+
+	// Also try normalized query if too few results
+	if len(rows) < 5 && normQ != strings.ToLower(q) {
+		var normRows []guideRow
+		normExpr := `REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(LOWER(p.title),' ',''),'.',''),',',''),'-',''),"'",''),':','')`
+		s.db.Raw(
+			`SELECT p.title, p.description, p.icon, datetime(MIN(p.start)) AS start, ch.name AS channel_name `+
+				`FROM programs p `+
+				`JOIN channels ch ON ch.channel_id = p.channel_id `+
+				`WHERE p.start > ? AND p.start < ? AND `+normExpr+` LIKE ? `+
+				`GROUP BY LOWER(p.title) `+
+				`ORDER BY start ASC `+
+				`LIMIT 20`,
+			nowStr, window14d, "%"+normQ+"%",
+		).Scan(&normRows)
+		// Merge, dedup by title
+		seen := make(map[string]bool, len(rows))
+		for _, r := range rows {
+			seen[strings.ToLower(r.Title)] = true
+		}
+		for _, r := range normRows {
+			if !seen[strings.ToLower(r.Title)] {
+				rows = append(rows, r)
+			}
+		}
+	}
 
 	results := make([]showSearchResult, 0, len(rows))
 	for _, r := range rows {
@@ -768,4 +821,233 @@ func (s *Server) deleteShowTracker(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"deleted": true})
+}
+
+// PassTestAiring is one matching guide airing returned by testDVRPass.
+type PassTestAiring struct {
+	ProgramID   uint      `json:"programId"`
+	Title       string    `json:"title"`
+	Subtitle    string    `json:"subtitle,omitempty"`
+	ChannelID   string    `json:"channelId"`
+	ChannelName string    `json:"channelName"`
+	ChannelLogo string    `json:"channelLogo,omitempty"`
+	Start       time.Time `json:"start"`
+	End         time.Time `json:"end"`
+	IsNew       bool      `json:"isNew"`
+	IsSports    bool      `json:"isSports"`
+	IsMovie     bool      `json:"isMovie"`
+	EpisodeNum  string    `json:"episodeNum,omitempty"`
+	Category    string    `json:"category,omitempty"`
+}
+
+// testDVRPass returns upcoming guide programs that match the provided pass conditions.
+// POST /dvr/passes/test
+func (s *Server) testDVRPass(c *gin.Context) {
+	var req passRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
+		return
+	}
+
+	// Parse each condition map from JSON
+	condMaps := map[string]map[string]json.RawMessage{}
+	for op, raw := range map[string]json.RawMessage{
+		"EQ": req.EQ, "NE": req.NE, "IN": req.IN, "NI": req.NI, "GT": req.GT, "LT": req.LT,
+	} {
+		if len(raw) == 0 {
+			continue
+		}
+		var m map[string]json.RawMessage
+		if err := json.Unmarshal(raw, &m); err == nil && len(m) > 0 {
+			condMaps[op] = m
+		}
+	}
+
+	if len(condMaps) == 0 {
+		c.JSON(http.StatusOK, gin.H{"airings": []PassTestAiring{}, "count": 0})
+		return
+	}
+
+	// Query programs in the next 14 days
+	now := time.Now()
+	horizon := now.Add(14 * 24 * time.Hour)
+	var programs []models.Program
+	if err := s.db.Where("start >= ? AND start <= ?", now, horizon).
+		Order("start ASC").
+		Limit(5000).
+		Find(&programs).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to query guide"})
+		return
+	}
+
+	// Build a channel lookup map for channel name + logo
+	var channels []models.Channel
+	s.db.Find(&channels)
+	chanMap := make(map[string]models.Channel, len(channels))
+	for _, ch := range channels {
+		chanMap[ch.ChannelID] = ch
+	}
+
+	// Evaluate conditions against each program
+	var matches []PassTestAiring
+	for i := range programs {
+		p := &programs[i]
+		if matchesConditions(p, condMaps) {
+			airing := PassTestAiring{
+				ProgramID:  p.ID,
+				Title:      p.Title,
+				Subtitle:   p.Subtitle,
+				ChannelID:  p.ChannelID,
+				Start:      p.Start,
+				End:        p.End,
+				IsNew:      p.IsNew,
+				IsSports:   p.IsSports,
+				IsMovie:    p.IsMovie,
+				EpisodeNum: p.EpisodeNum,
+				Category:   p.Category,
+			}
+			if ch, ok := chanMap[p.ChannelID]; ok {
+				airing.ChannelName = ch.Name
+				airing.ChannelLogo = ch.Logo
+			}
+			matches = append(matches, airing)
+			if len(matches) >= 100 {
+				break
+			}
+		}
+	}
+
+	if matches == nil {
+		matches = []PassTestAiring{}
+	}
+	c.JSON(http.StatusOK, gin.H{"airings": matches, "count": len(matches)})
+}
+
+// matchesConditions checks if a program satisfies all pass condition maps (AND logic).
+// condMaps keys are op names ("EQ", "NE", "IN", "NI", "GT", "LT");
+// values are maps of fieldName → raw JSON value.
+func matchesConditions(p *models.Program, condMaps map[string]map[string]json.RawMessage) bool {
+	for op, fields := range condMaps {
+		for field, rawVal := range fields {
+			// Decode the JSON value to a plain string (handles both "string" and number/bool)
+			var condValue string
+			// Try string first
+			var s string
+			if err := json.Unmarshal(rawVal, &s); err == nil {
+				condValue = s
+			} else {
+				// Fall back to raw (number / bool)
+				condValue = strings.Trim(string(rawVal), "\"")
+			}
+			fieldValue := passTestFieldValue(field, p)
+			if !passTestOp(op, fieldValue, condValue, field) {
+				return false
+			}
+		}
+	}
+	return true
+}
+
+// passTestFieldValue extracts the string value of a named field from a Program.
+// Mirrors dvr/query.go getFieldValue but is local to avoid a cross-package import cycle.
+func passTestFieldValue(field string, p *models.Program) string {
+	switch strings.ToLower(field) {
+	case "title":
+		return p.Title
+	case "subtitle", "episodetitle":
+		return p.Subtitle
+	case "channel":
+		return p.ChannelID
+	case "category", "genre", "categories", "genres":
+		return p.Category
+	case "isnew", "tags":
+		// Channels DVR passes encode "New" as EQ.Tags="New"
+		if strings.ToLower(field) == "tags" {
+			if p.IsNew {
+				return "New"
+			}
+			return ""
+		}
+		return fmt.Sprintf("%v", p.IsNew)
+	case "issports":
+		return fmt.Sprintf("%v", p.IsSports)
+	case "ismovie":
+		return fmt.Sprintf("%v", p.IsMovie)
+	case "iskids":
+		return fmt.Sprintf("%v", p.IsKids)
+	case "isnews":
+		return fmt.Sprintf("%v", p.IsNews)
+	case "ispremiere":
+		return fmt.Sprintf("%v", p.IsPremiere)
+	case "islive":
+		return fmt.Sprintf("%v", p.IsLive)
+	case "isfinale":
+		return fmt.Sprintf("%v", p.IsFinale)
+	case "seriesid":
+		return p.SeriesID
+	case "episodenum":
+		return p.EpisodeNum
+	case "episodenumber":
+		return fmt.Sprintf("%d", p.EpisodeNumber)
+	case "seasonnumber":
+		return fmt.Sprintf("%d", p.SeasonNumber)
+	case "contentrating", "rating":
+		return p.Rating
+	case "description", "summary":
+		return p.Description
+	case "teams", "team":
+		return p.Teams
+	case "league":
+		return p.League
+	default:
+		return ""
+	}
+}
+
+// passTestOp applies a comparison operator for pass condition evaluation.
+func passTestOp(op, fieldValue, condValue, field string) bool {
+	op = strings.ToUpper(op)
+	switch op {
+	case "EQ":
+		return strings.EqualFold(fieldValue, condValue)
+	case "NE":
+		return !strings.EqualFold(fieldValue, condValue)
+	case "IN":
+		// condValue may be a comma-separated list; check if fieldValue is contained
+		parts := strings.Split(condValue, ",")
+		for _, part := range parts {
+			if strings.EqualFold(strings.TrimSpace(part), fieldValue) {
+				return true
+			}
+			// substring match for team names
+			if strings.ToLower(field) == "team" && strings.Contains(strings.ToLower(fieldValue), strings.ToLower(strings.TrimSpace(part))) {
+				return true
+			}
+		}
+		return false
+	case "NI":
+		parts := strings.Split(condValue, ",")
+		for _, part := range parts {
+			if strings.EqualFold(strings.TrimSpace(part), fieldValue) {
+				return false
+			}
+		}
+		return true
+	case "GT":
+		fv, err1 := strconv.ParseFloat(fieldValue, 64)
+		cv, err2 := strconv.ParseFloat(condValue, 64)
+		if err1 != nil || err2 != nil {
+			return false
+		}
+		return fv > cv
+	case "LT":
+		fv, err1 := strconv.ParseFloat(fieldValue, 64)
+		cv, err2 := strconv.ParseFloat(condValue, 64)
+		if err1 != nil || err2 != nil {
+			return false
+		}
+		return fv < cv
+	default:
+		return false
+	}
 }

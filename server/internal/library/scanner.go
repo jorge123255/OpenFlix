@@ -58,12 +58,19 @@ var videoExtensions = map[string]bool{
 
 // ScanResult contains scan statistics
 type ScanResult struct {
-	LibraryID    uint
-	FilesFound   int
-	FilesAdded   int
-	FilesUpdated int
-	FilesRemoved int
-	Errors       []string
+	LibraryID      uint
+	FilesFound     int
+	FilesAdded     int
+	FilesUpdated   int
+	FilesRemoved   int
+	FilesRelocated int
+	Errors         []string
+}
+
+// fileFingerprint returns a stable identifier for a file based on its name and size.
+// This is used to detect relocated files (same file, different path).
+func fileFingerprint(name string, size int64) string {
+	return name + ":" + strconv.FormatInt(size, 10)
 }
 
 // ScanLibrary scans a library for media files
@@ -81,7 +88,8 @@ func (s *Scanner) ScanLibrary(library *models.Library) (*ScanResult, error) {
 
 	// Track existing LOCAL files to detect removals and modifications
 	// Skip remote files (VOD streams from Xtream/M3U) - they don't exist on disk
-	existingFiles := make(map[string]*models.MediaFile)
+	existingFiles := make(map[string]*models.MediaFile)         // keyed by path
+	existingByFingerprint := make(map[string]*models.MediaFile) // keyed by "filename:size"
 	var existingItems []models.MediaFile
 	s.db.Joins("JOIN media_items ON media_items.id = media_files.media_item_id").
 		Where("media_items.library_id = ?", library.ID).
@@ -91,6 +99,15 @@ func (s *Scanner) ScanLibrary(library *models.Library) (*ScanResult, error) {
 			continue
 		}
 		existingFiles[existingItems[i].FilePath] = &existingItems[i]
+		fp := existingItems[i].FileFingerprint
+		if fp == "" {
+			// Backfill fingerprint for records created before this feature
+			fp = fileFingerprint(filepath.Base(existingItems[i].FilePath), existingItems[i].FileSize)
+		}
+		// Only index if not already claimed (first entry wins to avoid collisions)
+		if _, conflict := existingByFingerprint[fp]; !conflict {
+			existingByFingerprint[fp] = &existingItems[i]
+		}
 	}
 
 	foundFiles := make(map[string]bool)
@@ -115,8 +132,14 @@ func (s *Scanner) ScanLibrary(library *models.Library) (*ScanResult, error) {
 			result.FilesFound++
 			foundFiles[path] = true
 
-			// Check if file already exists
+			// 1. Exact path match — normal case
 			if existingFile, exists := existingFiles[path]; exists {
+				// Backfill fingerprint if missing
+				if existingFile.FileFingerprint == "" {
+					fp := fileFingerprint(filepath.Base(path), info.Size())
+					s.db.Model(existingFile).Update("file_fingerprint", fp)
+					existingFile.FileFingerprint = fp
+				}
 				// Check if file was modified (size or mod time changed)
 				if info.Size() != existingFile.FileSize || !info.ModTime().Equal(existingFile.FileModTime) {
 					if err := s.updateMediaFile(existingFile, path, info); err != nil {
@@ -128,7 +151,26 @@ func (s *Scanner) ScanLibrary(library *models.Library) (*ScanResult, error) {
 				return nil
 			}
 
-			// Add new file
+			// 2. Fingerprint match — file was relocated (directory change or rename of parent folder)
+			fp := fileFingerprint(filepath.Base(path), info.Size())
+			if existingFile, found := existingByFingerprint[fp]; found {
+				// Update the stored path — preserves all metadata, watch history, ratings
+				oldPath := existingFile.FilePath
+				if err := s.db.Model(existingFile).Updates(map[string]interface{}{
+					"file_path":        path,
+					"file_fingerprint": fp,
+					"file_mod_time":    info.ModTime(),
+				}).Error; err == nil {
+					result.FilesRelocated++
+					_ = oldPath // available for logging if needed
+					// Remove from path index so removal loop doesn't delete it
+					delete(existingFiles, oldPath)
+					existingFiles[path] = existingFile
+				}
+				return nil
+			}
+
+			// 3. Truly new file
 			if err := s.addMediaFile(library, path, info); err != nil {
 				result.Errors = append(result.Errors, fmt.Sprintf("Error adding %s: %v", path, err))
 			} else {
@@ -510,11 +552,12 @@ func (s *Scanner) addGenericMedia(library *models.Library, filePath string, file
 // createMediaFile creates a media file record
 func (s *Scanner) createMediaFile(item *models.MediaItem, filePath string, fileInfo os.FileInfo, mediaInfo MediaInfo) error {
 	file := models.MediaFile{
-		MediaItemID: item.ID,
-		FilePath:    filePath,
-		FileSize:    fileInfo.Size(),
-		FileModTime: fileInfo.ModTime(),
-		Container:   strings.TrimPrefix(filepath.Ext(filePath), "."),
+		MediaItemID:     item.ID,
+		FilePath:        filePath,
+		FileSize:        fileInfo.Size(),
+		FileModTime:     fileInfo.ModTime(),
+		FileFingerprint: fileFingerprint(filepath.Base(filePath), fileInfo.Size()),
+		Container:       strings.TrimPrefix(filepath.Ext(filePath), "."),
 		Duration:    mediaInfo.Duration,
 		Bitrate:     int(mediaInfo.Bitrate),
 		Width:       mediaInfo.Width,

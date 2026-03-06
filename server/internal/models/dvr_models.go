@@ -180,6 +180,13 @@ type DVRGroup struct {
 	TMDBType      string `gorm:"size:10" json:"tmdbType,omitempty"` // movie, tv
 	FileCount     int    `gorm:"default:0" json:"fileCount"`
 
+	// Visibility control (Channels DVR: VisibilityMode)
+	// "both" (default) = visible normally; "kids" = visible only in kids mode; "hidden" = never shown
+	VisibilityMode string `gorm:"size:10;default:both" json:"visibilityMode"`
+
+	// User-defined labels (comma-separated), separate from Categories
+	Labels string `gorm:"size:500" json:"labels,omitempty"`
+
 	CreatedAt time.Time      `json:"createdAt"`
 	UpdatedAt time.Time      `json:"updatedAt"`
 	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`

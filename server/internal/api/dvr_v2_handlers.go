@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -509,7 +510,47 @@ func (s *Server) getFiles(c *gin.Context) {
 	c.JSON(http.StatusOK, result)
 }
 
-// getFile returns a single DVR file by ID
+// MediaRegion is a unified typed chapter/segment marker for a DVR file.
+// Merges CommercialSegments and DetectedSegments into the Channels DVR MediaRegions shape.
+type MediaRegion struct {
+	Start   float64  `json:"start"`   // seconds from start
+	End     float64  `json:"end"`     // seconds from start
+	Type    string   `json:"type"`    // "ad", "intro", "outro", "credits", "content"
+	Sources []string `json:"sources"` // e.g. ["comskip:0", "intro_detector:0"]
+}
+
+// buildMediaRegions merges commercial segments and detected segments for a file
+// into a single sorted MediaRegion slice (Channels DVR convention).
+func buildMediaRegions(commercials []models.CommercialSegment, detected []models.DetectedSegment) []MediaRegion {
+	var regions []MediaRegion
+	for i, c := range commercials {
+		regions = append(regions, MediaRegion{
+			Start:   c.StartTime,
+			End:     c.EndTime,
+			Type:    "ad",
+			Sources: []string{fmt.Sprintf("comskip:%d", i)},
+		})
+	}
+	for i, d := range detected {
+		regionType := d.Type // intro, outro, credits, commercial
+		if regionType == "commercial" {
+			regionType = "ad"
+		}
+		regions = append(regions, MediaRegion{
+			Start:   d.StartTime,
+			End:     d.EndTime,
+			Type:    regionType,
+			Sources: []string{fmt.Sprintf("%s_detector:%d", d.Type, i)},
+		})
+	}
+	// Sort by start time
+	sort.Slice(regions, func(i, j int) bool {
+		return regions[i].Start < regions[j].Start
+	})
+	return regions
+}
+
+// getFile returns a single DVR file by ID, including MediaRegions
 func (s *Server) getFile(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
@@ -523,7 +564,30 @@ func (s *Server) getFile(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, file)
+	regions := buildMediaRegions(file.Commercials, file.DetectedSegments)
+	c.JSON(http.StatusOK, gin.H{
+		"file":         file,
+		"mediaRegions": regions,
+	})
+}
+
+// getFileRegions returns MediaRegions for a file — lightweight endpoint for scrubber data.
+// GET /dvr/v2/files/:id/regions
+func (s *Server) getFileRegions(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid file ID"})
+		return
+	}
+
+	var commercials []models.CommercialSegment
+	s.db.Where("file_id = ?", id).Order("start_time ASC").Find(&commercials)
+
+	var detected []models.DetectedSegment
+	s.db.Where("file_id = ?", id).Order("start_time ASC").Find(&detected)
+
+	regions := buildMediaRegions(commercials, detected)
+	c.JSON(http.StatusOK, gin.H{"regions": regions, "fileId": id})
 }
 
 // updateFile updates a DVR file's metadata
@@ -671,19 +735,87 @@ func (s *Server) streamFile(c *gin.Context) {
 
 // ============ DVR V2: Groups ============
 
-// getGroups lists DVR groups with file counts and unwatched counts
+// UpNextCursor holds the position of the next unwatched episode in a group.
+// Mirrors Channels DVR's Group.UpNextCursor concept.
+type UpNextCursor struct {
+	FileID        uint       `json:"fileId"`
+	Title         string     `json:"title,omitempty"`
+	SeasonNumber  *int       `json:"seasonNumber,omitempty"`
+	EpisodeNumber *int       `json:"episodeNumber,omitempty"`
+	EpisodeNum    string     `json:"episodeNum,omitempty"`
+	OriginalDate  *time.Time `json:"originalDate,omitempty"`
+	PlaybackTime  int64      `json:"playbackTime"` // ms into the file
+	PlayedAt      *time.Time `json:"playedAt,omitempty"`
+}
+
+// getGroups lists DVR groups with file counts, unwatched counts, and UpNextCursor
 func (s *Server) getGroups(c *gin.Context) {
 	profileID := c.GetUint("profileID")
 
+	// Determine if the current profile is a kids profile
+	isKidsProfile := false
+	if profileID > 0 {
+		var profile models.UserProfile
+		if err := s.db.First(&profile, profileID).Error; err == nil {
+			isKidsProfile = profile.IsKid
+		}
+	}
+
+	// Build visibility filter:
+	// - Kids profile: show "kids" and "both"
+	// - Normal profile: show "both" only (hidden and kids-only are excluded)
 	var groups []models.DVRGroup
-	if err := s.db.Order("title ASC").Find(&groups).Error; err != nil {
+	var dbQuery *gorm.DB
+	if isKidsProfile {
+		dbQuery = s.db.Where("visibility_mode IN ?", []string{"both", "kids", ""})
+	} else {
+		dbQuery = s.db.Where("visibility_mode IN ? OR visibility_mode IS NULL", []string{"both", ""})
+	}
+	if err := dbQuery.Order("title ASC").Find(&groups).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch groups"})
 		return
 	}
 
+	// Batch-load GroupState for this profile so we avoid N+1 queries
+	groupStateMap := map[uint]models.GroupState{}
+	if profileID > 0 {
+		var states []models.GroupState
+		s.db.Where("profile_id = ?", profileID).Find(&states)
+		for _, st := range states {
+			groupStateMap[st.GroupID] = st
+		}
+	}
+
+	// Collect all upNextFileIDs so we can load them in one query
+	upNextFileIDs := make([]uint, 0)
+	for _, st := range groupStateMap {
+		if st.UpNextFileID != nil {
+			upNextFileIDs = append(upNextFileIDs, *st.UpNextFileID)
+		}
+	}
+	upNextFileMap := map[uint]models.DVRFile{}
+	if len(upNextFileIDs) > 0 {
+		var files []models.DVRFile
+		s.db.Where("id IN ?", upNextFileIDs).Find(&files)
+		for _, f := range files {
+			upNextFileMap[f.ID] = f
+		}
+	}
+
+	// Also batch-load FileState for upNext files so we have playback position
+	fileStateMap := map[uint]models.FileState{}
+	if profileID > 0 && len(upNextFileIDs) > 0 {
+		var fstates []models.FileState
+		s.db.Where("profile_id = ? AND file_id IN ?", profileID, upNextFileIDs).Find(&fstates)
+		for _, fs := range fstates {
+			fileStateMap[fs.FileID] = fs
+		}
+	}
+
 	type GroupResponse struct {
 		models.DVRGroup
-		UnwatchedCount int `json:"unwatchedCount"`
+		UnwatchedCount int           `json:"unwatchedCount"`
+		UpNextCursor   *UpNextCursor `json:"upNextCursor,omitempty"`
 	}
 
 	responses := make([]GroupResponse, 0, len(groups))
@@ -695,6 +827,7 @@ func (s *Server) getGroups(c *gin.Context) {
 
 		// Count unwatched files for the current profile
 		unwatchedCount := int(fileCount) // default: all are unwatched
+		var cursor *UpNextCursor
 		if profileID > 0 {
 			var watchedCount int64
 			s.db.Model(&models.FileState{}).
@@ -706,11 +839,31 @@ func (s *Server) getGroups(c *gin.Context) {
 			if unwatchedCount < 0 {
 				unwatchedCount = 0
 			}
+
+			// Build UpNextCursor from GroupState
+			if st, ok := groupStateMap[g.ID]; ok && st.UpNextFileID != nil {
+				if f, ok := upNextFileMap[*st.UpNextFileID]; ok {
+					cur := &UpNextCursor{
+						FileID:        f.ID,
+						Title:         f.Subtitle, // episode title
+						SeasonNumber:  f.SeasonNumber,
+						EpisodeNumber: f.EpisodeNumber,
+						EpisodeNum:    f.EpisodeNum,
+						OriginalDate:  f.OriginalAirDate,
+					}
+					if fs, ok := fileStateMap[f.ID]; ok {
+						cur.PlaybackTime = fs.PlaybackTime
+						cur.PlayedAt = fs.PlayedAt
+					}
+					cursor = cur
+				}
+			}
 		}
 
 		responses = append(responses, GroupResponse{
 			DVRGroup:       g,
 			UnwatchedCount: unwatchedCount,
+			UpNextCursor:   cursor,
 		})
 	}
 

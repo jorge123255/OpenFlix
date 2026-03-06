@@ -139,9 +139,10 @@ type MediaItem struct {
 type MediaFile struct {
 	ID          uint   `gorm:"primaryKey" json:"id"`
 	MediaItemID uint   `gorm:"index" json:"mediaItemId"`
-	FilePath    string `gorm:"size:2000;uniqueIndex" json:"file"`
-	FileSize    int64  `json:"size"`
-	FileModTime time.Time `json:"fileModTime"` // File modification time on disk
+	FilePath        string    `gorm:"size:2000;uniqueIndex" json:"file"`
+	FileSize        int64     `json:"size"`
+	FileModTime     time.Time `json:"fileModTime"`                       // File modification time on disk
+	FileFingerprint string    `gorm:"size:512;index" json:"fingerprint"` // "filename:size" for relocation detection
 	Container   string `gorm:"size:20" json:"container"`
 	Duration    int64  `json:"duration"` // milliseconds
 	Bitrate     int    `json:"bitrate"`
@@ -283,6 +284,25 @@ type WatchlistItem struct {
 	UserID      uint      `gorm:"uniqueIndex:idx_watchlist_user_item" json:"userId"`
 	MediaItemID uint      `gorm:"uniqueIndex:idx_watchlist_user_item" json:"ratingKey"`
 	AddedAt     time.Time `json:"addedAt"`
+}
+
+// ========== Tuner Devices ==========
+
+// TunerDevice persists a known HDHomeRun-compatible tuner device so it survives restarts.
+type TunerDevice struct {
+	ID              uint      `gorm:"primaryKey" json:"id"`
+	DeviceID        string    `gorm:"uniqueIndex;size:64" json:"deviceId"`
+	BaseURL         string    `gorm:"size:512" json:"baseUrl"`
+	LocalIP         string    `gorm:"size:64" json:"localIp"`
+	ModelNumber     string    `gorm:"size:128" json:"modelNumber"`
+	FirmwareName    string    `gorm:"size:128" json:"firmwareName"`
+	FirmwareVersion string    `gorm:"size:64" json:"firmwareVersion"`
+	TunerCount      int       `json:"tunerCount"`
+	DeviceAuth      string    `gorm:"size:128" json:"deviceAuth,omitempty"`
+	LineupURL       string    `gorm:"size:512" json:"lineupUrl"`
+	Priority        int       `gorm:"default:0" json:"priority"`
+	CreatedAt       time.Time `json:"createdAt"`
+	UpdatedAt       time.Time `json:"updatedAt"`
 }
 
 // ========== Live TV Models ==========
@@ -571,6 +591,7 @@ type SeriesRule struct {
 	// State
 	Paused   bool `gorm:"default:false" json:"Paused"`
 	Rerecord bool `gorm:"default:false" json:"Rerecord"` // re-record deleted episodes
+	NewOnly  bool `gorm:"default:false" json:"NewOnly"`   // only record new episodes
 
 	// Keep settings — matches Channels DVR exactly:
 	//   KeepOnly: "" = keep all, "unwatched" = unwatched only/+N, "last" = last N

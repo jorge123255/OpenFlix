@@ -125,9 +125,19 @@ function CheckStatusIcon({ status }: { status: string }) {
   return <XCircle className="h-5 w-5 text-red-400 flex-shrink-0" />
 }
 
+// Maps a failing check name to a fix link shown inline
+const checkFixLinks: Record<string, { label: string; href: string }> = {
+  'Guide Provider': { label: 'Configure guide source', href: '/ui/settings/livetv-dvr' },
+  'Recording Directory': { label: 'Configure storage', href: '/ui/settings' },
+  'Remote Access': { label: 'Remote access settings', href: '/ui/remote-access' },
+  'FFmpeg': { label: 'Check FFmpeg path', href: '/ui/settings/advanced' },
+  'Comskip': { label: 'Check Comskip path', href: '/ui/settings/advanced' },
+}
+
 function HealthCheckItem({ check }: { check: HealthCheckResult }) {
   const [expanded, setExpanded] = useState(false)
   const hasDetails = !!check.details
+  const fixLink = check.status !== 'ok' ? checkFixLinks[check.name] : undefined
 
   return (
     <div
@@ -158,6 +168,15 @@ function HealthCheckItem({ check }: { check: HealthCheckResult }) {
             </span>
           </div>
           <p className="text-sm text-gray-400 mt-0.5">{check.message}</p>
+          {fixLink && (
+            <a
+              href={fixLink.href}
+              onClick={(e) => e.stopPropagation()}
+              className="inline-flex items-center gap-1 mt-1.5 text-xs text-indigo-400 hover:text-indigo-300"
+            >
+              → {fixLink.label}
+            </a>
+          )}
         </div>
         {hasDetails && (
           <div className="text-gray-500">

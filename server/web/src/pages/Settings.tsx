@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { Save, CheckCircle, XCircle, Loader, Download, Upload, AlertCircle, Server, Globe, Play } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api, type ServerSettings, type ImportResult, type ConfigStats } from '../api/client'
@@ -12,9 +12,9 @@ function useServerConfig() {
   })
 }
 
-function SettingSection({ title, icon, children }: { title: string; icon?: React.ReactNode; children: React.ReactNode }) {
+function SettingSection({ title, icon, children, id }: { title: string; icon?: React.ReactNode; children: React.ReactNode; id?: string }) {
   return (
-    <div className="bg-gray-800 rounded-xl p-6 mb-6">
+    <div id={id || title.toLowerCase().replace(/[^a-z0-9]+/g, '-')} className="bg-gray-800 rounded-xl p-6 mb-6 scroll-mt-4">
       <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
         {icon}
         {title}
@@ -74,7 +74,7 @@ function VODSettingsSection({
   }
 
   return (
-    <div className="bg-gray-800 rounded-xl p-6 mb-6">
+    <div className="bg-gray-800 rounded-xl p-6 mb-6 scroll-mt-4">
       <h2 className="text-lg font-semibold text-white mb-4">VOD Downloads</h2>
       <div className="space-y-4">
         <SettingField
@@ -222,7 +222,7 @@ function ConfigBackupSection() {
   }
 
   return (
-    <div className="bg-gray-800 rounded-xl p-6 mb-6">
+    <div className="bg-gray-800 rounded-xl p-6 mb-6 scroll-mt-4">
       <h2 className="text-lg font-semibold text-white mb-4">Configuration Backup</h2>
       <div className="space-y-4">
         <p className="text-sm text-gray-400">
@@ -409,6 +409,26 @@ export function SettingsPage() {
       setFormData(config)
     }
   }, [config])
+
+  // Scroll to section from hash
+  const location = useLocation()
+  useEffect(() => {
+    const hash = location.hash.replace('#', '')
+    if (!hash) return
+    const tryScroll = (attempts: number) => {
+      const el = document.getElementById(hash)
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        el.style.outline = '2px solid rgba(139, 92, 246, 0.6)'
+        el.style.outlineOffset = '4px'
+        el.style.borderRadius = '12px'
+        setTimeout(() => { el.style.outline = ''; el.style.outlineOffset = '' }, 2000)
+      } else if (attempts > 0) {
+        setTimeout(() => tryScroll(attempts - 1), 200)
+      }
+    }
+    setTimeout(() => tryScroll(10), 100)
+  }, [location.hash, location.state])
 
   const updateConfig = useMutation({
     mutationFn: (data: Partial<ServerSettings>) => api.updateServerConfig(data),

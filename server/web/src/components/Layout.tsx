@@ -50,6 +50,7 @@ import {
 } from 'lucide-react'
 import { useState } from 'react'
 import { useCurrentUser, useLogout } from '../hooks/useAuth'
+import { SettingsSearch } from './SettingsSearch'
 
 interface NavItem {
   name: string
@@ -86,6 +87,7 @@ const navGroups: NavGroup[] = [
       { name: 'Live TV', href: '/ui/livetv', icon: Tv },
       { name: 'TV Guide', href: '/ui/tvguide', icon: CalendarDays },
       { name: 'On Now', href: '/ui/onnow', icon: MonitorPlay },
+      { name: 'EPG Editor', href: '/ui/livetv/epg-editor', icon: FileEdit },
       { name: 'Tuners', href: '/ui/tuners', icon: Radio },
       { name: 'Channel Collections', href: '/ui/channel-collections', icon: Layers },
       { name: 'Virtual Channels', href: '/ui/virtual-channels', icon: TvMinimal },
@@ -123,6 +125,11 @@ const navGroups: NavGroup[] = [
       { name: 'Remote Access', href: '/ui/remote-access', icon: Globe },
       { name: 'Family Sharing', href: '/ui/family-sharing', icon: Users },
       { name: 'Settings', href: '/ui/settings', icon: Settings },
+      { name: 'Sources', href: '/ui/settings/sources', icon: FolderOpen },
+      { name: 'Live TV / DVR', href: '/ui/settings/livetv-dvr', icon: Tv },
+      { name: 'Advanced', href: '/ui/settings/advanced', icon: SlidersHorizontal },
+      { name: 'Status', href: '/ui/settings/status', icon: Activity },
+      { name: 'Setup Wizard', href: '/ui/setup', icon: ListTodo },
       { name: 'Transcode', href: '/ui/transcode', icon: Cpu },
       { name: 'Jobs', href: '/ui/jobs', icon: ListTodo },
       { name: 'Logs', href: '/ui/logs', icon: FileText },
@@ -141,7 +148,9 @@ const navGroups: NavGroup[] = [
 ]
 
 function NavSection({ group, location, onNavigate }: { group: NavGroup; location: ReturnType<typeof useLocation>; onNavigate: () => void }) {
-  const hasActiveChild = group.items.some((item) => location.pathname === item.href)
+  const hasActiveChild = group.items.some(
+    (item) => location.pathname === item.href || location.pathname.startsWith(item.href + '/'),
+  )
   const [open, setOpen] = useState(group.label === '' || hasActiveChild)
 
   // Ungrouped items (Dashboard, Search) — always show
@@ -280,15 +289,43 @@ export function Layout() {
 
       {/* Main content */}
       <div className="lg:pl-64">
-        {/* Mobile header */}
-        <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b border-gray-700 bg-gray-800 px-4 lg:hidden">
-          <button
-            className="text-gray-400 hover:text-white"
-            onClick={() => setSidebarOpen(true)}
-          >
-            <Menu className="h-6 w-6" />
-          </button>
-          <span className="text-lg font-semibold text-white">OpenFlix</span>
+        {/* Top header — always visible */}
+        <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-gray-700 bg-gray-800 px-4">
+          {/* Left: hamburger (mobile) + brand (mobile) */}
+          <div className="flex items-center gap-3">
+            <button
+              className="text-gray-400 hover:text-white lg:hidden"
+              onClick={() => setSidebarOpen(true)}
+            >
+              <Menu className="h-5 w-5" />
+            </button>
+            <span className="text-base font-semibold text-white lg:hidden">OpenFlix</span>
+          </div>
+
+          {/* Right: settings gear + user avatar */}
+          <div className="flex items-center gap-2 ml-auto">
+            <SettingsSearch />
+            <Link
+              to="/ui/setup"
+              title="Setup Wizard"
+              className="p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg transition-colors"
+            >
+              <ListTodo className="h-5 w-5" />
+            </Link>
+            <Link
+              to="/ui/settings"
+              title="Settings"
+              className="p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg transition-colors"
+            >
+              <Settings className="h-5 w-5" />
+            </Link>
+            <div
+              className="h-8 w-8 rounded-full bg-indigo-600 flex items-center justify-center text-white font-medium text-sm cursor-default ml-1"
+              title={user?.username}
+            >
+              {user?.username?.charAt(0).toUpperCase() || 'U'}
+            </div>
+          </div>
         </header>
 
         {/* Page content */}

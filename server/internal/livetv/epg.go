@@ -273,13 +273,53 @@ func (p *EPGParser) ImportPrograms(sourceID uint, xmltv *XMLTV) (int, error) {
 			rating = prog.Rating[0].Value
 		}
 
-		// Determine new/premiere/live status from XMLTV elements
-		isNew := prog.New != nil                           // <new/> element present
-		isPremiere := prog.Premiere != nil                 // <premiere/> element present
-		isLive := prog.Live != nil                         // <live/> element present
-		isRerun := prog.PreviouslyShown != nil             // <previously-shown/> means it's a rerun
+		// Determine new/premiere/live/finale status from XMLTV elements
+		isNew := prog.New != nil
+		isLive := prog.Live != nil
+		isRerun := prog.PreviouslyShown != nil
 
-		// If it's explicitly marked as previously-shown, it's NOT new (unless also marked new)
+		isPremiere := false
+		isSeasonPremiere := false
+		isSeriesPremiere := false
+		isFinale := false
+		isSeasonFinale := false
+		isSeriesFinale := false
+
+		if prog.Premiere != nil {
+			isPremiere = true
+			isNew = true // premieres are always new
+			text := strings.ToLower(strings.TrimSpace(prog.Premiere.Value))
+			switch {
+			case strings.Contains(text, "series"):
+				isSeriesPremiere = true
+			case strings.Contains(text, "season"):
+				isSeasonPremiere = true
+			default:
+				isSeasonPremiere = true // default: treat unqualified premiere as season premiere
+			}
+		}
+
+		// Parse original air date from <date> element (YYYY or YYYYMMDD)
+		var originalAirDate *time.Time
+		if prog.Date != "" {
+			var t time.Time
+			var err error
+			switch len(prog.Date) {
+			case 8:
+				t, err = time.Parse("20060102", prog.Date)
+			case 4:
+				t, err = time.Parse("2006", prog.Date)
+			}
+			if err == nil {
+				originalAirDate = &t
+				// If original air date is within the last 7 days, treat as new
+				if !isNew && !isRerun && time.Since(t) < 7*24*time.Hour {
+					isNew = true
+				}
+			}
+		}
+
+		// If explicitly previously-shown, it's NOT new (unless also marked new)
 		if isRerun && !isNew && !isPremiere {
 			isNew = false
 		}
@@ -298,28 +338,40 @@ func (p *EPGParser) ImportPrograms(sourceID uint, xmltv *XMLTV) (int, error) {
 			existing.Icon = icon
 			existing.Rating = rating
 			existing.IsNew = isNew
-			existing.IsPremiere = isPremiere
 			existing.IsLive = isLive
-			// Classify content
+			existing.IsPremiere = isPremiere
+			existing.IsSeasonPremiere = isSeasonPremiere
+			existing.IsSeriesPremiere = isSeriesPremiere
+			existing.IsFinale = isFinale
+			existing.IsSeasonFinale = isSeasonFinale
+			existing.IsSeriesFinale = isSeriesFinale
+			if originalAirDate != nil {
+				existing.OriginalAirDate = originalAirDate
+			}
 			p.classifier.ClassifyProgram(&existing)
 			p.db.Save(&existing)
 		} else {
 			// Create new
 			program := models.Program{
-				ChannelID:   channelID,
-				Start:       *start,
-				End:         *stop,
-				Title:       title,
-				Description: desc,
-				Category:    category,
-				EpisodeNum:  episodeNum,
-				Icon:        icon,
-				Rating:      rating,
-				IsNew:       isNew,
-				IsPremiere:  isPremiere,
-				IsLive:      isLive,
+				ChannelID:        channelID,
+				Start:            *start,
+				End:              *stop,
+				Title:            title,
+				Description:      desc,
+				Category:         category,
+				EpisodeNum:       episodeNum,
+				Icon:             icon,
+				Rating:           rating,
+				IsNew:            isNew,
+				IsLive:           isLive,
+				IsPremiere:       isPremiere,
+				IsSeasonPremiere: isSeasonPremiere,
+				IsSeriesPremiere: isSeriesPremiere,
+				IsFinale:         isFinale,
+				IsSeasonFinale:   isSeasonFinale,
+				IsSeriesFinale:   isSeriesFinale,
+				OriginalAirDate:  originalAirDate,
 			}
-			// Classify content
 			p.classifier.ClassifyProgram(&program)
 			p.db.Create(&program)
 			imported++
@@ -632,20 +684,34 @@ func (p *EPGParser) ImportProgramsFromGracenote(source *models.EPGSource) (int, 
 			// Parse Gracenote flags for new/premiere/live/finale
 			isNew := false
 			isPremiere := false
+			isSeasonPremiere := false
+			isSeriesPremiere := false
 			isLive := false
 			isFinale := false
+			isSeasonFinale := false
+			isSeriesFinale := false
 			for _, flag := range event.Flag {
 				flagLower := strings.ToLower(flag)
 				switch {
 				case flagLower == "new":
 					isNew = true
-				case flagLower == "premiere" || strings.Contains(flagLower, "premiere"):
+				case strings.Contains(flagLower, "premiere"):
 					isPremiere = true
-					isNew = true // Premieres are always new
+					isNew = true
+					if strings.Contains(flagLower, "series") {
+						isSeriesPremiere = true
+					} else {
+						isSeasonPremiere = true
+					}
 				case flagLower == "live":
 					isLive = true
-				case flagLower == "finale" || strings.Contains(flagLower, "finale"):
+				case strings.Contains(flagLower, "finale"):
 					isFinale = true
+					if strings.Contains(flagLower, "series") {
+						isSeriesFinale = true
+					} else {
+						isSeasonFinale = true
+					}
 				}
 			}
 
@@ -665,32 +731,38 @@ func (p *EPGParser) ImportProgramsFromGracenote(source *models.EPGSource) (int, 
 				existing.ChannelNo = channel.ChannelNo
 				existing.AffiliateName = channel.AffiliateName
 				existing.IsNew = isNew
-				existing.IsPremiere = isPremiere
 				existing.IsLive = isLive
+				existing.IsPremiere = isPremiere
+				existing.IsSeasonPremiere = isSeasonPremiere
+				existing.IsSeriesPremiere = isSeriesPremiere
 				existing.IsFinale = isFinale
-				// Classify content
+				existing.IsSeasonFinale = isSeasonFinale
+				existing.IsSeriesFinale = isSeriesFinale
 				p.classifier.ClassifyProgram(&existing)
 				p.db.Save(&existing)
 			} else {
 				// Create new
 				program := models.Program{
-					ChannelID:     channelID,
-					EPGSourceID:   &source.ID,
-					CallSign:      channel.CallSign,
-					ChannelNo:     channel.ChannelNo,
-					AffiliateName: channel.AffiliateName,
-					Start:         start,
-					End:           end,
-					Title:         event.Program.Title,
-					Description:   event.Program.ShortDesc,
-					Category:      category,
-					Icon:          icon,
-					IsNew:         isNew,
-					IsPremiere:    isPremiere,
-					IsLive:        isLive,
-					IsFinale:      isFinale,
+					ChannelID:        channelID,
+					EPGSourceID:      &source.ID,
+					CallSign:         channel.CallSign,
+					ChannelNo:        channel.ChannelNo,
+					AffiliateName:    channel.AffiliateName,
+					Start:            start,
+					End:              end,
+					Title:            event.Program.Title,
+					Description:      event.Program.ShortDesc,
+					Category:         category,
+					Icon:             icon,
+					IsNew:            isNew,
+					IsLive:           isLive,
+					IsPremiere:       isPremiere,
+					IsSeasonPremiere: isSeasonPremiere,
+					IsSeriesPremiere: isSeriesPremiere,
+					IsFinale:         isFinale,
+					IsSeasonFinale:   isSeasonFinale,
+					IsSeriesFinale:   isSeriesFinale,
 				}
-				// Classify content
 				p.classifier.ClassifyProgram(&program)
 				p.db.Create(&program)
 				imported++
@@ -759,28 +831,35 @@ func (p *EPGParser) RefreshEPGSource(source *models.EPGSource) error {
 	return p.db.Save(source).Error
 }
 
-// GetEPGStats returns statistics about EPG data
+// GetEPGStats returns statistics about EPG data.
+// Uses raw SQL aggregates in a single query to avoid full-table scans on large program tables.
 func (p *EPGParser) GetEPGStats() (map[string]interface{}, error) {
-	var totalPrograms int64
-	var futurePrograms int64
-	var channelCount int64
-
 	now := time.Now()
 
-	p.db.Model(&models.Program{}).Count(&totalPrograms)
-	p.db.Model(&models.Program{}).Where("end > ?", now).Count(&futurePrograms)
-	p.db.Model(&models.Program{}).Distinct("channel_id").Count(&channelCount)
+	type statsRow struct {
+		TotalPrograms   int64  `gorm:"column:total"`
+		FuturePrograms  int64  `gorm:"column:future"`
+		ChannelsWithEPG int64  `gorm:"column:channels"`
+		EarliestStart   string `gorm:"column:earliest"`
+		LatestEnd       string `gorm:"column:latest"`
+	}
 
-	// Get earliest and latest program times
-	var earliestProgram, latestProgram models.Program
-	p.db.Order("start ASC").First(&earliestProgram)
-	p.db.Order("end DESC").First(&latestProgram)
+	var row statsRow
+	p.db.Raw(`
+		SELECT
+			COUNT(*) AS total,
+			SUM(CASE WHEN "end" > ? THEN 1 ELSE 0 END) AS future,
+			COUNT(DISTINCT channel_id) AS channels,
+			MIN(start) AS earliest,
+			MAX("end") AS latest
+		FROM programs
+	`, now).Scan(&row)
 
 	return map[string]interface{}{
-		"totalPrograms":   totalPrograms,
-		"futurePrograms":  futurePrograms,
-		"channelsWithEPG": channelCount,
-		"earliestProgram": earliestProgram.Start,
-		"latestProgram":   latestProgram.End,
+		"totalPrograms":   row.TotalPrograms,
+		"futurePrograms":  row.FuturePrograms,
+		"channelsWithEPG": row.ChannelsWithEPG,
+		"earliestProgram": row.EarliestStart,
+		"latestProgram":   row.LatestEnd,
 	}, nil
 }

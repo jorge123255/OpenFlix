@@ -13,6 +13,9 @@ import {
   Trash2,
   Rocket,
   AlertCircle,
+  Radio,
+  Search,
+  CalendarDays,
 } from 'lucide-react'
 
 // ---------------------------------------------------------------------------
@@ -30,6 +33,21 @@ interface WizardM3USource {
   url: string
 }
 
+interface WizardTuner {
+  deviceId: string
+  modelNumber: string
+  baseUrl: string
+  imported?: number
+}
+
+interface WizardGuideProvider {
+  id: number
+  name: string
+  type: string
+  city?: string
+  state?: string
+}
+
 interface WizardState {
   step: number
   serverName: string
@@ -37,9 +55,13 @@ interface WizardState {
   adminEmail: string
   adminPassword: string
   libraries: WizardLibrary[]
+  tuners: WizardTuner[]
+  zipCode: string
+  guideProvider: WizardGuideProvider | null
   m3uSource?: WizardM3USource
   dvrEnabled: boolean
   recordingDir: string
+  tmdbApiKey: string
 }
 
 interface StatusResponse {
@@ -56,11 +78,14 @@ const authHeaders: Record<string, string> = {
   'Content-Type': 'application/json',
 }
 
-const TOTAL_STEPS = 5
+const TOTAL_STEPS = 8
 
 const STEP_META: { label: string; icon: React.ElementType }[] = [
   { label: 'Welcome', icon: Server },
   { label: 'Libraries', icon: FolderOpen },
+  { label: 'Tuners', icon: Radio },
+  { label: 'Guide', icon: CalendarDays },
+  { label: 'Metadata', icon: Search },
   { label: 'Live TV', icon: Tv },
   { label: 'DVR', icon: Video },
   { label: 'Done', icon: Rocket },
@@ -325,7 +350,275 @@ function StepLibraries({
 }
 
 // ---------------------------------------------------------------------------
-// Step 3 - Live TV
+// Step 3 - Tuners
+// ---------------------------------------------------------------------------
+
+function StepTuners({
+  state,
+  onChange,
+}: {
+  state: WizardState
+  onChange: (patch: Partial<WizardState>) => void
+}) {
+  const [discovering, setDiscovering] = useState(false)
+  const [discovered, setDiscovered] = useState<WizardTuner[]>([])
+  const [discoverError, setDiscoverError] = useState<string | null>(null)
+  const [manualUrl, setManualUrl] = useState('')
+  const [adding, setAdding] = useState(false)
+  const [addError, setAddError] = useState<string | null>(null)
+
+  const handleDiscover = async () => {
+    setDiscovering(true)
+    setDiscoverError(null)
+    try {
+      const res = await fetch('/api/tuners/discover', { method: 'POST', headers: authHeaders })
+      if (!res.ok) throw new Error('Discovery failed')
+      const data = await res.json() as { devices: Array<{ deviceId: string; modelNumber: string; baseUrl: string }> }
+      // Add discovered devices that aren't already added
+      const existingIds = new Set(state.tuners.map((t) => t.deviceId))
+      const newDevices = (data.devices || []).filter((d) => !existingIds.has(d.deviceId))
+      setDiscovered(newDevices)
+      if (newDevices.length === 0 && (data.devices || []).length === 0) {
+        setDiscoverError('No HDHomeRun devices found on your network. Try adding manually.')
+      }
+    } catch {
+      setDiscoverError('Discovery failed. Make sure the server can reach your local network.')
+    } finally {
+      setDiscovering(false)
+    }
+  }
+
+  const addDevice = async (url: string) => {
+    setAdding(true)
+    setAddError(null)
+    try {
+      const res = await fetch('/api/tuners', {
+        method: 'POST',
+        headers: authHeaders,
+        body: JSON.stringify({ url }),
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({})) as { message?: string }
+        throw new Error(err.message || 'Failed to add tuner')
+      }
+      const data = await res.json() as { device: { deviceId: string; modelNumber: string; baseUrl: string }; imported: number }
+      const newTuner: WizardTuner = {
+        deviceId: data.device.deviceId,
+        modelNumber: data.device.modelNumber,
+        baseUrl: data.device.baseUrl,
+        imported: data.imported ?? 0,
+      }
+      onChange({ tuners: [...state.tuners, newTuner] })
+      setDiscovered((prev) => prev.filter((d) => d.deviceId !== data.device.deviceId))
+      setManualUrl('')
+    } catch (err) {
+      setAddError(err instanceof Error ? err.message : 'Failed to add tuner')
+    } finally {
+      setAdding(false)
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="text-center mb-4">
+        <h2 className="text-2xl font-bold text-white">HDHomeRun Tuners</h2>
+        <p className="text-gray-400 mt-2">
+          Connect your HDHomeRun device to get Live TV channels. You can skip this and add tuners later.
+        </p>
+      </div>
+
+      {/* Already added */}
+      {state.tuners.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">Added</p>
+          {state.tuners.map((t) => (
+            <div key={t.deviceId} className="flex items-center gap-3 bg-green-500/10 border border-green-500/30 rounded-lg p-3">
+              <CheckCircle className="w-5 h-5 text-green-400 shrink-0" />
+              <div>
+                <p className="text-white font-medium">{t.modelNumber || t.deviceId}</p>
+                <p className="text-xs text-gray-400">{t.baseUrl} · {t.imported} channels imported</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Discover */}
+      <div className="space-y-3">
+        <button
+          onClick={handleDiscover}
+          disabled={discovering}
+          className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-lg text-sm font-medium"
+        >
+          {discovering ? <Loader className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+          {discovering ? 'Scanning network…' : 'Discover Tuners'}
+        </button>
+        {discoverError && <p className="text-sm text-yellow-400">{discoverError}</p>}
+        {discovered.length > 0 && (
+          <div className="space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">Found on network</p>
+            {discovered.map((d) => (
+              <div key={d.deviceId} className="flex items-center justify-between bg-gray-700/50 border border-gray-600 rounded-lg p-3">
+                <div>
+                  <p className="text-white font-medium">{d.modelNumber || d.deviceId}</p>
+                  <p className="text-xs text-gray-400">{d.baseUrl}</p>
+                </div>
+                <button
+                  onClick={() => addDevice(d.baseUrl)}
+                  disabled={adding}
+                  className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-sm rounded-lg"
+                >
+                  Add
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Manual add */}
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-2">Add manually</p>
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={manualUrl}
+            onChange={(e) => setManualUrl(e.target.value)}
+            placeholder="192.168.1.100"
+            className="flex-1 px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm placeholder-gray-500 focus:outline-none focus:border-indigo-500"
+          />
+          <button
+            onClick={() => addDevice(manualUrl.trim())}
+            disabled={adding || !manualUrl.trim()}
+            className="flex items-center gap-1.5 px-4 py-2 bg-gray-600 hover:bg-gray-500 disabled:opacity-40 text-white text-sm rounded-lg"
+          >
+            {adding ? <Loader className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+            Add
+          </button>
+        </div>
+        {addError && <p className="text-sm text-red-400 mt-1">{addError}</p>}
+        <p className="text-xs text-gray-500 mt-1">Enter the IP address. Do not use port 5004 (that is the stream port).</p>
+      </div>
+
+      <p className="text-xs text-gray-500 text-center">
+        This step is optional — you can add tuners from the Tuners page later.
+      </p>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Step 4 - Guide Data
+// ---------------------------------------------------------------------------
+
+function StepGuideData({
+  state,
+  onChange,
+}: {
+  state: WizardState
+  onChange: (patch: Partial<WizardState>) => void
+}) {
+  const [searching, setSearching] = useState(false)
+  const [providers, setProviders] = useState<WizardGuideProvider[]>([])
+  const [searchError, setSearchError] = useState<string | null>(null)
+  const [zipInput, setZipInput] = useState(state.zipCode)
+
+  const handleSearch = async () => {
+    if (!zipInput.trim()) return
+    setSearching(true)
+    setSearchError(null)
+    setProviders([])
+    onChange({ guideProvider: null, zipCode: zipInput.trim() })
+    try {
+      const res = await fetch(`/livetv/epg/tvguide/providers?zip=${encodeURIComponent(zipInput.trim())}`, { headers: authHeaders })
+      if (!res.ok) throw new Error('Could not find providers for that ZIP code')
+      const data = await res.json() as { providers: WizardGuideProvider[] }
+      setProviders(data.providers || [])
+      if (!data.providers?.length) setSearchError('No providers found for that ZIP code. Try a nearby ZIP.')
+    } catch (err) {
+      setSearchError(err instanceof Error ? err.message : 'Search failed')
+    } finally {
+      setSearching(false)
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="text-center mb-4">
+        <h2 className="text-2xl font-bold text-white">TV Guide Data</h2>
+        <p className="text-gray-400 mt-2">
+          Enter your ZIP code to find available TV guide providers for program listings. You can skip this and configure it later.
+        </p>
+      </div>
+
+      {state.guideProvider && (
+        <div className="flex items-center gap-3 bg-green-500/10 border border-green-500/30 rounded-lg p-3">
+          <CheckCircle className="w-5 h-5 text-green-400 shrink-0" />
+          <div className="flex-1">
+            <p className="text-white font-medium">{state.guideProvider.name}</p>
+            <p className="text-xs text-gray-400">{state.guideProvider.type}{state.guideProvider.city ? ` · ${state.guideProvider.city}, ${state.guideProvider.state}` : ''}</p>
+          </div>
+          <button
+            onClick={() => { onChange({ guideProvider: null }); setProviders([]) }}
+            className="text-xs text-gray-400 hover:text-white"
+          >
+            Change
+          </button>
+        </div>
+      )}
+
+      {!state.guideProvider && (
+        <>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={zipInput}
+              onChange={(e) => setZipInput(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+              placeholder="ZIP code (e.g. 90210)"
+              maxLength={10}
+              className="flex-1 px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm placeholder-gray-500 focus:outline-none focus:border-indigo-500"
+            />
+            <button
+              onClick={handleSearch}
+              disabled={searching || !zipInput.trim()}
+              className="flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 text-white text-sm rounded-lg"
+            >
+              {searching ? <Loader className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+              Find Providers
+            </button>
+          </div>
+          {searchError && <p className="text-sm text-yellow-400">{searchError}</p>}
+          {providers.length > 0 && (
+            <div className="space-y-2 max-h-64 overflow-y-auto">
+              <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">{providers.length} providers found — pick one</p>
+              {providers.map((p) => (
+                <button
+                  key={p.id}
+                  onClick={() => onChange({ guideProvider: p })}
+                  className="w-full text-left flex items-center justify-between bg-gray-700/50 hover:bg-gray-700 border border-gray-600 rounded-lg p-3 transition-colors"
+                >
+                  <div>
+                    <p className="text-white text-sm font-medium">{p.name}</p>
+                    <p className="text-xs text-gray-400">{p.type}{p.city ? ` · ${p.city}, ${p.state}` : ''}</p>
+                  </div>
+                  <ArrowRight className="w-4 h-4 text-gray-400" />
+                </button>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+
+      <p className="text-xs text-gray-500 text-center">
+        This step is optional — you can configure guide data from Settings → Live TV later.
+      </p>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Step 5 - Live TV (M3U)
 // ---------------------------------------------------------------------------
 
 function StepLiveTV({
@@ -502,7 +795,53 @@ function StepDVR({
 }
 
 // ---------------------------------------------------------------------------
-// Step 5 - Done
+// Step 5 - Metadata (TMDB)
+// ---------------------------------------------------------------------------
+
+function StepTMDB({ state, onChange }: { state: WizardState; onChange: (c: Partial<WizardState>) => void }) {
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-2xl font-bold text-white">Metadata (Optional)</h2>
+        <p className="text-gray-400 mt-2">
+          A TMDB API key enables rich artwork, posters, and metadata enrichment for your media libraries.
+        </p>
+      </div>
+
+      <div className="space-y-2">
+        <label className="text-sm font-medium text-gray-300">TMDB API Key</label>
+        <input
+          type="password"
+          value={state.tmdbApiKey}
+          onChange={(e) => onChange({ tmdbApiKey: e.target.value })}
+          placeholder="Paste your TMDB API key here"
+          className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
+        />
+        <p className="text-xs text-gray-500">
+          Free account required.{' '}
+          <a
+            href="https://www.themoviedb.org/settings/api"
+            target="_blank"
+            rel="noreferrer"
+            className="text-indigo-400 hover:text-indigo-300"
+          >
+            Get your key at themoviedb.org →
+          </a>
+        </p>
+      </div>
+
+      {state.tmdbApiKey && (
+        <div className="flex items-center gap-2 text-green-400 text-sm">
+          <CheckCircle className="w-4 h-4" />
+          API key will be saved when you continue
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Step 8 - Done
 // ---------------------------------------------------------------------------
 
 function StepDone({ state }: { state: WizardState }) {
@@ -536,6 +875,24 @@ function StepDone({ state }: { state: WizardState }) {
           </span>
         </div>
         <div className="flex items-center justify-between">
+          <span className="text-gray-400">Tuners</span>
+          <span className="text-white font-medium">
+            {state.tuners.length > 0 ? `${state.tuners.length} added` : 'Skipped'}
+          </span>
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="text-gray-400">Guide Data</span>
+          <span className="text-white font-medium">
+            {state.guideProvider ? state.guideProvider.name : 'Skipped'}
+          </span>
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="text-gray-400">TMDB</span>
+          <span className="text-white font-medium">
+            {state.tmdbApiKey ? 'Configured' : 'Skipped'}
+          </span>
+        </div>
+        <div className="flex items-center justify-between">
           <span className="text-gray-400">Live TV Source</span>
           <span className="text-white font-medium">
             {state.m3uSource ? state.m3uSource.name : 'Skipped'}
@@ -564,9 +921,13 @@ export function SetupWizardPage() {
     adminEmail: '',
     adminPassword: '',
     libraries: [],
+    tuners: [],
+    zipCode: '',
+    guideProvider: null,
     m3uSource: undefined,
     dvrEnabled: false,
     recordingDir: '/recordings',
+    tmdbApiKey: '',
   })
 
   const [needsAdmin, setNeedsAdmin] = useState(false)
@@ -615,16 +976,14 @@ export function SetupWizardPage() {
           )
         }
         return !!state.serverName.trim()
-      case 2:
-        return true // libraries optional
-      case 3:
-        return true // Live TV optional
-      case 4:
-        return !state.dvrEnabled || !!state.recordingDir.trim()
-      case 5:
-        return true
-      default:
-        return false
+      case 2: return true  // libraries optional
+      case 3: return true  // tuners optional
+      case 4: return true  // guide optional
+      case 5: return true  // TMDB optional
+      case 6: return true  // M3U optional
+      case 7: return !state.dvrEnabled || !!state.recordingDir.trim()
+      case 8: return true
+      default: return false
     }
   }
 
@@ -682,39 +1041,61 @@ export function SetupWizardPage() {
             await fetch('/admin/libraries', {
               method: 'POST',
               headers: authHeaders,
-              body: JSON.stringify({
-                title: lib.title,
-                type: lib.type,
-                paths: lib.paths,
-              }),
+              body: JSON.stringify({ title: lib.title, type: lib.type, paths: lib.paths }),
             })
           }
           break
         }
         case 3: {
-          // Add M3U source
-          if (state.m3uSource) {
-            await fetch('/livetv/sources', {
+          // Tuners are added live in StepTuners — nothing to submit here
+          break
+        }
+        case 4: {
+          // Create EPG source from selected guide provider
+          if (state.guideProvider && state.zipCode) {
+            await fetch('/livetv/epg/sources', {
               method: 'POST',
               headers: authHeaders,
               body: JSON.stringify({
-                name: state.m3uSource.name,
-                url: state.m3uSource.url,
+                name: state.guideProvider.name,
+                providerType: 'tvguide',
+                tvguideProviderId: String(state.guideProvider.id),
+                tvguideZipCode: state.zipCode,
+                tvguideDays: 7,
               }),
             })
           }
           break
         }
-        case 4: {
+        case 5: {
+          // Save TMDB API key
+          if (state.tmdbApiKey.trim()) {
+            await fetch('/admin/settings', {
+              method: 'PUT',
+              headers: authHeaders,
+              body: JSON.stringify({ tmdb_api_key: state.tmdbApiKey.trim() }),
+            })
+          }
+          break
+        }
+        case 6: {
+          // Add M3U source
+          if (state.m3uSource) {
+            await fetch('/livetv/sources', {
+              method: 'POST',
+              headers: authHeaders,
+              body: JSON.stringify({ name: state.m3uSource.name, url: state.m3uSource.url }),
+            })
+          }
+          break
+        }
+        case 7: {
           // Update DVR settings
           if (state.dvrEnabled) {
             await fetch('/admin/settings', {
               method: 'PUT',
               headers: authHeaders,
-              body: JSON.stringify({
-                dvr_enabled: true,
-                recording_dir: state.recordingDir,
-              }),
+              body: JSON.stringify({ dvr_enabled: true, recording_dir: state.recordingDir }),
             })
           }
           break
@@ -773,9 +1154,12 @@ export function SetupWizardPage() {
           {state.step === 2 && (
             <StepLibraries state={state} onChange={patch} />
           )}
-          {state.step === 3 && <StepLiveTV state={state} onChange={patch} />}
-          {state.step === 4 && <StepDVR state={state} onChange={patch} />}
-          {state.step === 5 && <StepDone state={state} />}
+          {state.step === 3 && <StepTuners state={state} onChange={patch} />}
+          {state.step === 4 && <StepGuideData state={state} onChange={patch} />}
+          {state.step === 5 && <StepTMDB state={state} onChange={patch} />}
+          {state.step === 6 && <StepLiveTV state={state} onChange={patch} />}
+          {state.step === 7 && <StepDVR state={state} onChange={patch} />}
+          {state.step === 8 && <StepDone state={state} />}
 
           {error && (
             <div className="mt-4 flex items-center gap-2 text-red-400 bg-red-500/10 border border-red-500/30 rounded-lg p-3 text-sm">
@@ -810,9 +1194,15 @@ export function SetupWizardPage() {
                   <>
                     {state.step === 2 && state.libraries.length === 0
                       ? 'Skip'
-                      : state.step === 3 && !state.m3uSource
+                      : state.step === 3 && state.tuners.length === 0
                         ? 'Skip'
-                        : 'Next'}
+                        : state.step === 4 && !state.guideProvider
+                          ? 'Skip'
+                          : state.step === 5 && !state.tmdbApiKey
+                            ? 'Skip'
+                            : state.step === 6 && !state.m3uSource
+                              ? 'Skip'
+                              : 'Next'}
                     <ArrowRight className="w-4 h-4" />
                   </>
                 )}

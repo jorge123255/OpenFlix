@@ -24,8 +24,10 @@ type CloudRegistryClient struct {
 	claimToken   string
 	inviteTokens []string
 	licenseKey   string
+	externalURL  string
 	lastPublicIP string
 	lastSuccess  bool
+	running      bool
 	mu           sync.Mutex
 	client       *http.Client
 	ctx          context.Context
@@ -42,6 +44,7 @@ type CloudRegistration struct {
 	ClaimToken     string   `json:"claimToken,omitempty"`
 	InviteTokens   []string `json:"inviteTokens,omitempty"`
 	LicenseKey     string   `json:"licenseKey,omitempty"`
+	ExternalURL    string   `json:"externalUrl,omitempty"`
 }
 
 // CloudRegistrationResponse is the response from the cloud registry.
@@ -69,6 +72,14 @@ func NewCloudRegistryClient(registryURL string, serverInfo ServerInfo, claimToke
 
 // Start begins the periodic heartbeat to the cloud registry.
 func (c *CloudRegistryClient) Start() {
+	c.mu.Lock()
+	if c.running {
+		c.mu.Unlock()
+		return
+	}
+	c.running = true
+	c.mu.Unlock()
+
 	c.ctx, c.cancel = context.WithCancel(context.Background())
 
 	// Register immediately on start
@@ -93,6 +104,9 @@ func (c *CloudRegistryClient) Start() {
 
 // Stop stops the periodic heartbeat.
 func (c *CloudRegistryClient) Stop() {
+	c.mu.Lock()
+	c.running = false
+	c.mu.Unlock()
 	if c.cancel != nil {
 		c.cancel()
 	}
@@ -120,6 +134,23 @@ func (c *CloudRegistryClient) SetLicenseKey(key string) {
 	c.mu.Unlock()
 }
 
+// UpdateMachineID updates the machine ID used in heartbeats.
+// Call this after deriving a stable ID from the license key.
+func (c *CloudRegistryClient) UpdateMachineID(id string) {
+	c.mu.Lock()
+	c.serverInfo.MachineID = id
+	c.mu.Unlock()
+}
+
+// SetExternalURL updates the external URL sent with heartbeats.
+// iOS clients will prefer this URL over publicIp:port when connecting remotely.
+// Set to a cloudflared tunnel URL or custom domain for stable remote access.
+func (c *CloudRegistryClient) SetExternalURL(url string) {
+	c.mu.Lock()
+	c.externalURL = url
+	c.mu.Unlock()
+}
+
 // CloudRegistryStatus holds the current cloud connection status.
 type CloudRegistryStatus struct {
 	Connected bool   `json:"connected"`
@@ -140,6 +171,7 @@ func (c *CloudRegistryClient) register() {
 	c.mu.Lock()
 	claimToken := c.claimToken
 	licenseKey := c.licenseKey
+	externalURL := c.externalURL
 	inviteTokens := make([]string, len(c.inviteTokens))
 	copy(inviteTokens, c.inviteTokens)
 	c.mu.Unlock()
@@ -153,6 +185,7 @@ func (c *CloudRegistryClient) register() {
 		ClaimToken:     claimToken,
 		InviteTokens:   inviteTokens,
 		LicenseKey:     licenseKey,
+		ExternalURL:    externalURL,
 	}
 
 	body, err := json.Marshal(payload)
