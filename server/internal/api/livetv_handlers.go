@@ -3765,11 +3765,7 @@ func (s *Server) getEPGChannels(c *gin.Context) {
 
 					query = query.Where("channel_id LIKE ?", prefix)
 				} else if epgSource.ProviderType == "xmltv" {
-					// For XMLTV sources, show all non-Gracenote channels
-					// NOTE: Since Programs table doesn't track epg_source_id, we can't
-					// distinguish which programs belong to which XMLTV source.
-					// Just exclude Gracenote channels (which have their own prefix).
-					log.Printf("📺 XMLTV EPG source: %s - showing all non-Gracenote channels", epgSource.Name)
+					// Handle XMLTV sources (filter by epg_source_id)
 
 					sourceName := strings.ToLower(epgSource.Name)
 					if strings.Contains(sourceName, "fubo") {
@@ -3782,8 +3778,9 @@ func (s *Server) getEPGChannels(c *gin.Context) {
 							query = query.Where("channel_id IN ?", fuboIDs)
 						}
 					} else {
-						// For all other XMLTV sources (including DIRECTV), show all non-Gracenote channels
-						query = query.Where("channel_id NOT LIKE ?", "gracenote-%")
+						// For XMLTV sources, filter by epg_source_id directly
+						log.Printf("📺 XMLTV EPG source: %s (id=%d) - filtering by epg_source_id", epgSource.Name, sourceID)
+						query = query.Where("epg_source_id = ?", sourceID)
 					}
 				}
 			}
