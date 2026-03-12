@@ -14,12 +14,12 @@ struct XfinityLiveTVView: View {
     @State private var selectedFilter: ChannelFilter = .all
     @State private var selectedChannel: Channel?
     @State private var viewingTime: Date = Date()
-    @State private var programOffset: CGFloat = 0
     @State private var programDetail: ProgramDetailContext?
     @State private var recordingToast: String?
     @State private var showRecordingToast = false
     @State private var showSearch = false
     @State private var channelOrder: [String] = UserDefaults.standard.stringArray(forKey: "epg_channel_order") ?? []
+    @State private var draggingChannelId: String?
     private let dvrRepository = DVRRepository()
 
     // Channels sorted by saved order, with unordered ones appended at end
@@ -339,62 +339,37 @@ struct XfinityLiveTVView: View {
     // MARK: - Channel List
 
     private var channelList: some View {
-        List {
-            ForEach(filteredChannels) { channel in
-                XfinityChannelRow(
-                    channel: channel,
-                    programs: programsForChannel(channel),
-                    viewingTime: viewingTime,
-                    programOffset: programOffset,
-                    accentColor: accentPurple,
-                    onChannelTap: { selectedChannel = channel },
-                    onProgramTap: { program in
-                        programDetail = ProgramDetailContext(program: program, channel: channel)
+        ScrollView(.vertical, showsIndicators: false) {
+            LazyVStack(spacing: 0) {
+                ForEach(filteredChannels) { channel in
+                    XfinityChannelRow(
+                        channel: channel,
+                        programs: programsForChannel(channel),
+                        viewingTime: viewingTime,
+                        accentColor: accentPurple,
+                        onChannelTap: { selectedChannel = channel },
+                        onProgramTap: { program in
+                            programDetail = ProgramDetailContext(program: program, channel: channel)
+                        }
+                    )
+                    .onDrag {
+                        draggingChannelId = channel.id
+                        return NSItemProvider(object: channel.id as NSString)
                     }
-                )
-                .listRowInsets(EdgeInsets())
-                .listRowBackground(bgColor)
-                .listRowSeparatorTint(Color.white.opacity(0.08))
-            }
-            .onMove { from, to in
-                var current = filteredChannels
-                current.move(fromOffsets: from, toOffset: to)
-                // Only persist order when on "All channels" — other filters are temporary views
-                if selectedFilter == .all {
-                    saveOrder(current)
+                    .onDrop(of: [.text], delegate: ChannelReorderDelegate(
+                        targetId: channel.id,
+                        channels: filteredChannels,
+                        draggingId: $draggingChannelId,
+                        onReorder: { reordered in
+                            if selectedFilter == .all { saveOrder(reordered) }
+                        }
+                    ))
+                    .opacity(draggingChannelId == channel.id ? 0.4 : 1.0)
+
+                    Divider().background(Color.white.opacity(0.08))
                 }
             }
         }
-        .listStyle(.plain)
-        .scrollContentBackground(.hidden)
-        .environment(\.editMode, .constant(.active))
-        // Horizontal swipe on the list to shift time window
-        .simultaneousGesture(
-            DragGesture(minimumDistance: 40, coordinateSpace: .local)
-                .onChanged { value in
-                    let isHorizontal = abs(value.translation.width) > abs(value.translation.height) * 1.5
-                    guard isHorizontal else { return }
-                    programOffset = value.translation.width * 0.4
-                }
-                .onEnded { value in
-                    let isHorizontal = abs(value.translation.width) > abs(value.translation.height) * 1.5
-                    guard isHorizontal, abs(value.translation.width) > 40 else {
-                        withAnimation(.easeOut(duration: 0.2)) { programOffset = 0 }
-                        return
-                    }
-                    let step: TimeInterval = 2 * 60 * 60
-                    let screenWidth = UIScreen.main.bounds.width
-                    let forward = value.translation.width < 0
-                    withAnimation(.easeIn(duration: 0.18)) {
-                        programOffset = forward ? -screenWidth : screenWidth
-                    }
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.18) {
-                        viewingTime = snapToBlock(viewingTime.addingTimeInterval(forward ? step : -step))
-                        programOffset = forward ? screenWidth : -screenWidth
-                        withAnimation(.easeOut(duration: 0.22)) { programOffset = 0 }
-                    }
-                }
-        )
     }
 
     private func snapToBlock(_ date: Date) -> Date {
@@ -486,50 +461,86 @@ struct XfinityLiveTVView: View {
 
 // MARK: - Channel Row
 
+// MARK: - Channel Reorder Drop Delegate
+
+struct ChannelReorderDelegate: DropDelegate {
+    let targetId: String
+    let channels: [Channel]
+    @Binding var draggingId: String?
+    let onReorder: ([Channel]) -> Void
+
+    func dropEntered(info: DropInfo) {
+        guard let from = draggingId,
+              from != targetId,
+              let fromIdx = channels.firstIndex(where: { $0.id == from }),
+              let toIdx   = channels.firstIndex(where: { $0.id == targetId })
+        else { return }
+        var updated = channels
+        updated.move(fromOffsets: IndexSet(integer: fromIdx),
+                     toOffset: toIdx > fromIdx ? toIdx + 1 : toIdx)
+        withAnimation(.easeInOut(duration: 0.2)) { onReorder(updated) }
+    }
+
+    func dropUpdated(info: DropInfo) -> DropProposal? {
+        DropProposal(operation: .move)
+    }
+
+    func performDrop(info: DropInfo) -> Bool {
+        draggingId = nil
+        return true
+    }
+}
+
 struct XfinityChannelRow: View {
     let channel: Channel
     let programs: [Program]
     let viewingTime: Date
-    var programOffset: CGFloat = 0
     let accentColor: Color
     let onChannelTap: () -> Void
     let onProgramTap: (Program) -> Void
 
     private let rowHeight: CGFloat = 90
     private let channelColWidth: CGFloat = 80
+    private let ptsPerMinute: CGFloat = 4
+    private let minBlockWidth: CGFloat = 100
 
-    private func programAtTime(_ time: Date) -> Program? {
-        programs.first { $0.startTime <= time && $0.endTime > time }
+    private var visiblePrograms: [Program] {
+        let windowStart = viewingTime.addingTimeInterval(-2 * 3600)
+        let windowEnd = viewingTime.addingTimeInterval(12 * 3600)
+        return programs
+            .filter { $0.endTime > windowStart && $0.startTime < windowEnd }
+            .sorted { $0.startTime < $1.startTime }
     }
 
-    private var currentProgram: Program? { programAtTime(viewingTime) }
-
-    private var nextProgram: Program? {
-        guard let current = currentProgram else {
-            return programs.first { $0.startTime >= viewingTime }
-        }
-        return programs.first { $0.startTime >= current.endTime }
+    private func blockWidth(_ program: Program) -> CGFloat {
+        max(minBlockWidth, CGFloat(program.duration) * ptsPerMinute)
     }
 
-    private var progress: Double {
-        guard let program = currentProgram else { return 0 }
+    private func categoryColor(for program: Program) -> Color {
+        if program.isSports { return Color(red: 0.2, green: 0.6, blue: 1.0) }
+        if program.category?.lowercased().contains("movie") == true { return Color(red: 0.9, green: 0.5, blue: 0.1) }
+        if program.category?.lowercased().contains("news") == true { return Color(red: 0.9, green: 0.2, blue: 0.2) }
+        if program.isKids { return Color(red: 0.3, green: 0.85, blue: 0.4) }
+        return accentColor
+    }
+
+    private func recordingAccent(_ program: Program) -> Color? {
+        guard program.hasRecording else { return nil }
+        if program.isCurrentlyAiring { return .red }
+        if program.startTime > Date() { return .yellow }
+        return nil
+    }
+
+    private func progress(for program: Program) -> Double {
         let total = program.endTime.timeIntervalSince(program.startTime)
+        guard total > 0 else { return 0 }
         let elapsed = viewingTime.timeIntervalSince(program.startTime)
         return min(max(elapsed / total, 0), 1)
     }
 
-    private var categoryColor: Color {
-        guard let p = currentProgram else { return accentColor }
-        if p.isSports { return Color(red: 0.2, green: 0.6, blue: 1.0) }
-        if p.category?.lowercased().contains("movie") == true { return Color(red: 0.9, green: 0.5, blue: 0.1) }
-        if p.category?.lowercased().contains("news") == true { return Color(red: 0.9, green: 0.2, blue: 0.2) }
-        if p.isKids { return Color(red: 0.3, green: 0.85, blue: 0.4) }
-        return accentColor
-    }
-
     var body: some View {
         HStack(spacing: 0) {
-            // Channel column — taps to play
+            // Fixed channel column — tap to play live
             Button(action: onChannelTap) {
                 channelColumn
                     .frame(width: channelColWidth, height: rowHeight)
@@ -537,21 +548,30 @@ struct XfinityChannelRow: View {
             }
             .buttonStyle(.plain)
 
-            // Program cell — taps to show detail sheet
-            Button {
-                if let program = currentProgram { onProgramTap(program) } else { onChannelTap() }
-            } label: {
-                HStack(spacing: 0) {
-                    richProgramCell(currentProgram, isNext: false)
-                        .frame(maxWidth: .infinity)
-                    richProgramCell(nextProgram, isNext: true)
-                        .frame(maxWidth: .infinity)
+            // Per-row horizontal program scroll
+            ScrollViewReader { proxy in
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 2) {
+                        ForEach(visiblePrograms) { program in
+                            programBlock(program)
+                                .frame(width: blockWidth(program), height: rowHeight)
+                                .id(program.id)
+                                .onTapGesture { onProgramTap(program) }
+                        }
+                    }
+                    .padding(.horizontal, 4)
                 }
-                .offset(x: programOffset)
-                .clipped()
+                .onAppear {
+                    if let current = visiblePrograms.first(where: { $0.isCurrentlyAiring }) {
+                        proxy.scrollTo(current.id, anchor: .leading)
+                    }
+                }
+                .onChange(of: viewingTime) { _ in
+                    if let current = visiblePrograms.first(where: { $0.isCurrentlyAiring }) {
+                        withAnimation { proxy.scrollTo(current.id, anchor: .leading) }
+                    }
+                }
             }
-            .buttonStyle(.plain)
-            .clipped()
         }
         .frame(height: rowHeight)
         .clipped()
@@ -588,104 +608,84 @@ struct XfinityChannelRow: View {
         .padding(.vertical, 8)
     }
 
-    // MARK: - Rich Program Cell
-
-    private func recordingAccent(_ program: Program?, isNext: Bool) -> Color? {
-        guard let p = program, !isNext, p.hasRecording else { return nil }
-        if p.isCurrentlyAiring { return Color.red }          // actively recording now
-        if p.startTime > Date() { return Color.yellow }      // scheduled future recording
-        return nil
-    }
+    // MARK: - Program Block
 
     @ViewBuilder
-    private func richProgramCell(_ program: Program?, isNext: Bool) -> some View {
-        let recColor = recordingAccent(program, isNext: isNext)
-        let color = recColor ?? (isNext ? Color.gray.opacity(0.6) : categoryColor)
+    private func programBlock(_ program: Program) -> some View {
+        let isNow = program.isCurrentlyAiring
+        let catColor = categoryColor(for: program)
+        let recColor = recordingAccent(program)
+        let blockColor = recColor ?? catColor
+        let dimmed = !isNow
 
         ZStack(alignment: .bottomLeading) {
             // Artwork background
-            if let art = program?.art {
+            if let art = program.art {
                 AuthenticatedImage(path: art, systemPlaceholder: "tv")
                     .aspectRatio(contentMode: .fill)
-                    .frame(width: nil, height: rowHeight)
+                    .frame(height: rowHeight)
                     .clipped()
                     .overlay(
                         LinearGradient(
-                            colors: [.clear, .black.opacity(isNext ? 0.92 : 0.72)],
+                            colors: [.clear, .black.opacity(dimmed ? 0.88 : 0.72)],
                             startPoint: .top, endPoint: .bottom
                         )
                     )
-                    .opacity(isNext ? 0.4 : 1.0)
+                    .opacity(dimmed ? 0.45 : 1.0)
             } else {
                 LinearGradient(
-                    colors: [color.opacity(isNext ? 0.06 : 0.18), Color.black.opacity(0.8)],
+                    colors: [blockColor.opacity(dimmed ? 0.07 : 0.18), Color.black.opacity(0.8)],
                     startPoint: .topLeading, endPoint: .bottomTrailing
                 )
             }
 
             // Category stripe — left edge
             HStack(spacing: 0) {
-                Rectangle()
-                    .fill(color)
-                    .frame(width: 3)
+                Rectangle().fill(blockColor).frame(width: 3)
                 Spacer()
             }
 
-            // Content
+            // Content overlay
             VStack(alignment: .leading, spacing: 3) {
-                // Badges
-                if let p = program, !isNext {
-                    HStack(spacing: 4) {
-                        if p.isLive {
-                            liveBadge
-                        }
-                        if p.isNew {
-                            badge("NEW", color: .green)
-                        }
-                        if p.isPremiere {
-                            badge("PREMIERE", color: color)
-                        }
-                        if p.isFinale {
-                            badge("FINALE", color: .orange)
-                        }
-                        if p.hasRecording {
-                            recBadge
-                        }
-                    }
+                // Badges row
+                HStack(spacing: 4) {
+                    if program.isLive { liveBadge }
+                    if program.isNew { badge("NEW", color: .green) }
+                    if program.isPremiere { badge("PREMIERE", color: blockColor) }
+                    if program.isFinale { badge("FINALE", color: .orange) }
+                    if program.hasRecording { recBadge }
                 }
 
                 Spacer()
 
                 // Title
-                Text(program?.title ?? "No data")
-                    .font(.system(size: isNext ? 12 : 14, weight: isNext ? .regular : .semibold))
-                    .foregroundColor(isNext ? .gray : .white)
+                Text(program.title)
+                    .font(.system(size: isNow ? 14 : 12, weight: isNow ? .semibold : .regular))
+                    .foregroundColor(dimmed ? .white.opacity(0.6) : .white)
                     .lineLimit(2)
-                    .shadow(color: isNext ? .clear : .black.opacity(0.6), radius: 2)
+                    .shadow(color: .black.opacity(0.6), radius: 2)
 
-                // Time + duration
-                if let p = program {
-                    HStack(spacing: 4) {
-                        if isNext {
-                            Text(nextLabel(p))
-                                .font(.system(size: 10))
-                                .foregroundColor(.gray.opacity(0.7))
-                        } else {
-                            Text("\(p.duration)m")
-                                .font(.system(size: 10))
-                                .foregroundColor(.gray.opacity(0.8))
-                        }
-                    }
+                // Start time + duration
+                HStack(spacing: 3) {
+                    Text(startTimeLabel(program))
+                        .font(.system(size: 10))
+                        .foregroundColor(.gray.opacity(0.8))
+                    Text("·")
+                        .font(.system(size: 10))
+                        .foregroundColor(.gray.opacity(0.4))
+                    Text("\(program.duration)m")
+                        .font(.system(size: 10))
+                        .foregroundColor(.gray.opacity(0.8))
                 }
 
-                // Progress bar (current program only)
-                if let _ = program, !isNext, progress > 0 {
+                // Progress bar — only for currently airing
+                if isNow {
                     GeometryReader { geo in
                         ZStack(alignment: .leading) {
                             Rectangle().fill(Color.white.opacity(0.2)).frame(height: 2)
                             Rectangle()
-                                .fill(color)
-                                .frame(width: geo.size.width * CGFloat(progress), height: 2)
+                                .fill(blockColor)
+                                .frame(width: geo.size.width * CGFloat(progress(for: program)), height: 2)
                         }
                     }
                     .frame(height: 2)
@@ -693,9 +693,9 @@ struct XfinityChannelRow: View {
             }
             .padding(.horizontal, 8)
             .padding(.vertical, 8)
-            .padding(.leading, 3) // account for category stripe
+            .padding(.leading, 3)
 
-            // Recording border: red top edge = recording now, yellow = scheduled
+            // Recording top-edge indicator: red = recording now, yellow = scheduled
             if let rec = recColor {
                 VStack(spacing: 0) {
                     rec.frame(height: 3)
@@ -703,14 +703,13 @@ struct XfinityChannelRow: View {
                 }
             }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .clipShape(Rectangle())
     }
 
-    private func nextLabel(_ p: Program) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "h:mma"
-        return "Next \(formatter.string(from: p.startTime).lowercased())"
+    private func startTimeLabel(_ program: Program) -> String {
+        let f = DateFormatter()
+        f.dateFormat = "h:mma"
+        return f.string(from: program.startTime).lowercased()
     }
 
     // MARK: - Badges
