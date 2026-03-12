@@ -327,15 +327,23 @@ class ShowSearchViewModel: ObservableObject {
     @Published var isSearching = false
 
     private var searchTask: Task<Void, Never>?
+    private(set) var epgGuide: [ChannelWithPrograms] = []
 
-    func search(epgGuide: [ChannelWithPrograms]) {
+    /// Call when guide data finishes loading — re-runs current search if one is pending
+    func setGuide(_ guide: [ChannelWithPrograms]) {
+        epgGuide = guide
+        if query.count >= 2 { search() }
+    }
+
+    func search() {
         searchTask?.cancel()
         guard query.count >= 2 else { results = []; return }
         isSearching = true
         let q = query
+        let guide = epgGuide
         searchTask = Task {
             async let tmdbTask = TMDBService.shared.searchTVShows(title: q)
-            let epgResults = epgSearch(query: q, guide: epgGuide)
+            let epgResults = epgSearch(query: q, guide: guide)
             let tmdb = await tmdbTask
             guard !Task.isCancelled else { return }
 
@@ -343,7 +351,7 @@ class ShowSearchViewModel: ObservableObject {
 
             // TMDB results enriched with EPG airings
             for show in tmdb.prefix(8) {
-                let airings = findAirings(normalizedTitle: normalizeTitle(show.name), guide: epgGuide)
+                let airings = findAirings(normalizedTitle: normalizeTitle(show.name), guide: guide)
                 combined.append(ShowSearchResult(
                     id: "tmdb-\(show.id)",
                     title: show.name,
@@ -460,9 +468,6 @@ struct CreateSeriesPassSheet: View {
     @State private var isCreating = false
     @State private var errorMessage: String?
 
-    // EPG guide data for search
-    @State private var epgGuide: [ChannelWithPrograms] = []
-
     private let accentColor = Color(red: 97/255, green: 56/255, blue: 245/255)
     private let bg = Color(red: 17/255, green: 12/255, blue: 33/255)
     private let cardBg = Color(red: 26/255, green: 20/255, blue: 46/255)
@@ -502,10 +507,9 @@ struct CreateSeriesPassSheet: View {
                 }
             }
             .task {
-                // Load guide data for EPG search
                 let repo = LiveTVRepository()
                 if let cwps = try? await repo.getGuide() {
-                    epgGuide = cwps
+                    searchVM.setGuide(cwps)
                 }
             }
         }
@@ -523,7 +527,7 @@ struct CreateSeriesPassSheet: View {
                     .foregroundColor(.white)
                     .autocorrectionDisabled()
                     .onChange(of: searchVM.query) { _, _ in
-                        searchVM.search(epgGuide: epgGuide)
+                        searchVM.search()
                     }
                 if !searchVM.query.isEmpty {
                     Button { searchVM.query = "" } label: {
