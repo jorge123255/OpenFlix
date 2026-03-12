@@ -25,22 +25,33 @@ struct EPGSearchView: View {
         .prefix(20).map { $0 }
     }
 
+    private func normalizeForSearch(_ s: String) -> String {
+        s.lowercased()
+         .replacingOccurrences(of: ".", with: "")
+         .replacingOccurrences(of: "'", with: "")
+         .replacingOccurrences(of: "-", with: " ")
+         .trimmingCharacters(in: .whitespaces)
+    }
+
     private var programResults: [(program: Program, channel: Channel)] {
         guard searchText.count >= 2 else { return [] }
-        let query = searchText.lowercased()
+        let query = normalizeForSearch(searchText)
         var results: [(Program, Channel)] = []
 
         for cwp in viewModel.guide {
+            var channelHits = 0
             for program in cwp.programs {
-                if program.title.lowercased().contains(query) ||
-                   (program.subtitle?.lowercased().contains(query) ?? false) ||
-                   (program.description?.lowercased().contains(query) ?? false) ||
-                   (program.teams?.lowercased().contains(query) ?? false) {
+                let matchTitle    = normalizeForSearch(program.title).contains(query)
+                let matchSubtitle = program.subtitle.map { normalizeForSearch($0).contains(query) } ?? false
+                let matchDesc     = program.description.map { normalizeForSearch($0).contains(query) } ?? false
+                let matchTeams    = program.teams.map { normalizeForSearch($0).contains(query) } ?? false
+                if matchTitle || matchSubtitle || matchDesc || matchTeams {
                     results.append((program, cwp.channel))
-                    if results.count >= 50 { break }
+                    channelHits += 1
+                    if channelHits >= 5 { break }   // max 5 per channel
                 }
             }
-            if results.count >= 50 { break }
+            if results.count >= 80 { break }
         }
 
         return results.sorted { $0.0.startTime < $1.0.startTime }

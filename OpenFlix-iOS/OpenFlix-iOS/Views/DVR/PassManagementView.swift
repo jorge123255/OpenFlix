@@ -292,15 +292,32 @@ class PassManagementViewModel: ObservableObject {
 // Phase 1: Search for a show via EPG guide data + TMDB
 // Phase 2: Configure pass options and create
 
+struct ProgramAiring: Identifiable {
+    var id: Date { time }
+    let channelNum: Int?
+    let channelName: String
+    let time: Date
+}
+
 struct ShowSearchResult: Identifiable {
     enum Source { case epg, tmdb }
     let id: String
     let title: String
-    let posterPath: String?       // TMDB poster path
+    let posterPath: String?
     let network: String?
     let firstAirDate: String?
     let source: Source
     let tmdbId: Int?
+    let upcomingAirings: [ProgramAiring]
+
+    init(id: String, title: String, posterPath: String? = nil, network: String? = nil,
+         firstAirDate: String? = nil, source: Source, tmdbId: Int? = nil,
+         upcomingAirings: [ProgramAiring] = []) {
+        self.id = id; self.title = title; self.posterPath = posterPath
+        self.network = network; self.firstAirDate = firstAirDate
+        self.source = source; self.tmdbId = tmdbId
+        self.upcomingAirings = upcomingAirings
+    }
 }
 
 @MainActor
@@ -310,42 +327,38 @@ class ShowSearchViewModel: ObservableObject {
     @Published var isSearching = false
 
     private var searchTask: Task<Void, Never>?
-    private let liveTVRepo = LiveTVRepository()
 
     func search(epgGuide: [ChannelWithPrograms]) {
         searchTask?.cancel()
-        guard query.count >= 2 else {
-            results = []
-            return
-        }
+        guard query.count >= 2 else { results = []; return }
         isSearching = true
         let q = query
         searchTask = Task {
-            // Run EPG + TMDB search concurrently
-            async let tmdbResults = TMDBService.shared.searchTVShows(title: q)
+            async let tmdbTask = TMDBService.shared.searchTVShows(title: q)
             let epgResults = epgSearch(query: q, guide: epgGuide)
-
-            let tmdb = await tmdbResults
+            let tmdb = await tmdbTask
             guard !Task.isCancelled else { return }
 
             var combined: [ShowSearchResult] = []
 
-            // TMDB results first (richer metadata)
+            // TMDB results enriched with EPG airings
             for show in tmdb.prefix(8) {
+                let airings = findAirings(normalizedTitle: normalizeTitle(show.name), guide: epgGuide)
                 combined.append(ShowSearchResult(
                     id: "tmdb-\(show.id)",
                     title: show.name,
                     posterPath: show.posterPath,
-                    network: nil,
+                    network: airings.first?.channelName,
                     firstAirDate: show.firstAirDate,
                     source: .tmdb,
-                    tmdbId: show.id
+                    tmdbId: show.id,
+                    upcomingAirings: airings
                 ))
             }
 
-            // EPG results (deduplicated by title)
-            let existingTitles = Set(combined.map { $0.title.lowercased() })
-            for item in epgResults where !existingTitles.contains(item.title.lowercased()) {
+            // EPG-only results not already covered by TMDB
+            let existingNorm = Set(combined.map { normalizeTitle($0.title) })
+            for item in epgResults where !existingNorm.contains(normalizeTitle(item.title)) {
                 combined.append(item)
             }
 
@@ -354,30 +367,80 @@ class ShowSearchViewModel: ObservableObject {
         }
     }
 
+    // MARK: - Helpers
+
+    private func normalizeTitle(_ s: String) -> String {
+        s.lowercased()
+         .replacingOccurrences(of: ".", with: "")
+         .replacingOccurrences(of: "'", with: "")
+         .replacingOccurrences(of: "-", with: " ")
+         .trimmingCharacters(in: .whitespaces)
+    }
+
+    private func findAirings(normalizedTitle: String, guide: [ChannelWithPrograms]) -> [ProgramAiring] {
+        let now = Date()
+        var airings: [ProgramAiring] = []
+        for cwp in guide {
+            for program in cwp.programs {
+                guard program.endTime >= now,
+                      normalizeTitle(program.title).contains(normalizedTitle) ||
+                      normalizedTitle.contains(normalizeTitle(program.title))
+                else { continue }
+                airings.append(ProgramAiring(
+                    channelNum: cwp.channel.number,
+                    channelName: cwp.channel.name,
+                    time: program.startTime
+                ))
+                if airings.count >= 3 { return airings }
+            }
+        }
+        return airings
+    }
+
     private func epgSearch(query: String, guide: [ChannelWithPrograms]) -> [ShowSearchResult] {
-        let q = query.lowercased()
-        var seen = Set<String>()
-        var out: [ShowSearchResult] = []
+        let q = normalizeTitle(query)
+        let now = Date()
+        var titleToAirings: [String: [ProgramAiring]] = [:]
+        var titleToFirst: [String: (program: Program, channel: Channel)] = [:]
 
         for cwp in guide {
             for program in cwp.programs {
-                let titleLower = program.title.lowercased()
-                guard titleLower.contains(q), !seen.contains(titleLower) else { continue }
-                seen.insert(titleLower)
-                out.append(ShowSearchResult(
-                    id: "epg-\(program.id)",
-                    title: program.title,
-                    posterPath: nil,
-                    network: cwp.channel.name,
-                    firstAirDate: nil,
-                    source: .epg,
-                    tmdbId: nil
-                ))
-                if out.count >= 12 { break }
+                guard program.endTime >= now else { continue }
+                let norm = normalizeTitle(program.title)
+                guard norm.contains(q) else { continue }
+                var list = titleToAirings[norm] ?? []
+                if list.count < 3 {
+                    list.append(ProgramAiring(
+                        channelNum: cwp.channel.number,
+                        channelName: cwp.channel.name,
+                        time: program.startTime
+                    ))
+                    titleToAirings[norm] = list
+                }
+                if titleToFirst[norm] == nil {
+                    titleToFirst[norm] = (program, cwp.channel)
+                }
             }
+        }
+
+        var out: [ShowSearchResult] = []
+        for (norm, first) in titleToFirst {
+            let airings = (titleToAirings[norm] ?? []).sorted { $0.time < $1.time }
+            out.append(ShowSearchResult(
+                id: "epg-\(first.program.id)",
+                title: first.program.title,
+                posterPath: nil,
+                network: first.channel.name,
+                firstAirDate: nil,
+                source: .epg,
+                tmdbId: nil,
+                upcomingAirings: airings
+            ))
             if out.count >= 12 { break }
         }
-        return out
+        return out.sorted {
+            ($0.upcomingAirings.first?.time ?? .distantFuture) < ($1.upcomingAirings.first?.time ?? .distantFuture)
+        }
     }
 }
 
@@ -665,42 +728,68 @@ private struct ShowSearchRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            // Poster or icon
+            // Poster
             if let posterPath = result.posterPath {
                 TMDBPosterImage(path: posterPath)
-                    .frame(width: 44, height: 64)
+                    .frame(width: 48, height: 70)
                     .cornerRadius(6)
             } else {
                 RoundedRectangle(cornerRadius: 6)
                     .fill(accentColor.opacity(0.15))
-                    .frame(width: 44, height: 64)
+                    .frame(width: 48, height: 70)
                     .overlay(Image(systemName: "tv.fill").foregroundColor(accentColor))
             }
 
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 5) {
                 Text(result.title)
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundColor(.white)
                     .lineLimit(2)
 
-                if let network = result.network {
+                // Source badge + year
+                HStack(spacing: 6) {
+                    Text(result.source == .tmdb ? "TMDB" : "Guide")
+                        .font(.system(size: 9, weight: .heavy))
+                        .foregroundColor(result.source == .tmdb ? .blue : .green)
+                        .padding(.horizontal, 5).padding(.vertical, 2)
+                        .background((result.source == .tmdb ? Color.blue : Color.green).opacity(0.15))
+                        .cornerRadius(3)
+                    if let date = result.firstAirDate, date.count >= 4 {
+                        Text(date.prefix(4))
+                            .font(.system(size: 11))
+                            .foregroundColor(.gray.opacity(0.7))
+                    }
+                }
+
+                // Upcoming airings
+                if !result.upcomingAirings.isEmpty {
+                    VStack(alignment: .leading, spacing: 3) {
+                        ForEach(result.upcomingAirings.prefix(2)) { airing in
+                            HStack(spacing: 4) {
+                                if let num = airing.channelNum {
+                                    Text("Ch.\(num)")
+                                        .font(.system(size: 10, weight: .bold))
+                                        .foregroundColor(accentColor)
+                                }
+                                Text(airing.channelName)
+                                    .font(.system(size: 10))
+                                    .foregroundColor(.gray)
+                                    .lineLimit(1)
+                                Text("·")
+                                    .font(.system(size: 10))
+                                    .foregroundColor(.gray.opacity(0.4))
+                                Text(airingTimeLabel(airing.time))
+                                    .font(.system(size: 10, weight: .medium))
+                                    .foregroundColor(.white.opacity(0.85))
+                            }
+                        }
+                    }
+                } else if let network = result.network {
                     Label(network, systemImage: "antenna.radiowaves.left.and.right")
-                        .font(.system(size: 12))
+                        .font(.system(size: 11))
                         .foregroundColor(.gray)
+                        .lineLimit(1)
                 }
-
-                if let date = result.firstAirDate, !date.isEmpty {
-                    Text(date.prefix(4))
-                        .font(.system(size: 12))
-                        .foregroundColor(.gray.opacity(0.7))
-                }
-
-                Text(result.source == .tmdb ? "TMDB" : "On Guide")
-                    .font(.system(size: 10, weight: .medium))
-                    .foregroundColor(result.source == .tmdb ? .blue : .green)
-                    .padding(.horizontal, 6).padding(.vertical, 2)
-                    .background((result.source == .tmdb ? Color.blue : Color.green).opacity(0.15))
-                    .cornerRadius(4)
             }
 
             Spacer()
@@ -713,6 +802,23 @@ private struct ShowSearchRow: View {
         .padding(.vertical, 10)
         .background(cardBg)
         .contentShape(Rectangle())
+    }
+
+    private func airingTimeLabel(_ date: Date) -> String {
+        let cal = Calendar.current
+        let f = DateFormatter()
+        if date < Date() {
+            return "Now"
+        } else if cal.isDateInToday(date) {
+            f.dateFormat = "h:mma"
+            return "Today \(f.string(from: date).lowercased())"
+        } else if cal.isDateInTomorrow(date) {
+            f.dateFormat = "h:mma"
+            return "Tomorrow \(f.string(from: date).lowercased())"
+        } else {
+            f.dateFormat = "EEE h:mma"
+            return f.string(from: date).lowercased()
+        }
     }
 }
 
