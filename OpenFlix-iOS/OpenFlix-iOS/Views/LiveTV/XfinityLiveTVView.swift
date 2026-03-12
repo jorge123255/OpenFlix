@@ -19,7 +19,24 @@ struct XfinityLiveTVView: View {
     @State private var recordingToast: String?
     @State private var showRecordingToast = false
     @State private var showSearch = false
+    @State private var channelOrder: [String] = UserDefaults.standard.stringArray(forKey: "epg_channel_order") ?? []
     private let dvrRepository = DVRRepository()
+
+    // Channels sorted by saved order, with unordered ones appended at end
+    private func applyOrder(_ channels: [Channel]) -> [Channel] {
+        guard !channelOrder.isEmpty else { return channels }
+        var ordered: [Channel] = []
+        for id in channelOrder {
+            if let ch = channels.first(where: { $0.id == id }) { ordered.append(ch) }
+        }
+        let remaining = channels.filter { !channelOrder.contains($0.id) }
+        return ordered + remaining
+    }
+
+    private func saveOrder(_ channels: [Channel]) {
+        channelOrder = channels.map(\.id)
+        UserDefaults.standard.set(channelOrder, forKey: "epg_channel_order")
+    }
 
     enum ChannelFilter: String, CaseIterable {
         case all = "All channels"
@@ -322,28 +339,36 @@ struct XfinityLiveTVView: View {
     // MARK: - Channel List
 
     private var channelList: some View {
-        ScrollView(.vertical, showsIndicators: false) {
-            LazyVStack(spacing: 0) {
-                ForEach(filteredChannels) { channel in
-                    XfinityChannelRow(
-                        channel: channel,
-                        programs: programsForChannel(channel),
-                        viewingTime: viewingTime,
-                        programOffset: programOffset,
-                        accentColor: accentPurple,
-                        onChannelTap: {
-                            selectedChannel = channel
-                        },
-                        onProgramTap: { program in
-                            programDetail = ProgramDetailContext(program: program, channel: channel)
-                        }
-                    )
-
-                    Divider()
-                        .background(Color.white.opacity(0.1))
+        List {
+            ForEach(filteredChannels) { channel in
+                XfinityChannelRow(
+                    channel: channel,
+                    programs: programsForChannel(channel),
+                    viewingTime: viewingTime,
+                    programOffset: programOffset,
+                    accentColor: accentPurple,
+                    onChannelTap: { selectedChannel = channel },
+                    onProgramTap: { program in
+                        programDetail = ProgramDetailContext(program: program, channel: channel)
+                    }
+                )
+                .listRowInsets(EdgeInsets())
+                .listRowBackground(bgColor)
+                .listRowSeparatorTint(Color.white.opacity(0.08))
+            }
+            .onMove { from, to in
+                var current = filteredChannels
+                current.move(fromOffsets: from, toOffset: to)
+                // Only persist order when on "All channels" — other filters are temporary views
+                if selectedFilter == .all {
+                    saveOrder(current)
                 }
             }
         }
+        .listStyle(.plain)
+        .scrollContentBackground(.hidden)
+        .environment(\.editMode, .constant(.active))
+        // Horizontal swipe on the list to shift time window
         .simultaneousGesture(
             DragGesture(minimumDistance: 40, coordinateSpace: .local)
                 .onChanged { value in
@@ -360,21 +385,13 @@ struct XfinityLiveTVView: View {
                     let step: TimeInterval = 2 * 60 * 60
                     let screenWidth = UIScreen.main.bounds.width
                     let forward = value.translation.width < 0
-
-                    // Slide out
                     withAnimation(.easeIn(duration: 0.18)) {
                         programOffset = forward ? -screenWidth : screenWidth
                     }
-
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.18) {
-                        // Snap time, jump offset to opposite edge (no animation)
                         viewingTime = snapToBlock(viewingTime.addingTimeInterval(forward ? step : -step))
                         programOffset = forward ? screenWidth : -screenWidth
-
-                        // Slide in
-                        withAnimation(.easeOut(duration: 0.22)) {
-                            programOffset = 0
-                        }
+                        withAnimation(.easeOut(duration: 0.22)) { programOffset = 0 }
                     }
                 }
         )
@@ -388,20 +405,16 @@ struct XfinityLiveTVView: View {
     }
 
     private var filteredChannels: [Channel] {
+        let base: [Channel]
         switch selectedFilter {
-        case .all:
-            return viewModel.channels
-        case .favorites:
-            return viewModel.channels.filter { $0.isFavorite }
-        case .sports:
-            return viewModel.channels.filter { $0.group?.lowercased().contains("sport") ?? false }
-        case .news:
-            return viewModel.channels.filter { $0.group?.lowercased().contains("news") ?? false }
-        case .movies:
-            return viewModel.channels.filter { $0.group?.lowercased().contains("movie") ?? false }
-        case .kids:
-            return viewModel.channels.filter { $0.group?.lowercased().contains("kid") ?? false }
+        case .all:      base = viewModel.channels
+        case .favorites: base = viewModel.channels.filter { $0.isFavorite }
+        case .sports:   base = viewModel.channels.filter { $0.group?.lowercased().contains("sport") ?? false }
+        case .news:     base = viewModel.channels.filter { $0.group?.lowercased().contains("news") ?? false }
+        case .movies:   base = viewModel.channels.filter { $0.group?.lowercased().contains("movie") ?? false }
+        case .kids:     base = viewModel.channels.filter { $0.group?.lowercased().contains("kid") ?? false }
         }
+        return applyOrder(base)
     }
     
     private func programsForChannel(_ channel: Channel) -> [Program] {
@@ -577,9 +590,17 @@ struct XfinityChannelRow: View {
 
     // MARK: - Rich Program Cell
 
+    private func recordingAccent(_ program: Program?, isNext: Bool) -> Color? {
+        guard let p = program, !isNext, p.hasRecording else { return nil }
+        if p.isCurrentlyAiring { return Color.red }          // actively recording now
+        if p.startTime > Date() { return Color.yellow }      // scheduled future recording
+        return nil
+    }
+
     @ViewBuilder
     private func richProgramCell(_ program: Program?, isNext: Bool) -> some View {
-        let color = isNext ? Color.gray.opacity(0.6) : categoryColor
+        let recColor = recordingAccent(program, isNext: isNext)
+        let color = recColor ?? (isNext ? Color.gray.opacity(0.6) : categoryColor)
 
         ZStack(alignment: .bottomLeading) {
             // Artwork background
@@ -673,6 +694,14 @@ struct XfinityChannelRow: View {
             .padding(.horizontal, 8)
             .padding(.vertical, 8)
             .padding(.leading, 3) // account for category stripe
+
+            // Recording border: red top edge = recording now, yellow = scheduled
+            if let rec = recColor {
+                VStack(spacing: 0) {
+                    rec.frame(height: 3)
+                    Spacer()
+                }
+            }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .clipShape(Rectangle())
