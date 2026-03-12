@@ -1,6 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { useNavigate } from 'react-router-dom'
 import { Tv, Plus, Trash2, RefreshCw, FileText, Radio, Search, Edit, X, Check, Settings, MapPin, Zap, AlertCircle, Film, Monitor, Download, Clock, Archive, Layers, ArrowUp, ArrowDown, ChevronDown, ChevronRight, Wand2, Upload, List, Copy, Star } from 'lucide-react'
 import { EPGSourceCard } from '../components/EPGSourceCard'
 import {
@@ -3171,7 +3170,6 @@ function ManageLineupModal({
 }
 
 export function LiveTVPage() {
-  const navigate = useNavigate()
   const queryClient = useQueryClient()
   const { data: m3uSources, isLoading: loadingM3U } = useM3USources()
   const { data: epgSources, isLoading: loadingEPG } = useEPGSources()
