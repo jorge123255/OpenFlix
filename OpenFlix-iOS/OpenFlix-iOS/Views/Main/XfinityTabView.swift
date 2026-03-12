@@ -200,16 +200,24 @@ struct XfinityTabView: View {
         .sheet(isPresented: $showSettings) {
             NavigationStack {
                 SettingsView()
-                    .navigationBarTitleDisplayMode(.inline)
                     .toolbar {
                         ToolbarItem(placement: .topBarTrailing) {
                             Button("Done") { showSettings = false }
+                                .foregroundColor(Color(red: 97/255, green: 56/255, blue: 245/255))
                         }
                     }
             }
+            .environmentObject(authViewModel)
+            .environmentObject(settingsViewModel)
         }
         .sheet(isPresented: $showProfilePicker) {
             XfinityProfilePickerSheet()
+        }
+        // When profile is cleared from Settings, show profile picker
+        .onChange(of: authViewModel.currentProfile == nil) { isNil in
+            if isNil && !showSettings {
+                showProfilePicker = true
+            }
         }
     }
 }

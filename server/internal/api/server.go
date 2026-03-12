@@ -142,6 +142,8 @@ func NewServer(cfg *config.Config, db *gorm.DB) *Server {
 			CommercialDetect: cfg.DVR.CommercialDetect,
 		})
 		logger.Info("DVR recording enabled")
+		// Start database maintenance scheduler
+		dvr.StartMaintenance(db, dvr.DefaultMaintenanceConfig())
 		if cfg.DVR.CommercialDetect {
 			logger.Info("Commercial detection enabled")
 		}
