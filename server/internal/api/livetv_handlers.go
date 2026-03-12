@@ -3360,10 +3360,6 @@ func (s *Server) refreshGracenoteEPG(source *models.EPGSource) error {
 				continue
 			}
 
-			// Debug first parsed time
-			if i == 0 && len(programs) == 0 {
-				fmt.Printf("🕐 DEBUG: First program time - Start: %v, End: %v\n", startTime, endTime)
-			}
 
 			// Parse Gracenote flags for new/premiere/live/finale
 			isNew := false

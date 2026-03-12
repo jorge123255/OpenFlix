@@ -27,6 +27,9 @@ import (
 	"golang.org/x/crypto/acme"
 )
 
+// registryClient is used for DNS challenge API calls with a reasonable timeout
+var registryClient = &http.Client{Timeout: 30 * time.Second}
+
 const (
 	acmeStagingURL     = "https://acme-staging-v02.api.letsencrypt.org/directory"
 	acmeProductionURL  = "https://acme-v02.api.letsencrypt.org/directory"
@@ -385,7 +388,7 @@ func (m *Manager) setDNSChallenge(ctx context.Context, txtValue string) (string,
 		return "", err
 	}
 	req.Header.Set("Content-Type", "application/json")
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := registryClient.Do(req)
 	if err != nil {
 		return "", err
 	}
@@ -408,7 +411,7 @@ func (m *Manager) deleteDNSChallenge(ctx context.Context, recordID string) error
 		return err
 	}
 	req.Header.Set("Content-Type", "application/json")
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := registryClient.Do(req)
 	if err != nil {
 		return err
 	}

@@ -626,18 +626,9 @@ func (p *EPGParser) ImportProgramsFromGracenote(source *models.EPGSource) (int, 
 
 	// Process each channel and its programs
 	programs := make([]models.Program, 0)
-	for i, channel := range gridResp.Channels {
+	for _, channel := range gridResp.Channels {
 		channelID := fmt.Sprintf("gracenote-%s-%s", source.GracenoteAffiliate, channel.ChannelID)
 
-		// Debug: print first channel to see what data we're getting
-		if i == 0 {
-			fmt.Printf("🔍 DEBUG - First channel data:\n")
-			fmt.Printf("  ChannelID: %s\n", channel.ChannelID)
-			fmt.Printf("  CallSign: '%s'\n", channel.CallSign)
-			fmt.Printf("  ChannelNo: '%s'\n", channel.ChannelNo)
-			fmt.Printf("  AffiliateName: '%s'\n", channel.AffiliateName)
-			fmt.Printf("  Thumbnail: '%s'\n", channel.Thumbnail)
-		}
 
 		// Process each event/program
 		for _, event := range channel.Events {

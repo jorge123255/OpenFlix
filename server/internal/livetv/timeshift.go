@@ -1,6 +1,7 @@
 package livetv
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -39,6 +40,8 @@ type TimeShiftBuffer struct {
 
 // ChannelBuffer represents an active buffer for a channel
 type ChannelBuffer struct {
+	ctx         context.Context
+	cancel      context.CancelFunc
 	ChannelID   uint
 	Process     *exec.Cmd
 	StartTime   time.Time
@@ -163,7 +166,8 @@ func (tsb *TimeShiftBuffer) StartBuffer(channel *models.Channel) error {
 		playlistPath,
 	}
 
-	cmd := exec.Command(tsb.config.FFmpegPath, args...)
+	ctx, cancel := context.WithCancel(context.Background())
+	cmd := exec.CommandContext(ctx, tsb.config.FFmpegPath, args...)
 	cmd.Dir = bufferDir
 
 	if err := cmd.Start(); err != nil {
@@ -171,6 +175,8 @@ func (tsb *TimeShiftBuffer) StartBuffer(channel *models.Channel) error {
 	}
 
 	buffer := &ChannelBuffer{
+		ctx:         ctx,
+		cancel:      cancel,
 		ChannelID: channel.ID,
 		Process:   cmd,
 		StartTime: time.Now(),
@@ -212,6 +218,9 @@ func (tsb *TimeShiftBuffer) StopBuffer(channelID uint) {
 	}
 
 	bufferDir := buffer.BufferDir
+	if buffer.cancel != nil {
+		buffer.cancel()
+	}
 	if buffer.Process != nil && buffer.Process.Process != nil {
 		buffer.Process.Process.Kill()
 	}
@@ -504,7 +513,10 @@ func (tsb *TimeShiftBuffer) Stop() {
 	// Collect buffer directories before clearing map
 	dirsToCleanup := make([]string, 0, len(tsb.activeBuffers))
 	for channelID, buffer := range tsb.activeBuffers {
-		if buffer.Process != nil && buffer.Process.Process != nil {
+		if buffer.cancel != nil {
+		buffer.cancel()
+	}
+	if buffer.Process != nil && buffer.Process.Process != nil {
 			buffer.Process.Process.Kill()
 		}
 		if buffer.BufferDir != "" {

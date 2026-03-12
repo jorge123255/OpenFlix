@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"os/exec"
 	"strings"
 	"sync"
@@ -220,7 +221,8 @@ func (cd *CommercialDetector) parseComskipOutput(videoPath string) ([]Commercial
 	data, err := os.ReadFile(edlPath)
 	if err != nil {
 		// Try /tmp directory
-		edlPath = "/tmp/" + videoPath[strings.LastIndex(videoPath, "/")+1:len(videoPath)-4] + ".edl"
+		baseName := filepath.Base(videoPath[:len(videoPath)-4])
+		edlPath = filepath.Join(os.TempDir(), baseName+".edl")
 		data, err = os.ReadFile(edlPath)
 		if err != nil {
 			return nil, err
