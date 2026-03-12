@@ -524,15 +524,15 @@ func importChannelsFromTuner(db *gorm.DB, dev *tuner.HDHomeRunDevice) TunerImpor
 			ChannelID:  channelID,
 			Name:       ch.GuideName,
 			Number:     channelNum,
-			NumberStr:  ch.GuideNumber,
+			
 			StreamURL:  streamURL,
 			Group:      group,
-			Source:     sourceName,
+			SourceName: sourceName,
 			SourceType: "hdhr",
-			TvgID:      channelID,
+			TVGId:      channelID,
 			VideoCodec: ch.VideoCodec,
 			AudioCodec: ch.AudioCodec,
-			IsHD:       ch.HD == 1,
+			
 			Enabled:    true,
 		}
 
