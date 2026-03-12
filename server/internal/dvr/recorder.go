@@ -252,6 +252,8 @@ func (r *Recorder) processSeriesRules() {
 				StartTime:    startTime,
 				EndTime:      endTime,
 				Status:       "scheduled",
+				Thumb:        prog.Icon,
+				Art:          prog.Art,
 				SeriesRuleID: &rule.ID,
 			}
 
@@ -362,6 +364,8 @@ func (r *Recorder) processTeamPassesForUser(userID uint) int {
 				EndTime:      endTime,
 				Status:       "scheduled",
 				Category:     "Sports",
+				Thumb:        prog.Icon,
+				Art:          prog.Art,
 				SeriesRecord: true, // Mark as auto-recorded
 			}
 
@@ -441,6 +445,8 @@ func (r *Recorder) schedulePreGameForTeamPass(tp *models.TeamPass, gameProg *mod
 		Status:       "scheduled",
 		Category:     "Sports",
 		SeriesRecord: true,
+		Thumb:        preGame.Icon,
+		Art:          preGame.Art,
 	}
 
 	if err := r.db.Create(&recording).Error; err != nil {
@@ -484,6 +490,8 @@ func (r *Recorder) schedulePostGameForTeamPass(tp *models.TeamPass, gameProg *mo
 		Status:       "scheduled",
 		Category:     "Sports",
 		SeriesRecord: true,
+		Thumb:        postGame.Icon,
+		Art:          postGame.Art,
 	}
 
 	if err := r.db.Create(&recording).Error; err != nil {
@@ -669,6 +677,8 @@ func (r *Recorder) processRules() {
 				StartTime:    startTime,
 				EndTime:      endTime,
 				Status:       "scheduled",
+				Thumb:        prog.Icon,
+				Art:          prog.Art,
 				Category:     prog.Category,
 				EpisodeNum:   prog.EpisodeNum,
 				IsMovie:      prog.IsMovie,
@@ -817,6 +827,8 @@ func (r *Recorder) schedulePreShowForRule(rule *models.DVRRule, prog *models.Pro
 		Status:        "scheduled",
 		Category:      preShow.Category,
 		SeriesRecord:  true,
+		Thumb:         preShow.Icon,
+		Art:           preShow.Art,
 		Priority:      rule.Priority,
 		QualityPreset: rule.QualityPreset,
 	}
@@ -913,6 +925,8 @@ func (r *Recorder) schedulePostShowForRule(rule *models.DVRRule, prog *models.Pr
 		Status:        "scheduled",
 		Category:      postShow.Category,
 		SeriesRecord:  true,
+		Thumb:         postShow.Icon,
+		Art:           postShow.Art,
 		Priority:      rule.Priority,
 		QualityPreset: rule.QualityPreset,
 	}
