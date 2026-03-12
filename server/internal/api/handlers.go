@@ -320,6 +320,7 @@ type ClientLogSubmission struct {
 
 // In-memory storage for client logs (limited to last 100 submissions)
 var clientLogStore = struct {
+	sync.RWMutex
 	submissions []ClientLogSubmission
 	maxSize     int
 }{
@@ -361,6 +362,8 @@ func (s *Server) submitClientLogs(c *gin.Context) {
 	}
 
 	// Add to store (circular buffer)
+	clientLogStore.Lock()
+	defer clientLogStore.Unlock()
 	clientLogStore.submissions = append(clientLogStore.submissions, submission)
 	if len(clientLogStore.submissions) > clientLogStore.maxSize {
 		clientLogStore.submissions = clientLogStore.submissions[1:]
@@ -376,6 +379,8 @@ func (s *Server) submitClientLogs(c *gin.Context) {
 
 // getClientLogs returns all stored client log submissions
 func (s *Server) getClientLogs(c *gin.Context) {
+	clientLogStore.RLock()
+	defer clientLogStore.RUnlock()
 	c.JSON(http.StatusOK, gin.H{
 		"submissions": clientLogStore.submissions,
 		"count":       len(clientLogStore.submissions),
@@ -384,6 +389,8 @@ func (s *Server) getClientLogs(c *gin.Context) {
 
 // clearClientLogs clears all stored client logs
 func (s *Server) clearClientLogs(c *gin.Context) {
+	clientLogStore.Lock()
+	defer clientLogStore.Unlock()
 	clientLogStore.submissions = make([]ClientLogSubmission, 0)
 	logger.Info("Client logs cleared by admin")
 	c.JSON(http.StatusOK, gin.H{"message": "Client logs cleared"})

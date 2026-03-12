@@ -18,6 +18,14 @@ import (
 	"gorm.io/gorm"
 )
 
+// Pre-compiled regexes for filename parsing
+var (
+	tvShowPattern1 = regexp.MustCompile(`(?i)S(\d{1,2})E(\d{1,3})(?:-?E(\d{1,3}))?`)
+	tvShowPattern2 = regexp.MustCompile(`(?i)(\d{1,2})x(\d{1,3})`)
+	tvShowPattern3 = regexp.MustCompile(`(?i)Season\s*(\d{1,2})\s*Episode\s*(\d{1,3})`)
+	yearPatternRe  = regexp.MustCompile(`\(?(19\d{2}|20\d{2})\)?`)
+)
+
 const missingLibraryPathThreshold = 3
 
 // Scanner handles media file discovery and metadata extraction
@@ -360,11 +368,7 @@ func (s *Scanner) parseFilename(filePath string, libraryType string) ParsedFilen
 
 	if libraryType == "show" {
 		// TV Show patterns: S01E01, 1x01, Season 1 Episode 1
-		patterns := []*regexp.Regexp{
-			regexp.MustCompile(`(?i)S(\d{1,2})E(\d{1,3})(?:-?E(\d{1,3}))?`), // S01E01 or S01E01-E02
-			regexp.MustCompile(`(?i)(\d{1,2})x(\d{1,3})`),                   // 1x01
-			regexp.MustCompile(`(?i)Season\s*(\d{1,2})\s*Episode\s*(\d{1,3})`),
-		}
+		patterns := []*regexp.Regexp{tvShowPattern1, tvShowPattern2, tvShowPattern3}
 
 		for _, pattern := range patterns {
 			if matches := pattern.FindStringSubmatch(name); matches != nil {
@@ -385,13 +389,12 @@ func (s *Scanner) parseFilename(filePath string, libraryType string) ParsedFilen
 	}
 
 	// Extract year
-	yearPattern := regexp.MustCompile(`\(?(19\d{2}|20\d{2})\)?`)
-	if matches := yearPattern.FindStringSubmatch(name); matches != nil {
+	if matches := yearPatternRe.FindStringSubmatch(name); matches != nil {
 		parsed.Year, _ = strconv.Atoi(matches[1])
 
 		// For movies, title is everything before the year
 		if libraryType == "movie" && parsed.Title == "" {
-			idx := yearPattern.FindStringIndex(name)
+			idx := yearPatternRe.FindStringIndex(name)
 			if idx != nil {
 				parsed.Title = strings.TrimSpace(name[:idx[0]])
 			}

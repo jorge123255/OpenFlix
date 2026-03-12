@@ -8,6 +8,16 @@ import (
 
 	"github.com/openflix/openflix-server/internal/models"
 )
+// Pre-compiled regexes for channel name processing
+var (
+	networkNumberRe   = regexp.MustCompile(`\b(NBC|CBS|ABC|FOX|PBS|CW|WB)\s*(\d+)`)
+	channelNumberRe   = regexp.MustCompile(`\b(?:CHANNEL|CH\.?)\s*(\d+)`)
+	leadingNumberRe   = regexp.MustCompile(`^(\d+)\s*[-\s]\s*\w`)
+	trailingNumberRe  = regexp.MustCompile(`\b(\d+)\s*$`)
+	nonAlphanumericRe = regexp.MustCompile(`[^A-Z0-9\s]`)
+	multiSpaceRe      = regexp.MustCompile(`\s+`)
+)
+
 
 // networkAliases maps network identifiers to their common name variations
 // Used for matching channel names to EPG callsigns
@@ -307,26 +317,22 @@ func extractChannelNumber(name string) string {
 	name = strings.ToUpper(name)
 
 	// Pattern 1: "Network Number" (e.g., "NBC 5", "CBS 2")
-	networkPattern := regexp.MustCompile(`\b(NBC|CBS|ABC|FOX|PBS|CW|WB)\s*(\d+)`)
-	if matches := networkPattern.FindStringSubmatch(name); len(matches) > 2 {
+	if matches := networkNumberRe.FindStringSubmatch(name); len(matches) > 2 {
 		return matches[2]
 	}
 
 	// Pattern 2: "Channel N" or "Ch N"
-	channelPattern := regexp.MustCompile(`\b(?:CHANNEL|CH\.?)\s*(\d+)`)
-	if matches := channelPattern.FindStringSubmatch(name); len(matches) > 1 {
+	if matches := channelNumberRe.FindStringSubmatch(name); len(matches) > 1 {
 		return matches[1]
 	}
 
 	// Pattern 3: Leading number with separator (e.g., "5 NBC", "7 - ABC")
-	leadingPattern := regexp.MustCompile(`^(\d+)\s*[-\s]\s*\w`)
-	if matches := leadingPattern.FindStringSubmatch(name); len(matches) > 1 {
+	if matches := leadingNumberRe.FindStringSubmatch(name); len(matches) > 1 {
 		return matches[1]
 	}
 
 	// Pattern 4: Number at end after network (e.g., "WMAQ-TV 5")
-	trailingPattern := regexp.MustCompile(`\b(\d+)\s*$`)
-	if matches := trailingPattern.FindStringSubmatch(strings.TrimSuffix(strings.TrimSuffix(name, "HD"), " ")); len(matches) > 1 {
+	if matches := trailingNumberRe.FindStringSubmatch(strings.TrimSuffix(strings.TrimSuffix(name, "HD"), " ")); len(matches) > 1 {
 		return matches[1]
 	}
 
@@ -486,10 +492,10 @@ func normalizeChannelName(name string) string {
 	}
 
 	// Remove special characters
-	name = regexp.MustCompile(`[^A-Z0-9\s]`).ReplaceAllString(name, " ")
+	name = nonAlphanumericRe.ReplaceAllString(name, " ")
 
 	// Normalize whitespace
-	name = regexp.MustCompile(`\s+`).ReplaceAllString(name, " ")
+	name = multiSpaceRe.ReplaceAllString(name, " ")
 	name = strings.TrimSpace(name)
 
 	return name
