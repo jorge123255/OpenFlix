@@ -21,7 +21,6 @@ const INDEX: SettingsEntry[] = [
   { label: 'Live TV', section: 'Live TV', route: '/ui/livetv', keywords: ['channels', 'stream', 'live', 'iptv', 'hdhr'] },
   { label: 'TV Guide', section: 'Live TV', route: '/ui/tvguide', keywords: ['epg', 'guide', 'schedule', 'program', 'what is on'] },
   { label: 'On Now', section: 'Live TV', route: '/ui/onnow', keywords: ['currently airing', 'now', 'live now'] },
-  { label: 'EPG Editor', section: 'Live TV', route: '/ui/livetv/epg-editor', keywords: ['epg', 'edit guide', 'program guide', 'channel mapping'] },
   { label: 'Tuners', section: 'Live TV', route: '/ui/tuners', keywords: ['hdhr', 'hdhomerun', 'tuner', 'antenna', 'hardware', 'add tuner'] },
   { label: 'Channel Collections', section: 'Live TV', route: '/ui/channel-collections', keywords: ['channels', 'groups', 'favorites', 'lineup'] },
   { label: 'Virtual Channels', section: 'Live TV', route: '/ui/virtual-channels', keywords: ['pluto', '24/7', 'loop', 'playlist channel'] },

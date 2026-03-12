@@ -3463,13 +3463,6 @@ export function LiveTVPage() {
           <h1 className="text-2xl font-bold text-white">Live TV</h1>
           <p className="text-gray-400 mt-1">Manage your IPTV sources, channels, and program guide</p>
         </div>
-        <button
-          onClick={() => navigate('/ui/livetv/epg-editor')}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
-        >
-          <Settings className="h-4 w-4" />
-          EPG Editor
-        </button>
       </div>
 
       {/* Tabs */}
