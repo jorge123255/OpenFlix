@@ -2156,196 +2156,6 @@ function AddXtreamSourceModal({ onClose }: { onClose: () => void }) {
   )
 }
 
-function EPGProgramsTab({ epgSources }: { epgSources: any[] }) {
-  const [selectedSource, setSelectedSource] = useState<number | null>(null)
-  const [page, setPage] = useState(1)
-  const limit = 50
-
-  const { data: programsData, isLoading } = useQuery({
-    queryKey: ['epgPrograms', selectedSource, page],
-    queryFn: () => api.getEPGPrograms({
-      page,
-      limit,
-      epgSourceId: selectedSource || undefined,
-    }),
-    enabled: epgSources.length > 0,
-  })
-
-  const totalPrograms = epgSources.reduce((sum, s) => sum + (s.programCount || 0), 0)
-
-  return (
-    <div>
-      <div className="bg-gray-800 rounded-xl p-6">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h3 className="text-lg font-semibold text-white mb-1">EPG Program Listings</h3>
-            <p className="text-sm text-gray-400">
-              Total: {totalPrograms.toLocaleString()} programs across {epgSources.length} source(s)
-            </p>
-          </div>
-          {epgSources.length > 1 && (
-            <select
-              value={selectedSource || ''}
-              onChange={(e) => {
-                setSelectedSource(e.target.value ? parseInt(e.target.value) : null)
-                setPage(1)
-              }}
-              className="px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm"
-            >
-              <option value="">All Sources</option>
-              {epgSources.map((source) => (
-                <option key={source.id} value={source.id}>
-                  {source.name} ({source.programCount} programs)
-                </option>
-              ))}
-            </select>
-          )}
-        </div>
-
-        {/* Channel mapping info */}
-        <div className="mb-4 p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg">
-          <p className="text-sm text-blue-300">
-            <strong>Note:</strong> Channel names in gray are EPG channel IDs that haven't been mapped to your M3U channels yet.
-            Go to the <strong>Channels</strong> tab to assign EPG sources to your channels for proper matching.
-          </p>
-        </div>
-
-        {isLoading ? (
-          <div className="text-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-500 mx-auto"></div>
-            <p className="text-gray-400 mt-4">Loading programs...</p>
-          </div>
-        ) : programsData && programsData.programs.length > 0 ? (
-          <>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-700/50">
-                  <tr>
-                    <th className="text-left p-3 text-gray-300 text-sm font-medium">Channel</th>
-                    <th className="text-left p-3 text-gray-300 text-sm font-medium">Program</th>
-                    <th className="text-left p-3 text-gray-300 text-sm font-medium">Time</th>
-                    <th className="text-left p-3 text-gray-300 text-sm font-medium">Category</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-700">
-                  {programsData.programs.map((program) => {
-                    const start = new Date(program.start)
-                    const end = new Date(program.end)
-                    const duration = Math.round((end.getTime() - start.getTime()) / 60000)
-
-                    // Format channel display
-                    const channelDisplay = program.channelName ||
-                      (program.channelId?.replace(/^(fubo|gracenote)-/, '') || 'Unknown')
-                    const isUnmapped = !program.channelName
-
-                    return (
-                      <tr key={program.id} className="hover:bg-gray-700/30">
-                        <td className="p-3">
-                          <div className={`font-medium ${isUnmapped ? 'text-gray-400' : 'text-white'}`}>
-                            {channelDisplay}
-                          </div>
-                          {isUnmapped && (
-                            <div className="text-xs text-gray-600 mt-1">EPG ID: {program.channelId}</div>
-                          )}
-                        </td>
-                        <td className="p-3">
-                          <div className="font-medium text-white">{program.title}</div>
-                          {program.description && (
-                            <div className="text-sm text-gray-400 mt-1 line-clamp-2">
-                              {program.description}
-                            </div>
-                          )}
-                          {program.episodeNum && (
-                            <div className="text-xs text-gray-500 mt-1">{program.episodeNum}</div>
-                          )}
-                        </td>
-                        <td className="p-3">
-                          <div className="text-sm text-white">
-                            {start.toLocaleDateString()} {start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                          </div>
-                          <div className="text-xs text-gray-400">{duration} min</div>
-                        </td>
-                        <td className="p-3">
-                          {program.category && (
-                            <span className="inline-block px-2 py-1 bg-gray-700 text-gray-300 text-xs rounded">
-                              {program.category}
-                            </span>
-                          )}
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Pagination */}
-            {programsData.pages > 1 && (
-              <div className="flex items-center justify-between mt-6 pt-4 border-t border-gray-700">
-                <div className="text-sm text-gray-400">
-                  Showing {((page - 1) * limit) + 1} - {Math.min(page * limit, programsData.total)} of {programsData.total.toLocaleString()}
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setPage(p => Math.max(1, p - 1))}
-                    disabled={page === 1}
-                    className="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-white text-sm rounded disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Previous
-                  </button>
-                  <div className="flex items-center gap-1">
-                    {Array.from({ length: Math.min(5, programsData.pages) }, (_, i) => {
-                      let pageNum
-                      if (programsData.pages <= 5) {
-                        pageNum = i + 1
-                      } else if (page <= 3) {
-                        pageNum = i + 1
-                      } else if (page >= programsData.pages - 2) {
-                        pageNum = programsData.pages - 4 + i
-                      } else {
-                        pageNum = page - 2 + i
-                      }
-                      return (
-                        <button
-                          key={pageNum}
-                          onClick={() => setPage(pageNum)}
-                          className={`px-3 py-1.5 text-sm rounded ${
-                            page === pageNum
-                              ? 'bg-indigo-600 text-white'
-                              : 'bg-gray-700 hover:bg-gray-600 text-white'
-                          }`}
-                        >
-                          {pageNum}
-                        </button>
-                      )
-                    })}
-                  </div>
-                  <button
-                    onClick={() => setPage(p => Math.min(programsData.pages, p + 1))}
-                    disabled={page === programsData.pages}
-                    className="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-white text-sm rounded disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Next
-                  </button>
-                </div>
-              </div>
-            )}
-          </>
-        ) : (
-          <div className="text-center py-12">
-            <FileText className="h-12 w-12 text-gray-600 mx-auto mb-4" />
-            <p className="text-gray-400">
-              {epgSources.length === 0
-                ? 'No EPG sources configured. Add an EPG source to see program listings.'
-                : 'No programs found. Try refreshing your EPG sources.'}
-            </p>
-          </div>
-        )}
-      </div>
-    </div>
-  )
-}
-
 // Channel Group Card Component
 function ChannelGroupCard({
   group,
@@ -3178,7 +2988,7 @@ export function LiveTVPage() {
   const deleteEPG = useDeleteEPGSource()
   const refreshEPG = useRefreshEPG()
   const [showAddModal, setShowAddModal] = useState<'m3u' | 'epg' | 'xtream' | null>(null)
-  const [activeTab, setActiveTab] = useState<'sources' | 'channels' | 'programs' | 'groups'>('sources')
+  const [activeTab, setActiveTab] = useState<'sources' | 'channels' | 'groups'>('sources')
   const [channelSearch, setChannelSearch] = useState('')
   const [editingChannel, setEditingChannel] = useState<Channel | null>(null)
   const [showMapNumbersModal, setShowMapNumbersModal] = useState(false)
@@ -3491,15 +3301,6 @@ export function LiveTVPage() {
           )}
         </button>
         <button
-          onClick={() => setActiveTab('programs')}
-          className={`pb-3 px-1 text-sm font-medium border-b-2 transition-colors ${
-            activeTab === 'programs'
-              ? 'border-indigo-500 text-white'
-              : 'border-transparent text-gray-400 hover:text-white'
-          }`}
-        >
-          EPG Programs
-        </button>
         <button
           onClick={() => setActiveTab('groups')}
           className={`pb-3 px-1 text-sm font-medium border-b-2 transition-colors ${
@@ -3810,9 +3611,6 @@ export function LiveTVPage() {
         </>
       )}
 
-      {activeTab === 'programs' && (
-        <EPGProgramsTab epgSources={epgSources || []} />
-      )}
 
       {activeTab === 'channels' && (
         <div>
