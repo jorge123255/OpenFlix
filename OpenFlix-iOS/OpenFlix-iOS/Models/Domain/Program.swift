@@ -24,7 +24,6 @@ struct Program: Identifiable, Hashable {
     let league: String?
     let hasRecording: Bool
     let recordingId: String?
-    let hasCC: Bool
 
     // MARK: - Computed Properties
 
@@ -134,8 +133,7 @@ extension ProgramDTO {
             teams: teams,
             league: league,
             hasRecording: hasRecording ?? false,
-            recordingId: recordingId?.stringValue,
-            hasCC: hasCC ?? false
+            recordingId: recordingId?.stringValue
         )
     }
 }

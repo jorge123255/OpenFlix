@@ -1,8 +1,18 @@
 import SwiftUI
-import AVKit
+import UIKit
+
+// MARK: - App Delegate (orientation lock)
+class AppDelegate: NSObject, UIApplicationDelegate {
+    static var orientationLock: UIInterfaceOrientationMask = .portrait
+
+    func application(_ application: UIApplication, supportedInterfaceOrientationsFor window: UIWindow?) -> UIInterfaceOrientationMask {
+        return AppDelegate.orientationLock
+    }
+}
 
 @main
 struct OpenFlixApp: App {
+    @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @StateObject private var authViewModel = AuthViewModel()
     @StateObject private var settingsViewModel = SettingsViewModel()
     @State private var showSplash = true
@@ -16,8 +26,8 @@ struct OpenFlixApp: App {
                     .preferredColorScheme(.dark)
 
                 if showSplash {
-                    VideoSplashView {
-                        withAnimation(.easeOut(duration: 0.5)) {
+                    LogoSplashView {
+                        withAnimation(.easeOut(duration: 0.6)) {
                             showSplash = false
                         }
                     }
@@ -29,90 +39,72 @@ struct OpenFlixApp: App {
     }
 }
 
-// MARK: - Video Splash Screen
+// MARK: - Logo Splash Screen
 
-struct VideoSplashView: View {
+struct LogoSplashView: View {
     let onFinished: () -> Void
 
-    @State private var player: AVPlayer?
-    @State private var overlayOpacity: Double = 1.0
-    @State private var finished = false
+    @State private var logoScale: CGFloat = 0.75
+    @State private var logoOpacity: Double = 0
+    @State private var taglineOpacity: Double = 0
+    @State private var glowRadius: CGFloat = 0
+
+    private let accent = Color(red: 97/255, green: 56/255, blue: 245/255)
+    private let bg = Color(red: 10/255, green: 6/255, blue: 24/255)
 
     var body: some View {
         ZStack {
-            Color.black.ignoresSafeArea()
+            bg.ignoresSafeArea()
 
-            if let player = player {
-                VideoPlayer(player: player)
-                    .ignoresSafeArea()
-                    .disabled(true) // disable AVKit controls — we handle tap ourselves
-            }
+            RadialGradient(
+                colors: [accent.opacity(0.25), .clear],
+                center: .center,
+                startRadius: 0,
+                endRadius: glowRadius
+            )
+            .ignoresSafeArea()
+            .animation(.easeOut(duration: 1.2), value: glowRadius)
 
-            // Tap anywhere to skip
-            Color.clear
-                .ignoresSafeArea()
-                .contentShape(Rectangle())
-                .onTapGesture {
-                    guard !finished else { return }
-                    finish()
+            VStack(spacing: 14) {
+                HStack(spacing: 10) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(accent)
+                            .frame(width: 52, height: 52)
+                        Image(systemName: "play.fill")
+                            .font(.system(size: 22, weight: .bold))
+                            .foregroundColor(.white)
+                            .offset(x: 2)
+                    }
+
+                    Text("OpenFlix")
+                        .font(.system(size: 42, weight: .black, design: .rounded))
+                        .foregroundColor(.white)
                 }
+                .scaleEffect(logoScale)
+                .opacity(logoOpacity)
 
-            // Skip hint
-            VStack {
-                Spacer()
-                HStack {
-                    Spacer()
-                    Text("Tap to skip")
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundColor(.white.opacity(0.5))
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 8)
-                        .background(Color.black.opacity(0.3))
-                        .cornerRadius(20)
-                        .padding(.trailing, 20)
-                        .padding(.bottom, 40)
-                }
+                Text("Your media. Anywhere.")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(.white.opacity(0.45))
+                    .tracking(1.5)
+                    .opacity(taglineOpacity)
             }
         }
-        .onAppear { setupPlayer() }
-        .onDisappear { player?.pause() }
-    }
-
-    private func setupPlayer() {
-        guard let url = Bundle.main.url(forResource: "splash_video", withExtension: "mp4") else {
-            // Video not found — skip straight to app
-            onFinished()
-            return
+        .onAppear {
+            withAnimation(.spring(response: 0.6, dampingFraction: 0.72)) {
+                logoScale = 1.0
+                logoOpacity = 1.0
+            }
+            withAnimation(.easeOut(duration: 1.2)) {
+                glowRadius = 260
+            }
+            withAnimation(.easeIn(duration: 0.5).delay(0.4)) {
+                taglineOpacity = 1.0
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.8) {
+                onFinished()
+            }
         }
-
-        // Configure audio session to play with sound
-        try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .moviePlayback)
-        try? AVAudioSession.sharedInstance().setActive(true)
-
-        let avPlayer = AVPlayer(url: url)
-        avPlayer.isMuted = false
-        self.player = avPlayer
-        avPlayer.play()
-
-        // Listen for video end
-        NotificationCenter.default.addObserver(
-            forName: .AVPlayerItemDidPlayToEndTime,
-            object: avPlayer.currentItem,
-            queue: .main
-        ) { _ in
-            finish()
-        }
-
-        // Safety fallback — always dismiss after 12s
-        DispatchQueue.main.asyncAfter(deadline: .now() + 12.0) {
-            finish()
-        }
-    }
-
-    private func finish() {
-        guard !finished else { return }
-        finished = true
-        player?.pause()
-        onFinished()
     }
 }

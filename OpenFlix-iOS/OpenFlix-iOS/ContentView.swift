@@ -6,8 +6,9 @@ struct ContentView: View {
     var body: some View {
         Group {
             if authViewModel.isAuthenticated {
-                if authViewModel.currentProfile != nil {
+                if authViewModel.currentProfile != nil || authViewModel.isLocalAccessMode {
                     // New Xfinity-style 5-tab navigation
+                    // Skip profile selection in local access mode (no profiles needed)
                     XfinityTabView()
                 } else {
                     ProfileSelectionView()

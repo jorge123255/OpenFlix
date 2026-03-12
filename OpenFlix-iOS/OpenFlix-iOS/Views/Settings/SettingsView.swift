@@ -7,10 +7,6 @@ struct SettingsView: View {
     @State private var showSources = false
     @State private var showLogoutConfirm = false
     @State private var showClaimTokenCopied = false
-    @State private var tmdbApiKey = ""
-    @State private var tmdbKeyIsSet = false   // server already has a key
-    @State private var isSavingTMDB = false
-    @State private var tmdbSaved = false
 
     var body: some View {
         NavigationStack {
@@ -239,48 +235,27 @@ struct SettingsView: View {
                 if settingsViewModel.hasDVR {
                     Section("DVR") {
                         Toggle("Commercial Skip", isOn: $settingsViewModel.commercialSkipEnabled)
-                    }
-                }
 
-                // Metadata Section
-                Section {
-                    if tmdbKeyIsSet && tmdbApiKey.isEmpty {
-                        HStack {
-                            Label("TMDB API Key", systemImage: "key.fill")
-                            Spacer()
-                            Text("Configured")
-                                .foregroundColor(.green)
-                                .font(.subheadline)
+                        // ONNX AI Detection
+                        Toggle(isOn: $settingsViewModel.onnxDetectionEnabled) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Label("ONNX AI Detection", systemImage: "cpu")
+                                Text("Neural network for more accurate commercial detection")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
                         }
-                        Button("Replace Key") {
-                            tmdbKeyIsSet = false
-                        }
-                        .font(.subheadline)
-                        .foregroundColor(.blue)
-                    } else {
-                        HStack {
-                            SecureField(tmdbKeyIsSet ? "Enter new key to replace" : "Enter TMDB API key", text: $tmdbApiKey)
-                                .autocorrectionDisabled()
-                                .textInputAutocapitalization(.never)
-                            Spacer()
-                            if isSavingTMDB {
-                                ProgressView().scaleEffect(0.8)
-                            } else if tmdbSaved {
-                                Image(systemName: "checkmark.circle.fill")
-                                    .foregroundColor(.green)
-                            } else if !tmdbApiKey.isEmpty {
-                                Button("Save") {
-                                    saveTMDBKey()
-                                }
-                                .font(.caption.weight(.semibold))
-                                .foregroundColor(.blue)
+
+                        // AcoustID Intro Detection
+                        Toggle(isOn: $settingsViewModel.acoustidEnabled) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Label("Audio Fingerprint Intro Detection", systemImage: "waveform")
+                                Text("Find episode intros by comparing audio across episodes")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
                             }
                         }
                     }
-                } header: {
-                    Text("Metadata")
-                } footer: {
-                    Text("TMDB API key enables movie & TV show posters in DVR pass search. Get a free key at themoviedb.org.")
                 }
 
                 // Live TV Section
@@ -364,7 +339,6 @@ struct SettingsView: View {
         .task {
             await settingsViewModel.loadServerInfo()
             await settingsViewModel.loadSources()
-            await loadServerSettings()
         }
         .confirmationDialog("Sign Out", isPresented: $showLogoutConfirm) {
             Button("Sign Out", role: .destructive) {
@@ -373,37 +347,6 @@ struct SettingsView: View {
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("Are you sure you want to sign out?")
-        }
-    }
-
-    private func loadServerSettings() async {
-        do {
-            let response = try await OpenFlixAPI.shared.getAdminSettings()
-            if let key = response.settings["TMDBApiKey"]?.value as? String, !key.isEmpty {
-                await MainActor.run { tmdbKeyIsSet = true }
-            }
-        } catch {
-            // Non-admin users won't have access — silently ignore
-        }
-    }
-
-    private func saveTMDBKey() {
-        guard !tmdbApiKey.isEmpty else { return }
-        isSavingTMDB = true
-        Task {
-            do {
-                try await OpenFlixAPI.shared.updateAdminSettings(settings: ["TMDBApiKey": tmdbApiKey])
-                await MainActor.run {
-                    isSavingTMDB = false
-                    tmdbSaved = true
-                    tmdbKeyIsSet = true
-                    tmdbApiKey = ""
-                }
-                try? await Task.sleep(nanoseconds: 2_000_000_000)
-                await MainActor.run { tmdbSaved = false }
-            } catch {
-                await MainActor.run { isSavingTMDB = false }
-            }
         }
     }
 
@@ -540,6 +483,8 @@ struct SourcesView: View {
         }
     }
 
+    @State private var showAddEPG = false
+
     private var epgSourcesList: some View {
         List {
             ForEach(settingsViewModel.epgSources) { source in
@@ -549,6 +494,21 @@ struct SourcesView: View {
                     Task { try? await settingsViewModel.deleteEPGSource(source) }
                 }
             }
+
+            Button {
+                showAddEPG = true
+            } label: {
+                HStack {
+                    Image(systemName: "plus.circle.fill")
+                        .foregroundColor(.purple)
+                    Text("Add EPG Source")
+                        .foregroundColor(.purple)
+                }
+            }
+        }
+        .sheet(isPresented: $showAddEPG) {
+            AddEPGSourceView()
+                .environmentObject(settingsViewModel)
         }
     }
 }
@@ -799,32 +759,80 @@ struct EPGSourceRow: View {
     var onDelete: () -> Void
 
     var body: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(source.name)
-                    .font(.headline)
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(spacing: 6) {
+                        Text(source.name)
+                            .font(.headline)
+                        Text(source.type.displayName)
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundColor(source.type == .tvguide ? .purple : .blue)
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 1)
+                            .background((source.type == .tvguide ? Color.purple : Color.blue).opacity(0.15))
+                            .cornerRadius(3)
+                    }
 
-                HStack {
-                    Text(source.type.displayName)
-                    Text("\(source.channelCount) channels")
-                    Text("\(source.programCount) programs")
-                }
-                .font(.caption)
-                .foregroundColor(.secondary)
-            }
-
-            Spacer()
-
-            if !source.enabled {
-                Text("Disabled")
+                    HStack(spacing: 12) {
+                        Label("\(source.channelCount)", systemImage: "tv")
+                        Label("\(source.programCount)", systemImage: "doc.text")
+                    }
                     .font(.caption)
-                    .foregroundColor(.orange)
+                    .foregroundColor(.secondary)
+
+                    if let lastFetched = source.lastFetched {
+                        Text("Updated \(lastFetched, formatter: relativeDateFormatter)")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                }
+
+                Spacer()
+
+                if !source.enabled {
+                    Text("OFF")
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundColor(.orange)
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 1)
+                        .background(Color.orange.opacity(0.15))
+                        .cornerRadius(3)
+                }
+
+                Button(action: onRefresh) {
+                    Image(systemName: "arrow.clockwise")
+                }
+                .buttonStyle(.plain)
             }
 
-            Button(action: onRefresh) {
-                Image(systemName: "arrow.clockwise")
+            // Action bar
+            HStack(spacing: 8) {
+                if source.type == .tvguide, let zip = source.tvguideZipCode {
+                    Text("📍 \(zip)")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                }
+                if let days = source.tvguideDays, source.type == .tvguide {
+                    Text("\(days) days")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                }
+                Spacer()
+                Button(action: onRefresh) {
+                    Label("Refresh", systemImage: "arrow.clockwise")
+                        .font(.caption2)
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.mini)
+
+                Button(role: .destructive, action: onDelete) {
+                    Label("Delete", systemImage: "trash")
+                        .font(.caption2)
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.mini)
             }
-            .buttonStyle(.plain)
         }
         .contextMenu {
             Button(action: onRefresh) {
@@ -1158,6 +1166,252 @@ private let relativeDateFormatter: RelativeDateTimeFormatter = {
     formatter.unitsStyle = .short
     return formatter
 }()
+
+// MARK: - Add EPG Source View
+
+struct AddEPGSourceView: View {
+    @EnvironmentObject var settingsViewModel: SettingsViewModel
+    @Environment(\.dismiss) var dismiss
+
+    @State private var name = ""
+    @State private var selectedType: EPGSourceType = .tvguide
+    @State private var xmltvUrl = ""
+
+    // TVGuide fields
+    @State private var zipCode = ""
+    @State private var tvguideDays = 13
+    @State private var providers: [TVGuideProviderDTO] = []
+    @State private var selectedProvider: TVGuideProviderDTO?
+    @State private var isSearching = false
+    @State private var hasSearched = false
+
+    @State private var isLoading = false
+    @State private var error: String?
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                // Provider type picker
+                Section("Provider") {
+                    HStack(spacing: 12) {
+                        providerButton(.tvguide, label: "TV Guide", icon: "tv", color: .purple)
+                        providerButton(.xmltv, label: "XMLTV", icon: "doc.text", color: .blue)
+                        providerButton(.gracenote, label: "Gracenote", icon: "antenna.radiowaves.left.and.right", color: .green)
+                    }
+                    .listRowBackground(Color.clear)
+                    .listRowInsets(EdgeInsets())
+                    .padding(.vertical, 4)
+                }
+
+                Section("Name") {
+                    TextField("e.g. YouTube TV - Chicago", text: $name)
+                }
+
+                // Type-specific fields
+                switch selectedType {
+                case .tvguide:
+                    tvguideFields
+                case .xmltv:
+                    Section("XMLTV URL") {
+                        TextField("http://example.com/guide.xml", text: $xmltvUrl)
+                            .keyboardType(.URL)
+                            .autocapitalization(.none)
+                    }
+                case .gracenote:
+                    Section("XMLTV URL") {
+                        TextField("http://example.com/guide.xml", text: $xmltvUrl)
+                            .keyboardType(.URL)
+                            .autocapitalization(.none)
+                    }
+                }
+
+                if let error = error {
+                    Section {
+                        Text(error)
+                            .foregroundColor(.red)
+                            .font(.caption)
+                    }
+                }
+            }
+            .navigationTitle("Add EPG Source")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Add") {
+                        addSource()
+                    }
+                    .disabled(!canAdd || isLoading)
+                    .fontWeight(.bold)
+                }
+            }
+        }
+    }
+
+    private var canAdd: Bool {
+        guard !name.isEmpty else { return false }
+        switch selectedType {
+        case .tvguide:
+            return selectedProvider != nil && !zipCode.isEmpty
+        case .xmltv, .gracenote:
+            return !xmltvUrl.isEmpty
+        }
+    }
+
+    @ViewBuilder
+    private var tvguideFields: some View {
+        Section("Location") {
+            HStack {
+                TextField("Zip Code", text: $zipCode)
+                    .keyboardType(.numberPad)
+
+                Button {
+                    searchProviders()
+                } label: {
+                    if isSearching {
+                        ProgressView()
+                            .scaleEffect(0.8)
+                    } else {
+                        Text("Search")
+                            .fontWeight(.semibold)
+                    }
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.purple)
+                .disabled(zipCode.count < 5 || isSearching)
+            }
+        }
+
+        if hasSearched {
+            Section("Provider (\(providers.count) found)") {
+                if providers.isEmpty {
+                    Text("No providers found for this zip code")
+                        .foregroundColor(.secondary)
+                        .font(.caption)
+                } else {
+                    ForEach(providers) { provider in
+                        Button {
+                            selectedProvider = provider
+                            if name.isEmpty {
+                                name = provider.name
+                            }
+                        } label: {
+                            HStack {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(provider.name)
+                                        .font(.subheadline)
+                                        .foregroundColor(.primary)
+                                    HStack(spacing: 6) {
+                                        Text(provider.type.capitalized)
+                                            .font(.caption2)
+                                            .padding(.horizontal, 4)
+                                            .padding(.vertical, 1)
+                                            .background(Color.purple.opacity(0.15))
+                                            .cornerRadius(3)
+                                        if let city = provider.city, let state = provider.state {
+                                            Text("\(city), \(state)")
+                                                .font(.caption2)
+                                        }
+                                    }
+                                    .foregroundColor(.secondary)
+                                }
+                                Spacer()
+                                if selectedProvider?.id == provider.id {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .foregroundColor(.purple)
+                                        .font(.title3)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        if selectedProvider != nil {
+            Section("Settings") {
+                Picker("Days to Fetch", selection: $tvguideDays) {
+                    Text("3 days").tag(3)
+                    Text("7 days").tag(7)
+                    Text("13 days (max)").tag(13)
+                }
+            }
+        }
+    }
+
+    private func providerButton(_ type: EPGSourceType, label: String, icon: String, color: Color) -> some View {
+        Button {
+            withAnimation(.easeInOut(duration: 0.2)) {
+                selectedType = type
+            }
+        } label: {
+            VStack(spacing: 4) {
+                Image(systemName: icon)
+                    .font(.title3)
+                Text(label)
+                    .font(.caption)
+                    .fontWeight(.medium)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 10)
+            .background(selectedType == type ? color : Color(.systemGray5))
+            .foregroundColor(selectedType == type ? .white : .primary)
+            .cornerRadius(10)
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func searchProviders() {
+        isSearching = true
+        error = nil
+        Task {
+            do {
+                let response = try await settingsViewModel.discoverTVGuideProviders(zip: zipCode)
+                providers = response.providers
+                hasSearched = true
+                selectedProvider = nil
+            } catch {
+                self.error = "Failed to search: \(error.localizedDescription)"
+            }
+            isSearching = false
+        }
+    }
+
+    private func addSource() {
+        isLoading = true
+        error = nil
+        Task {
+            do {
+                switch selectedType {
+                case .tvguide:
+                    guard let provider = selectedProvider else { return }
+                    try await settingsViewModel.addEPGSource(
+                        name: name,
+                        url: nil,
+                        type: "tvguide",
+                        tvguideProviderId: String(provider.id),
+                        tvguideZipCode: zipCode,
+                        tvguideDays: tvguideDays
+                    )
+                case .xmltv:
+                    try await settingsViewModel.addEPGSource(name: name, url: xmltvUrl, type: "xmltv")
+                case .gracenote:
+                    try await settingsViewModel.addEPGSource(name: name, url: xmltvUrl, type: "gracenote")
+                }
+                // Auto-refresh after adding
+                if let newSource = settingsViewModel.epgSources.last {
+                    try? await settingsViewModel.refreshEPGSource(newSource)
+                }
+                dismiss()
+            } catch {
+                self.error = error.localizedDescription
+            }
+            isLoading = false
+        }
+    }
+}
 
 #Preview {
     SettingsView()

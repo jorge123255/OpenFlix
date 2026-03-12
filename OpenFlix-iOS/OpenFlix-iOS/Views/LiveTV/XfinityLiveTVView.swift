@@ -18,9 +18,9 @@ struct XfinityLiveTVView: View {
     @State private var programDetail: ProgramDetailContext?
     @State private var recordingToast: String?
     @State private var showRecordingToast = false
-    @State private var showOnNow = false
+    @State private var showSearch = false
     private let dvrRepository = DVRRepository()
-    
+
     enum ChannelFilter: String, CaseIterable {
         case all = "All channels"
         case favorites = "Favorites"
@@ -28,6 +28,28 @@ struct XfinityLiveTVView: View {
         case news = "News"
         case movies = "Movies"
         case kids = "Kids"
+
+        var shortLabel: String {
+            switch self {
+            case .all: return "All"
+            case .favorites: return "Favorites"
+            case .sports: return "Sports"
+            case .news: return "News"
+            case .movies: return "Movies"
+            case .kids: return "Kids"
+            }
+        }
+
+        var icon: String? {
+            switch self {
+            case .all: return nil
+            case .favorites: return "star.fill"
+            case .sports: return "sportscourt.fill"
+            case .news: return "newspaper.fill"
+            case .movies: return "film.fill"
+            case .kids: return "figure.child"
+            }
+        }
     }
     
     // Xfinity colors
@@ -58,12 +80,19 @@ struct XfinityLiveTVView: View {
         .background(bgColor.ignoresSafeArea())
         .navigationTitle(selectedFilter.rawValue)
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                NavigationLink(destination: WhatsOnNowView()) {
-                    Label("On Now", systemImage: "tv.badge.wifi")
+        .sheet(isPresented: $showSearch) {
+            EPGSearchView(
+                viewModel: viewModel,
+                isPresented: $showSearch,
+                onChannelSelect: { channel in
+                    showSearch = false
+                    selectedChannel = channel
+                },
+                onProgramSelect: { program, channel in
+                    showSearch = false
+                    programDetail = ProgramDetailContext(program: program, channel: channel)
                 }
-            }
+            )
         }
         .sheet(item: $programDetail) { ctx in
             ModernProgramDetailSheet(
@@ -155,6 +184,16 @@ struct XfinityLiveTVView: View {
                 }
 
                 Spacer()
+
+                // Search button
+                Button { showSearch = true } label: {
+                    Image(systemName: "magnifyingglass")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(.white)
+                        .padding(8)
+                        .background(cardBg)
+                        .cornerRadius(8)
+                }
             }
             .padding(.horizontal, 16)
             .padding(.top, 12)

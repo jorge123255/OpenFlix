@@ -110,12 +110,16 @@ extension XtreamSourceDTO {
 struct EPGSource: Identifiable, Hashable {
     let id: Int
     let name: String
-    let url: String
+    let url: String?
     let type: EPGSourceType
     let enabled: Bool
     let lastFetched: Date?
     let channelCount: Int
     let programCount: Int
+    // TVGuide-specific fields
+    let tvguideProviderId: String?
+    let tvguideZipCode: String?
+    let tvguideDays: Int?
 
     func hash(into hasher: inout Hasher) {
         hasher.combine(id)
@@ -129,11 +133,13 @@ struct EPGSource: Identifiable, Hashable {
 enum EPGSourceType: String, Codable {
     case xmltv
     case gracenote
+    case tvguide
 
     var displayName: String {
         switch self {
         case .xmltv: return "XMLTV"
         case .gracenote: return "Gracenote"
+        case .tvguide: return "TV Guide"
         }
     }
 }
@@ -144,11 +150,14 @@ extension EPGSourceDTO {
             id: id,
             name: name,
             url: url,
-            type: EPGSourceType(rawValue: type) ?? .xmltv,
+            type: EPGSourceType(rawValue: resolvedType) ?? .xmltv,
             enabled: enabled ?? true,
             lastFetched: lastFetched != nil ? ISO8601DateFormatter().date(from: lastFetched!) : nil,
             channelCount: channelCount ?? 0,
-            programCount: programCount ?? 0
+            programCount: programCount ?? 0,
+            tvguideProviderId: tvguideProviderId,
+            tvguideZipCode: tvguideZipCode,
+            tvguideDays: tvguideDays
         )
     }
 }

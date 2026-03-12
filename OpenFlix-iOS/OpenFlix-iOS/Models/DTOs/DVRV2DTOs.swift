@@ -159,40 +159,9 @@ struct StripAdsStatusResponse: Codable {
 // MARK: - DVR Management
 struct DVRPassesResponse: Codable { let passes: [DVRPassDTO] }
 struct DVRPassDTO: Codable {
-    let ID: Int
-    let PassType: String      // "series" | "team"
-    let Name: String
-    let Image: String?
-    let Paused: Bool
-    let Rerecord: Bool
-    let KeepOnly: String      // "" | "unwatched" | "last"
-    let KeepNum: Int
-    let PaddingStart: Int     // seconds
-    let PaddingEnd: Int       // seconds
-    let Limit: Int
-    let Priority: Int
-    let NumJobs: Int
-    let UpdatedAt: String
-    let TeamName: String?
-    let League: String?
-    // Filter conditions — JSON objects {"FieldName": value}
-    let EQ: [String: String]?
-    let NE: [String: String]?
-    let IN: [String: String]?
-    let NI: [String: String]?
-    let GT: [String: String]?
-    let LT: [String: String]?
-    let Tracker: ShowTrackerInfo?
-
-    enum CodingKeys: String, CodingKey {
-        case ID, Name, Image, Paused, Rerecord, KeepOnly, KeepNum
-        case PaddingStart, PaddingEnd, Limit, Priority, NumJobs, UpdatedAt
-        case TeamName, League
-        case EQ, NE, NI, GT, LT
-        case PassType = "Type"
-        case IN = "IN"
-        case Tracker = "Tracker"
-    }
+    let id: StringOrInt; let title: String; let type: String
+    let enabled: Bool?; let paused: Bool?; let recordingCount: Int?
+    let upcomingCount: Int?; let channelIds: [StringOrInt]?
 }
 
 struct DVRScheduleResponse: Codable { let entries: [DVRScheduleEntryDTO] }

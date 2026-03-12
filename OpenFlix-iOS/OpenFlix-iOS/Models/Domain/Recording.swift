@@ -194,77 +194,6 @@ extension RecordingDTO {
 
 // MARK: - Series Rule
 
-struct DVRPass: Identifiable {
-    let id: Int
-    let type: String        // "series" | "team"
-    let name: String
-    let image: String?
-    var paused: Bool
-    let rerecord: Bool
-    let keepOnly: String    // "" | "unwatched" | "last"
-    let keepNum: Int
-    let paddingStart: Int   // seconds
-    let paddingEnd: Int     // seconds
-    let limit: Int
-    let priority: Int
-    let numJobs: Int
-    let updatedAt: String
-    let teamName: String?
-    let league: String?
-    // Filter conditions
-    let eq: [String: String]?
-    let ne: [String: String]?
-    let inMap: [String: String]?
-    let ni: [String: String]?
-    let gt: [String: String]?
-    let lt: [String: String]?
-
-    // Show tracker (nil if no TMDB tracker for this pass)
-    let tracker: ShowTrackerInfo?
-
-    var isActive: Bool { !paused }
-
-    var typeLabel: String { type == "team" ? "Team Pass" : "Series Rule" }
-
-    var keepLabel: String {
-        switch keepOnly {
-        case "last": return "Keep last \(keepNum)"
-        case "unwatched": return keepNum > 0 ? "Keep \(keepNum) unwatched" : "Unwatched only"
-        default: return "Keep all"
-        }
-    }
-}
-
-extension DVRPassDTO {
-    func toDomain() -> DVRPass {
-        DVRPass(
-            id: ID,
-            type: PassType,
-            name: Name,
-            image: Image,
-            paused: Paused,
-            rerecord: Rerecord,
-            keepOnly: KeepOnly,
-            keepNum: KeepNum,
-            paddingStart: PaddingStart,
-            paddingEnd: PaddingEnd,
-            limit: Limit,
-            priority: Priority,
-            numJobs: NumJobs,
-            updatedAt: UpdatedAt,
-            teamName: TeamName,
-            league: League,
-            eq: EQ,
-            ne: NE,
-            inMap: IN,
-            ni: NI,
-            gt: GT,
-            lt: LT,
-            tracker: Tracker
-        )
-    }
-}
-
 struct SeriesRule: Identifiable {
     let id: Int
     let title: String
@@ -281,12 +210,12 @@ extension SeriesRuleDTO {
         SeriesRule(
             id: safeId,
             title: safeTitle,
-            channelId: channelId?.stringValue,
-            enabled: enabled ?? true,
-            prePadding: prePadding ?? 0,
-            postPadding: postPadding ?? 0,
-            keepCount: keepCount ?? 0,
-            recordingCount: recordingCount ?? 0
+            channelId: nil,
+            enabled: !(paused ?? false),
+            prePadding: (paddingStart ?? 0) / 60,
+            postPadding: (paddingEnd ?? 0) / 60,
+            keepCount: keepNum ?? 0,
+            recordingCount: numJobs ?? 0
         )
     }
 }

@@ -33,23 +33,44 @@ class AuthViewModel: ObservableObject {
     @Published var discoveryProgress: String?
     @Published var autoConnected = false
     @Published var isLocalAccessMode = false
+    @Published var connectionType: ConnectionType = .unknown
+    @Published var pendingDeepLink: AuthDeepLink?
+    @Published var serverConnectionManager = ServerConnectionManager.shared
+
+    // Debug discovery log visible in UI
+    @Published var discoveryLog: [String] = []
 
     // Cloud discovery URL — enables away-from-home reconnection via discover.openflix.app
-    private let cloudRegistryURL: String? = "https://discover.openflix.app"
+    private let cloudRegistryURL: String? = "https://discover.openflix.io"
 
     private let connectionTimeout: TimeInterval = 1.5
+
+    private func log(_ message: String) {
+        let ts = DateFormatter.localizedString(from: Date(), dateStyle: .none, timeStyle: .medium)
+        let entry = "[\(ts)] \(message)"
+        print("DISCOVERY: \(message)")
+        discoveryLog.append(entry)
+    }
 
     // MARK: - Initialization
 
     func initialize() async {
-        // Check if we have a saved server URL
-        if let savedURL = UserDefaults.standard.serverURL {
-            // Try to reconnect silently
+        discoveryLog = []
+        // Check if we have saved server info or a legacy saved URL
+        if serverConnectionManager.currentServer != nil || UserDefaults.standard.serverURL != nil {
             connectionMode = .atHome
             discoveryProgress = "Reconnecting to your server..."
             isDiscovering = true
+            log("Init: Have saved server, attempting reconnect...")
 
-            if await testServerConnection(savedURL) {
+            if await autoReconnect() {
+                log("Init: ✅ Auto-reconnect succeeded")
+                isDiscovering = false
+                return
+            }
+            log("Init: Auto-reconnect failed, trying saved URL...")
+
+            if let savedURL = UserDefaults.standard.serverURL, await testServerConnection(savedURL) {
                 await autoConnectToServer(DiscoveredServer(
                     name: "OpenFlix Server",
                     version: "unknown",
@@ -57,22 +78,28 @@ class AuthViewModel: ObservableObject {
                     host: savedURL.host ?? "",
                     port: savedURL.port ?? 32400
                 ))
+                isDiscovering = false
                 return
             }
 
             // Saved URL failed - try cloud discovery with saved machineId
             if let machineId = UserDefaults.standard.lastMachineId {
                 discoveryProgress = "Checking cloud for server..."
+                log("Init: Trying cloud with machineId \(machineId)")
                 if let server = await discoverViaCloud(machineId: machineId) {
-                    print("DISCOVERY: Found server via cloud machineId reconnect")
-                    await selectServer(server)
+                    log("Init: ✅ Found via cloud reconnect")
+                    await selectServer(server, isRemote: true)
                     isDiscovering = false
                     return
                 }
+                log("Init: Cloud reconnect failed")
             }
 
             // All reconnection failed, fall back to discovery
+            log("Init: All reconnection failed, starting fresh discovery")
             isDiscovering = false
+        } else {
+            log("Init: Fresh install (no saved server)")
         }
 
         // No saved URL (fresh install) — skip mode selection, go straight to discovery
@@ -106,6 +133,7 @@ class AuthViewModel: ObservableObject {
     func discoverServers() async {
         isDiscovering = true
         discoveredServers = []
+        discoveryLog = []
         error = nil
         discoveryProgress = "Searching for server..."
 
@@ -113,39 +141,103 @@ class AuthViewModel: ObservableObject {
             isDiscovering = false
         }
 
-        // Run UDP, Bonjour, and subnet scan all in parallel — first result wins
-        let server: DiscoveredServer? = await withTaskGroup(of: DiscoveredServer?.self) { group in
-            group.addTask { await self.discoverViaUDP(timeout: 5.0).first }
-            group.addTask { await self.discoverViaBonjour(timeout: 8.0).first }
-            group.addTask { await self.discoverViaSubnetScan() }
+        let localIP = getLocalIPAddress()
+        log("Local IP: \(localIP ?? "none (not on WiFi?)")")
+        log("Saved machineId: \(UserDefaults.standard.lastMachineId ?? "none")")
+        log("Saved server URL: \(UserDefaults.standard.serverURL?.absoluteString ?? "none")")
+        log("Starting parallel discovery: UDP + Bonjour + Subnet scan")
 
-            for await result in group {
-                if let found = result {
-                    group.cancelAll()
-                    return found
+        // Run UDP and subnet scan in parallel — first result wins
+        // NOTE: Bonjour uses withCheckedContinuation which can hang if no server found,
+        // blocking the entire task group. So we use detached tasks + AsyncStream instead.
+        let subnetStr = localIP.flatMap({ subnetPrefix(from: $0) })
+        
+        let server: DiscoveredServer? = await withCheckedContinuation { continuation in
+            var resumed = false
+            let lock = NSLock()
+            
+            func deliver(_ server: DiscoveredServer?) {
+                lock.lock()
+                guard !resumed else { lock.unlock(); return }
+                if server != nil { resumed = true }
+                lock.unlock()
+                if server != nil {
+                    continuation.resume(returning: server)
                 }
             }
-            return nil
+            
+            // Subnet scan (fastest, most reliable)
+            Task {
+                if let subnet = subnetStr {
+                    await MainActor.run { self.log("Subnet: Scanning \(subnet).1-254 :32400") }
+                    let result = await self.discoverViaSubnetScan()
+                    await MainActor.run { self.log("Subnet: \(result != nil ? "Found \(result!.host):\(result!.port)" : "No server on subnet")") }
+                    deliver(result)
+                } else {
+                    await MainActor.run { self.log("Subnet: Skipped (no local IP)") }
+                }
+            }
+            
+            // UDP broadcast
+            Task {
+                await MainActor.run { self.log("UDP: Sending broadcast to 255.255.255.255:32412") }
+                let result = await self.discoverViaUDP(timeout: 5.0).first
+                await MainActor.run { self.log("UDP: \(result != nil ? "Found \(result!.host):\(result!.port)" : "No response")") }
+                deliver(result)
+            }
+            
+            // Bonjour (can hang — fire and forget, deliver if it finds something)
+            Task {
+                await MainActor.run { self.log("Bonjour: Browsing _openflix._tcp.local") }
+                let result = await self.discoverViaBonjour(timeout: 8.0).first
+                await MainActor.run { self.log("Bonjour: \(result != nil ? "Found \(result!.host):\(result!.port)" : "No response")") }
+                deliver(result)
+            }
+            
+            // Timeout: if nothing found after 12 seconds, give up
+            Task {
+                try? await Task.sleep(nanoseconds: 12_000_000_000)
+                lock.lock()
+                guard !resumed else { lock.unlock(); return }
+                resumed = true
+                lock.unlock()
+                await MainActor.run { self.log("Discovery: Timeout (12s), no server found") }
+                continuation.resume(returning: nil)
+            }
         }
+
+        log("Discovery returned: \(server?.host ?? "nil")")
 
         if let found = server {
             discoveredServers.append(found)
-            print("DISCOVERY: Found server: \(found.name) at \(found.host):\(found.port)")
+            log("✅ Found server: \(found.name) at \(found.host):\(found.port)")
+            log("Calling selectServer -> autoConnectToServer...")
+            serverConnectionManager.saveDiscoveredServer(found, isRemote: false)
             await selectServer(found)
+            log("✅ selectServer completed. isAuthenticated=\(isAuthenticated), isLocalAccessMode=\(isLocalAccessMode)")
             return
         }
+
+        log("Local discovery failed. Trying cloud registry...")
 
         // Fallback: cloud registry with saved machineId
         if let machineId = UserDefaults.standard.lastMachineId {
             discoveryProgress = "Checking cloud registry..."
+            log("Cloud: Looking up machineId \(machineId) at \(cloudRegistryURL ?? "nil")")
             if let cloudServer = await discoverViaCloud(machineId: machineId) {
                 discoveredServers.append(cloudServer)
-                print("DISCOVERY: Found server via cloud: \(cloudServer.name) at \(cloudServer.host):\(cloudServer.port)")
-                await selectServer(cloudServer)
+                log("✅ Found via cloud: \(cloudServer.name) at \(cloudServer.host):\(cloudServer.port)")
+                serverConnectionManager.saveDiscoveredServer(cloudServer, isRemote: true)
+                await selectServer(cloudServer, isRemote: true)
                 return
+            } else {
+                log("Cloud: No result for machineId \(machineId)")
             }
+        } else {
+            log("Cloud: Skipped (no saved machineId — first install?)")
         }
 
+        log("❌ All discovery methods failed")
         discoveryProgress = nil
         error = "No servers found on your network. Make sure your OpenFlix server is running."
     }
@@ -178,7 +270,7 @@ class AuthViewModel: ObservableObject {
         }
     }
 
-    private func getLocalIPAddress() -> String? {
+    func getLocalIPAddress() -> String? {
         var address: String?
         var ifaddr: UnsafeMutablePointer<ifaddrs>?
         guard getifaddrs(&ifaddr) == 0, let firstAddr = ifaddr else { return nil }
@@ -202,7 +294,7 @@ class AuthViewModel: ObservableObject {
         return address
     }
 
-    private func subnetPrefix(from ip: String) -> String? {
+    func subnetPrefix(from ip: String) -> String? {
         let parts = ip.split(separator: ".")
         guard parts.count == 4 else { return nil }
         return parts.prefix(3).joined(separator: ".")
@@ -254,15 +346,15 @@ class AuthViewModel: ObservableObject {
             }
 
             let name = json["name"] as? String ?? "OpenFlix Server"
-            let host = json["publicIp"] as? String ?? json["host"] as? String ?? ""
+            let publicIp = json["publicIp"] as? String ?? json["host"] as? String ?? ""
             let port = json["port"] as? Int ?? 32400
             let version = json["version"] as? String ?? "unknown"
 
-            guard !host.isEmpty else { return nil }
-
-            // Verify this server is actually reachable
-            let server = DiscoveredServer(name: name, version: version, machineId: machineId, host: host, port: port)
+            // Connect via publicIp:port (user forwards port 32400 on their router)
+            guard !publicIp.isEmpty else { return nil }
+            let server = DiscoveredServer(name: name, version: version, machineId: machineId, host: publicIp, port: port)
             if await testServerConnection(server.url) {
+                serverConnectionManager.saveDiscoveredServer(server, isRemote: true)
                 return server
             }
         } catch {
@@ -302,6 +394,7 @@ class AuthViewModel: ObservableObject {
 
             let server = DiscoveredServer(name: name, version: version, machineId: machineId, host: host, port: port)
             if await testServerConnection(server.url) {
+                serverConnectionManager.saveDiscoveredServer(server, isRemote: true)
                 return server
             }
         } catch {
@@ -370,6 +463,7 @@ class AuthViewModel: ObservableObject {
                     print("DISCOVERY: Validated server at \(url) - machineId: \(machineId)")
                     // Save machineId for cloud reconnection
                     UserDefaults.standard.lastMachineId = machineId
+                    KeychainHelper.shared.saveMachineId(machineId)
                     return true
                 }
             }
@@ -387,6 +481,7 @@ class AuthViewModel: ObservableObject {
                let machineId = server["machineIdentifier"] as? String, !machineId.isEmpty {
                 print("DISCOVERY: Validated server via /api/status at \(url)")
                 UserDefaults.standard.lastMachineId = machineId
+                KeychainHelper.shared.saveMachineId(machineId)
                 return true
             }
         } catch {}
@@ -396,41 +491,43 @@ class AuthViewModel: ObservableObject {
 
     // MARK: - Server Connection
 
-    private func autoConnectToServer(_ server: DiscoveredServer) async {
+    private func autoConnectToServer(_ server: DiscoveredServer, isRemote: Bool = false) async {
         isLoading = true
         defer { isLoading = false }
 
         do {
+            serverConnectionManager.saveDiscoveredServer(server, isRemote: isRemote)
             // Configure API with discovered server
             await OpenFlixAPI.shared.configure(serverURL: server.url, token: nil)
             UserDefaults.standard.serverURL = server.url
             UserDefaults.standard.lastMachineId = server.machineId
+            KeychainHelper.shared.saveMachineId(server.machineId)
+            connectionType = isRemote ? .remote : .local
 
             // Enable local access mode - no login required
             isLocalAccessMode = true
             autoConnected = true
             isAuthenticated = true
 
-            // Load profiles - retry once if local network permission hasn't been granted yet
-            // (UDP discovery can trigger the permission dialog, but HTTP requests may race ahead)
+            // Load profiles (non-fatal - server may not have profiles endpoint yet)
             do {
                 try await loadProfiles()
+                // Auto-select first profile if only one exists (single user mode)
+                if profiles.count == 1, let profile = profiles.first {
+                    currentProfile = profile
+                    UserDefaults.standard.currentProfileUUID = profile.uuid
+                    print("Auto-selected single profile: \(profile.name)")
+                }
             } catch {
-                print("First profile load failed (likely local network permission pending), retrying in 2s...")
-                try await Task.sleep(nanoseconds: 2_000_000_000)
-                try await loadProfiles()
+                print("Profile loading failed (non-fatal, continuing): \(error)")
+                // Profiles aren't required for local access - continue without them
             }
 
-            // Auto-select first profile if only one exists (single user mode)
-            if profiles.count == 1, let profile = profiles.first {
-                currentProfile = profile
-                UserDefaults.standard.currentProfileUUID = profile.uuid
-                print("Auto-selected single profile: \(profile.name)")
-            }
+            await serverConnectionManager.refreshConnectionInfo(baseURL: server.url)
 
             print("Auto-connected to local server: \(server.name) at \(server.url)")
         } catch {
-            print("Failed to auto-connect after retry: \(error)")
+            print("Failed to auto-connect: \(error)")
             // Fall back to manual login
             isLocalAccessMode = false
             autoConnected = false
@@ -458,6 +555,42 @@ class AuthViewModel: ObservableObject {
             let server = DiscoveredServer(name: name, version: "unknown", machineId: machineId, host: host, port: port)
             return (server, name)
         } catch { return nil }
+    }
+
+    /// Resolve an invite code to a server (for the simplified invite flow).
+    func acceptInvite(code: String) async -> DiscoveredServer? {
+        isLoading = true
+        defer { isLoading = false }
+
+        // Try to resolve the invite code via the relay/discovery service
+        guard let serverURL = UserDefaults.standard.serverURL else { return nil }
+        let resolveURL = serverURL.appendingPathComponent("api/invite/\(code)/resolve")
+        var request = URLRequest(url: resolveURL)
+        request.httpMethod = "GET"
+        request.timeoutInterval = 10
+
+        struct ResolveResponse: Decodable {
+            let machineId: String
+            let name: String
+            let host: String
+            let port: Int
+        }
+
+        do {
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard let http = response as? HTTPURLResponse, http.statusCode == 200 else { return nil }
+            let resolved = try JSONDecoder().decode(ResolveResponse.self, from: data)
+            return DiscoveredServer(
+                name: resolved.name,
+                version: "",
+                machineId: resolved.machineId,
+                host: resolved.host,
+                port: resolved.port
+            )
+        } catch {
+            self.error = "Could not resolve invite code: \(error.localizedDescription)"
+            return nil
+        }
     }
 
     /// Accepts an invite: registers a new account on the home server and auto-connects.
@@ -498,11 +631,15 @@ class AuthViewModel: ObservableObject {
             // Save server + token, mark authenticated
             await OpenFlixAPI.shared.configure(serverURL: server.url, token: resp.authToken)
             UserDefaults.standard.serverURL = server.url
-            UserDefaults.standard.lastMachineId = server.machineId
+            let machineId = resp.machineId.isEmpty ? server.machineId : resp.machineId
+            UserDefaults.standard.lastMachineId = machineId
+            KeychainHelper.shared.saveMachineId(machineId)
+            serverConnectionManager.saveDiscoveredServer(server, isRemote: true)
             isAuthenticated = true
             isLocalAccessMode = false
             ensureDeviceRegistered()
             try? await loadProfiles()
+            await serverConnectionManager.refreshConnectionInfo(baseURL: server.url)
         } catch {
             self.error = "Could not connect to server"
         }
@@ -528,11 +665,69 @@ class AuthViewModel: ObservableObject {
         if success {
             UserDefaults.standard.serverURL = url
             await OpenFlixAPI.shared.configure(serverURL: url, token: nil)
+            let machineId = UserDefaults.standard.lastMachineId
+                ?? KeychainHelper.shared.getMachineId()
+                ?? url.host
+                ?? UUID().uuidString
+            let isRemote = connectionMode == .awayFromHome
+            let saved = SavedServer(
+                machineId: machineId,
+                name: "OpenFlix Server",
+                localURLs: isRemote ? [] : [url.absoluteString],
+                remoteURL: isRemote ? url.absoluteString : nil,
+                tailscaleURL: nil,
+                lastConnectedURL: url.absoluteString,
+                connectionType: isRemote ? .remote : .local
+            )
+            serverConnectionManager.saveServer(saved)
+            connectionType = saved.connectionType
+            await serverConnectionManager.refreshConnectionInfo(baseURL: url)
             return true
         } else {
             error = "Could not connect to server at \(cleanURL)"
             return false
         }
+    }
+
+    func autoReconnect() async -> Bool {
+        guard let url = await serverConnectionManager.autoReconnect() else {
+            return false
+        }
+
+        let machineId = serverConnectionManager.currentServer?.machineId
+            ?? UserDefaults.standard.lastMachineId
+            ?? KeychainHelper.shared.getMachineId()
+            ?? url.host
+            ?? "server"
+        let name = serverConnectionManager.currentServer?.name ?? "OpenFlix Server"
+        let isRemote = serverConnectionManager.currentServer?.connectionType == .remote
+
+        await autoConnectToServer(DiscoveredServer(
+            name: name,
+            version: "unknown",
+            machineId: machineId,
+            host: url.host ?? "",
+            port: url.port ?? 32400
+        ), isRemote: isRemote)
+
+        return true
+    }
+
+    func reconnectSmartly() async -> URL? {
+        let server = serverConnectionManager.currentServer
+            ?? (UserDefaults.standard.lastMachineId.flatMap { serverConnectionManager.server(for: $0) })
+
+        guard let target = server else { return nil }
+
+        if let url = await serverConnectionManager.connect(to: target) {
+            await OpenFlixAPI.shared.configure(serverURL: url, token: KeychainHelper.shared.getToken())
+            UserDefaults.standard.serverURL = url
+            connectionType = serverConnectionManager.currentServer?.connectionType ?? .unknown
+            await serverConnectionManager.refreshConnectionInfo(baseURL: url)
+            return url
+        }
+
+        return nil
     }
 
     // MARK: - Auth State
@@ -603,6 +798,23 @@ class AuthViewModel: ObservableObject {
             // Load profiles
             try await loadProfiles()
 
+            let machineId = UserDefaults.standard.lastMachineId
+                ?? KeychainHelper.shared.getMachineId()
+                ?? serverURL.host
+                ?? UUID().uuidString
+            let saved = SavedServer(
+                machineId: machineId,
+                name: "OpenFlix Server",
+                localURLs: [],
+                remoteURL: serverURL.absoluteString,
+                tailscaleURL: nil,
+                lastConnectedURL: serverURL.absoluteString,
+                connectionType: .remote
+            )
+            serverConnectionManager.saveServer(saved)
+            connectionType = .remote
+            await serverConnectionManager.refreshConnectionInfo(baseURL: serverURL)
+
         } catch let networkError as NetworkError {
             error = networkError.errorDescription
         } catch {
@@ -629,6 +841,23 @@ class AuthViewModel: ObservableObject {
             ensureDeviceRegistered()
 
             try await loadProfiles()
+
+            let machineId = UserDefaults.standard.lastMachineId
+                ?? KeychainHelper.shared.getMachineId()
+                ?? serverURL.host
+                ?? UUID().uuidString
+            let saved = SavedServer(
+                machineId: machineId,
+                name: "OpenFlix Server",
+                localURLs: [],
+                remoteURL: serverURL.absoluteString,
+                tailscaleURL: nil,
+                lastConnectedURL: serverURL.absoluteString,
+                connectionType: .remote
+            )
+            serverConnectionManager.saveServer(saved)
+            connectionType = .remote
+            await serverConnectionManager.refreshConnectionInfo(baseURL: serverURL)
 
         } catch let networkError as NetworkError {
             error = networkError.errorDescription
@@ -689,8 +918,8 @@ class AuthViewModel: ObservableObject {
 
     // MARK: - Manual Server Selection
 
-    func selectServer(_ server: DiscoveredServer) async {
-        await autoConnectToServer(server)
+    func selectServer(_ server: DiscoveredServer, isRemote: Bool = false) async {
+        await autoConnectToServer(server, isRemote: isRemote)
     }
 
     // MARK: - Legacy compatibility
@@ -713,15 +942,6 @@ struct DiscoveredServer: Identifiable {
 
     var url: URL {
         URL(string: "http://\(host):\(port)")!
-    }
-}
-
-// MARK: - UserDefaults Extension for machineId
-
-extension UserDefaults {
-    var lastMachineId: String? {
-        get { string(forKey: "openflix_last_machine_id") }
-        set { set(newValue, forKey: "openflix_last_machine_id") }
     }
 }
 

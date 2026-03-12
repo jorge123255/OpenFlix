@@ -178,11 +178,7 @@ struct EPGProgramCellModern: View {
             if program.hasRecording {
                 recordingIndicator
             }
-
-            if program.hasCC {
-                modernBadge("CC", color: .gray)
-            }
-
+            
             Spacer()
         }
     }
@@ -527,6 +523,7 @@ struct EPGQuickNavBar: View {
     let onJumpToNow: () -> Void
     let onJumpToPrimetime: () -> Void
     let onShowCategories: () -> Void
+    let onMyTeams: () -> Void
     let onSearch: () -> Void
     
     var body: some View {
@@ -535,6 +532,7 @@ struct EPGQuickNavBar: View {
                 quickNavButton(icon: "clock.fill", label: "Now", action: onJumpToNow)
                 quickNavButton(icon: "moon.stars.fill", label: "Tonight", action: onJumpToPrimetime)
                 quickNavButton(icon: "line.3.horizontal.decrease", label: "Filter", action: onShowCategories)
+                quickNavButton(icon: "sportscourt.fill", label: "My Teams", action: onMyTeams)
                 quickNavButton(icon: "magnifyingglass", label: "Search", action: onSearch)
             }
             .padding(.horizontal, 16)
@@ -614,6 +612,7 @@ struct EPGQuickNavBar: View {
                 onJumpToNow: {},
                 onJumpToPrimetime: {},
                 onShowCategories: {},
+                onMyTeams: {},
                 onSearch: {}
             )
             

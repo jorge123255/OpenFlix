@@ -10,24 +10,22 @@ struct LoginView: View {
     @State private var showRegister = false
     @State private var isServerConnected = false
     @State private var claimCode = ""
-    @State private var isSearchingByCode = false
-    // Invite flow
     @State private var inviteCode = ""
+    @State private var isSearchingByCode = false
     @State private var isResolvingInvite = false
-    @State private var resolvedInviteServer: DiscoveredServer?
-    @State private var resolvedInviteServerName = ""
-    @State private var resolvedInviteToken = ""
-    @State private var showInviteRegister = false
-    @State private var inviteRegUsername = ""
-    @State private var inviteRegEmail = ""
-    @State private var inviteRegPassword = ""
+    @State private var inviteStatus: InviteStatus?
+    @State private var showOtherWays = false
+    @State private var selectedOtherWay: OtherConnectOption?
+    @State private var showAwayFromHomeSheet = false
+    @State private var awayCode = ""
+    @State private var awayIsLoading = false
+    @State private var awayError: String?
 
     // Animation states
     @State private var logoScale: CGFloat = 0.8
     @State private var logoOpacity: Double = 0
     @State private var cardOffset: CGFloat = 50
     @State private var cardOpacity: Double = 0
-    @State private var scanPulse = false
 
     @FocusState private var focusedField: Field?
 
@@ -35,13 +33,44 @@ struct LoginView: View {
         case serverURL, username, password
     }
 
+    enum InviteStatus: Equatable {
+        case success(String)
+        case failure(String)
+    }
+
+    enum OtherConnectOption: String, CaseIterable, Identifiable {
+        case code
+        case manual
+
+        var id: String { rawValue }
+
+        var title: String {
+            switch self {
+            case .code: return "Away from Home"
+            case .manual: return "Enter server address manually"
+            }
+        }
+
+        var subtitle: String? {
+            switch self {
+            case .code: return "Enter your 4-character pairing code"
+            case .manual: return nil
+            }
+        }
+
+        var icon: String {
+            switch self {
+            case .code: return "globe"
+            case .manual: return "link"
+            }
+        }
+    }
+
     var body: some View {
         ZStack {
-            // Background - dark purple matching main app theme
-            Color(red: 17/255, green: 12/255, blue: 33/255)
+            OpenFlixColors.background
                 .ignoresSafeArea()
 
-            // Content
             ScrollView {
                 VStack(spacing: 0) {
                     Spacer().frame(height: 60)
@@ -64,7 +93,6 @@ struct LoginView: View {
 
                     Spacer().frame(height: 40)
 
-                    // Auth Card with animation
                     VStack(spacing: 0) {
                         authContent
                     }
@@ -86,6 +114,10 @@ struct LoginView: View {
             Task {
                 await authViewModel.initialize()
             }
+        }
+        .onChange(of: authViewModel.pendingDeepLink) { _, newValue in
+            guard let newValue else { return }
+            handleDeepLink(newValue)
         }
         .sheet(isPresented: $showRegister) {
             RegisterView()
@@ -113,184 +145,35 @@ struct LoginView: View {
         if isServerConnected {
             loginFormView
         } else {
-            switch authViewModel.connectionMode {
-            case .selection:
-                modeSelectionView
-            case .atHome:
-                discoveryView
-            case .awayFromHome:
-                serverFormView
-            }
+            connectionFlowView
         }
     }
 
-    // MARK: - Mode Selection (At Home / Away from Home)
+    // MARK: - Unified Connection Flow
 
-    private var modeSelectionView: some View {
+    private var connectionFlowView: some View {
         VStack(spacing: 24) {
-            Text("How are you connecting?")
-                .font(.title2)
-                .fontWeight(.semibold)
-                .foregroundColor(OpenFlixColors.textPrimary)
-                .multilineTextAlignment(.center)
-
-            // At Home button
-            Button(action: {
-                withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-                    authViewModel.selectAtHome()
-                }
-            }) {
-                HStack(spacing: 16) {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(OpenFlixColors.primary.opacity(0.2))
-                            .frame(width: 56, height: 56)
-                        Image(systemName: "house.fill")
-                            .font(.system(size: 24))
-                            .foregroundColor(OpenFlixColors.primary)
-                    }
-
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("At Home")
-                            .font(.headline)
-                            .foregroundColor(OpenFlixColors.textPrimary)
-                        Text("Auto-discover server on your network")
-                            .font(.caption)
-                            .foregroundColor(OpenFlixColors.textSecondary)
-                    }
-
-                    Spacer()
-
-                    Image(systemName: "chevron.right")
-                        .foregroundColor(OpenFlixColors.textTertiary)
-                }
-                .padding(16)
-                .background(OpenFlixColors.surfaceVariant)
-                .cornerRadius(16)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 16)
-                        .stroke(OpenFlixColors.surfaceElevated, lineWidth: 1)
-                )
-            }
-            .buttonStyle(ScaleButtonStyle())
-
-            // Away from Home button
-            Button(action: {
-                withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-                    authViewModel.selectAwayFromHome()
-                }
-            }) {
-                HStack(spacing: 16) {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(OpenFlixColors.secondary.opacity(0.2))
-                            .frame(width: 56, height: 56)
-                        Image(systemName: "globe")
-                            .font(.system(size: 24))
-                            .foregroundColor(OpenFlixColors.secondary)
-                    }
-
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Away from Home")
-                            .font(.headline)
-                            .foregroundColor(OpenFlixColors.textPrimary)
-                        Text("Enter your server URL manually")
-                            .font(.caption)
-                            .foregroundColor(OpenFlixColors.textSecondary)
-                    }
-
-                    Spacer()
-
-                    Image(systemName: "chevron.right")
-                        .foregroundColor(OpenFlixColors.textTertiary)
-                }
-                .padding(16)
-                .background(OpenFlixColors.surfaceVariant)
-                .cornerRadius(16)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 16)
-                        .stroke(OpenFlixColors.surfaceElevated, lineWidth: 1)
-                )
-            }
-            .buttonStyle(ScaleButtonStyle())
-        }
-    }
-
-    // MARK: - Discovery View (At Home)
-
-    private var discoveryView: some View {
-        VStack(spacing: 24) {
-            // Header with back button
-            HStack {
-                Button(action: {
-                    withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-                        authViewModel.goBackToModeSelection()
-                    }
-                }) {
-                    Image(systemName: "arrow.left")
-                        .font(.system(size: 18, weight: .medium))
-                        .foregroundColor(OpenFlixColors.textSecondary)
-                        .frame(width: 36, height: 36)
-                        .background(OpenFlixColors.surfaceVariant)
-                        .clipShape(Circle())
-                }
-                .buttonStyle(ScaleButtonStyle())
-
-                Spacer()
-
-                Text("Find Your Server")
+            VStack(spacing: 8) {
+                Text("Looking for your server...")
                     .font(.title2)
                     .fontWeight(.semibold)
                     .foregroundColor(OpenFlixColors.textPrimary)
 
-                Spacer()
-
-                // Balance spacer
-                Color.clear.frame(width: 36, height: 36)
+                Text("We will automatically find it on your network.")
+                    .font(.subheadline)
+                    .foregroundColor(OpenFlixColors.textSecondary)
             }
 
-            // Discovery status
-            if authViewModel.isDiscovering {
-                // Animated scanning view
-                VStack(spacing: 16) {
-                    ZStack {
-                        // Pulsing rings
-                        ForEach(0..<3, id: \.self) { i in
-                            Circle()
-                                .stroke(OpenFlixColors.primary.opacity(0.3), lineWidth: 2)
-                                .frame(width: 60 + CGFloat(i * 30), height: 60 + CGFloat(i * 30))
-                                .scaleEffect(scanPulse ? 1.2 : 1.0)
-                                .opacity(scanPulse ? 0 : 0.5)
-                                .animation(
-                                    .easeOut(duration: 1.5)
-                                    .repeatForever(autoreverses: false)
-                                    .delay(Double(i) * 0.3),
-                                    value: scanPulse
-                                )
-                        }
+            RadarScanView(
+                statusText: authViewModel.discoveryProgress ?? "Searching your network...",
+                isScanning: authViewModel.isDiscovering
+            )
 
-                        // Center icon
-                        Image(systemName: "antenna.radiowaves.left.and.right")
-                            .font(.system(size: 28))
-                            .foregroundColor(OpenFlixColors.primary)
-                    }
-                    .frame(height: 120)
-                    .onAppear { scanPulse = true }
-
-                    Text(authViewModel.discoveryProgress ?? "Scanning network...")
-                        .font(.subheadline)
-                        .foregroundColor(OpenFlixColors.textSecondary)
-                        .multilineTextAlignment(.center)
-                }
-                .padding(.vertical, 8)
-            }
-
-            // Discovered servers list
             if !authViewModel.discoveredServers.isEmpty {
                 VStack(alignment: .leading, spacing: 12) {
-                    HStack {
+                    HStack(spacing: 8) {
                         Image(systemName: "checkmark.circle.fill")
-                            .foregroundColor(OpenFlixColors.primary)
+                            .foregroundColor(OpenFlixColors.success)
                         Text("Servers Found")
                             .font(.subheadline)
                             .foregroundColor(OpenFlixColors.textSecondary)
@@ -303,27 +186,12 @@ struct LoginView: View {
                             }
                         }
                     }
-
-                    // Divider
-                    HStack {
-                        Rectangle()
-                            .fill(OpenFlixColors.surfaceVariant)
-                            .frame(height: 1)
-                        Text("or enter manually")
-                            .font(.caption)
-                            .foregroundColor(OpenFlixColors.textTertiary)
-                        Rectangle()
-                            .fill(OpenFlixColors.surfaceVariant)
-                            .frame(height: 1)
-                    }
-                    .padding(.vertical, 8)
                 }
                 .transition(.asymmetric(insertion: .scale.combined(with: .opacity), removal: .opacity))
             }
 
-            // No servers found
             if !authViewModel.isDiscovering && authViewModel.discoveredServers.isEmpty && authViewModel.error != nil {
-                VStack(spacing: 16) {
+                VStack(spacing: 12) {
                     Image(systemName: "tv.slash")
                         .font(.system(size: 40))
                         .foregroundColor(OpenFlixColors.textTertiary)
@@ -337,76 +205,31 @@ struct LoginView: View {
                         .foregroundColor(OpenFlixColors.textTertiary)
                         .multilineTextAlignment(.center)
                 }
-                .padding(.vertical, 16)
+                .padding(.vertical, 8)
             }
 
-            // Manual URL entry (always shown)
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Server URL")
-                    .font(.subheadline)
-                    .foregroundColor(OpenFlixColors.textSecondary)
-
-                HStack {
-                    Image(systemName: "link")
-                        .foregroundColor(OpenFlixColors.textTertiary)
-                    TextField("192.168.1.100:32400", text: $serverURL)
-                        .textFieldStyle(.plain)
-                        .font(.body)
-                        .autocapitalization(.none)
-                        .disableAutocorrection(true)
-                        .focused($focusedField, equals: .serverURL)
-                }
-                .padding(14)
-                .background(OpenFlixColors.surfaceVariant)
-                .cornerRadius(12)
-            }
-
-            // Action buttons — always show Connect, only show Scan Again when not searching
-            HStack(spacing: 12) {
-                if !authViewModel.isDiscovering {
-                    // Scan Again
-                    Button(action: {
-                        scanPulse = false
-                        Task {
-                            await authViewModel.discoverServers()
-                        }
-                    }) {
-                        HStack(spacing: 6) {
-                            Image(systemName: "arrow.clockwise")
-                            Text("Scan Again")
-                        }
-                        .font(.subheadline.weight(.medium))
-                        .foregroundColor(OpenFlixColors.primary)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                        .background(OpenFlixColors.primary.opacity(0.15))
-                        .cornerRadius(12)
+            if !authViewModel.isDiscovering {
+                Button(action: {
+                    Task {
+                        await authViewModel.discoverServers()
                     }
-                    .buttonStyle(ScaleButtonStyle())
-                }
-
-                // Connect manually — always visible
-                Button(action: connectToServer) {
+                }) {
                     HStack(spacing: 6) {
-                        if authViewModel.isLoading {
-                            ProgressView()
-                                .tint(OpenFlixColors.background)
-                                .scaleEffect(0.8)
-                        }
-                        Text("Connect")
+                        Image(systemName: "arrow.clockwise")
+                        Text("Scan Again")
                     }
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundColor(OpenFlixColors.background)
+                    .font(.subheadline.weight(.medium))
+                    .foregroundColor(OpenFlixColors.primary)
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
-                    .background(serverURL.isEmpty ? OpenFlixColors.primary.opacity(0.5) : OpenFlixColors.primary)
+                    .padding(.vertical, 12)
+                    .background(OpenFlixColors.primary.opacity(0.15))
                     .cornerRadius(12)
                 }
                 .buttonStyle(ScaleButtonStyle())
-                .disabled(serverURL.isEmpty || authViewModel.isLoading)
             }
 
-            // Error
+            otherWaysSection
+
             if let error = authViewModel.error, !authViewModel.isDiscovering {
                 HStack(spacing: 8) {
                     Image(systemName: "exclamationmark.triangle.fill")
@@ -419,71 +242,201 @@ struct LoginView: View {
                 .background(OpenFlixColors.error.opacity(0.1))
                 .cornerRadius(8)
             }
+
+            // Debug log (tap to expand)
+            if !authViewModel.discoveryLog.isEmpty {
+                DisclosureGroup("Discovery Log") {
+                    ScrollView {
+                        Text(authViewModel.discoveryLog.joined(separator: "\n"))
+                            .font(.system(.caption2, design: .monospaced))
+                            .foregroundColor(OpenFlixColors.textTertiary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    .frame(maxHeight: 150)
+                }
+                .font(.caption)
+                .foregroundColor(OpenFlixColors.textTertiary)
+                .padding(8)
+                .background(OpenFlixColors.surfaceVariant.opacity(0.5))
+                .cornerRadius(8)
+            }
         }
         .animation(.spring(response: 0.4, dampingFraction: 0.8), value: authViewModel.discoveredServers.isEmpty)
         .animation(.spring(response: 0.4, dampingFraction: 0.8), value: authViewModel.isDiscovering)
     }
 
-    // MARK: - Server Form View (Away from Home)
+    private var otherWaysSection: some View {
+        VStack(spacing: 12) {
+            // Away from Home — opens sheet
+            Button(action: { showAwayFromHomeSheet = true }) {
+                HStack(spacing: 12) {
+                    Image(systemName: OtherConnectOption.code.icon)
+                        .foregroundColor(OpenFlixColors.primary)
+                        .frame(width: 24)
 
-    private var serverFormView: some View {
-        VStack(spacing: 24) {
-            // Header with back button
-            HStack {
-                Button(action: {
-                    withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-                        authViewModel.goBackToModeSelection()
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(OtherConnectOption.code.title)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundColor(OpenFlixColors.textPrimary)
+
+                        if let subtitle = OtherConnectOption.code.subtitle {
+                            Text(subtitle)
+                                .font(.caption)
+                                .foregroundColor(OpenFlixColors.textSecondary)
+                        }
                     }
-                }) {
-                    Image(systemName: "arrow.left")
-                        .font(.system(size: 18, weight: .medium))
-                        .foregroundColor(OpenFlixColors.textSecondary)
-                        .frame(width: 36, height: 36)
-                        .background(OpenFlixColors.surfaceVariant)
-                        .clipShape(Circle())
+
+                    Spacer()
+
+                    Image(systemName: "chevron.right")
+                        .foregroundColor(OpenFlixColors.textTertiary)
                 }
-                .buttonStyle(ScaleButtonStyle())
-
-                Spacer()
-
-                Text("Connect to Server")
-                    .font(.title2)
-                    .fontWeight(.semibold)
-                    .foregroundColor(OpenFlixColors.textPrimary)
-
-                Spacer()
-
-                Color.clear.frame(width: 36, height: 36)
+                .padding(12)
+                .background(OpenFlixColors.surfaceVariant)
+                .cornerRadius(12)
+            }
+            .buttonStyle(ScaleButtonStyle())
+            .sheet(isPresented: $showAwayFromHomeSheet) {
+                AwayFromHomeSheet(
+                    code: $awayCode,
+                    isLoading: awayIsLoading,
+                    error: awayError,
+                    onConnect: {
+                        awayIsLoading = true
+                        awayError = nil
+                        Task {
+                            if let server = await authViewModel.discoverViaCloud(claimToken: awayCode) {
+                                showAwayFromHomeSheet = false
+                                await authViewModel.selectServer(server, isRemote: true)
+                            } else {
+                                awayError = "Server not found. Check your code."
+                            }
+                            awayIsLoading = false
+                        }
+                    },
+                    onCancel: { showAwayFromHomeSheet = false }
+                )
+                .environmentObject(authViewModel)
             }
 
-            // Server URL field
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Server URL")
-                    .font(.subheadline)
-                    .foregroundColor(OpenFlixColors.textSecondary)
+            // Manual entry
+            Button(action: {
+                withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) {
+                    selectedOtherWay = selectedOtherWay == .manual ? nil : .manual
+                }
+            }) {
+                HStack(spacing: 12) {
+                    Image(systemName: OtherConnectOption.manual.icon)
+                        .foregroundColor(OpenFlixColors.primary)
+                        .frame(width: 24)
 
-                HStack {
-                    Image(systemName: "globe")
+                    Text(OtherConnectOption.manual.title)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundColor(OpenFlixColors.textPrimary)
+
+                    Spacer()
+
+                    Image(systemName: selectedOtherWay == .manual ? "chevron.up" : "chevron.right")
                         .foregroundColor(OpenFlixColors.textTertiary)
-                    TextField("https://your-server.example.com:32400", text: $serverURL)
+                }
+                .padding(12)
+                .background(OpenFlixColors.surfaceVariant)
+                .cornerRadius(12)
+            }
+            .buttonStyle(ScaleButtonStyle())
+
+            if selectedOtherWay == .manual {
+                manualEntryView
+            }
+        }
+    }
+
+    private var unifiedCodeEntryView: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Connection Code")
+                .font(.subheadline)
+                .foregroundColor(OpenFlixColors.textSecondary)
+
+            HStack(spacing: 12) {
+                HStack {
+                    Image(systemName: "key.fill")
+                        .foregroundColor(OpenFlixColors.textTertiary)
+                    TextField("Enter code", text: $claimCode)
                         .textFieldStyle(.plain)
-                        .font(.body)
-                        .autocapitalization(.none)
+                        .font(.system(.body, design: .monospaced))
+                        .autocapitalization(.allCharacters)
                         .disableAutocorrection(true)
-                        .keyboardType(.URL)
-                        .focused($focusedField, equals: .serverURL)
-                        .onSubmit { connectToServer() }
+                        .onChange(of: claimCode) { newValue in
+                            claimCode = String(newValue.uppercased().prefix(8))
+                        }
+                        .onSubmit { submitUnifiedCode() }
                 }
                 .padding(14)
                 .background(OpenFlixColors.surfaceVariant)
                 .cornerRadius(12)
 
-                Text("Enter your server's public URL or IP address")
-                    .font(.caption2)
-                    .foregroundColor(OpenFlixColors.textTertiary)
+                Button(action: submitUnifiedCode) {
+                    Group {
+                        if isSearchingByCode || isResolvingInvite {
+                            ProgressView()
+                                .tint(OpenFlixColors.background)
+                                .scaleEffect(0.8)
+                        } else {
+                            Text("Connect")
+                                .font(.subheadline.weight(.semibold))
+                        }
+                    }
+                    .foregroundColor(OpenFlixColors.background)
+                    .frame(width: 90)
+                    .padding(.vertical, 14)
+                    .background(claimCode.count >= 4 ? OpenFlixColors.primary : OpenFlixColors.primary.opacity(0.5))
+                    .cornerRadius(12)
+                }
+                .buttonStyle(ScaleButtonStyle())
+                .disabled(claimCode.count < 4 || isSearchingByCode || isResolvingInvite)
             }
 
-            // Connect button
+            Text("Enter the code from your server admin or setup screen")
+                .font(.caption2)
+                .foregroundColor(OpenFlixColors.textTertiary)
+
+            if let inviteStatus {
+                HStack(spacing: 8) {
+                    Image(systemName: inviteStatusIcon)
+                        .foregroundColor(inviteStatusColor)
+                    Text(inviteStatusText)
+                        .font(.caption)
+                        .foregroundColor(inviteStatusColor)
+                }
+                .padding(10)
+                .background(inviteStatusColor.opacity(0.12))
+                .cornerRadius(8)
+            }
+        }
+    }
+
+    private var manualEntryView: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Server URL")
+                .font(.subheadline)
+                .foregroundColor(OpenFlixColors.textSecondary)
+
+            HStack {
+                Image(systemName: "link")
+                    .foregroundColor(OpenFlixColors.textTertiary)
+                TextField("https://your-server.example.com:32400", text: $serverURL)
+                    .textFieldStyle(.plain)
+                    .font(.body)
+                    .autocapitalization(.none)
+                    .disableAutocorrection(true)
+                    .keyboardType(.URL)
+                    .focused($focusedField, equals: .serverURL)
+                    .onSubmit { connectToServer() }
+            }
+            .padding(14)
+            .background(OpenFlixColors.surfaceVariant)
+            .cornerRadius(12)
+
             Button(action: connectToServer) {
                 HStack(spacing: 8) {
                     if authViewModel.isLoading {
@@ -496,166 +449,36 @@ struct LoginView: View {
                 }
                 .foregroundColor(OpenFlixColors.background)
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 16)
-                .background(
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(serverURL.isEmpty ? OpenFlixColors.primary.opacity(0.5) : OpenFlixColors.primary)
-                )
+                .padding(.vertical, 14)
+                .background(serverURL.isEmpty ? OpenFlixColors.primary.opacity(0.5) : OpenFlixColors.primary)
+                .cornerRadius(12)
             }
             .buttonStyle(ScaleButtonStyle())
             .disabled(serverURL.isEmpty || authViewModel.isLoading)
+        }
+    }
 
-            // Divider
-            HStack {
-                Rectangle()
-                    .fill(OpenFlixColors.surfaceVariant)
-                    .frame(height: 1)
-                Text("or")
-                    .font(.caption)
-                    .foregroundColor(OpenFlixColors.textTertiary)
-                Rectangle()
-                    .fill(OpenFlixColors.surfaceVariant)
-                    .frame(height: 1)
-            }
+    private var inviteStatusText: String {
+        switch inviteStatus {
+        case .success(let text): return text
+        case .failure(let text): return text
+        case .none: return ""
+        }
+    }
 
-            // Link with Code section
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Link with Code")
-                    .font(.subheadline)
-                    .foregroundColor(OpenFlixColors.textSecondary)
+    private var inviteStatusColor: Color {
+        switch inviteStatus {
+        case .success: return OpenFlixColors.success
+        case .failure: return OpenFlixColors.error
+        case .none: return OpenFlixColors.textTertiary
+        }
+    }
 
-                HStack(spacing: 12) {
-                    HStack {
-                        Image(systemName: "key")
-                            .foregroundColor(OpenFlixColors.textTertiary)
-                        TextField("ABCD", text: $claimCode)
-                            .textFieldStyle(.plain)
-                            .font(.system(.body, design: .monospaced))
-                            .autocapitalization(.allCharacters)
-                            .disableAutocorrection(true)
-                            .onChange(of: claimCode) { newValue in
-                                // Limit to 4 characters, uppercase only
-                                claimCode = String(newValue.uppercased().prefix(4))
-                            }
-                    }
-                    .padding(14)
-                    .background(OpenFlixColors.surfaceVariant)
-                    .cornerRadius(12)
-
-                    Button(action: findServerByCode) {
-                        Group {
-                            if isSearchingByCode {
-                                ProgressView()
-                                    .tint(OpenFlixColors.background)
-                                    .scaleEffect(0.8)
-                            } else {
-                                Text("Find")
-                                    .font(.subheadline.weight(.semibold))
-                            }
-                        }
-                        .foregroundColor(OpenFlixColors.background)
-                        .frame(width: 80)
-                        .padding(.vertical, 14)
-                        .background(claimCode.count == 4 ? OpenFlixColors.secondary : OpenFlixColors.secondary.opacity(0.5))
-                        .cornerRadius(12)
-                    }
-                    .buttonStyle(ScaleButtonStyle())
-                    .disabled(claimCode.count != 4 || isSearchingByCode)
-                }
-
-                Text("Enter the 4-character code from your server's settings")
-                    .font(.caption2)
-                    .foregroundColor(OpenFlixColors.textTertiary)
-            }
-
-            // Invite code section
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Got an Invite?")
-                    .font(.subheadline)
-                    .foregroundColor(OpenFlixColors.textSecondary)
-
-                HStack(spacing: 12) {
-                    HStack {
-                        Image(systemName: "person.badge.plus")
-                            .foregroundColor(OpenFlixColors.textTertiary)
-                        TextField("ABCD1234", text: $inviteCode)
-                            .textFieldStyle(.plain)
-                            .font(.system(.body, design: .monospaced))
-                            .autocapitalization(.allCharacters)
-                            .disableAutocorrection(true)
-                            .onChange(of: inviteCode) { newValue in
-                                inviteCode = String(newValue.uppercased().prefix(8))
-                            }
-                    }
-                    .padding(14)
-                    .background(OpenFlixColors.surfaceVariant)
-                    .cornerRadius(12)
-
-                    Button(action: redeemInviteCode) {
-                        Group {
-                            if isResolvingInvite {
-                                ProgressView()
-                                    .tint(OpenFlixColors.background)
-                                    .scaleEffect(0.8)
-                            } else {
-                                Text("Join")
-                                    .font(.subheadline.weight(.semibold))
-                            }
-                        }
-                        .foregroundColor(OpenFlixColors.background)
-                        .frame(width: 80)
-                        .padding(.vertical, 14)
-                        .background(inviteCode.count == 8 ? Color.green : Color.green.opacity(0.5))
-                        .cornerRadius(12)
-                    }
-                    .buttonStyle(ScaleButtonStyle())
-                    .disabled(inviteCode.count != 8 || isResolvingInvite)
-                }
-
-                Text("Enter the 8-character invite code sent by a server owner")
-                    .font(.caption2)
-                    .foregroundColor(OpenFlixColors.textTertiary)
-            }
-            .sheet(isPresented: $showInviteRegister) {
-                InviteRegisterSheet(
-                    serverName: resolvedInviteServerName,
-                    username: $inviteRegUsername,
-                    email: $inviteRegEmail,
-                    password: $inviteRegPassword,
-                    isLoading: authViewModel.isLoading,
-                    error: authViewModel.error,
-                    onAccept: {
-                        guard let server = resolvedInviteServer else { return }
-                        Task {
-                            await authViewModel.acceptInvite(
-                                server: server,
-                                token: resolvedInviteToken,
-                                username: inviteRegUsername,
-                                email: inviteRegEmail,
-                                password: inviteRegPassword
-                            )
-                            if authViewModel.isAuthenticated {
-                                showInviteRegister = false
-                            }
-                        }
-                    },
-                    onCancel: { showInviteRegister = false }
-                )
-            }
-
-            // Error
-            if let error = authViewModel.error {
-                HStack(spacing: 8) {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .foregroundColor(OpenFlixColors.error)
-                    Text(error)
-                        .font(.caption)
-                        .foregroundColor(OpenFlixColors.error)
-                }
-                .padding(12)
-                .background(OpenFlixColors.error.opacity(0.1))
-                .cornerRadius(8)
-            }
+    private var inviteStatusIcon: String {
+        switch inviteStatus {
+        case .success: return "checkmark.circle.fill"
+        case .failure: return "exclamationmark.triangle.fill"
+        case .none: return "info.circle"
         }
     }
 
@@ -669,7 +492,6 @@ struct LoginView: View {
                     .fontWeight(.semibold)
                     .foregroundColor(OpenFlixColors.textPrimary)
 
-                // Server info pill
                 HStack(spacing: 6) {
                     Image(systemName: "checkmark.circle.fill")
                         .font(.caption)
@@ -686,7 +508,6 @@ struct LoginView: View {
             }
 
             VStack(spacing: 16) {
-                // Username
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Username")
                         .font(.subheadline)
@@ -706,7 +527,6 @@ struct LoginView: View {
                     .cornerRadius(12)
                 }
 
-                // Password
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Password")
                         .font(.subheadline)
@@ -726,7 +546,6 @@ struct LoginView: View {
                     .cornerRadius(12)
                 }
 
-                // Remember me
                 Toggle(isOn: $rememberMe) {
                     Text("Remember Me")
                         .font(.subheadline)
@@ -735,7 +554,6 @@ struct LoginView: View {
                 .tint(OpenFlixColors.primary)
             }
 
-            // Error
             if let error = authViewModel.error {
                 Text(error)
                     .font(.caption)
@@ -746,7 +564,6 @@ struct LoginView: View {
                     .cornerRadius(8)
             }
 
-            // Buttons
             VStack(spacing: 12) {
                 Button(action: login) {
                     Group {
@@ -778,12 +595,7 @@ struct LoginView: View {
                 }
                 .buttonStyle(ScaleButtonStyle())
 
-                Button(action: {
-                    withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-                        isServerConnected = false
-                        authViewModel.goBackToModeSelection()
-                    }
-                }) {
+                Button(action: resetServerSelection) {
                     Text("Change Server")
                         .font(.caption)
                         .foregroundColor(OpenFlixColors.textTertiary)
@@ -799,42 +611,87 @@ struct LoginView: View {
         !username.isEmpty && !password.isEmpty
     }
 
-    private func redeemInviteCode() {
+    private func handleDeepLink(_ deepLink: AuthDeepLink) {
+        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+            showOtherWays = true
+        }
+
+        switch deepLink {
+        case .invite(let machineId, let token):
+            selectedOtherWay = .code
+            claimCode = token
+            inviteCode = token
+            acceptInviteFromDeepLink(machineId: machineId, token: token)
+        case .connect(let url):
+            selectedOtherWay = .manual
+            serverURL = url
+            connectToServer()
+        }
+
+        authViewModel.pendingDeepLink = nil
+    }
+
+    private func resetServerSelection() {
+        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+            isServerConnected = false
+        }
+        authViewModel.error = nil
+        Task {
+            await authViewModel.discoverServers()
+        }
+    }
+
+    private func acceptInviteFromDeepLink(machineId: String, token: String) {
+        inviteStatus = nil
+        isResolvingInvite = true
+        authViewModel.error = nil
+
+        Task {
+            defer { isResolvingInvite = false }
+            guard let resolved = await authViewModel.resolveInvite(machineId: machineId, token: token) else {
+                inviteStatus = .failure("Invite link is invalid or expired.")
+                return
+            }
+
+            serverURL = resolved.server.url.absoluteString
+            let success = await authViewModel.connectToServerURL(serverURL)
+            if success {
+                inviteStatus = .success("Invite accepted. Please sign in.")
+                withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                    isServerConnected = true
+                }
+                focusedField = .username
+            } else {
+                inviteStatus = .failure("Could not connect to invited server.")
+            }
+        }
+    }
+
+    private func acceptInviteCode() {
         guard inviteCode.count == 8 else { return }
 
-        // Invite deep link format: openflix://invite/MACHINEID/TOKEN
-        // Manual code entry: we treat the first part as machineId lookup via code
-        // The invite code IS the token; machineId is retrieved from the server via the registry
-        // We split the 8-char code: first we try it as a straight token against cloud registry
+        inviteStatus = nil
         isResolvingInvite = true
         authViewModel.error = nil
 
         Task {
             defer { isResolvingInvite = false }
 
-            // Ask cloud registry: any server registered with this invite token?
-            guard let baseURL = "https://discover.openflix.io" as String?,
-                  let url = URL(string: "\(baseURL)/servers?invite=\(inviteCode)") else {
-                authViewModel.error = "Could not contact discovery service"
+            guard let resolved = await authViewModel.acceptInvite(code: inviteCode) else {
+                inviteStatus = .failure("Invite code not found or expired. Ask the server owner to generate a new one.")
                 return
             }
 
-            var req = URLRequest(url: url)
-            req.timeoutInterval = 5
-            if let (data, resp) = try? await URLSession.shared.data(for: req),
-               let http = resp as? HTTPURLResponse, http.statusCode == 200,
-               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-               let machineId = json["machineId"] as? String,
-               let host = (json["publicIp"] as? String ?? json["host"] as? String),
-               !host.isEmpty {
-                let port = json["port"] as? Int ?? 32400
-                let name = json["name"] as? String ?? "OpenFlix Server"
-                resolvedInviteServer = DiscoveredServer(name: name, version: "unknown", machineId: machineId, host: host, port: port)
-                resolvedInviteServerName = name
-                resolvedInviteToken = inviteCode
-                showInviteRegister = true
+            serverURL = resolved.url.absoluteString
+            let success = await authViewModel.connectToServerURL(serverURL)
+            if success {
+                inviteStatus = .success("Invite accepted. Please sign in.")
+                withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                    isServerConnected = true
+                }
+                focusedField = .username
             } else {
-                authViewModel.error = "Invite code not found or expired. Ask the server owner to generate a new one."
+                inviteStatus = .failure("Could not connect to invited server.")
             }
         }
     }
@@ -848,6 +705,17 @@ struct LoginView: View {
         }
     }
 
+    /// Smart code handler: 4-char = claim code (find server), 5-8 char = invite code (join server)
+    private func submitUnifiedCode() {
+        let code = claimCode.trimmingCharacters(in: .whitespaces)
+        if code.count <= 4 {
+            findServerByCode()
+        } else {
+            inviteCode = code
+            acceptInviteCode()
+        }
+    }
+
     private func findServerByCode() {
         guard claimCode.count == 4 else { return }
 
@@ -858,7 +726,6 @@ struct LoginView: View {
             defer { isSearchingByCode = false }
 
             if let server = await authViewModel.discoverViaCloud(claimToken: claimCode) {
-                // Found server via claim code - connect
                 serverURL = server.url.absoluteString
                 UserDefaults.standard.serverURL = server.url
                 await OpenFlixAPI.shared.configure(serverURL: server.url, token: nil)
@@ -879,27 +746,14 @@ struct LoginView: View {
         Task {
             let success = await authViewModel.connectToServerURL(serverURL)
             if success {
-                // Update serverURL to the cleaned version
                 if let url = UserDefaults.standard.serverURL {
                     serverURL = url.absoluteString
                 }
 
-                // For "At Home" mode, go directly to profile selection (no login)
-                if authViewModel.connectionMode == .atHome {
-                    await authViewModel.selectServer(DiscoveredServer(
-                        name: "OpenFlix Server",
-                        version: "unknown",
-                        machineId: serverURL,
-                        host: URL(string: serverURL)?.host ?? serverURL,
-                        port: URL(string: serverURL)?.port ?? 32400
-                    ))
-                } else {
-                    // "Away from Home" - show login form
-                    withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-                        isServerConnected = true
-                    }
-                    focusedField = .username
+                withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                    isServerConnected = true
                 }
+                focusedField = .username
             }
         }
     }

@@ -1,5 +1,11 @@
 import Foundation
 
+enum ConnectionType: String, Codable {
+    case local
+    case remote
+    case unknown
+}
+
 // MARK: - Auth Response
 
 struct AuthResponse: Codable {

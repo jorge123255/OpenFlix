@@ -55,7 +55,8 @@ struct DVRView: View {
                 recordingURL: item.url,
                 startPosition: item.startPosition,
                 commercials: item.recording.commercials,
-                recordingDurationMs: item.recording.duration
+                recordingDurationMs: item.recording.duration,
+                recording: item.recording
             )
         }
         .sheet(isPresented: $showManageSheet) {
@@ -677,17 +678,14 @@ struct ManageRecordingsSheet: View {
                 Picker("Tab", selection: $selectedTab) {
                     Text("Recordings").tag(0)
                     Text("Series Rules").tag(1)
-                    Text("Passes").tag(2)
                 }
                 .pickerStyle(.segmented)
                 .padding()
-
+                
                 if selectedTab == 0 {
                     recordingsList
-                } else if selectedTab == 1 {
-                    seriesRulesList
                 } else {
-                    DVRPassesView(viewModel: viewModel)
+                    seriesRulesList
                 }
             }
             .navigationTitle("Manage")

@@ -20,6 +20,7 @@ extension UserDefaults {
         static let commercialSkipEnabled = "commercial_skip_enabled"
         static let screensaverEnabled = "screensaver_enabled"
         static let screensaverDelay = "screensaver_delay"
+        static let lastMachineId = "openflix_last_machine_id"
     }
 
     var serverURL: URL? {
@@ -116,6 +117,11 @@ extension UserDefaults {
             return value > 0 ? value : 300 // 5 minutes default
         }
         set { set(newValue, forKey: Keys.screensaverDelay) }
+    }
+
+    var lastMachineId: String? {
+        get { string(forKey: Keys.lastMachineId) }
+        set { set(newValue, forKey: Keys.lastMachineId) }
     }
 }
 

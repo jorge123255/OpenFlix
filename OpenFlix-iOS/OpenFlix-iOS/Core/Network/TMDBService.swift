@@ -305,6 +305,49 @@ actor TMDBService {
             return nil
         }
     }
+
+    // MARK: - TV Show Search
+
+    /// Fetch TV show details: networks, next episode air date, etc.
+    func getTVShowDetails(tmdbId: Int) async -> TMDBTVDetails? {
+        await ensureApiKeyLoaded()
+        guard let apiKey = apiKey, !apiKey.isEmpty else { return nil }
+
+        let urlString = "\(baseURL)/tv/\(tmdbId)?api_key=\(apiKey)"
+        guard let url = URL(string: urlString) else { return nil }
+
+        do {
+            let (data, response) = try await session.data(from: url)
+            guard let http = response as? HTTPURLResponse, http.statusCode == 200 else { return nil }
+            return try decoder.decode(TMDBTVDetails.self, from: data)
+        } catch {
+            NSLog("TMDBService: Failed to fetch TV details for \(tmdbId): \(error)")
+            return nil
+        }
+    }
+
+    /// Search TMDB for TV shows by title. Returns top results with poster art.
+    func searchTVShows(title: String) async -> [TMDBTVResult] {
+        await ensureApiKeyLoaded()
+        guard let apiKey = apiKey, !apiKey.isEmpty else { return [] }
+
+        var components = URLComponents(string: "\(baseURL)/search/tv")!
+        components.queryItems = [
+            URLQueryItem(name: "api_key", value: apiKey),
+            URLQueryItem(name: "query", value: title)
+        ]
+        guard let url = components.url else { return [] }
+
+        do {
+            let (data, response) = try await session.data(from: url)
+            guard let http = response as? HTTPURLResponse, http.statusCode == 200 else { return [] }
+            let result = try decoder.decode(TMDBTVSearchResponse.self, from: data)
+            return Array(result.results.prefix(5))
+        } catch {
+            NSLog("TMDBService: TV search failed for '\(title)': \(error)")
+            return []
+        }
+    }
 }
 
 // MARK: - TMDB Response Models
@@ -476,4 +519,70 @@ enum TMDBError: Error {
     case requestFailed
     case decodingError
     case noTrailerFound
+}
+
+// MARK: - TMDB TV Models
+
+struct TMDBTVSearchResponse: Codable {
+    let results: [TMDBTVResult]
+}
+
+struct TMDBTVResult: Codable, Identifiable {
+    let id: Int
+    let name: String
+    let posterPath: String?
+    let firstAirDate: String?
+
+    enum CodingKeys: String, CodingKey {
+        case id, name
+        case posterPath = "poster_path"
+        case firstAirDate = "first_air_date"
+    }
+
+    var posterURL: URL? {
+        guard let path = posterPath else { return nil }
+        return URL(string: "https://image.tmdb.org/t/p/w185\(path)")
+    }
+}
+
+struct TMDBTVDetails: Codable {
+    let id: Int
+    let name: String
+    let networks: [TMDBNetwork]?
+    let nextEpisodeToAir: TMDBNextEpisode?
+
+    enum CodingKeys: String, CodingKey {
+        case id, name, networks
+        case nextEpisodeToAir = "next_episode_to_air"
+    }
+}
+
+struct TMDBNetwork: Codable {
+    let id: Int
+    let name: String
+    let logoPath: String?
+
+    enum CodingKeys: String, CodingKey {
+        case id, name
+        case logoPath = "logo_path"
+    }
+
+    var logoURL: URL? {
+        guard let path = logoPath else { return nil }
+        return URL(string: "https://image.tmdb.org/t/p/w92\(path)")
+    }
+}
+
+struct TMDBNextEpisode: Codable {
+    let airDate: String?
+    let seasonNumber: Int?
+    let episodeNumber: Int?
+    let name: String?
+
+    enum CodingKeys: String, CodingKey {
+        case airDate = "air_date"
+        case seasonNumber = "season_number"
+        case episodeNumber = "episode_number"
+        case name
+    }
 }

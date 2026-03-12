@@ -7,15 +7,52 @@ import SwiftUI
 struct OnLaterView: View {
     @StateObject private var viewModel = OnLaterViewModel()
     @State private var selectedTimeRange: TimeRange = .next2Hours
+    @State private var selectedCategory: OnLaterCategory = .all
     @FocusState private var focusedProgram: String?
-    
+
     enum TimeRange: String, CaseIterable {
         case next2Hours = "Next 2 Hours"
         case tonight = "Tonight"
         case tomorrow = "Tomorrow"
         case thisWeek = "This Week"
     }
-    
+
+    enum OnLaterCategory: String, CaseIterable, Identifiable {
+        case all      = "All"
+        case movies   = "Movies"
+        case sports   = "Sports"
+        case kids     = "Kids"
+        case news     = "News"
+        case holiday  = "Holiday"
+        case halloween = "Halloween"
+        case seasonal = "Special Events"
+        var id: String { rawValue }
+        var icon: String {
+            switch self {
+            case .all:      return "square.grid.2x2"
+            case .movies:   return "film"
+            case .sports:   return "sportscourt"
+            case .kids:     return "figure.play"
+            case .news:     return "newspaper"
+            case .holiday:  return "gift"
+            case .halloween: return "moon.stars"
+            case .seasonal: return "bolt"
+            }
+        }
+        var endpoint: String {
+            switch self {
+            case .all:      return "all"
+            case .movies:   return "movies"
+            case .sports:   return "sports"
+            case .kids:     return "kids"
+            case .news:     return "news"
+            case .holiday:  return "holiday"
+            case .halloween: return "halloween"
+            case .seasonal: return "seasonal"
+            }
+        }
+    }
+
     var body: some View {
         ZStack {
             // Background
@@ -25,14 +62,20 @@ struct OnLaterView: View {
                 endPoint: .bottomTrailing
             )
             .ignoresSafeArea()
-            
+
             VStack(spacing: 0) {
                 // Header
                 header
-                
-                // Time range selector
-                timeRangeSelector
-                
+
+                // Category selector
+                categorySelector
+
+                // Time range selector (only for non-seasonal categories)
+                if selectedCategory == .all || selectedCategory == .movies ||
+                   selectedCategory == .sports || selectedCategory == .kids || selectedCategory == .news {
+                    timeRangeSelector
+                }
+
                 // Content
                 if viewModel.isLoading {
                     loadingView
@@ -44,7 +87,43 @@ struct OnLaterView: View {
             }
         }
         .onAppear {
-            viewModel.loadUpcomingPrograms()
+            viewModel.loadByCategory(selectedCategory)
+        }
+        .onChange(of: selectedCategory) { _, newCat in
+            viewModel.loadByCategory(newCat)
+        }
+    }
+
+    // MARK: - Category Selector
+
+    private var categorySelector: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 12) {
+                ForEach(OnLaterCategory.allCases) { cat in
+                    Button {
+                        selectedCategory = cat
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: cat.icon)
+                                .font(.system(size: 14))
+                            Text(cat.rawValue)
+                                .font(.subheadline)
+                                .fontWeight(.semibold)
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
+                        .background(
+                            selectedCategory == cat
+                                ? Color(hex: "3B82F6")
+                                : Color.white.opacity(0.08)
+                        )
+                        .foregroundColor(selectedCategory == cat ? .white : .gray)
+                        .clipShape(Capsule())
+                    }
+                }
+            }
+            .padding(.horizontal, 48)
+            .padding(.vertical, 12)
         }
     }
     
@@ -330,13 +409,15 @@ class OnLaterViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var error: String?
 
-    func loadUpcomingPrograms() {
+    // MARK: - Category Loading
+
+    func loadByCategory(_ category: OnLaterView.OnLaterCategory) {
         isLoading = true
         error = nil
         Task {
             do {
-                let response = try await api.getOnLaterAll()
-                upcomingPrograms = response.allItems.compactMap { dto -> UpcomingProgram? in
+                let response = try await api.getOnLater(endpoint: category.endpoint)
+                let programs = response.allItems.compactMap { dto -> UpcomingProgram? in
                     guard let start = dto.program.startDate,
                           let end = dto.program.endDate else { return nil }
                     return UpcomingProgram(
@@ -351,11 +432,16 @@ class OnLaterViewModel: ObservableObject {
                         category: dto.program.category
                     )
                 }
+                await MainActor.run { self.upcomingPrograms = programs }
             } catch {
-                self.error = error.localizedDescription
+                await MainActor.run { self.error = error.localizedDescription }
             }
-            isLoading = false
+            await MainActor.run { self.isLoading = false }
         }
+    }
+
+    func loadUpcomingPrograms() {
+        loadByCategory(.all)
     }
     
     func programs(for range: OnLaterView.TimeRange) -> [UpcomingProgram] {

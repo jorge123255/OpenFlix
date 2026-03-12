@@ -8,6 +8,7 @@ import MobileVLCKit
 
 struct LiveTVView: View {
     @StateObject private var viewModel = LiveTVViewModel()
+    @StateObject private var dvrViewModel = DVRViewModel()
     @State private var showPlayer = false
     @State private var streamURL: URL?
     @State private var selectedChannelForPlayback: Channel?
@@ -91,6 +92,7 @@ struct LiveTVView: View {
                     streamURL: url,
                     viewModel: viewModel
                 )
+                .environmentObject(dvrViewModel)
             }
         }
     }
@@ -132,6 +134,7 @@ struct LiveTVPlayerView: View {
     @StateObject private var playerViewModel = PlayerViewModel()  // Kept for VOD/recordings
     @StateObject private var instantSwitchManager = InstantSwitchManager()
     @Environment(\.dismiss) var dismiss
+    @EnvironmentObject private var dvrViewModel: DVRViewModel
 
     // UI State
     @State private var showOverlay = true
@@ -273,7 +276,15 @@ struct LiveTVPlayerView: View {
                         handleToggleFavorite()
                     },
                     onRecord: {
-                        showPlayerToast("Record", icon: "record.circle")
+                        guard let program = viewModel.selectedChannel?.nowPlaying ?? channel.nowPlaying else {
+                            return
+                        }
+                        Task {
+                            try? await dvrViewModel.recordProgram(channelId: channel.id, program: program)
+                            await MainActor.run {
+                                showPlayerToast("Recording Scheduled", icon: "record.circle")
+                            }
+                        }
                     },
                     onInfo: {
                         showStreamInfo.toggle()

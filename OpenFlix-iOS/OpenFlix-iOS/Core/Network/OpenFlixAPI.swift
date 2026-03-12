@@ -289,15 +289,11 @@ actor OpenFlixAPI {
     }
     func deleteXtreamSource(id: String) async throws { try await requestVoid(.deleteXtreamSource(id: id)) }
     func getEPGSources() async throws -> EPGSourcesResponse { try await request(.getEPGSources) }
-    func addEPGSource(name: String, url: String, type: String) async throws { try await requestVoid(.addEPGSource(name: name, url: url, type: type)) }
+    func addEPGSource(name: String, url: String?, type: String, tvguideProviderId: String? = nil, tvguideZipCode: String? = nil, tvguideDays: Int? = nil) async throws { try await requestVoid(.addEPGSource(name: name, url: url, type: type, tvguideProviderId: tvguideProviderId, tvguideZipCode: tvguideZipCode, tvguideDays: tvguideDays)) }
     func deleteEPGSource(id: String) async throws { try await requestVoid(.deleteEPGSource(id: id)) }
     func refreshEPGSource(id: String) async throws { try await requestVoid(.refreshEPGSource(id: id)) }
 
     // MARK: - EPG Management
-    func searchGuidePrograms(query: String? = nil, limit: Int = 60) async throws -> EPGProgramsResponse {
-        try await request(.getEPGPrograms(channelId: nil, date: nil, search: query, limit: limit))
-    }
-
     func getEPGStats() async throws -> EPGStatsResponse { try await request(.getEPGStats) }
     func refreshAllEPG() async throws { try await requestVoid(.refreshAllEPG) }
     func getEPGSchedulerStatus() async throws -> EPGSchedulerStatusResponse { try await request(.getEPGSchedulerStatus) }
@@ -327,6 +323,24 @@ actor OpenFlixAPI {
     func getOnLaterTonight() async throws -> OnLaterResponse { try await request(.getOnLaterTonight) }
     func getOnLaterWeek() async throws -> OnLaterResponse { try await request(.getOnLaterWeek) }
     func getOnLaterStats() async throws -> OnLaterStatsResponse { try await request(.getOnLaterStats) }
+    func getOnLaterHoliday() async throws -> OnLaterResponse { try await request(.getOnLaterHoliday) }
+    func getOnLaterHalloween() async throws -> OnLaterResponse { try await request(.getOnLaterHalloween) }
+    func getOnLaterSeasonal(event: String? = nil) async throws -> OnLaterResponse {
+        try await request(.getOnLaterSeasonal(event: event))
+    }
+    /// Generic On Later endpoint loader — maps category endpoint string to API call
+    func getOnLater(endpoint: String) async throws -> OnLaterResponse {
+        switch endpoint {
+        case "movies":   return try await getOnLaterMovies()
+        case "sports":   return try await getOnLaterSports()
+        case "kids":     return try await getOnLaterKids()
+        case "news":     return try await getOnLaterNews()
+        case "holiday":  return try await getOnLaterHoliday()
+        case "halloween": return try await getOnLaterHalloween()
+        case "seasonal": return try await getOnLaterSeasonal()
+        default:         return try await getOnLaterAll()
+        }
+    }
 
     // MARK: - Team Pass
     func getTeamPasses() async throws -> TeamPassesResponse { try await request(.getTeamPasses) }
@@ -379,15 +393,7 @@ actor OpenFlixAPI {
     func getQualityPresets() async throws -> QualityPresetsResponse { try await request(.getQualityPresets) }
     func getDVRSettings() async throws -> DVRSettingsResponse { try await request(.getDVRSettings) }
     func updateDVRSettings(settings: [String: Any]) async throws { try await requestVoid(.updateDVRSettings(settings: settings)) }
-    func searchShowForPass(query: String, type: String? = "tv") async throws -> ShowSearchResultsResponse {
-        try await request(.searchShowForPass(query: query, type: type))
-    }
     func getDVRPasses() async throws -> DVRPassesResponse { try await request(.getDVRPasses) }
-    func createDVRPass(params: [String: Any]) async throws { try await requestVoid(.createDVRPass(params: params)) }
-    func updateDVRPass(id: Int, params: [String: Any]) async throws { try await requestVoid(.updateDVRPass(id: id, params: params)) }
-    func deleteDVRPass(id: Int) async throws { try await requestVoid(.deleteDVRPass(id: id)) }
-    func pauseDVRPass(id: Int) async throws { try await requestVoid(.pauseDVRPass(id: String(id))) }
-    func resumeDVRPass(id: Int) async throws { try await requestVoid(.resumeDVRPass(id: String(id))) }
     func getDVRSchedule() async throws -> DVRScheduleResponse { try await request(.getDVRSchedule) }
     func getDVRCalendar() async throws -> DVRCalendarResponse { try await request(.getDVRCalendar) }
     func getDVRLabels() async throws -> DVRLabelsResponse { try await request(.getDVRLabels) }

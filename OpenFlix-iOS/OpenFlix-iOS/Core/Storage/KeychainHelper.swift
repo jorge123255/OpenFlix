@@ -7,6 +7,7 @@ class KeychainHelper {
     private let service = "com.openflix.tvos"
     private let tokenKey = "auth_token"
     private let serverURLKey = "server_url"
+    private let machineIdKey = "machine_id"
 
     private init() {}
 
@@ -116,10 +117,63 @@ class KeychainHelper {
         return status == errSecSuccess || status == errSecItemNotFound
     }
 
+    // MARK: - Machine ID
+
+    func saveMachineId(_ id: String) -> Bool {
+        guard let data = id.data(using: .utf8) else { return false }
+
+        deleteMachineId()
+
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: machineIdKey,
+            kSecValueData as String: data,
+            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock
+        ]
+
+        let status = SecItemAdd(query as CFDictionary, nil)
+        return status == errSecSuccess
+    }
+
+    func getMachineId() -> String? {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: machineIdKey,
+            kSecReturnData as String: true,
+            kSecMatchLimit as String: kSecMatchLimitOne
+        ]
+
+        var result: AnyObject?
+        let status = SecItemCopyMatching(query as CFDictionary, &result)
+
+        guard status == errSecSuccess,
+              let data = result as? Data,
+              let machineId = String(data: data, encoding: .utf8) else {
+            return nil
+        }
+
+        return machineId
+    }
+
+    @discardableResult
+    func deleteMachineId() -> Bool {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: machineIdKey
+        ]
+
+        let status = SecItemDelete(query as CFDictionary)
+        return status == errSecSuccess || status == errSecItemNotFound
+    }
+
     // MARK: - Clear All
 
     func clearAll() {
         deleteToken()
         deleteServerURL()
+        deleteMachineId()
     }
 }

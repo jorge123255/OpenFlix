@@ -7,7 +7,6 @@ class DVRRepository: ObservableObject {
     @Published var recordings: [Recording] = []
     @Published var scheduledRecordings: [Recording] = []
     @Published var seriesRules: [SeriesRule] = []
-    @Published var dvrPasses: [DVRPass] = []
 
     // MARK: - Recordings
 
@@ -114,7 +113,9 @@ class DVRRepository: ObservableObject {
 
     func loadSeriesRules() async throws {
         let response: SeriesRulesResponse = try await api.request(.getSeriesRules)
-        seriesRules = response.rules.map { $0.toDomain() }
+        seriesRules = response.rules
+            .filter { ($0.type ?? "series") == "series" }
+            .map { $0.toDomain() }
     }
 
     func createSeriesRule(title: String, channelId: String?, prePadding: Int, postPadding: Int, keepCount: Int) async throws {
@@ -131,51 +132,6 @@ class DVRRepository: ObservableObject {
     func deleteSeriesRule(id: Int) async throws {
         try await api.requestVoid(.deleteSeriesRule(id: String(id)))
         seriesRules.removeAll { $0.id == id }
-    }
-
-    // MARK: - DVR Passes
-
-    func loadDVRPasses() async throws {
-        let response = try await api.getDVRPasses()
-        dvrPasses = response.passes.map { $0.toDomain() }
-    }
-
-    func createDVRPass(name: String, keepOnly: String, keepNum: Int, paddingStart: Int, paddingEnd: Int, rerecord: Bool) async throws {
-        let params: [String: Any] = [
-            "Name": name,
-            "KeepOnly": keepOnly,
-            "KeepNum": keepNum,
-            "PaddingStart": paddingStart,
-            "PaddingEnd": paddingEnd,
-            "Rerecord": rerecord
-        ]
-        try await api.createDVRPass(params: params)
-        try await loadDVRPasses()
-    }
-
-    func createDVRPassWithParams(_ params: [String: Any]) async throws {
-        try await api.createDVRPass(params: params)
-        try await loadDVRPasses()
-    }
-
-    func updateDVRPassWithParams(id: Int, params: [String: Any]) async throws {
-        try await api.updateDVRPass(id: id, params: params)
-        try await loadDVRPasses()
-    }
-
-    func pauseDVRPass(id: Int) async throws {
-        try await api.pauseDVRPass(id: id)
-        if let i = dvrPasses.firstIndex(where: { $0.id == id }) { dvrPasses[i].paused = true }
-    }
-
-    func resumeDVRPass(id: Int) async throws {
-        try await api.resumeDVRPass(id: id)
-        if let i = dvrPasses.firstIndex(where: { $0.id == id }) { dvrPasses[i].paused = false }
-    }
-
-    func deleteDVRPass(id: Int) async throws {
-        try await api.deleteDVRPass(id: id)
-        dvrPasses.removeAll { $0.id == id }
     }
 
     // MARK: - Conflicts

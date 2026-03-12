@@ -86,14 +86,13 @@ struct ProgramDTO: Codable {
     let league: String?
     let hasRecording: Bool?
     let recordingId: StringOrInt?
-    let hasCC: Bool?
 
     enum CodingKeys: String, CodingKey {
         case idValue = "id"
         case title, subtitle, description, start, end
         case startTime, endTime, duration, icon, art, rating, category
         case isNew, isLive, isPremiere, isFinale, isSports, isKids
-        case teams, league, hasRecording, recordingId, hasCC
+        case teams, league, hasRecording, recordingId
     }
 
     var safeId: String { idValue?.stringValue ?? "" }
@@ -281,12 +280,50 @@ struct EPGSourcesResponse: Codable {
 struct EPGSourceDTO: Codable {
     let id: Int
     let name: String
-    let url: String
-    let type: String    // "xmltv" or "gracenote"
+    let url: String?
+    let providerType: String?   // "xmltv", "gracenote", or "tvguide"
+    let type: String?           // Legacy alias
     let enabled: Bool?
     let lastFetched: String?
     let channelCount: Int?
     let programCount: Int?
+    // TVGuide-specific
+    let tvguideProviderId: String?
+    let tvguideZipCode: String?
+    let tvguideDays: Int?
+
+    /// Resolved type — prefers providerType, falls back to type
+    var resolvedType: String {
+        providerType ?? type ?? "xmltv"
+    }
+}
+
+// MARK: - TVGuide Provider Discovery
+
+struct TVGuideProvidersResponse: Codable {
+    let zipCode: String
+    let count: Int
+    let providers: [TVGuideProviderDTO]
+
+    enum CodingKeys: String, CodingKey {
+        case zipCode = "zipCode"
+        case count, providers
+    }
+}
+
+struct TVGuideProviderDTO: Codable, Identifiable {
+    let id: Int64
+    let name: String
+    let type: String
+    let city: String?
+    let state: String?
+
+    var displayName: String {
+        if let city = city, let state = state {
+            return "\(name) • \(city), \(state)"
+        }
+        return name
+    }
 }
 
 // MARK: - Channel Groups

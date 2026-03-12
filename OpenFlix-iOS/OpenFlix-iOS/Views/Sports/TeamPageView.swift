@@ -253,6 +253,7 @@ struct TeamPageView: View {
             favorites = decoded
         }
         
+        let isRemoving = isFavorite
         if isFavorite {
             favorites.removeAll { $0 == team.id }
         } else {
@@ -263,6 +264,23 @@ struct TeamPageView: View {
         
         if let encoded = try? JSONEncoder().encode(favorites) {
             favoriteTeamsData = encoded
+        }
+        
+        Task {
+            let api = OpenFlixAPI.shared
+            if isRemoving {
+                if let passesResponse = try? await api.getTeamPasses(),
+                   let matchingPass = passesResponse.teamPasses.first(where: {
+                       $0.teamName.localizedCaseInsensitiveCompare(team.name) == .orderedSame
+                   }) {
+                    try? await api.deleteTeamPass(id: String(matchingPass.id))
+                }
+            } else {
+                _ = try? await api.createTeamPass(teamName: team.name, league: team.league)
+            }
+            await MainActor.run {
+                UINotificationFeedbackGenerator().notificationOccurred(.success)
+            }
         }
     }
     

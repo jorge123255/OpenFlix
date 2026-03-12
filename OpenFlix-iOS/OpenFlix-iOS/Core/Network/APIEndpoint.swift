@@ -210,15 +210,16 @@ enum APIEndpoint {
     // MARK: - EPG Sources
     case getEPGSources
     case previewEPGSource(url: String, type: String)
-    case addEPGSource(name: String, url: String, type: String)
+    case addEPGSource(name: String, url: String?, type: String, tvguideProviderId: String?, tvguideZipCode: String?, tvguideDays: Int?)
     case updateEPGSource(id: String, name: String?, url: String?, enabled: Bool?)
     case deleteEPGSource(id: String)
     case refreshEPGSource(id: String)
+    case discoverTVGuideProviders(zip: String)
 
     // MARK: - EPG Management
     case getEPGStats
     case refreshAllEPG
-    case getEPGPrograms(channelId: String?, date: String?, search: String?, limit: Int?)
+    case getEPGPrograms(channelId: String?, date: String?)
     case getEPGChannels
     case getEPGSchedulerStatus
     case forceEPGRefresh
@@ -264,6 +265,9 @@ enum APIEndpoint {
     case searchOnLater(query: String)
     case getOnLaterByChannel(channelId: String)
     case getOnLaterStats
+    case getOnLaterHoliday
+    case getOnLaterHalloween
+    case getOnLaterSeasonal(event: String?)
     case enrichEPG(programIds: [String])
     case getOnLaterLeagues
     case getOnLaterTeams(league: String)
@@ -332,11 +336,7 @@ enum APIEndpoint {
     case getQualityPresets
     case getDVRSettings
     case updateDVRSettings(settings: [String: Any])
-    case searchShowForPass(query: String, type: String?)
     case getDVRPasses
-    case createDVRPass(params: [String: Any])
-    case updateDVRPass(id: Int, params: [String: Any])
-    case deleteDVRPass(id: Int)
     case pauseDVRPass(id: String)
     case resumeDVRPass(id: String)
     case getDVRSchedule
@@ -873,6 +873,7 @@ enum APIEndpoint {
         case .fetchEPGWithFallback: return "/livetv/epg/sources/fetch-fallback"
         case .resetEPGSourceHealth(let id): return "/livetv/epg/sources/\(id)/reset-health"
         case .discoverGracenoteProviders: return "/livetv/gracenote/providers"
+        case .discoverTVGuideProviders: return "/livetv/epg/tvguide/providers"
         // Catchup / Timeshift / Archive
         case .getCatchupPrograms(let id): return "/livetv/channels/\(id)/catchup"
         case .getStartover(let id): return "/livetv/channels/\(id)/startover"
@@ -901,6 +902,11 @@ enum APIEndpoint {
         case .searchOnLater: return "/api/onlater/search"
         case .getOnLaterByChannel(let id): return "/api/onlater/channels/\(id)"
         case .getOnLaterStats: return "/api/onlater/stats"
+        case .getOnLaterHoliday: return "/api/onlater/holiday"
+        case .getOnLaterHalloween: return "/api/onlater/halloween"
+        case .getOnLaterSeasonal(let event):
+            if let e = event { return "/api/onlater/seasonal?event=\(e)" }
+            return "/api/onlater/seasonal"
         case .enrichEPG: return "/api/onlater/enrich"
         case .getOnLaterLeagues: return "/api/onlater/leagues"
         case .getOnLaterTeams(let league): return "/api/onlater/teams/\(league)"
@@ -962,11 +968,7 @@ enum APIEndpoint {
         case .getQualityPresets: return "/dvr/quality-presets"
         case .getDVRSettings: return "/dvr/settings"
         case .updateDVRSettings: return "/dvr/settings"
-        case .searchShowForPass: return "/dvr/show-search"
         case .getDVRPasses: return "/dvr/passes"
-        case .createDVRPass: return "/dvr/passes"
-        case .updateDVRPass(let id, _): return "/dvr/passes/\(id)"
-        case .deleteDVRPass(let id): return "/dvr/passes/\(id)"
         case .pauseDVRPass(let id): return "/dvr/passes/\(id)/pause"
         case .resumeDVRPass(let id): return "/dvr/passes/\(id)/resume"
         case .getDVRSchedule: return "/dvr/schedule"
@@ -1284,7 +1286,6 @@ enum APIEndpoint {
              .startTimeshift, .stopTimeshift,
              .enableArchive, .disableArchive,
              .enrichEPG,
-             .createDVRPass,
              .createTeamPass, .toggleTeamPass, .processTeamPasses,
              .scheduleRecording, .recordFromProgram, .bulkRecordingAction, .matchRecording,
              .detectCommercials, .reprocessRecording,
@@ -1346,7 +1347,7 @@ enum APIEndpoint {
              .updateRecording, .updateRecordingPriority, .updateRecordingProgress,
              .toggleRecordingWatched, .toggleRecordingFavorite, .toggleRecordingKeep,
              .updateDVRSettings,
-             .pauseDVRPass, .resumeDVRPass, .updateDVRPass,
+             .pauseDVRPass, .resumeDVRPass,
              .setRecordingLabels,
              .updateV2Job, .updateV2File,
              .updateV2FileState, .setV2FileLabels, .lockV2File,
@@ -1381,7 +1382,7 @@ enum APIEndpoint {
              .removeEPGMapping,
              .deleteChannelGroup, .removeChannelFromGroup,
              .deleteM3USource, .deleteXtreamSource, .deleteEPGSource,
-             .deleteTeamPass, .deleteDVRPass,
+             .deleteTeamPass,
              .deleteRecording, .trashRecording,
              .deleteSeriesRule,
              .deleteV2Job, .deleteV2File, .unlockV2File,
@@ -1458,12 +1459,12 @@ enum APIEndpoint {
             return [URLQueryItem(name: "url", value: url)]
         case .discoverGracenoteProviders(let zip):
             return [URLQueryItem(name: "zip", value: zip)]
-        case .getEPGPrograms(let channelId, let date, let search, let limit):
+        case .discoverTVGuideProviders(let zip):
+            return [URLQueryItem(name: "zip", value: zip)]
+        case .getEPGPrograms(let channelId, let date):
             var items: [URLQueryItem] = []
             if let c = channelId { items.append(URLQueryItem(name: "channelId", value: c)) }
             if let d = date { items.append(URLQueryItem(name: "date", value: d)) }
-            if let s = search { items.append(URLQueryItem(name: "search", value: s)) }
-            if let l = limit { items.append(URLQueryItem(name: "limit", value: String(l))) }
             return items.isEmpty ? nil : items
         case .checkV2Duplicate(let title, let startTime):
             return [URLQueryItem(name: "title", value: title), URLQueryItem(name: "startTime", value: startTime)]
@@ -1506,10 +1507,6 @@ enum APIEndpoint {
             if let c = channelId { items.append(URLQueryItem(name: "channel_id", value: c)) }
             if let n = count { items.append(URLQueryItem(name: "count", value: "\(n)")) }
             return items.isEmpty ? nil : items
-        case .searchShowForPass(let query, let type):
-            var items = [URLQueryItem(name: "q", value: query)]
-            if let t = type { items.append(URLQueryItem(name: "type", value: t)) }
-            return items
         default:
             return nil
         }
@@ -1649,8 +1646,13 @@ enum APIEndpoint {
             return d.isEmpty ? nil : jsonBody(d)
         case .previewEPGSource(let url, let type):
             return jsonBody(["url": url, "type": type])
-        case .addEPGSource(let name, let url, let type):
-            return jsonBody(["name": name, "url": url, "type": type])
+        case .addEPGSource(let name, let url, let type, let tvguideProviderId, let tvguideZipCode, let tvguideDays):
+            var d: [String: Any] = ["name": name, "providerType": type]
+            if let u = url { d["url"] = u }
+            if let pid = tvguideProviderId { d["tvguideProviderId"] = pid }
+            if let zip = tvguideZipCode { d["tvguideZipCode"] = zip }
+            if let days = tvguideDays { d["tvguideDays"] = days }
+            return jsonBody(d)
         case .updateEPGSource(_, let name, let url, let enabled):
             var d: [String: Any] = [:]
             if let n = name { d["name"] = n }
@@ -1815,10 +1817,6 @@ enum APIEndpoint {
             return jsonBody(["type": type, "destination": destination])
         case .setMetadataPrefs(_, let prefs):
             return jsonBody(prefs)
-        case .createDVRPass(let params):
-            return jsonBody(params)
-        case .updateDVRPass(_, let params):
-            return jsonBody(params)
         case .createSeriesRule(let title, let channelId, let prePadding, let postPadding, let keepCount):
             var d: [String: Any] = ["title": title]
             if let c = channelId { d["channelId"] = c }

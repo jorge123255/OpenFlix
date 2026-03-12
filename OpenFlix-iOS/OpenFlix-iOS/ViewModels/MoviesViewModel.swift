@@ -143,7 +143,7 @@ class MoviesViewModel: ObservableObject {
             let result = (try? await mediaRepository.getLibraryItems(
                 sectionId: sectionId,
                 start: 0,
-                size: 200,
+                size: 1000,
                 sort: "addedAt:desc"
             )) ?? (items: [], totalSize: 0)
             combined.append(contentsOf: result.items)

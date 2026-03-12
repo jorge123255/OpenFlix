@@ -73,9 +73,13 @@ class SourceRepository: ObservableObject {
         epgSources = response.sources.map { $0.toDomain() }
     }
 
-    func addEPGSource(name: String, url: String, type: String) async throws {
-        let _: EPGSourceDTO = try await api.request(.addEPGSource(name: name, url: url, type: type))
+    func addEPGSource(name: String, url: String?, type: String, tvguideProviderId: String? = nil, tvguideZipCode: String? = nil, tvguideDays: Int? = nil) async throws {
+        let _: EPGSourceDTO = try await api.request(.addEPGSource(name: name, url: url, type: type, tvguideProviderId: tvguideProviderId, tvguideZipCode: tvguideZipCode, tvguideDays: tvguideDays))
         try await loadEPGSources()
+    }
+
+    func discoverTVGuideProviders(zip: String) async throws -> TVGuideProvidersResponse {
+        return try await api.request(.discoverTVGuideProviders(zip: zip))
     }
 
     func deleteEPGSource(id: Int) async throws {

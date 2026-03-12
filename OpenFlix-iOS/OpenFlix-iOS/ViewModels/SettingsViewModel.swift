@@ -20,6 +20,8 @@ class SettingsViewModel: ObservableObject {
     @AppStorage("skip_credits") var skipCredits = false
     @AppStorage("show_subtitles") var showSubtitles = false
     @AppStorage("commercial_skip_enabled") var commercialSkipEnabled = true
+    @AppStorage("onnx_detection_enabled") var onnxDetectionEnabled = false
+    @AppStorage("acoustid_enabled") var acoustidEnabled = false
     @AppStorage("channel_surfing_enabled") var channelSurfingEnabled = true
     @AppStorage("epg_days_to_load") var epgDaysToLoad = 3
     @AppStorage("screensaver_enabled") var screensaverEnabled = true
@@ -153,9 +155,13 @@ class SettingsViewModel: ObservableObject {
 
     // MARK: - EPG Sources
 
-    func addEPGSource(name: String, url: String, type: String) async throws {
-        try await sourceRepository.addEPGSource(name: name, url: url, type: type)
+    func addEPGSource(name: String, url: String?, type: String, tvguideProviderId: String? = nil, tvguideZipCode: String? = nil, tvguideDays: Int? = nil) async throws {
+        try await sourceRepository.addEPGSource(name: name, url: url, type: type, tvguideProviderId: tvguideProviderId, tvguideZipCode: tvguideZipCode, tvguideDays: tvguideDays)
         epgSources = sourceRepository.epgSources
+    }
+
+    func discoverTVGuideProviders(zip: String) async throws -> TVGuideProvidersResponse {
+        return try await sourceRepository.discoverTVGuideProviders(zip: zip)
     }
 
     func deleteEPGSource(_ source: EPGSource) async throws {

@@ -11,6 +11,7 @@ struct VideoPlayerView: View {
     var startPosition: Int?
     var commercials: [Commercial] = []
     var recordingDurationMs: Int = 0
+    var recording: Recording? = nil
 
     @StateObject private var viewModel = PlayerViewModel()
     @Environment(\.dismiss) var dismiss
@@ -124,17 +125,20 @@ struct VideoPlayerView: View {
                     viewModel: viewModel,
                     commercials: commercials,
                     recordingDurationMs: recordingDurationMs,
-                    isRecording: recordingURL != nil
+                    isRecording: recordingURL != nil,
+                    recording: recording
                 ) {
                     dismiss()
                 }
             }
         }
         .onAppear {
+            lockLandscape()
             loadContent()
         }
         .onDisappear {
             viewModel.cleanup()
+            unlockOrientation()
         }
         #if os(tvOS)
         .onPlayPauseCommand {
@@ -151,6 +155,22 @@ struct VideoPlayerView: View {
             }
         }
         #endif
+    }
+
+    private func lockLandscape() {
+        AppDelegate.orientationLock = .landscape
+        if #available(iOS 16.0, *) {
+            let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene
+            scene?.requestGeometryUpdate(.iOS(interfaceOrientations: .landscape))
+        }
+    }
+
+    private func unlockOrientation() {
+        AppDelegate.orientationLock = .allButUpsideDown
+        if #available(iOS 16.0, *) {
+            let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene
+            scene?.requestGeometryUpdate(.iOS(interfaceOrientations: .portrait))
+        }
     }
 
     private func loadContent() {
@@ -251,6 +271,7 @@ struct AppleTVPlayerControlsOverlay: View {
     var commercials: [Commercial] = []
     var recordingDurationMs: Int = 0
     var isRecording: Bool = false
+    var recording: Recording? = nil
     var onClose: () -> Void
 
     @FocusState private var focusedControl: PlayerControl?

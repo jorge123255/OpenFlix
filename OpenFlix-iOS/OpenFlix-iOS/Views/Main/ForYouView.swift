@@ -5,7 +5,6 @@ struct ForYouView: View {
     @StateObject private var viewModel = ForYouViewModel()
     @StateObject private var liveTVViewModel = LiveTVViewModel()
     @State private var selectedHeroIndex = 0
-    @State private var showAllOnNow = false
 
     // Xfinity colors
     private let bgColor = Color(red: 17/255, green: 12/255, blue: 33/255)
@@ -50,18 +49,10 @@ struct ForYouView: View {
                     ForYouGallerySection(
                         title: "On Now",
                         badge: "LIVE",
-                        badgeColor: liveRed,
-                        showViewAll: true,
-                        onViewAll: { showAllOnNow = true }
+                        badgeColor: liveRed
                     ) {
                         OnNowGalleryRow(channels: viewModel.onNowChannels, liveTVViewModel: liveTVViewModel)
                     }
-                    .background(
-                        NavigationLink(destination: WhatsOnNowView(), isActive: $showAllOnNow) {
-                            EmptyView()
-                        }
-                        .hidden()
-                    )
                 }
 
                 // Recent Recordings

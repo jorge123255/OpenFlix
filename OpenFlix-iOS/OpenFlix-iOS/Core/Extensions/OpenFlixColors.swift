@@ -1,13 +1,13 @@
 import SwiftUI
 
-/// OpenFlix color palette - Apple TV inspired with unique teal accent
+/// OpenFlix color palette - Apple TV inspired with unique purple accent
 /// Premium, modern design differentiated from Apple TV's white/gray
 enum OpenFlixColors {
-    // MARK: - Primary Brand Colors (Teal accent - differentiates from Apple TV)
-    static let accent = Color(hex: "00D4AA")           // Primary teal accent
-    static let accentDark = Color(hex: "00A888")       // Darker teal for pressed states
-    static let accentLight = Color(hex: "33DFBB")      // Lighter teal for highlights
-    static let accentGlow = Color(hex: "00D4AA").opacity(0.3) // Glow effect
+    // MARK: - Primary Brand Colors (Purple accent)
+    static let accent = Color(hex: "8B5CF6")           // Primary purple accent
+    static let accentDark = Color(hex: "6D28D9")       // Darker purple for pressed states
+    static let accentLight = Color(hex: "A78BFA")      // Lighter purple for highlights
+    static let accentGlow = Color(hex: "8B5CF6").opacity(0.3) // Glow effect
 
     // Legacy names for compatibility
     static let primary = accent

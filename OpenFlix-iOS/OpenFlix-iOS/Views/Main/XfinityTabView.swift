@@ -19,7 +19,9 @@ struct XfinityTabView: View {
     enum XfinityTab: String, CaseIterable {
         case forYou = "Home"
         case guide = "Live TV"
+        case teamPass = "Team Pass"
         case saved = "My library"
+        case passes = "Passes"
         case browse = "Browse"
         case search = "Search"
         
@@ -27,7 +29,9 @@ struct XfinityTabView: View {
             switch self {
             case .forYou: return "house.fill"
             case .guide: return "tv.fill"
+            case .teamPass: return "sportscourt.fill"
             case .saved: return "arrow.down.circle.fill"
+            case .passes: return "calendar.badge.clock"
             case .browse: return "square.grid.2x2.fill"
             case .search: return "magnifyingglass"
             }
@@ -37,7 +41,9 @@ struct XfinityTabView: View {
             switch self {
             case .forYou: return "house"
             case .guide: return "tv"
+            case .teamPass: return "sportscourt"
             case .saved: return "arrow.down.circle"
+            case .passes: return "calendar.badge.clock"
             case .browse: return "square.grid.2x2"
             case .search: return "magnifyingglass"
             }
@@ -66,8 +72,12 @@ struct XfinityTabView: View {
                         ForYouView()
                     case .guide:
                         XfinityLiveTVView()
+                    case .teamPass:
+                        SportsTeamsView()
                     case .saved:
                         XfinityLibraryWrapper()
+                    case .passes:
+                        PassManagementView()
                     case .browse:
                         XfinityBrowseWrapper()
                     case .search:
@@ -166,7 +176,7 @@ struct XfinityTabView: View {
         .ignoresSafeArea(hideInLandscape ? .all : [])
         .onReceive(NotificationCenter.default.publisher(for: .switchTab)) { notification in
             if let tabName = notification.object as? String,
-               let tab = XfinityTab(rawValue: ["forYou": "Home", "guide": "Live TV", "saved": "My library", "browse": "Browse", "search": "Search"][tabName] ?? "") {
+               let tab = XfinityTab(rawValue: ["forYou": "Home", "guide": "Live TV", "teamPass": "Team Pass", "saved": "My library", "browse": "Browse", "search": "Search"][tabName] ?? "") {
                 selectedTab = tab
             }
         }
@@ -222,6 +232,8 @@ struct SideDrawerView: View {
     private let items: [DrawerItem] = [
         DrawerItem(tab: .forYou,  icon: "house.fill",           label: "Home"),
         DrawerItem(tab: .guide,   icon: "play.fill",            label: "Live TV"),
+        DrawerItem(tab: .teamPass, icon: "sportscourt.fill",    label: "Team Pass"),
+        DrawerItem(tab: .passes,  icon: "calendar.badge.clock", label: "Passes"),
         DrawerItem(tab: .saved,   icon: "list.bullet",          label: "Library"),
         DrawerItem(tab: .browse,  icon: "text.justify",         label: "Browse"),
         DrawerItem(tab: .search,  icon: "magnifyingglass",      label: "Search"),
@@ -471,12 +483,10 @@ struct XfinityProfileCard: View {
 // MARK: - Library Wrapper (Saved Tab)
 struct XfinityLibraryWrapper: View {
     @State private var selectedSection: LibrarySection = .recordings
-    @StateObject private var passesViewModel = DVRViewModel()
     
     enum LibrarySection: String, CaseIterable {
         case recordings = "Recordings"
         case scheduled = "Scheduled"
-        case passes = "Passes"
         case downloads = "Downloads"
         case watchlist = "Watchlist"
     }
@@ -510,8 +520,6 @@ struct XfinityLibraryWrapper: View {
                     DVRRecordingsContent()
                 case .scheduled:
                     DVRScheduledContent()
-                case .passes:
-                    DVRPassesView(viewModel: passesViewModel)
                 case .downloads:
                     DownloadsPlaceholder()
                 case .watchlist:
@@ -532,7 +540,6 @@ struct XfinityBrowseWrapper: View {
     enum XfinityBrowseCategory: String, CaseIterable, Identifiable {
         case movies = "Movies"
         case tvShows = "TV"
-        case sports = "Sports Zone"
         case news = "News"
         case kids = "Kids & family"
         case networks = "Networks"
@@ -546,8 +553,6 @@ struct XfinityBrowseWrapper: View {
                 return [Color(hex: "7B4FE8"), Color(hex: "5B3DC4")]
             case .tvShows:
                 return [Color(hex: "6B3FD8"), Color(hex: "4B2DB4")]
-            case .sports:
-                return [Color(hex: "8B5FF8"), Color(hex: "6B4DD4")]
             case .news:
                 return [Color(hex: "7B4FE8"), Color(hex: "5B3DC4")]
             case .kids:
@@ -661,8 +666,6 @@ struct CategoryDetailFullScreen: View {
                     BrowseMoviesView()
                 case .tvShows:
                     BrowseTVShowsView()
-                case .sports:
-                    SportsTeamsView()
                 case .news:
                     BrowseNewsView()
                 case .kids:
@@ -1507,19 +1510,43 @@ struct SportsTeamsView: View {
     @State private var teamsByLeague: [String: [ESPNTeam]] = [:]
     @State private var teamIdToLeague: [String: ESPNService.League] = [:]  // Quick lookup
     @State private var liveGames: [String: [ESPNGame]] = [:]
+    @State private var favoriteTeamNextGames: [String: ESPNGame] = [:]
     @State private var selectedTeam: ESPNTeam?
     @State private var selectedTeamLeague: ESPNService.League = .nba
     @State private var selectedLeague: ESPNService.League? = nil
     @State private var isLoading = true
     @State private var showTeamDetail = false
-    @AppStorage("favoriteTeamIds") private var favoriteTeamIdsData: Data = Data()
+    @State private var showManageFavorites = false
+        @State private var selectedChannel: Channel?
+    @StateObject private var broadcastService = BroadcastChannelService.shared
+    @AppStorage("favoriteTeamKeys") private var favoriteTeamKeysData: Data = Data()
     
-    private var favoriteTeamIds: Set<String> {
-        (try? JSONDecoder().decode(Set<String>.self, from: favoriteTeamIdsData)) ?? []
+    private var favoriteTeamKeys: Set<String> {
+        (try? JSONDecoder().decode(Set<String>.self, from: favoriteTeamKeysData)) ?? []
     }
     
-    private var favoriteTeams: [ESPNTeam] {
-        teamsByLeague.values.flatMap { $0 }.filter { favoriteTeamIds.contains($0.id) }
+    private func teamKey(league: ESPNService.League, teamId: String) -> String {
+        "\(league.rawValue):\(teamId)"
+    }
+    
+    private func isFavorite(league: ESPNService.League, teamId: String) -> Bool {
+        favoriteTeamKeys.contains(teamKey(league: league, teamId: teamId))
+    }
+    
+    // Returns (team, league) pairs for favorites — iterates teamsByLeague directly to avoid ID collisions
+    private var favoriteTeamsWithLeague: [(team: ESPNTeam, league: ESPNService.League)] {
+        var seen = Set<String>()
+        var result: [(team: ESPNTeam, league: ESPNService.League)] = []
+        for league in leagues {
+            guard let teams = teamsByLeague[league.displayName] else { continue }
+            for team in teams {
+                let key = teamKey(league: league, teamId: team.id)
+                if favoriteTeamKeys.contains(key) && seen.insert(key).inserted {
+                    result.append((team: team, league: league))
+                }
+            }
+        }
+        return result
     }
     
     let leagues: [ESPNService.League] = [.nfl, .nba, .mlb, .nhl, .mls]
@@ -1557,30 +1584,54 @@ struct SportsTeamsView: View {
                     }
                     
                     // Favorite Teams Section
-                    if !favoriteTeams.isEmpty && selectedLeague == nil {
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text("⭐ Your Teams")
-                                .font(.system(size: 18, weight: .semibold))
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 16)
-                            
-                            ScrollView(.horizontal, showsIndicators: false) {
-                                HStack(spacing: 12) {
-                                    ForEach(favoriteTeams) { team in
-                                        ESPNTeamCard(
-                                            team: team,
-                                            isFavorite: true,
-                                            onTap: {
-                                                selectedTeam = team
-                                                selectedTeamLeague = teamIdToLeague[team.id] ?? .nba
-                                                showTeamDetail = true
-                                            },
-                                            onFavorite: { toggleFavorite(team) }
-                                        )
+                    let favs = favoriteTeamsWithLeague
+                    if !favs.isEmpty && selectedLeague == nil {
+                        VStack(alignment: .leading, spacing: 16) {
+                            HStack {
+                                Text("⭐ My Teams")
+                                    .font(.system(size: 20, weight: .bold))
+                                    .foregroundColor(.white)
+                                
+                                Spacer()
+                                
+                                Button(action: { showManageFavorites = true }) {
+                                    HStack(spacing: 4) {
+                                        Image(systemName: "square.and.pencil")
+                                            .font(.system(size: 12))
+                                        Text("Manage")
+                                            .font(.system(size: 12, weight: .semibold))
                                     }
+                                    .foregroundColor(.white.opacity(0.7))
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 6)
+                                    .background(Color.white.opacity(0.08))
+                                    .cornerRadius(8)
                                 }
-                                .padding(.horizontal, 16)
+                                .buttonStyle(.plain)
                             }
+                            .padding(.horizontal, 16)
+                            
+                            VStack(spacing: 12) {
+                                ForEach(Array(favs.enumerated()), id: \.offset) { _, item in
+                                    FavoriteTeamDashboardCard(
+                                        team: item.team,
+                                        league: item.league,
+                                        nextGame: favoriteTeamNextGames[teamKey(league: item.league, teamId: item.team.id)],
+                                        liveGame: liveGame(for: item.team.id),
+                                        broadcastService: broadcastService,
+                                        onTap: {
+                                            selectedTeam = item.team
+                                            selectedTeamLeague = item.league
+                                            showTeamDetail = true
+                                        },
+                                        onWatch: { channel in
+                                            selectedChannel = channel
+                                        },
+                                        onRemove: { toggleFavorite(item.team, league: item.league) }
+                                    )
+                                }
+                            }
+                            .padding(.horizontal, 16)
                         }
                     }
                     
@@ -1618,13 +1669,13 @@ struct SportsTeamsView: View {
                                         ForEach(teams) { team in
                                             ESPNTeamCard(
                                                 team: team,
-                                                isFavorite: favoriteTeamIds.contains(team.id),
+                                                isFavorite: isFavorite(league: league, teamId: team.id),
                                                 onTap: {
                                                     selectedTeam = team
                                                     selectedTeamLeague = league
                                                     showTeamDetail = true
                                                 },
-                                                onFavorite: { toggleFavorite(team) }
+                                                onFavorite: { toggleFavorite(team, league: league) }
                                             )
                                         }
                                     }
@@ -1647,6 +1698,21 @@ struct SportsTeamsView: View {
             if let team = selectedTeam {
                 ESPNTeamDetailView(team: team, league: selectedTeamLeague)
             }
+        }
+        .fullScreenCover(item: $selectedChannel) { channel in
+            if let urlStr = channel.streamUrl, let url = URL(string: urlStr) {
+                VideoPlayerView(
+                    mediaItem: nil,
+                    recordingURL: url,
+                    startPosition: nil
+                )
+            }
+        }
+        .sheet(isPresented: $showManageFavorites) {
+            ManageFavoritesSheet(
+                favoriteTeams: favoriteTeamsWithLeague,
+                onRemove: { team, league in toggleFavorite(team, league: league) }
+            )
         }
     }
     
@@ -1679,19 +1745,74 @@ struct SportsTeamsView: View {
             }
         }
         
+        // Load favorite team schedules (keyed by "league:teamId")
+        let favsList = await MainActor.run { self.favoriteTeamsWithLeague }
+        if favsList.isEmpty {
+            await MainActor.run { favoriteTeamNextGames = [:] }
+        } else {
+            let now = Date()
+            var nextGames: [String: ESPNGame] = [:]
+            await withTaskGroup(of: (String, ESPNGame?).self) { group in
+                for item in favsList {
+                    let key = teamKey(league: item.league, teamId: item.team.id)
+                    group.addTask {
+                        let schedule = try? await ESPNService.shared.fetchTeamSchedule(league: item.league, teamId: item.team.id)
+                        let nextGame = schedule?
+                            .filter { game in
+                                guard let date = game.gameDate else { return false }
+                                return date >= now && !game.isCompleted
+                            }
+                            .sorted { ($0.gameDate ?? .distantFuture) < ($1.gameDate ?? .distantFuture) }
+                            .first
+                        return (key, nextGame)
+                    }
+                }
+                
+                for await (key, game) in group {
+                    if let game {
+                        nextGames[key] = game
+                    }
+                }
+            }
+            await MainActor.run { favoriteTeamNextGames = nextGames }
+        }
+        
+        if !broadcastService.isLoaded {
+            await broadcastService.loadChannels()
+        }
+        
         isLoading = false
     }
     
-    private func toggleFavorite(_ team: ESPNTeam) {
+    private func toggleFavorite(_ team: ESPNTeam, league: ESPNService.League) {
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-        var ids = favoriteTeamIds
-        if ids.contains(team.id) {
-            ids.remove(team.id)
+        let key = teamKey(league: league, teamId: team.id)
+        var keys = favoriteTeamKeys
+        let isRemoving = keys.contains(key)
+        if keys.contains(key) {
+            keys.remove(key)
         } else {
-            ids.insert(team.id)
+            keys.insert(key)
         }
-        if let encoded = try? JSONEncoder().encode(ids) {
-            favoriteTeamIdsData = encoded
+        if let encoded = try? JSONEncoder().encode(keys) {
+            favoriteTeamKeysData = encoded
+        }
+        
+        Task {
+            let api = OpenFlixAPI.shared
+            if isRemoving {
+                if let passesResponse = try? await api.getTeamPasses(),
+                   let matchingPass = passesResponse.teamPasses.first(where: {
+                       $0.teamName.localizedCaseInsensitiveCompare(team.displayName) == .orderedSame
+                   }) {
+                    try? await api.deleteTeamPass(id: String(matchingPass.id))
+                }
+            } else {
+                _ = try? await api.createTeamPass(teamName: team.displayName, league: league.rawValue)
+            }
+            await MainActor.run {
+                UINotificationFeedbackGenerator().notificationOccurred(.success)
+            }
         }
     }
     
@@ -1702,6 +1823,276 @@ struct SportsTeamsView: View {
             }
         }
         return .nfl
+    }
+    
+    private func liveGame(for teamId: String) -> ESPNGame? {
+        for games in liveGames.values {
+            if let match = games.first(where: { game in
+                guard game.isLive else { return false }
+                return game.homeTeam?.team.id == teamId || game.awayTeam?.team.id == teamId
+            }) {
+                return match
+            }
+        }
+        return nil
+    }
+}
+
+// MARK: - Favorite Team Dashboard Card
+struct FavoriteTeamDashboardCard: View {
+    let team: ESPNTeam
+    let league: ESPNService.League
+    let nextGame: ESPNGame?
+    let liveGame: ESPNGame?
+    let broadcastService: BroadcastChannelService
+    let onTap: () -> Void
+    let onWatch: (Channel) -> Void
+    var onRemove: (() -> Void)? = nil
+    
+    @State private var pulse = false
+    
+    private var teamColor: Color {
+        Color(hex: team.primaryColor)
+    }
+    
+    private var displayGame: ESPNGame? {
+        liveGame ?? nextGame
+    }
+    
+    private var opponent: ESPNCompetitor? {
+        guard let game = displayGame else { return nil }
+        let isHome = game.homeTeam?.team.id == team.id
+        return isHome ? game.awayTeam : game.homeTeam
+    }
+    
+    private var watchChannel: Channel? {
+        guard let game = displayGame, let broadcast = game.broadcast else { return nil }
+        return broadcastService.findChannel(forBroadcast: broadcast)
+    }
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 12) {
+                ZStack {
+                    Circle()
+                        .fill(LinearGradient(
+                            colors: [teamColor, teamColor.opacity(0.6)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ))
+                        .frame(width: 54, height: 54)
+                    
+                    if let logoUrl = team.logoURL, let url = URL(string: logoUrl) {
+                        AsyncImage(url: url) { image in
+                            image.resizable().aspectRatio(contentMode: .fit)
+                        } placeholder: {
+                            Text(team.abbreviation)
+                                .font(.system(size: 14, weight: .bold))
+                                .foregroundColor(.white)
+                        }
+                        .frame(width: 30, height: 30)
+                    } else {
+                        Text(team.abbreviation)
+                            .font(.system(size: 14, weight: .bold))
+                            .foregroundColor(.white)
+                    }
+                }
+                
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(team.displayName)
+                        .font(.system(size: 18, weight: .bold))
+                        .foregroundColor(.white)
+                }
+                
+                Spacer()
+                
+                Text(league.emoji)
+                    .font(.system(size: 18))
+                    .padding(8)
+                    .background(Color.white.opacity(0.08))
+                    .clipShape(Circle())
+            }
+            
+            if let live = liveGame {
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(spacing: 6) {
+                        Circle()
+                            .fill(Color.red)
+                            .frame(width: 6, height: 6)
+                            .scaleEffect(pulse ? 1.2 : 0.7)
+                            .opacity(pulse ? 1 : 0.5)
+                            .onAppear {
+                                withAnimation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true)) {
+                                    pulse.toggle()
+                                }
+                            }
+                        Text("LIVE")
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundColor(.red)
+                        if let status = live.statusDetail {
+                            Text(status)
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundColor(.white.opacity(0.8))
+                        }
+                        Spacer()
+                    }
+                    
+                    HStack(spacing: 12) {
+                        HStack(spacing: 6) {
+                            Text(live.awayTeam?.team.abbreviation ?? "AWY")
+                                .font(.system(size: 13, weight: .bold))
+                                .foregroundColor(.white)
+                            Text(live.awayTeam?.scoreDisplay ?? "-")
+                                .font(.system(size: 14, weight: .bold))
+                                .foregroundColor(.white)
+                        }
+                        Text("•")
+                            .foregroundColor(.white.opacity(0.5))
+                        HStack(spacing: 6) {
+                            Text(live.homeTeam?.team.abbreviation ?? "HOM")
+                                .font(.system(size: 13, weight: .bold))
+                                .foregroundColor(.white)
+                            Text(live.homeTeam?.scoreDisplay ?? "-")
+                                .font(.system(size: 14, weight: .bold))
+                                .foregroundColor(.white)
+                        }
+                        Spacer()
+                        
+                        if let channel = watchChannel {
+                            Button {
+                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                onWatch(channel)
+                            } label: {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "play.fill")
+                                        .font(.system(size: 10, weight: .bold))
+                                    Text("Watch")
+                                        .font(.system(size: 12, weight: .bold))
+                                }
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 6)
+                                .background(Color.red)
+                                .cornerRadius(8)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                }
+            } else if let game = nextGame {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Next Game")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundColor(.white.opacity(0.7))
+                    
+                    Text("\(game.homeTeam?.team.id == team.id ? "vs" : "@") \(opponent?.team.displayName ?? "TBD")")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundColor(.white)
+                    
+                    HStack(spacing: 6) {
+                        if let date = game.gameDate {
+                            Text(date.formatted(.dateTime.month(.abbreviated).day().hour().minute()))
+                                .font(.system(size: 12))
+                                .foregroundColor(.white.opacity(0.7))
+                        }
+                        if let broadcast = game.broadcast {
+                            Text("•")
+                                .foregroundColor(.white.opacity(0.5))
+                            Text(broadcast)
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundColor(watchChannel != nil ? Color(hex: "6138f5") : .white.opacity(0.7))
+                        }
+                    }
+                }
+            } else {
+                Text("No upcoming games")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(.gray)
+            }
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(
+                    LinearGradient(
+                        colors: [teamColor.opacity(0.25), Color.black.opacity(0.2)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(teamColor.opacity(0.4), lineWidth: 1)
+        )
+        .onTapGesture {
+            onTap()
+        }
+    }
+}
+
+// MARK: - Manage Favorites Sheet
+struct ManageFavoritesSheet: View {
+    let favoriteTeams: [(team: ESPNTeam, league: ESPNService.League)]
+    let onRemove: (ESPNTeam, ESPNService.League) -> Void
+    @Environment(\.dismiss) private var dismiss
+    
+    var body: some View {
+        NavigationView {
+            List {
+                if favoriteTeams.isEmpty {
+                    Text("No favorite teams yet.\nStar teams from the list below to add them here.")
+                        .foregroundColor(.gray)
+                        .multilineTextAlignment(.center)
+                        .listRowBackground(Color.clear)
+                } else {
+                    ForEach(favoriteTeams, id: \.team.id) { item in
+                        HStack(spacing: 12) {
+                            if let logoUrl = item.team.logoURL, let url = URL(string: logoUrl) {
+                                AsyncImage(url: url) { image in
+                                    image.resizable().aspectRatio(contentMode: .fit)
+                                } placeholder: {
+                                    Circle().fill(Color.gray.opacity(0.3))
+                                }
+                                .frame(width: 36, height: 36)
+                            }
+                            
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(item.team.displayName)
+                                    .font(.system(size: 16, weight: .semibold))
+                                    .foregroundColor(.white)
+                                Text("\(item.league.emoji) \(item.league.displayName)")
+                                    .font(.system(size: 12))
+                                    .foregroundColor(.gray)
+                            }
+                            
+                            Spacer()
+                            
+                            Button {
+                                withAnimation { onRemove(item.team, item.league) }
+                            } label: {
+                                Image(systemName: "star.slash.fill")
+                                    .foregroundColor(.yellow)
+                                    .font(.system(size: 18))
+                            }
+                            .buttonStyle(.plain)
+                        }
+                        .listRowBackground(Color.white.opacity(0.05))
+                    }
+                }
+            }
+            .scrollContentBackground(.hidden)
+            .background(Color.black)
+            .navigationTitle("Manage My Teams")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Done") { dismiss() }
+                }
+            }
+        }
+        .presentationDetents([.medium, .large])
     }
 }
 
@@ -1886,11 +2277,15 @@ struct ESPNTeamDetailView: View {
     @State private var teamDetails: ESPNTeamDetails?
     @State private var isLoading = true
     @State private var selectedChannel: Channel?
-    @AppStorage("favoriteTeamIds") private var favoriteTeamIdsData: Data = Data()
+    @AppStorage("favoriteTeamKeys") private var favoriteTeamKeysData: Data = Data()
+    
+    private var teamKey: String {
+        "\(league.rawValue):\(team.id)"
+    }
     
     private var isFavorite: Bool {
-        let ids = (try? JSONDecoder().decode(Set<String>.self, from: favoriteTeamIdsData)) ?? []
-        return ids.contains(team.id)
+        let keys = (try? JSONDecoder().decode(Set<String>.self, from: favoriteTeamKeysData)) ?? []
+        return keys.contains(teamKey)
     }
     
     var teamColor: Color {
@@ -2212,14 +2607,14 @@ struct ESPNTeamDetailView: View {
     
     private func toggleFavorite() {
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-        var ids = (try? JSONDecoder().decode(Set<String>.self, from: favoriteTeamIdsData)) ?? []
-        if ids.contains(team.id) {
-            ids.remove(team.id)
+        var keys = (try? JSONDecoder().decode(Set<String>.self, from: favoriteTeamKeysData)) ?? []
+        if keys.contains(teamKey) {
+            keys.remove(teamKey)
         } else {
-            ids.insert(team.id)
+            keys.insert(teamKey)
         }
-        if let encoded = try? JSONEncoder().encode(ids) {
-            favoriteTeamIdsData = encoded
+        if let encoded = try? JSONEncoder().encode(keys) {
+            favoriteTeamKeysData = encoded
         }
     }
 }

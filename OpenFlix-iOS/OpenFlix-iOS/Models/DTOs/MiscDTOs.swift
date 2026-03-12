@@ -106,25 +106,42 @@ struct RecordingStatsResponse: Codable {
 
 struct SeriesRulesResponse: Codable {
     let rules: [SeriesRuleDTO]
+    enum CodingKeys: String, CodingKey {
+        case rules = "passes"
+    }
 }
 
 struct SeriesRuleDTO: Codable {
-    let idValue: StringOrInt
-    let title: String?
+    let id: Int
+    let type: String?
+    let name: String?
+    let paused: Bool?
+    let numJobs: Int?
+    let keepNum: Int?
+    let paddingStart: Int?
+    let paddingEnd: Int?
+    // Legacy camelCase fields (older server responses)
     let channelId: StringOrInt?
     let enabled: Bool?
-    let prePadding: Int?
-    let postPadding: Int?
-    let keepCount: Int?
-    let recordingCount: Int?
 
     enum CodingKeys: String, CodingKey {
-        case idValue = "id"
-        case title, channelId, enabled, prePadding, postPadding, keepCount, recordingCount
+        case id = "ID"
+        case type = "Type"
+        case name = "Name"
+        case paused = "Paused"
+        case numJobs = "NumJobs"
+        case keepNum = "KeepNum"
+        case paddingStart = "PaddingStart"
+        case paddingEnd = "PaddingEnd"
+        case channelId, enabled
     }
 
-    var safeId: Int { idValue.intValue }
-    var safeTitle: String { title ?? "Series Rule" }
+    var safeId: Int { id }
+    var safeTitle: String { name ?? "Series Rule" }
+    var recordingCount: Int? { numJobs }
+    var keepCount: Int? { keepNum }
+    var prePadding: Int? { paddingStart }
+    var postPadding: Int? { paddingEnd }
 }
 
 // MARK: - DVR Conflicts

@@ -463,7 +463,7 @@ struct MultiviewPlayerV2: View {
 
         slots = picks.enumerated().map { i, ch in
             let vm = VLCPlayerViewModel()
-            if i > 0 { vm.mediaPlayer.audio?.volume = 0 }
+            if i > 0 { setVolume(vm, 0) }
             return MultiviewSlot(channel: ch, playerVM: vm)
         }
         // play() is triggered by VLCPlayerView.onAppear after layout settles
@@ -484,22 +484,29 @@ struct MultiviewPlayerV2: View {
         if let url = URL(string: channel.streamUrl ?? "") {
             slots[index].playerVM.play(url: url)
         }
-        slots[index].playerVM.mediaPlayer.audio?.volume = Int32(audioSlot == index ? 100 : 0)
+        setVolume(slots[index].playerVM, Int32(audioSlot == index ? 100 : 0))
     }
 
     private func switchAudio(to index: Int) {
         allMuted = false
         audioSlot = index
         for i in 0..<slots.count {
-            slots[i].playerVM.mediaPlayer.audio?.volume = Int32(i == index ? 100 : 0)
+            setVolume(slots[i].playerVM, Int32(i == index ? 100 : 0))
         }
     }
 
     private func toggleMuteAll() {
         allMuted.toggle()
         for i in 0..<slots.count {
-            slots[i].playerVM.mediaPlayer.audio?.volume = allMuted ? 0 : Int32(i == audioSlot ? 100 : 0)
+            setVolume(slots[i].playerVM, allMuted ? 0 : Int32(i == audioSlot ? 100 : 0))
         }
+    }
+
+    /// Set volume on a VLC media player (no-op on simulator where VLCKit is stripped)
+    private func setVolume(_ player: VLCPlayerViewModel, _ volume: Int32) {
+        #if !targetEnvironment(simulator)
+        player.mediaPlayer.audio?.volume = volume
+        #endif
     }
 
     private func cleanupPlayers() {
