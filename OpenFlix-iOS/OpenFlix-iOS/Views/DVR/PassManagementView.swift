@@ -389,11 +389,9 @@ class ShowSearchViewModel: ObservableObject {
         let now = Date()
         var airings: [ProgramAiring] = []
         for cwp in guide {
-            for program in cwp.programs {
-                guard program.endTime >= now,
-                      normalizeTitle(program.title).contains(normalizedTitle) ||
-                      normalizedTitle.contains(normalizeTitle(program.title))
-                else { continue }
+            for program in cwp.programs where program.startTime >= now {
+                let norm = normalizeTitle(program.title)
+                guard norm.contains(normalizedTitle) || normalizedTitle.contains(norm) else { continue }
                 airings.append(ProgramAiring(
                     channelNum: cwp.channel.number,
                     channelName: cwp.channel.name,
@@ -407,13 +405,11 @@ class ShowSearchViewModel: ObservableObject {
 
     private func epgSearch(query: String, guide: [ChannelWithPrograms]) -> [ShowSearchResult] {
         let q = normalizeTitle(query)
-        let now = Date()
         var titleToAirings: [String: [ProgramAiring]] = [:]
         var titleToFirst: [String: (program: Program, channel: Channel)] = [:]
 
         for cwp in guide {
             for program in cwp.programs {
-                guard program.endTime >= now else { continue }
                 let norm = normalizeTitle(program.title)
                 guard norm.contains(q) else { continue }
                 var list = titleToAirings[norm] ?? []
@@ -508,7 +504,9 @@ struct CreateSeriesPassSheet: View {
             }
             .task {
                 let repo = LiveTVRepository()
-                if let cwps = try? await repo.getGuide() {
+                let start = Date()
+                let end = Calendar.current.date(byAdding: .day, value: 14, to: start)
+                if let cwps = try? await repo.getGuide(start: start, end: end) {
                     searchVM.setGuide(cwps)
                 }
             }
@@ -548,12 +546,16 @@ struct CreateSeriesPassSheet: View {
                     .tint(.white)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if searchVM.results.isEmpty && searchVM.query.count >= 2 {
+                let totalProgs = searchVM.epgGuide.reduce(0) { $0 + $1.programs.count }
                 VStack(spacing: 12) {
                     Image(systemName: "magnifyingglass")
                         .font(.system(size: 36))
                         .foregroundColor(.gray.opacity(0.5))
                     Text("No shows found")
                         .foregroundColor(.gray)
+                    Text("Guide: \(searchVM.epgGuide.count) ch / \(totalProgs) programs")
+                        .font(.system(size: 11))
+                        .foregroundColor(.gray.opacity(0.5))
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if searchVM.query.count < 2 {

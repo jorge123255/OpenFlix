@@ -362,7 +362,8 @@ struct EPGSearchView: View {
     }
 
     private var noResultsView: some View {
-        VStack(spacing: 12) {
+        let totalPrograms = viewModel.guide.reduce(0) { $0 + $1.programs.count }
+        return VStack(spacing: 12) {
             Spacer()
             Image(systemName: "magnifyingglass")
                 .font(.system(size: 36))
@@ -370,8 +371,8 @@ struct EPGSearchView: View {
             Text("No results for \"\(searchText)\"")
                 .font(.system(size: 17, weight: .medium))
                 .foregroundColor(.white)
-            Text("Try a different search term")
-                .font(.system(size: 14))
+            Text("Searched \(totalPrograms) programs across \(viewModel.guide.count) channels")
+                .font(.system(size: 13))
                 .foregroundColor(.gray)
             Spacer()
         }

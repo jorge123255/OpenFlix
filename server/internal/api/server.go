@@ -490,6 +490,33 @@ func NewServer(cfg *config.Config, db *gorm.DB) *Server {
 
 		logger.Info("[scheduler:source_refresh] all sources refreshed")
 		return nil
+
+	// Refresh HDHomeRun tuners and import any new channels (every 6 hours)
+	taskSched.RegisterTask("tuner_refresh", "Tuner Refresh",
+		"Discover HDHomeRun tuners and import lineup changes", "0 */6 * * *", 5*time.Minute,
+		func(ctx context.Context) error {
+			logger.Info("[scheduler:tuner_refresh] discovering tuners")
+			mgr := getTunerManager(db)
+			devices, err := mgr.Discover(ctx)
+			if err != nil {
+				logger.Warnf("[scheduler:tuner_refresh] discovery failed: %v", err)
+				return err
+			}
+			logger.Infof("[scheduler:tuner_refresh] found %d tuner(s)", len(devices))
+			// Import channels from each discovered device
+			for _, dev := range devices {
+				if err := ctx.Err(); err != nil {
+					return err
+				}
+				result := importChannelsFromTuner(db, dev)
+				if result.Error != nil {
+					logger.Warnf("[scheduler:tuner_refresh] import failed for %s: %v", dev.DeviceID, result.Error)
+				} else {
+					logger.Infof("[scheduler:tuner_refresh] %s: %d new, %d updated", dev.DeviceID, result.Imported, result.Skipped)
+				}
+			}
+			return nil
+		})
 	})
 
 	// Monitor tracked shows for new seasons (every 12 hours)

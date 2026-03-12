@@ -691,6 +691,10 @@ func (s *Server) updateChannel(c *gin.Context) {
 		channel.EPGSourceID = req.EPGSourceID
 	}
 	if req.ChannelID != "" {
+		// Preserve original ChannelID in TVGId so HDHomeRun rescan can still find this channel
+		if channel.TVGId == "" && channel.ChannelID != "" {
+			channel.TVGId = channel.ChannelID
+		}
 		channel.ChannelID = req.ChannelID
 	}
 
@@ -1282,6 +1286,10 @@ func (s *Server) refreshChannelEPG(c *gin.Context) {
 	var newMatch *livetv.MatchResult
 	if len(matches) > 0 && matches[0].Confidence >= 0.5 {
 		newMatch = &matches[0]
+		// Preserve original ChannelID in TVGId before overwriting with EPG channel ID
+		if channel.TVGId == "" && channel.ChannelID != "" {
+			channel.TVGId = channel.ChannelID
+		}
 		// Apply the new mapping
 		channel.ChannelID = newMatch.EPGChannelID
 		channel.EPGCallSign = newMatch.EPGCallSign

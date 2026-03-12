@@ -314,11 +314,16 @@ func (s *Server) importChannelsForDevice(deviceID string) (imported, skipped int
 
 		// If the channel already exists, update its codec fields and move on.
 		// Check multiple criteria to catch all cases:
-		// 1. By hdhr channel_id (normal case)
-		// 2. By stream_url (catches remapped channel_ids)
-		// 3. By source_type=hdhr + name + number (catches URL variations)
+		// 1. By hdhr channel_id (normal case — channel not yet remapped)
+		// 2. By tvg_id (catches channels that were remapped to an EPG source; bulkMapChannels
+		//    preserves the original hdhr-{deviceID}-{guideNumber} value in tvg_id)
+		// 3. By stream_url (catches URL-only variations)
+		// 4. By source_type=hdhr + name + number (last-resort fallback)
 		var existing models.Channel
 		found := s.db.Where("channel_id = ?", channelID).First(&existing).Error == nil
+		if !found {
+			found = s.db.Where("tvg_id = ?", channelID).First(&existing).Error == nil
+		}
 		if !found && streamURL != "" {
 			found = s.db.Where("stream_url = ?", streamURL).First(&existing).Error == nil
 		}
@@ -427,4 +432,116 @@ func (s *Server) scanTunerChannels(c *gin.Context) {
 		"message": "Channel scan started",
 		"status":  status,
 	})
+}
+
+// TunerImportResult holds the result of a channel import from a tuner.
+type TunerImportResult struct {
+	Imported int
+	Skipped  int
+	Error    error
+}
+
+// importChannelsFromTuner is a standalone helper for the scheduler to import
+// channels from a discovered HDHomeRun device. Unlike importChannelsForDevice,
+// this does not require a Server instance.
+func importChannelsFromTuner(db *gorm.DB, dev *tuner.HDHomeRunDevice) TunerImportResult {
+	mgr := getTunerManager(db)
+
+	lineup, err := mgr.GetLineup(dev.DeviceID)
+	if err != nil {
+		return TunerImportResult{Error: fmt.Errorf("get lineup: %w", err)}
+	}
+
+	if len(lineup) == 0 {
+		return TunerImportResult{}
+	}
+
+	// Build source name for the device
+	deviceName := dev.ModelNumber
+	if deviceName == "" {
+		deviceName = dev.DeviceID
+	}
+	sourceName := "HDHomeRun " + deviceName
+
+	var imported, skipped int
+
+	for _, ch := range lineup {
+		if ch.DRM != 0 {
+			skipped++
+			continue
+		}
+
+		streamURL := ch.URL
+		if streamURL == "" {
+			streamURL = mgr.GetStreamURL(dev.DeviceID, ch.GuideNumber)
+		}
+
+		channelNum, _ := strconv.Atoi(ch.GuideNumber)
+		if channelNum == 0 {
+			if f, ferr := strconv.ParseFloat(ch.GuideNumber, 64); ferr == nil {
+				channelNum = int(f)
+			}
+		}
+
+		group := "SD"
+		if ch.HD == 1 {
+			group = "HD"
+		}
+
+		channelID := fmt.Sprintf("hdhr-%s-%s", dev.DeviceID, ch.GuideNumber)
+
+		// Check if channel already exists (multiple criteria)
+		var existing models.Channel
+		found := db.Where("channel_id = ?", channelID).First(&existing).Error == nil
+		if !found {
+			found = db.Where("tvg_id = ?", channelID).First(&existing).Error == nil
+		}
+		if !found && streamURL != "" {
+			found = db.Where("stream_url = ?", streamURL).First(&existing).Error == nil
+		}
+		if !found {
+			found = db.Where("source_type = ? AND number = ? AND name = ?", "hdhr", channelNum, ch.GuideName).First(&existing).Error == nil
+		}
+
+		if found {
+			// Update codec fields on existing channel
+			updates := map[string]interface{}{}
+			if ch.VideoCodec != "" && existing.VideoCodec != ch.VideoCodec {
+				updates["video_codec"] = ch.VideoCodec
+			}
+			if ch.AudioCodec != "" && existing.AudioCodec != ch.AudioCodec {
+				updates["audio_codec"] = ch.AudioCodec
+			}
+			if len(updates) > 0 {
+				db.Model(&existing).Updates(updates)
+			}
+			skipped++
+			continue
+		}
+
+		// Create new channel
+		newCh := models.Channel{
+			ChannelID:  channelID,
+			Name:       ch.GuideName,
+			Number:     channelNum,
+			NumberStr:  ch.GuideNumber,
+			StreamURL:  streamURL,
+			Group:      group,
+			Source:     sourceName,
+			SourceType: "hdhr",
+			TvgID:      channelID,
+			VideoCodec: ch.VideoCodec,
+			AudioCodec: ch.AudioCodec,
+			IsHD:       ch.HD == 1,
+			Enabled:    true,
+		}
+
+		if err := db.Create(&newCh).Error; err != nil {
+			logger.Warnf("importChannelsFromTuner: failed to create channel %s: %v", ch.GuideName, err)
+			continue
+		}
+		imported++
+	}
+
+	return TunerImportResult{Imported: imported, Skipped: skipped}
 }

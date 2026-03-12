@@ -61,6 +61,10 @@ type TunerManager struct {
 	mu      sync.RWMutex
 	client  *http.Client
 	db      *gorm.DB
+
+	// Scheduled refresh
+	stopCh   chan struct{}
+	stopOnce sync.Once
 }
 
 // discoverJSON is the JSON structure returned by /discover.json on the device.
@@ -1167,4 +1171,56 @@ func parseDiscoveryResponse(data []byte, addr net.Addr) *HDHomeRunDevice {
 	}
 
 	return dev
+}
+
+// RefreshCallback is called after each scheduled tuner discovery with the
+// list of discovered devices. Use this to trigger channel imports.
+type RefreshCallback func(devices []*HDHomeRunDevice)
+
+// StartScheduledRefresh begins a background goroutine that discovers tuners
+// at the given interval. The callback is invoked after each successful discovery.
+// Call StopScheduledRefresh to stop the goroutine gracefully.
+func (tm *TunerManager) StartScheduledRefresh(interval time.Duration, callback RefreshCallback) {
+	if interval < time.Minute {
+		interval = time.Hour * 6 // Default: 6 hours
+	}
+
+	tm.stopCh = make(chan struct{})
+
+	go func() {
+		logger.Infof("TunerManager: scheduled refresh started (every %v)", interval)
+		ticker := time.NewTicker(interval)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-tm.stopCh:
+				logger.Infof("TunerManager: scheduled refresh stopped")
+				return
+			case <-ticker.C:
+				ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+				devices, err := tm.Discover(ctx)
+				cancel()
+
+				if err != nil {
+					logger.Warnf("TunerManager: scheduled refresh failed: %v", err)
+					continue
+				}
+
+				logger.Infof("TunerManager: scheduled refresh found %d device(s)", len(devices))
+				if callback != nil {
+					callback(devices)
+				}
+			}
+		}
+	}()
+}
+
+// StopScheduledRefresh stops the background refresh goroutine.
+func (tm *TunerManager) StopScheduledRefresh() {
+	tm.stopOnce.Do(func() {
+		if tm.stopCh != nil {
+			close(tm.stopCh)
+		}
+	})
 }
