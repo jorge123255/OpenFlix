@@ -954,11 +954,11 @@ enum APIEndpoint {
         case .toggleRecordingKeep(let id): return "/dvr/recordings/\(id)/keep"
         case .trashRecording(let id): return "/dvr/recordings/\(id)/trash"
         case .validateStream: return "/dvr/validate-stream"
-        // DVR Series Rules
-        case .getSeriesRules: return "/dvr/rules"
-        case .createSeriesRule: return "/dvr/rules"
-        case .updateSeriesRule(let id, _, _, _, _): return "/dvr/rules/\(id)"
-        case .deleteSeriesRule(let id): return "/dvr/rules/\(id)"
+        // DVR Series Rules — GET list from /dvr/passes (returns PassResponse with "passes" key + PascalCase fields)
+        case .getSeriesRules: return "/dvr/passes"
+        case .createSeriesRule: return "/dvr/passes"
+        case .updateSeriesRule(let id, _, _, _, _): return "/dvr/passes/\(id)"
+        case .deleteSeriesRule(let id): return "/dvr/passes/\(id)"
         // DVR Conflicts
         case .getConflicts: return "/dvr/conflicts"
         case .checkConflict: return "/dvr/conflicts/check"
@@ -1817,19 +1817,18 @@ enum APIEndpoint {
             return jsonBody(["type": type, "destination": destination])
         case .setMetadataPrefs(_, let prefs):
             return jsonBody(prefs)
-        case .createSeriesRule(let title, let channelId, let prePadding, let postPadding, let keepCount):
-            var d: [String: Any] = ["title": title]
-            if let c = channelId { d["channelId"] = c }
-            if let p = prePadding { d["prePadding"] = p }
-            if let p = postPadding { d["postPadding"] = p }
-            if let k = keepCount { d["keepCount"] = k }
+        case .createSeriesRule(let title, _, let prePadding, let postPadding, let keepCount):
+            var d: [String: Any] = ["Name": title, "Type": "series"]
+            if let p = prePadding { d["PaddingStart"] = p * 60 }  // UI uses minutes, server uses seconds
+            if let p = postPadding { d["PaddingEnd"] = p * 60 }
+            if let k = keepCount, k > 0 { d["KeepNum"] = k; d["KeepOnly"] = "last" }
             return jsonBody(d)
         case .updateSeriesRule(_, let enabled, let prePadding, let postPadding, let keepCount):
             var d: [String: Any] = [:]
-            if let e = enabled { d["enabled"] = e }
-            if let p = prePadding { d["prePadding"] = p }
-            if let p = postPadding { d["postPadding"] = p }
-            if let k = keepCount { d["keepCount"] = k }
+            if let e = enabled { d["Paused"] = !e }
+            if let p = prePadding { d["PaddingStart"] = p * 60 }
+            if let p = postPadding { d["PaddingEnd"] = p * 60 }
+            if let k = keepCount { d["KeepNum"] = k }
             return d.isEmpty ? nil : jsonBody(d)
         case .importVOD(_, let libraryId), .importSeries(_, let libraryId):
             return jsonBody(["libraryId": libraryId])

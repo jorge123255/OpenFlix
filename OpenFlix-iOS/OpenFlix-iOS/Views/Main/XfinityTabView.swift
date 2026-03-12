@@ -3623,6 +3623,160 @@ struct XfinityMediaCard: View {
     }
 }
 
+// MARK: - LiveTV Grid Tab
+// Wrapper that owns the LiveTVViewModel and bridges EPGGridViewModern into the tab system
+
+struct LiveTVGridTab: View {
+    @StateObject private var viewModel = LiveTVViewModel()
+    @State private var playerChannel: Channel?
+    @State private var playerProgram: Program?
+    @State private var showPlayer = false
+    @State private var showProgramDetail = false
+    @State private var detailProgram: Program?
+    @State private var detailChannel: Channel?
+
+    var body: some View {
+        EPGGridViewModern(
+            viewModel: viewModel,
+            onChannelSelect: { channel in
+                playerChannel = channel
+                playerProgram = channel.nowPlaying
+                showPlayer = true
+            },
+            onProgramSelect: { program, channel in
+                detailProgram = program
+                detailChannel = channel
+                showProgramDetail = true
+            }
+        )
+        .task {
+            async let channels: () = viewModel.loadChannels()
+            async let guide: () = viewModel.loadGuide()
+            _ = await (channels, guide)
+        }
+        .fullScreenCover(isPresented: $showPlayer) {
+            if let channel = playerChannel {
+                VideoPlayerView(
+                    mediaItem: nil,
+                    liveChannelURL: channel.streamUrl.flatMap { URL(string: $0) }
+                )
+            }
+        }
+        .sheet(isPresented: $showProgramDetail) {
+            if let program = detailProgram, let channel = detailChannel {
+                ProgramDetailSheet(program: program, channel: channel) {
+                    // Play action
+                    detailProgram = nil
+                    showProgramDetail = false
+                    playerChannel = channel
+                    playerProgram = program
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        showPlayer = true
+                    }
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Program Detail Sheet (inline, shown from EPG tap)
+
+struct ProgramDetailSheet: View {
+    let program: Program
+    let channel: Channel
+    let onPlay: () -> Void
+    @Environment(\.dismiss) private var dismiss
+
+    private let accentColor = Color(red: 97/255, green: 56/255, blue: 245/255)
+    private let bg = Color(red: 17/255, green: 12/255, blue: 33/255)
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                bg.ignoresSafeArea()
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 16) {
+                        // Artwork
+                        if let artPath = program.art ?? program.icon {
+                            AuthenticatedImage(
+                                path: artPath,
+                                systemPlaceholder: "tv"
+                            )
+                            .aspectRatio(16/9, contentMode: .fill)
+                            .cornerRadius(12)
+                            .padding(.horizontal)
+                        }
+
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text(program.title)
+                                .font(.system(size: 22, weight: .bold))
+                                .foregroundColor(.white)
+
+                            if let subtitle = program.subtitle {
+                                Text(subtitle)
+                                    .font(.system(size: 14, weight: .medium))
+                                    .foregroundColor(.gray)
+                            }
+
+                            HStack(spacing: 12) {
+                                Label(channel.name, systemImage: "antenna.radiowaves.left.and.right")
+                                if let rating = program.rating {
+                                    Text(rating)
+                                        .font(.system(size: 11, weight: .semibold))
+                                        .padding(.horizontal, 6).padding(.vertical, 2)
+                                        .background(Color.white.opacity(0.1))
+                                        .cornerRadius(4)
+                                }
+                                if program.isNew {
+                                    Text("NEW")
+                                        .font(.system(size: 11, weight: .bold))
+                                        .foregroundColor(.green)
+                                        .padding(.horizontal, 6).padding(.vertical, 2)
+                                        .background(Color.green.opacity(0.15))
+                                        .cornerRadius(4)
+                                }
+                            }
+                            .font(.system(size: 13))
+                            .foregroundColor(.gray)
+
+                            if let desc = program.description {
+                                Text(desc)
+                                    .font(.system(size: 14))
+                                    .foregroundColor(.white.opacity(0.8))
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                        }
+                        .padding(.horizontal)
+
+                        // Watch button
+                        Button(action: onPlay) {
+                            HStack {
+                                Image(systemName: "play.fill")
+                                Text("Watch Live")
+                                    .fontWeight(.semibold)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
+                            .background(accentColor)
+                            .foregroundColor(.white)
+                            .cornerRadius(12)
+                        }
+                        .padding(.horizontal)
+                    }
+                    .padding(.vertical)
+                }
+            }
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Done") { dismiss() }
+                        .foregroundColor(.white)
+                }
+            }
+        }
+    }
+}
+
 #Preview {
     XfinityTabView()
         .environmentObject(AuthViewModel())

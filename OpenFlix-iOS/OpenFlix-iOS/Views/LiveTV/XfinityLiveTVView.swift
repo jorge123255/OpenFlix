@@ -482,13 +482,14 @@ struct XfinityChannelRow: View {
     let onChannelTap: () -> Void
     let onProgramTap: (Program) -> Void
 
+    private let rowHeight: CGFloat = 90
+    private let channelColWidth: CGFloat = 80
+
     private func programAtTime(_ time: Date) -> Program? {
         programs.first { $0.startTime <= time && $0.endTime > time }
     }
 
-    private var currentProgram: Program? {
-        programAtTime(viewingTime)
-    }
+    private var currentProgram: Program? { programAtTime(viewingTime) }
 
     private var nextProgram: Program? {
         guard let current = currentProgram else {
@@ -504,93 +505,214 @@ struct XfinityChannelRow: View {
         return min(max(elapsed / total, 0), 1)
     }
 
+    private var categoryColor: Color {
+        guard let p = currentProgram else { return accentColor }
+        if p.isSports { return Color(red: 0.2, green: 0.6, blue: 1.0) }
+        if p.category?.lowercased().contains("movie") == true { return Color(red: 0.9, green: 0.5, blue: 0.1) }
+        if p.category?.lowercased().contains("news") == true { return Color(red: 0.9, green: 0.2, blue: 0.2) }
+        if p.isKids { return Color(red: 0.3, green: 0.85, blue: 0.4) }
+        return accentColor
+    }
+
     var body: some View {
         HStack(spacing: 0) {
-            // Channel logo area → plays channel
+            // Channel column — taps to play
             Button(action: onChannelTap) {
-                channelInfo
-                    .frame(width: 140)
+                channelColumn
+                    .frame(width: channelColWidth, height: rowHeight)
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
 
-            // Program area → tap opens Watch/Record/Pass sheet
+            // Program cell — taps to show detail sheet
             Button {
-                if let program = currentProgram {
-                    onProgramTap(program)
-                } else {
-                    onChannelTap()
-                }
+                if let program = currentProgram { onProgramTap(program) } else { onChannelTap() }
             } label: {
                 HStack(spacing: 0) {
-                    // Program at viewingTime
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(currentProgram?.title ?? "No data")
-                            .font(.system(size: 15))
-                            .foregroundColor(.white)
-                            .lineLimit(2)
-
-                        // Progress bar (only meaningful when showing current live time)
-                        GeometryReader { geo in
-                            ZStack(alignment: .leading) {
-                                Rectangle()
-                                    .fill(Color.white.opacity(0.2))
-                                    .frame(height: 3)
-
-                                Rectangle()
-                                    .fill(accentColor)
-                                    .frame(width: geo.size.width * progress, height: 3)
-                            }
-                        }
-                        .frame(height: 3)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.trailing, 16)
-
-                    // Next program
-                    Text(nextProgram?.title ?? "")
-                        .font(.system(size: 15))
-                        .foregroundColor(.gray)
-                        .lineLimit(2)
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                    richProgramCell(currentProgram, isNext: false)
+                        .frame(maxWidth: .infinity)
+                    richProgramCell(nextProgram, isNext: true)
+                        .frame(maxWidth: .infinity)
                 }
-                .contentShape(Rectangle())
                 .offset(x: programOffset)
                 .clipped()
             }
             .buttonStyle(.plain)
             .clipped()
         }
-        .padding(.vertical, 16)
-        .padding(.horizontal, 16)
+        .frame(height: rowHeight)
+        .clipped()
+        .background(Color(red: 17/255, green: 12/255, blue: 33/255))
     }
 
-    private var channelInfo: some View {
-        HStack(spacing: 10) {
-            // Favorite star
-            Image(systemName: channel.isFavorite ? "star.fill" : "star")
-                .font(.system(size: 14))
-                .foregroundColor(channel.isFavorite ? .yellow : .gray.opacity(0.5))
+    // MARK: - Channel Column
 
-            // Channel logo
+    private var channelColumn: some View {
+        VStack(spacing: 6) {
             if let logo = channel.logo {
                 AuthenticatedImage(path: logo, systemPlaceholder: "tv")
                     .aspectRatio(contentMode: .fit)
-                    .frame(width: 40, height: 24)
+                    .frame(width: 44, height: 26)
             } else {
-                Text(channel.name.prefix(3).uppercased())
-                    .font(.system(size: 12, weight: .bold))
+                Text(channel.name.prefix(4).uppercased())
+                    .font(.system(size: 11, weight: .bold))
                     .foregroundColor(.white)
-                    .frame(width: 40)
+                    .lineLimit(1)
+                    .frame(width: 44)
             }
-
-            // Channel number
             if let number = channel.number {
                 Text("\(number)")
-                    .font(.system(size: 13))
+                    .font(.system(size: 12, weight: .medium))
                     .foregroundColor(.gray)
             }
+            if channel.isFavorite {
+                Image(systemName: "star.fill")
+                    .font(.system(size: 9))
+                    .foregroundColor(.yellow.opacity(0.8))
+            }
         }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 8)
+    }
+
+    // MARK: - Rich Program Cell
+
+    @ViewBuilder
+    private func richProgramCell(_ program: Program?, isNext: Bool) -> some View {
+        let color = isNext ? Color.gray.opacity(0.6) : categoryColor
+
+        ZStack(alignment: .bottomLeading) {
+            // Artwork background
+            if let art = program?.art {
+                AuthenticatedImage(path: art, systemPlaceholder: "tv")
+                    .aspectRatio(contentMode: .fill)
+                    .frame(width: nil, height: rowHeight)
+                    .clipped()
+                    .overlay(
+                        LinearGradient(
+                            colors: [.clear, .black.opacity(isNext ? 0.92 : 0.72)],
+                            startPoint: .top, endPoint: .bottom
+                        )
+                    )
+                    .opacity(isNext ? 0.4 : 1.0)
+            } else {
+                LinearGradient(
+                    colors: [color.opacity(isNext ? 0.06 : 0.18), Color.black.opacity(0.8)],
+                    startPoint: .topLeading, endPoint: .bottomTrailing
+                )
+            }
+
+            // Category stripe — left edge
+            HStack(spacing: 0) {
+                Rectangle()
+                    .fill(color)
+                    .frame(width: 3)
+                Spacer()
+            }
+
+            // Content
+            VStack(alignment: .leading, spacing: 3) {
+                // Badges
+                if let p = program, !isNext {
+                    HStack(spacing: 4) {
+                        if p.isLive {
+                            liveBadge
+                        }
+                        if p.isNew {
+                            badge("NEW", color: .green)
+                        }
+                        if p.isPremiere {
+                            badge("PREMIERE", color: color)
+                        }
+                        if p.isFinale {
+                            badge("FINALE", color: .orange)
+                        }
+                        if p.hasRecording {
+                            recBadge
+                        }
+                    }
+                }
+
+                Spacer()
+
+                // Title
+                Text(program?.title ?? "No data")
+                    .font(.system(size: isNext ? 12 : 14, weight: isNext ? .regular : .semibold))
+                    .foregroundColor(isNext ? .gray : .white)
+                    .lineLimit(2)
+                    .shadow(color: isNext ? .clear : .black.opacity(0.6), radius: 2)
+
+                // Time + duration
+                if let p = program {
+                    HStack(spacing: 4) {
+                        if isNext {
+                            Text(nextLabel(p))
+                                .font(.system(size: 10))
+                                .foregroundColor(.gray.opacity(0.7))
+                        } else {
+                            Text("\(p.duration)m")
+                                .font(.system(size: 10))
+                                .foregroundColor(.gray.opacity(0.8))
+                        }
+                    }
+                }
+
+                // Progress bar (current program only)
+                if let _ = program, !isNext, progress > 0 {
+                    GeometryReader { geo in
+                        ZStack(alignment: .leading) {
+                            Rectangle().fill(Color.white.opacity(0.2)).frame(height: 2)
+                            Rectangle()
+                                .fill(color)
+                                .frame(width: geo.size.width * CGFloat(progress), height: 2)
+                        }
+                    }
+                    .frame(height: 2)
+                }
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 8)
+            .padding(.leading, 3) // account for category stripe
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .clipShape(Rectangle())
+    }
+
+    private func nextLabel(_ p: Program) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "h:mma"
+        return "Next \(formatter.string(from: p.startTime).lowercased())"
+    }
+
+    // MARK: - Badges
+
+    private var liveBadge: some View {
+        HStack(spacing: 3) {
+            Circle().fill(Color.red).frame(width: 5, height: 5)
+            Text("LIVE").font(.system(size: 8, weight: .black)).foregroundColor(.white)
+        }
+        .padding(.horizontal, 5).padding(.vertical, 2)
+        .background(Color.red)
+        .cornerRadius(3)
+    }
+
+    private var recBadge: some View {
+        HStack(spacing: 2) {
+            Circle().fill(Color.red).frame(width: 4, height: 4)
+            Text("REC").font(.system(size: 8, weight: .bold)).foregroundColor(.red)
+        }
+        .padding(.horizontal, 5).padding(.vertical, 2)
+        .background(Color.red.opacity(0.2))
+        .cornerRadius(3)
+    }
+
+    private func badge(_ text: String, color: Color) -> some View {
+        Text(text)
+            .font(.system(size: 8, weight: .heavy))
+            .foregroundColor(.white)
+            .padding(.horizontal, 5).padding(.vertical, 2)
+            .background(color)
+            .cornerRadius(3)
     }
 }
 
