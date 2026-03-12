@@ -171,6 +171,7 @@ func (tsb *TimeShiftBuffer) StartBuffer(channel *models.Channel) error {
 	cmd.Dir = bufferDir
 
 	if err := cmd.Start(); err != nil {
+		cancel()
 		return fmt.Errorf("failed to start buffer: %w", err)
 	}
 

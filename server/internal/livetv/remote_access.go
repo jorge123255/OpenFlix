@@ -2,6 +2,7 @@ package livetv
 
 import (
 	"encoding/json"
+	"strconv"
 	"fmt"
 	"net"
 	"net/http"
@@ -377,7 +378,7 @@ func (ram *RemoteAccessManager) HealthCheck() map[string]interface{} {
 
 	// Test Tailscale connectivity if available
 	if ram.status.TailscaleIP != "" {
-		tailscaleAddr := fmt.Sprintf("%s:%d", ram.status.TailscaleIP, ram.config.Port)
+		tailscaleAddr := net.JoinHostPort(ram.status.TailscaleIP, strconv.Itoa(ram.config.Port))
 		conn, err := net.DialTimeout("tcp", tailscaleAddr, 5*time.Second)
 		if err == nil {
 			conn.Close()
