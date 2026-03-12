@@ -29,6 +29,7 @@ type HDHomeRunDevice struct {
 	DeviceAuth      string `json:"deviceAuth,omitempty"`
 	LineupURL       string `json:"lineupUrl"`
 	Priority        int    `json:"priority"`
+	LineupVersion   string `json:"lineupVersion,omitempty"`
 }
 
 // HDHomeRunChannel represents a single channel in the tuner lineup.
@@ -115,6 +116,7 @@ func (tm *TunerManager) loadFromDB() {
 			DeviceAuth:      row.DeviceAuth,
 			LineupURL:       row.LineupURL,
 			Priority:        row.Priority,
+			LineupVersion:   row.LineupVersion,
 		}
 		tm.devices[dev.DeviceID] = dev
 	}
@@ -139,6 +141,7 @@ func (tm *TunerManager) saveToDB(dev *HDHomeRunDevice) {
 		DeviceAuth:      dev.DeviceAuth,
 		LineupURL:       dev.LineupURL,
 		Priority:        dev.Priority,
+		LineupVersion:   dev.LineupVersion,
 	}
 	if err := tm.db.Where(models.TunerDevice{DeviceID: dev.DeviceID}).Assign(row).FirstOrCreate(&row).Error; err != nil {
 		logger.Warnf("TunerManager: failed to persist device %s: %v", dev.DeviceID, err)
@@ -1223,4 +1226,77 @@ func (tm *TunerManager) StopScheduledRefresh() {
 			close(tm.stopCh)
 		}
 	})
+}
+
+// lineupStatusJSON is the structure returned by /lineup_status.json
+type lineupStatusJSON struct {
+	ScanInProgress int      `json:"ScanInProgress"`
+	ScanPossible   int      `json:"ScanPossible"`
+	Source         string   `json:"Source"`
+	SourceList     []string `json:"SourceList"`
+	Active         int      `json:"Active"`
+	LineupVersion  string   `json:"LineupVersion"`
+}
+
+// GetLineupVersion fetches the current lineup version from the device.
+// Returns empty string if the device doesn't support it or on error.
+func (tm *TunerManager) GetLineupVersion(deviceID string) string {
+	dev, err := tm.getDevice(deviceID)
+	if err != nil {
+		return ""
+	}
+
+	statusURL := dev.BaseURL + "/lineup_status.json"
+	resp, err := tm.client.Get(statusURL)
+	if err != nil {
+		return ""
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return ""
+	}
+
+	var status lineupStatusJSON
+	if err := json.NewDecoder(resp.Body).Decode(&status); err != nil {
+		return ""
+	}
+
+	return status.LineupVersion
+}
+
+// UpdateLineupVersion updates the stored lineup version for a device.
+func (tm *TunerManager) UpdateLineupVersion(deviceID, version string) {
+	tm.mu.Lock()
+	defer tm.mu.Unlock()
+
+	if dev, ok := tm.devices[deviceID]; ok {
+		dev.LineupVersion = version
+		tm.saveToDB(dev)
+	}
+}
+
+// HasLineupChanged checks if the device's lineup has changed since last check.
+// Returns true if changed (or if we can't determine), and the new version.
+func (tm *TunerManager) HasLineupChanged(deviceID string) (changed bool, newVersion string) {
+	tm.mu.RLock()
+	dev, ok := tm.devices[deviceID]
+	var oldVersion string
+	if ok {
+		oldVersion = dev.LineupVersion
+	}
+	tm.mu.RUnlock()
+
+	newVersion = tm.GetLineupVersion(deviceID)
+	if newVersion == "" {
+		// Can't determine, assume changed to be safe
+		return true, ""
+	}
+
+	if oldVersion == "" {
+		// First time seeing this device
+		return true, newVersion
+	}
+
+	return oldVersion != newVersion, newVersion
 }

@@ -492,10 +492,11 @@ func NewServer(cfg *config.Config, db *gorm.DB) *Server {
 		return nil
 
 	// Refresh HDHomeRun tuners and import any new channels (every 6 hours)
+	// Refresh HDHomeRun tuners and import any new channels (every 6 hours)
 	taskSched.RegisterTask("tuner_refresh", "Tuner Refresh",
 		"Discover HDHomeRun tuners and import lineup changes", "0 */6 * * *", 5*time.Minute,
 		func(ctx context.Context) error {
-			logger.Info("[scheduler:tuner_refresh] discovering tuners")
+			logger.Info("[scheduler:tuner_refresh] checking tuners for lineup changes")
 			mgr := getTunerManager(db)
 			devices, err := mgr.Discover(ctx)
 			if err != nil {
@@ -503,22 +504,34 @@ func NewServer(cfg *config.Config, db *gorm.DB) *Server {
 				return err
 			}
 			logger.Infof("[scheduler:tuner_refresh] found %d tuner(s)", len(devices))
-			// Import channels from each discovered device
+
+			// Check each device for lineup changes
 			for _, dev := range devices {
 				if err := ctx.Err(); err != nil {
 					return err
 				}
+
+				// Check if lineup version changed
+				changed, newVersion := mgr.HasLineupChanged(dev.DeviceID)
+				if !changed {
+					logger.Debugf("[scheduler:tuner_refresh] %s: lineup unchanged (v%s)", dev.DeviceID, dev.LineupVersion)
+					continue
+				}
+
+				logger.Infof("[scheduler:tuner_refresh] %s: lineup changed, reimporting...", dev.DeviceID)
 				result := importChannelsFromTuner(db, dev)
 				if result.Error != nil {
 					logger.Warnf("[scheduler:tuner_refresh] import failed for %s: %v", dev.DeviceID, result.Error)
 				} else {
 					logger.Infof("[scheduler:tuner_refresh] %s: %d new, %d updated", dev.DeviceID, result.Imported, result.Skipped)
+					// Update stored version only on success
+					if newVersion != "" {
+						mgr.UpdateLineupVersion(dev.DeviceID, newVersion)
+					}
 				}
 			}
 			return nil
 		})
-	})
-
 	// Monitor tracked shows for new seasons (every 12 hours)
 	taskSched.RegisterTask("monitor_new_seasons", "Monitor New Seasons",
 		"Check TMDB for new seasons of tracked shows", "0 */12 * * *", 5*time.Minute,

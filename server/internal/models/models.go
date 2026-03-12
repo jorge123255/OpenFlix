@@ -307,6 +307,7 @@ type TunerDevice struct {
 	DeviceAuth      string    `gorm:"size:128" json:"deviceAuth,omitempty"`
 	LineupURL       string    `gorm:"size:512" json:"lineupUrl"`
 	Priority        int       `gorm:"default:0" json:"priority"`
+	LineupVersion   string    `gorm:"size:64" json:"lineupVersion"`
 	CreatedAt       time.Time `json:"createdAt"`
 	UpdatedAt       time.Time `json:"updatedAt"`
 }
@@ -653,7 +654,8 @@ type TeamPass struct {
 	PreGameMinutes  int       `gorm:"default:30" json:"preGameMinutes"`     // Max pre-game minutes to look for
 	PostGameMinutes int       `gorm:"default:60" json:"postGameMinutes"`    // Max post-game minutes to look for
 	KeepCount       int       `gorm:"default:0" json:"keepCount"`           // 0 = keep all
-	Priority        int       `gorm:"default:0" json:"priority"`            // For conflict resolution
+	Priority        int       `gorm:"default:0" json:"priority"`
+	LineupVersion   string    `gorm:"size:64" json:"lineupVersion"`            // For conflict resolution
 	Enabled         bool      `gorm:"default:true" json:"enabled"`
 	CreatedAt       time.Time `json:"createdAt"`
 	UpdatedAt       time.Time `json:"updatedAt"`
