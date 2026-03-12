@@ -47,24 +47,39 @@ func (s *Server) discoverTuners(c *gin.Context) {
 		return
 	}
 
-	// Auto-import channels for each discovered device that has none yet
+	// Auto-import channels for each discovered device. Running importChannelsForDevice
+	// on an existing device is safe — it inserts new channels and updates codec fields
+	// on existing ones without duplicating anything.
 	for _, dev := range devices {
-		var count int64
-		s.db.Model(&models.Channel{}).Where("channel_id LIKE ?", "hdhr-"+dev.DeviceID+"-%").Count(&count)
-		if count == 0 {
-			imported, skipped, err := s.importChannelsForDevice(dev.DeviceID)
-			if err != nil {
-				logger.Warnf("Auto-import failed for device %s: %v", dev.DeviceID, err)
-			} else {
-				logger.Infof("Auto-imported %d channels from discovered device %s (%d skipped)", imported, dev.DeviceID, skipped)
-			}
+		imported, skipped, err := s.importChannelsForDevice(dev.DeviceID)
+		if err != nil {
+			logger.Warnf("Auto-import failed for device %s: %v", dev.DeviceID, err)
+		} else {
+			logger.Infof("Auto-imported %d channels from discovered device %s (%d skipped/updated)", imported, dev.DeviceID, skipped)
 		}
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"devices": devices,
-		"count":   len(devices),
-	})
+	// Map to the shape iOS expects: { discovered: [{ url, name, model, deviceId }] }
+	type discoveredItem struct {
+		URL      string `json:"url"`
+		Name     string `json:"name"`
+		Model    string `json:"model,omitempty"`
+		DeviceID string `json:"deviceId,omitempty"`
+	}
+	items := make([]discoveredItem, 0, len(devices))
+	for _, d := range devices {
+		name := d.ModelNumber
+		if name == "" {
+			name = d.DeviceID
+		}
+		items = append(items, discoveredItem{
+			URL:      d.BaseURL,
+			Name:     name,
+			Model:    d.ModelNumber,
+			DeviceID: d.DeviceID,
+		})
+	}
+	c.JSON(http.StatusOK, gin.H{"discovered": items})
 }
 
 // getTuners returns all currently known tuner devices.
@@ -142,6 +157,11 @@ func (s *Server) removeTuner(c *gin.Context) {
 
 	mgr := getTunerManager(s.db)
 	mgr.RemoveDevice(deviceID)
+
+	// Invalidate guide cache so deleted tuner channels disappear immediately.
+	if s.guideCache != nil {
+		s.guideCache.InvalidateAll()
+	}
 
 	logger.Infof("Removed tuner %s: deleted %d channels, %d programs", deviceID, channelsDeleted, programsDeleted)
 	c.JSON(http.StatusOK, gin.H{
@@ -285,19 +305,44 @@ func (s *Server) importChannelsForDevice(deviceID string) (imported, skipped int
 			}
 		}
 
-		var existing models.Channel
-		if s.db.Where("stream_url = ?", streamURL).First(&existing).Error == nil {
-			skipped++
-			continue
-		}
-
 		group := "SD"
 		if ch.HD == 1 {
 			group = "HD"
 		}
 
+		channelID := fmt.Sprintf("hdhr-%s-%s", deviceID, ch.GuideNumber)
+
+		// If the channel already exists, update its codec fields and move on.
+		// Check multiple criteria to catch all cases:
+		// 1. By hdhr channel_id (normal case)
+		// 2. By stream_url (catches remapped channel_ids)
+		// 3. By source_type=hdhr + name + number (catches URL variations)
+		var existing models.Channel
+		found := s.db.Where("channel_id = ?", channelID).First(&existing).Error == nil
+		if !found && streamURL != "" {
+			found = s.db.Where("stream_url = ?", streamURL).First(&existing).Error == nil
+		}
+		if !found {
+			// Also check by HDHomeRun source + channel number to catch any edge cases
+			found = s.db.Where("source_type = ? AND number = ? AND name = ?", "hdhr", channelNum, ch.GuideName).First(&existing).Error == nil
+		}
+		if found {
+			updates := map[string]interface{}{}
+			if ch.VideoCodec != "" && existing.VideoCodec != ch.VideoCodec {
+				updates["video_codec"] = ch.VideoCodec
+			}
+			if ch.AudioCodec != "" && existing.AudioCodec != ch.AudioCodec {
+				updates["audio_codec"] = ch.AudioCodec
+			}
+			if len(updates) > 0 {
+				s.db.Model(&existing).Updates(updates)
+			}
+			skipped++
+			continue
+		}
+
 		channel := models.Channel{
-			ChannelID:  fmt.Sprintf("hdhr-%s-%s", deviceID, ch.GuideNumber),
+			ChannelID:  channelID,
 			Number:     channelNum,
 			Name:       ch.GuideName,
 			StreamURL:  streamURL,
@@ -305,6 +350,8 @@ func (s *Server) importChannelsForDevice(deviceID string) (imported, skipped int
 			SourceType: "hdhr",
 			SourceName: sourceName,
 			Group:      group,
+			VideoCodec: ch.VideoCodec,
+			AudioCodec: ch.AudioCodec,
 		}
 
 		if createErr := s.db.Create(&channel).Error; createErr != nil {

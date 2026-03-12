@@ -325,6 +325,25 @@ func (s *Server) importM3USeries(c *gin.Context) {
 
 // getChannels returns all channels, optionally filtered
 func (s *Server) getChannels(c *gin.Context) {
+	cacheKey := ""
+	if s.guideCache != nil {
+		nowBucket := time.Now().UTC().Truncate(time.Minute).Unix()
+		cacheKey = s.guideCache.GenerateKey(
+			"channels",
+			nowBucket,
+			c.Query("sourceId"),
+			c.Query("group"),
+			c.Query("enabled"),
+			c.Query("limit"),
+		)
+		if cached, found := s.guideCache.Get(cacheKey); found {
+			if response, ok := cached.(gin.H); ok {
+				c.JSON(http.StatusOK, response)
+				return
+			}
+		}
+	}
+
 	query := s.db.Model(&models.Channel{})
 
 	// Filter by source
@@ -378,7 +397,37 @@ func (s *Server) getChannels(c *gin.Context) {
 	if len(channelIDs) > 0 {
 		// Current programs: one row per channel_id (latest start ≤ now AND end > now)
 		var nowPrograms []models.Program
-		s.db.Where("channel_id IN ? AND start <= ? AND \"end\" > ?", channelIDs, nowStr, nowStr).
+		s.db.Select([]string{
+			"id",
+			"channel_id",
+			"call_sign",
+			"channel_no",
+			"affiliate_name",
+			"title",
+			"subtitle",
+			"description",
+			"start",
+			"end",
+			"icon",
+			"art",
+			"category",
+			"rating",
+			"is_movie",
+			"is_sports",
+			"is_kids",
+			"is_news",
+			"is_new",
+			"is_live",
+			"is_premiere",
+			"is_finale",
+			"teams",
+			"league",
+			"has_cc",
+			"epg_source_id",
+			"program_id",
+		}).
+			Where("channel_id IN ? AND start <= ? AND \"end\" > ?", channelIDs, nowStr, nowStr).
+			Order("channel_id, start DESC").
 			Find(&nowPrograms)
 		for i := range nowPrograms {
 			p := &nowPrograms[i]
@@ -393,8 +442,37 @@ func (s *Server) getChannels(c *gin.Context) {
 		// Next programs: earliest start > now per channel_id
 		// Use a subquery approach: fetch all upcoming, then pick earliest per channel in Go
 		var nextPrograms []models.Program
-		s.db.Where("channel_id IN ? AND start > ?", channelIDs, nowStr).
-			Order("start ASC").
+		s.db.Select([]string{
+			"id",
+			"channel_id",
+			"call_sign",
+			"channel_no",
+			"affiliate_name",
+			"title",
+			"subtitle",
+			"description",
+			"start",
+			"end",
+			"icon",
+			"art",
+			"category",
+			"rating",
+			"is_movie",
+			"is_sports",
+			"is_kids",
+			"is_news",
+			"is_new",
+			"is_live",
+			"is_premiere",
+			"is_finale",
+			"teams",
+			"league",
+			"has_cc",
+			"epg_source_id",
+			"program_id",
+		}).
+			Where("channel_id IN ? AND start > ?", channelIDs, nowStr).
+			Order("channel_id, start ASC").
 			Find(&nextPrograms)
 		for i := range nextPrograms {
 			p := &nextPrograms[i]
@@ -423,7 +501,12 @@ func (s *Server) getChannels(c *gin.Context) {
 		}
 	}
 
-	c.JSON(http.StatusOK, gin.H{"channels": enrichedChannels})
+	response := gin.H{"channels": enrichedChannels}
+	if s.guideCache != nil && cacheKey != "" {
+		s.guideCache.Set(cacheKey, response)
+	}
+
+	c.JSON(http.StatusOK, response)
 }
 
 // getOnNowChannels returns channels that currently have a program airing, limited for home screen use.
@@ -996,8 +1079,8 @@ func (s *Server) autoDetectDuplicates(c *gin.Context) {
 
 	// Group by normalized name
 	type DuplicateGroup struct {
-		Name     string            `json:"name"`
-		Channels []models.Channel  `json:"channels"`
+		Name     string           `json:"name"`
+		Channels []models.Channel `json:"channels"`
 	}
 
 	nameGroups := make(map[string][]models.Channel)
@@ -1725,7 +1808,7 @@ func (s *Server) getGuide(c *gin.Context) {
 	endBucket := end.Truncate(5 * time.Minute)
 	cacheKey := ""
 	if s.guideCache != nil {
-		cacheKey = s.guideCache.GenerateKey("guide", startBucket.Unix(), endBucket.Unix(), sourceID)
+		cacheKey = s.guideCache.GenerateKey("guide", startBucket.Unix(), endBucket.Unix(), sourceID, limit, offset)
 
 		// Check cache first
 		if cached, found := s.guideCache.Get(cacheKey); found {
@@ -1844,6 +1927,7 @@ func (s *Server) getGuide(c *gin.Context) {
 	}
 
 	response := gin.H{
+		"channels":      channels,
 		"programs":      programsByChannel,
 		"start":         start,
 		"end":           end,
@@ -3394,25 +3478,76 @@ func (s *Server) refreshTVGuideEPG(source *models.EPGSource) error {
 
 	log.Printf("📺 TVGuide: Got %d programs across %d channels", len(programs), channelCount)
 
+	// Build a mapping from TVGuide channel info to existing channel IDs
+	// This allows HDHomeRun/M3U channels to receive TVGuide program data
+	var existingChannels []models.Channel
+	s.db.Find(&existingChannels)
+
+	// Create lookup maps for fast matching
+	channelByNumber := make(map[string]*models.Channel)  // "2" -> channel
+	channelByCallSign := make(map[string]*models.Channel) // "WBBM" -> channel
+	channelByName := make(map[string]*models.Channel)    // "CBS" -> channel
+
+	for i := range existingChannels {
+		ch := &existingChannels[i]
+		if ch.Number > 0 {
+			channelByNumber[strconv.Itoa(ch.Number)] = ch
+		}
+		// Extract callsign from channel name (e.g., "WBBM-DT" from "WBBM-DT CBS 2")
+		nameParts := strings.Fields(strings.ToUpper(ch.Name))
+		if len(nameParts) > 0 {
+			channelByCallSign[nameParts[0]] = ch
+			// Also try without -DT/-HD suffix
+			base := strings.TrimSuffix(strings.TrimSuffix(nameParts[0], "-DT"), "-HD")
+			channelByCallSign[base] = ch
+		}
+		channelByName[strings.ToUpper(ch.Name)] = ch
+	}
+
+	// Remap TVGuide channel IDs to existing channels where possible
+	remapped := 0
+	for i := range programs {
+		p := &programs[i]
+		var matched *models.Channel
+
+		// Try matching by channel number first (most reliable)
+		if p.ChannelNo != "" {
+			if ch, ok := channelByNumber[p.ChannelNo]; ok {
+				matched = ch
+			}
+		}
+
+		// Try by callsign
+		if matched == nil && p.CallSign != "" {
+			callSign := strings.ToUpper(p.CallSign)
+			base := strings.TrimSuffix(strings.TrimSuffix(callSign, "-DT"), "-HD")
+			if ch, ok := channelByCallSign[base]; ok {
+				matched = ch
+			}
+		}
+
+		// If we found a match, use that channel's ID instead
+		if matched != nil && matched.ChannelID != "" {
+			p.ChannelID = matched.ChannelID
+			remapped++
+		}
+	}
+
+	log.Printf("📺 TVGuide: Remapped %d/%d programs to existing channels", remapped, len(programs))
+
 	// Build channel set for cleanup
 	channelSet := make(map[string]bool)
 	for _, p := range programs {
 		channelSet[p.ChannelID] = true
 	}
 
-	// Delete old programs for this source's channels
-	if len(channelSet) > 0 {
-		channelIDs := make([]string, 0, len(channelSet))
-		for chID := range channelSet {
-			channelIDs = append(channelIDs, chID)
-		}
-		s.db.Where("channel_id IN ? AND start < ?", channelIDs, time.Now().Add(-24*time.Hour)).Delete(&models.Program{})
-	}
-
-	// Import programs
 	now := time.Now()
-	imported := 0
-	updated := 0
+	cutoff := now.Add(-24 * time.Hour)
+	channelIDs := make([]string, 0, len(channelSet))
+	for chID := range channelSet {
+		channelIDs = append(channelIDs, chID)
+	}
+	dbPrograms := make([]models.Program, 0, len(programs))
 
 	for _, p := range programs {
 		// Skip past programs
@@ -3428,90 +3563,46 @@ func (s *Server) refreshTVGuideEPG(source *models.EPGSource) error {
 			episodeNum = fmt.Sprintf("E%02d", p.EpisodeNumber)
 		}
 
-		// Check if program already exists
-		var existing models.Program
-		result := s.db.Where("channel_id = ? AND start = ?", p.ChannelID, p.Start).First(&existing)
-
-		if result.Error == nil {
-			// Update existing — only overwrite enriched fields if new value is non-empty
-			existing.End = p.End
-			existing.Title = p.Title
-			if p.Description != "" {
-				existing.Description = p.Description
-			}
-			if p.EpisodeTitle != "" {
-				existing.Subtitle = p.EpisodeTitle
-			}
-			if p.Category != "" {
-				existing.Category = p.Category
-			}
-			if p.Rating != "" {
-				existing.Rating = p.Rating
-			}
-			existing.Icon = p.Icon
-			if p.Art != "" {
-				existing.Art = p.Art
-			}
-			existing.CallSign = p.CallSign
-			existing.ChannelNo = p.ChannelNo
-			existing.AffiliateName = p.AffiliateName
-			if episodeNum != "" {
-				existing.EpisodeNum = episodeNum
-			}
-			if p.SeasonNumber > 0 {
-				existing.SeasonNumber = p.SeasonNumber
-			}
-			if p.EpisodeNumber > 0 {
-				existing.EpisodeNumber = p.EpisodeNumber
-			}
-			existing.IsNew = p.IsNew
-			existing.IsLive = p.IsLive
-			existing.IsMovie = p.IsMovie
-			existing.IsSports = p.IsSports
-			existing.IsKids = p.IsKids
-			existing.IsNews = p.IsNews
-			if p.Genres != "" {
-				existing.Genres = p.Genres
-			}
-			existing.HasCC = p.HasCC
-			existing.ProgramID = p.ProgramID
-			existing.EPGSourceID = &source.ID
-			s.db.Save(&existing)
-			updated++
-		} else {
-			// Create new
-			program := models.Program{
-				ChannelID:     p.ChannelID,
-				CallSign:      p.CallSign,
-				ChannelNo:     p.ChannelNo,
-				AffiliateName: p.AffiliateName,
-				Title:         p.Title,
-				Subtitle:      p.EpisodeTitle,
-				Description:   p.Description,
-				Start:         p.Start,
-				End:           p.End,
-				Icon:          p.Icon,
-				Art:           p.Art,
-				Category:      p.Category,
-				EpisodeNum:    episodeNum,
-				SeasonNumber:  p.SeasonNumber,
-				EpisodeNumber: p.EpisodeNumber,
-				Rating:        p.Rating,
-				IsNew:         p.IsNew,
-				IsLive:        p.IsLive,
-				IsMovie:       p.IsMovie,
-				IsSports:      p.IsSports,
-				IsKids:        p.IsKids,
-				IsNews:        p.IsNews,
-				Genres:        p.Genres,
-				HasCC:         p.HasCC,
-				ProgramID:     p.ProgramID,
-				EPGSourceID:   &source.ID,
-			}
-			s.db.Create(&program)
-			imported++
-		}
+		dbPrograms = append(dbPrograms, models.Program{
+			ChannelID:     p.ChannelID,
+			CallSign:      p.CallSign,
+			ChannelNo:     p.ChannelNo,
+			AffiliateName: p.AffiliateName,
+			Title:         p.Title,
+			Subtitle:      p.EpisodeTitle,
+			Description:   p.Description,
+			Start:         p.Start,
+			End:           p.End,
+			Icon:          p.Icon,
+			Art:           p.Art,
+			Category:      p.Category,
+			EpisodeNum:    episodeNum,
+			SeasonNumber:  p.SeasonNumber,
+			EpisodeNumber: p.EpisodeNumber,
+			Rating:        p.Rating,
+			IsNew:         p.IsNew,
+			IsLive:        p.IsLive,
+			IsMovie:       p.IsMovie,
+			IsSports:      p.IsSports,
+			IsKids:        p.IsKids,
+			IsNews:        p.IsNews,
+			Genres:        p.Genres,
+			HasCC:         p.HasCC,
+			ProgramID:     p.ProgramID,
+			EPGSourceID:   &source.ID,
+		})
 	}
+
+	upsertResult, err := livetv.UpsertPrograms(s.db, dbPrograms, livetv.ProgramCleanupOptions{
+		ChannelIDs:     channelIDs,
+		DeleteBefore:   &cutoff,
+		CheckpointMode: "PASSIVE",
+	})
+	if err != nil {
+		return err
+	}
+	imported := upsertResult.Imported
+	updated := upsertResult.Updated
 
 	log.Printf("📺 TVGuide: Imported %d new, updated %d existing programs", imported, updated)
 
@@ -3807,7 +3898,8 @@ func (s *Server) getCatchUpPrograms(c *gin.Context) {
 
 		var streamURL string
 		if available {
-			streamURL = fmt.Sprintf("/livetv/timeshift/%d/stream.m3u8", id)
+			streamURL, _ = s.timeshiftBuffer.GetProgramTimeShiftURL(uint(id), p.Start)
+			streamURL = appendAuthToken(streamURL, c.GetString("token"))
 		}
 
 		result = append(result, CatchUpProgram{
@@ -3872,9 +3964,13 @@ func (s *Server) getStartOverInfo(c *gin.Context) {
 	// Calculate how far into the program we are
 	elapsedSeconds := int(now.Sub(program.Start).Seconds())
 
-	// For Start Over, we provide a URL that seeks back to the program start
-	// This works with DVR buffer or time-shift buffer
-	startOverUrl := fmt.Sprintf("/livetv/channels/%d/stream?startOver=true&offset=%d", id, elapsedSeconds)
+	startOverURL, startOverErr := s.timeshiftBuffer.GetStartOverURL(uint(id), channel.ChannelID)
+	available := elapsedSeconds > 30 && startOverErr == nil
+	if !available {
+		startOverURL = ""
+	} else {
+		startOverURL = appendAuthToken(startOverURL, c.GetString("token"))
+	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"channel": channel,
@@ -3888,8 +3984,8 @@ func (s *Server) getStartOverInfo(c *gin.Context) {
 			"elapsed":     elapsedSeconds,
 			"remaining":   int(program.End.Sub(now).Seconds()),
 		},
-		"startOverUrl": startOverUrl,
-		"available":    elapsedSeconds > 30, // Only allow start over if we're at least 30 seconds in
+		"startOverUrl": startOverURL,
+		"available":    available, // Only allow start over if we're at least 30 seconds in and buffered
 	})
 }
 
@@ -3912,7 +4008,7 @@ func (s *Server) getTimeshiftPlaylist(c *gin.Context) {
 	}
 
 	// Generate playlist
-	playlist, err := s.timeshiftBuffer.GenerateTimeshiftPlaylist(uint(id), startSegment)
+	playlist, err := s.timeshiftBuffer.GenerateTimeshiftPlaylist(uint(id), startSegment, c.GetString("token"))
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
@@ -4191,6 +4287,20 @@ func splitAndTrim(s, sep string) []string {
 	return parts
 }
 
+func appendAuthToken(rawURL, authToken string) string {
+	if rawURL == "" || authToken == "" || authToken == "local-access" {
+		return rawURL
+	}
+	u, err := url.Parse(rawURL)
+	if err != nil {
+		return rawURL
+	}
+	q := u.Query()
+	q.Set("X-Plex-Token", authToken)
+	u.RawQuery = q.Encode()
+	return u.String()
+}
+
 // ============ Multi-Source Fallback ============
 
 // getEPGSourceHealth returns health status for all EPG sources
@@ -4367,7 +4477,7 @@ func (s *Server) getArchivePlaylist(c *gin.Context) {
 		return
 	}
 
-	playlist, err := s.archiveManager.GenerateArchivePlaylist(uint(id))
+	playlist, err := s.archiveManager.GenerateArchivePlaylist(uint(id), c.GetString("token"))
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
@@ -4766,6 +4876,10 @@ func fixProgramImageURL(val string) string {
 	if strings.HasPrefix(val, "//") {
 		return "https:" + val
 	}
+	// TVGuide relative paths (e.g., "/provider/8/4/8-9266070094_light.png", "/catalog/...")
+	if strings.HasPrefix(val, "/provider/") || strings.HasPrefix(val, "/catalog/") || strings.HasPrefix(val, "/assets/") {
+		return "https://www.tvguide.com/a/img/catalog" + val
+	}
 	// TMS/Gracenote asset IDs (e.g., "p27822843_b_v9_aa", "GNLZZGG002QLGYG")
 	if (strings.HasPrefix(val, "p") || strings.HasPrefix(val, "GN")) && !strings.Contains(val, "/") {
 		return "https://www.tmsimg.com/assets/" + val + ".jpg"
@@ -4795,4 +4909,3 @@ func (s *Server) getTVGuideProviders(c *gin.Context) {
 		"count":     len(providers),
 	})
 }
-

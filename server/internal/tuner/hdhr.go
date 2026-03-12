@@ -266,13 +266,14 @@ func (tm *TunerManager) Discover(ctx context.Context) ([]*HDHomeRunDevice, error
 		}
 	}
 
-	// Store discovered devices
+	// Store discovered devices and persist to database
 	tm.mu.Lock()
 	for _, d := range unique {
 		if existing, ok := tm.devices[d.DeviceID]; ok && existing != nil {
 			d.Priority = existing.Priority
 		}
 		tm.devices[d.DeviceID] = d
+		tm.saveToDB(d) // Persist so tuners survive restarts
 	}
 	tm.mu.Unlock()
 
