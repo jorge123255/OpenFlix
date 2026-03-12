@@ -141,26 +141,21 @@ struct EPGSearchView: View {
             isPresented = false
         } label: {
             HStack(spacing: 12) {
-                // Channel logo/number
+                // Channel logo
                 ZStack {
                     RoundedRectangle(cornerRadius: 8)
                         .fill(Color.white.opacity(0.1))
-                    if let logo = channel.logo, let url = URL(string: logo) {
-                        AsyncImage(url: url) { image in
-                            image.resizable().scaledToFit()
-                        } placeholder: {
-                            Text("\(channel.number ?? 0)")
-                                .font(.system(size: 14, weight: .bold))
-                                .foregroundColor(.white)
-                        }
-                        .padding(4)
+                    if let logo = channel.logo {
+                        AuthenticatedImage(path: logo, systemPlaceholder: "tv")
+                            .aspectRatio(contentMode: .fit)
+                            .padding(6)
                     } else {
-                        Text("\(channel.number ?? 0)")
-                            .font(.system(size: 14, weight: .bold))
+                        Text(channel.name.prefix(4).uppercased())
+                            .font(.system(size: 11, weight: .bold))
                             .foregroundColor(.white)
                     }
                 }
-                .frame(width: 48, height: 36)
+                .frame(width: 52, height: 38)
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(channel.name)
@@ -194,18 +189,8 @@ struct EPGSearchView: View {
             isPresented = false
         } label: {
             HStack(spacing: 12) {
-                // Time badge
-                VStack(spacing: 2) {
-                    Text(program.startTimeFormatted)
-                        .font(.system(size: 12, weight: .bold))
-                    if program.isCurrentlyAiring {
-                        Text("NOW")
-                            .font(.system(size: 10, weight: .heavy))
-                            .foregroundColor(.green)
-                    }
-                }
-                .frame(width: 60)
-                .foregroundColor(.white)
+                // Artwork thumbnail
+                programThumbnail(program)
 
                 VStack(alignment: .leading, spacing: 3) {
                     HStack(spacing: 6) {
@@ -214,13 +199,11 @@ struct EPGSearchView: View {
                             .foregroundColor(.white)
                             .lineLimit(1)
 
-                        // Badges
                         ForEach(program.badges.prefix(2), id: \.self) { badge in
                             Text(badge)
                                 .font(.system(size: 9, weight: .heavy))
                                 .foregroundColor(.white)
-                                .padding(.horizontal, 5)
-                                .padding(.vertical, 2)
+                                .padding(.horizontal, 5).padding(.vertical, 2)
                                 .background(badgeColor(badge))
                                 .cornerRadius(3)
                         }
@@ -241,7 +224,6 @@ struct EPGSearchView: View {
 
                 Spacer()
 
-                // Create pass button
                 if !program.hasEnded {
                     Menu {
                         Button {
@@ -249,18 +231,12 @@ struct EPGSearchView: View {
                         } label: {
                             Label("Details", systemImage: "info.circle")
                         }
-
                         if program.isSports, let teams = program.teams, !teams.isEmpty {
-                            Button {
-                                // Will be handled by pass management
-                            } label: {
+                            Button { } label: {
                                 Label("Create Team Pass", systemImage: "sportscourt")
                             }
                         }
-
-                        Button {
-                            // Will be handled by pass management
-                        } label: {
+                        Button { } label: {
                             Label("Create Series Pass", systemImage: "calendar.badge.plus")
                         }
                     } label: {
@@ -271,9 +247,78 @@ struct EPGSearchView: View {
                 }
             }
             .padding(.horizontal, 16)
-            .padding(.vertical, 10)
+            .padding(.vertical, 8)
         }
         .buttonStyle(.plain)
+    }
+
+    @ViewBuilder
+    private func programThumbnail(_ program: Program) -> some View {
+        let catColor: Color = {
+            if program.isSports { return Color(red: 0.2, green: 0.6, blue: 1.0) }
+            if program.category?.lowercased().contains("movie") == true { return Color(red: 0.9, green: 0.5, blue: 0.1) }
+            if program.category?.lowercased().contains("news") == true { return Color(red: 0.9, green: 0.2, blue: 0.2) }
+            return Color(red: 97/255, green: 56/255, blue: 245/255)
+        }()
+
+        ZStack(alignment: .bottomLeading) {
+            if let art = program.art {
+                AuthenticatedImage(path: art, systemPlaceholder: "tv")
+                    .aspectRatio(contentMode: .fill)
+                    .frame(width: 84, height: 54)
+                    .clipped()
+                    .overlay(
+                        LinearGradient(
+                            colors: [.clear, .black.opacity(0.65)],
+                            startPoint: .top, endPoint: .bottom
+                        )
+                    )
+            } else {
+                RoundedRectangle(cornerRadius: 0)
+                    .fill(catColor.opacity(0.12))
+                    .frame(width: 84, height: 54)
+                    .overlay(
+                        Image(systemName: "tv")
+                            .foregroundColor(catColor.opacity(0.4))
+                            .font(.system(size: 22))
+                    )
+            }
+
+            // Category stripe at bottom
+            VStack(spacing: 0) {
+                Spacer()
+                catColor.frame(height: 3)
+            }
+
+            // NOW badge top-right
+            if program.isCurrentlyAiring {
+                VStack {
+                    HStack {
+                        Spacer()
+                        Text("NOW")
+                            .font(.system(size: 8, weight: .heavy))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 4).padding(.vertical, 2)
+                            .background(Color.green)
+                            .cornerRadius(3)
+                    }
+                    .padding(4)
+                    Spacer()
+                }
+            }
+
+            // Time label bottom-left
+            Text(program.startTimeFormatted)
+                .font(.system(size: 9, weight: .medium))
+                .foregroundColor(.white.opacity(0.9))
+                .padding(.horizontal, 5).padding(.bottom, 6).padding(.leading, 3)
+        }
+        .frame(width: 84, height: 54)
+        .clipShape(RoundedRectangle(cornerRadius: 8))
+        .overlay(
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(catColor.opacity(0.25), lineWidth: 1)
+        )
     }
 
     // MARK: - Helpers

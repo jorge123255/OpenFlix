@@ -382,12 +382,46 @@ struct XfinityLiveTVView: View {
     private var filteredChannels: [Channel] {
         let base: [Channel]
         switch selectedFilter {
-        case .all:      base = viewModel.channels
-        case .favorites: base = viewModel.channels.filter { $0.isFavorite }
-        case .sports:   base = viewModel.channels.filter { $0.group?.lowercased().contains("sport") ?? false }
-        case .news:     base = viewModel.channels.filter { $0.group?.lowercased().contains("news") ?? false }
-        case .movies:   base = viewModel.channels.filter { $0.group?.lowercased().contains("movie") ?? false }
-        case .kids:     base = viewModel.channels.filter { $0.group?.lowercased().contains("kid") ?? false }
+        case .all:
+            base = viewModel.channels
+        case .favorites:
+            base = viewModel.channels.filter { $0.isFavorite }
+        case .sports:
+            base = viewModel.channels.filter { ch in
+                let g = ch.group?.lowercased() ?? ""
+                let n = ch.name.lowercased()
+                return g.contains("sport") || g.contains("espn") || g.contains("nfl") || g.contains("nba") ||
+                    n.contains("espn") || n.contains("nfl") || n.contains("nba") || n.contains("mlb") ||
+                    n.contains("nhl") || n.contains("fox sport") || n.contains("bein") || n.contains("dazn") ||
+                    ch.nowPlaying?.isSports == true
+            }
+        case .news:
+            base = viewModel.channels.filter { ch in
+                let g = ch.group?.lowercased() ?? ""
+                let n = ch.name.lowercased()
+                return g.contains("news") || n.contains("news") || n.contains("cnn") ||
+                    n.contains("msnbc") || n.contains("cnbc") || n.contains("fox news") ||
+                    n.contains("abc news") || n.contains("cbs news") || n.contains("nbc news") ||
+                    n.contains("bloomberg") || n.contains("c-span")
+            }
+        case .movies:
+            base = viewModel.channels.filter { ch in
+                let g = ch.group?.lowercased() ?? ""
+                let n = ch.name.lowercased()
+                return g.contains("movie") || g.contains("film") || g.contains("cinema") ||
+                    n.contains("hbo") || n.contains("showtime") || n.contains("starz") ||
+                    n.contains("cinemax") || n.contains("amc") || n.contains("tcm") ||
+                    n.contains("fxx") || n.contains("sundance")
+            }
+        case .kids:
+            base = viewModel.channels.filter { ch in
+                let g = ch.group?.lowercased() ?? ""
+                let n = ch.name.lowercased()
+                return g.contains("kid") || g.contains("child") || g.contains("family") ||
+                    n.contains("disney") || n.contains("nickelodeon") || n.contains("nick") ||
+                    n.contains("cartoon") || n.contains("pbs kids") || n.contains("boomerang") ||
+                    n.contains("toon")
+            }
         }
         return applyOrder(base)
     }
