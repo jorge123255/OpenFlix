@@ -170,6 +170,23 @@ class DVRViewModel @Inject constructor(
         }
     }
 
+    // ============ Stop Recording ============
+
+    fun stopRecording(recordingId: String) {
+        viewModelScope.launch {
+            val result = dvrRepository.stopRecording(recordingId)
+            result.fold(
+                onSuccess = {
+                    Timber.d("Stopped recording: $recordingId")
+                    loadRecordings()
+                },
+                onFailure = { error ->
+                    Timber.e(error, "Failed to stop recording")
+                }
+            )
+        }
+    }
+
     // ============ Search & Filter ============
 
     fun updateSearchQuery(query: String) {
@@ -337,4 +354,47 @@ data class DVRUiState(
             .filter { it.status == RecordingStatus.COMPLETED }
             .groupBy { it.title }
             .toSortedMap()
+
+    // ============ iOS-style section lists ============
+
+    val recordingNow: List<Recording>
+        get() = recordings.filter { it.status == RecordingStatus.RECORDING }
+
+    val continueWatching: List<Recording>
+        get() = recordings.filter {
+            it.status == RecordingStatus.COMPLETED &&
+            (it.viewOffset ?: 0L) > 0L &&
+            it.watchProgress < 0.95f
+        }.sortedByDescending { it.startTime }
+
+    val justRecorded: List<Recording>
+        get() {
+            val sevenDaysAgo = System.currentTimeMillis() - (7L * 24 * 60 * 60 * 1000)
+            return recordings.filter {
+                it.status == RecordingStatus.COMPLETED && it.endTime > sevenDaysAgo
+            }.sortedByDescending { it.endTime }.take(20)
+        }
+
+    val allByChannel: Map<String, List<Recording>>
+        get() = recordings
+            .filter { it.status == RecordingStatus.COMPLETED }
+            .groupBy { it.channelName ?: "Unknown" }
+            .toSortedMap()
+
+    val scheduled: List<Recording>
+        get() = recordings.filter {
+            it.status == RecordingStatus.SCHEDULED || it.status == RecordingStatus.PENDING
+        }.sortedBy { it.startTime }
+
+    val failed: List<Recording>
+        get() = recordings.filter {
+            it.status == RecordingStatus.FAILED || it.status == RecordingStatus.CANCELLED
+        }.sortedByDescending { it.startTime }
+
+    val totalStorageBytes: Long
+        get() = recordings.filter { it.status == RecordingStatus.COMPLETED }
+            .sumOf { it.fileSize ?: 0L }
+
+    val totalRecordingCount: Int
+        get() = recordings.count { it.status == RecordingStatus.COMPLETED }
 }

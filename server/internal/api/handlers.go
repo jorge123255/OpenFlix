@@ -1,6 +1,8 @@
 package api
 
 import (
+	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -11,9 +13,9 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"sort"
 	"strconv"
 	"strings"
-	"sort"
 	"sync"
 	"time"
 	"unicode"
@@ -38,15 +40,15 @@ func (s *Server) getServerInfo(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"MediaContainer": gin.H{
-			"size":              0,
-			"machineIdentifier": s.config.Server.MachineID,
-			"version":           serverVersion,
-			"friendlyName":      s.config.Server.Name,
-			"platform":          runtime.GOOS,
-			"platformVersion":   runtime.Version(),
-			"myPlex":            false,
-			"myPlexMappingState": "unknown",
-			"myPlexSigninState": "none",
+			"size":                          0,
+			"machineIdentifier":             s.config.Server.MachineID,
+			"version":                       serverVersion,
+			"friendlyName":                  s.config.Server.Name,
+			"platform":                      runtime.GOOS,
+			"platformVersion":               runtime.Version(),
+			"myPlex":                        false,
+			"myPlexMappingState":            "unknown",
+			"myPlexSigninState":             "none",
 			"transcoderActiveVideoSessions": 0,
 		},
 	})
@@ -153,10 +155,10 @@ func (s *Server) getServerStatus(c *gin.Context) {
 			"commercialDetect": s.recorder != nil && s.recorder.IsCommercialDetectionEnabled(),
 		},
 		"system": gin.H{
-			"goroutines":   runtime.NumGoroutine(),
-			"memAllocMB":   m.Alloc / 1024 / 1024,
-			"memTotalMB":   m.TotalAlloc / 1024 / 1024,
-			"numCPU":       runtime.NumCPU(),
+			"goroutines": runtime.NumGoroutine(),
+			"memAllocMB": m.Alloc / 1024 / 1024,
+			"memTotalMB": m.TotalAlloc / 1024 / 1024,
+			"numCPU":     runtime.NumCPU(),
 		},
 		"logging": gin.H{
 			"level": s.config.Logging.Level,
@@ -277,10 +279,10 @@ func (s *Server) getLogs(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"lines":   logLines,
-		"count":   len(logLines),
-		"path":    logger.GetLogFilePath(),
-		"level":   s.config.Logging.Level,
+		"lines": logLines,
+		"count": len(logLines),
+		"path":  logger.GetLogFilePath(),
+		"level": s.config.Logging.Level,
 	})
 }
 
@@ -299,11 +301,11 @@ func (s *Server) clearLogs(c *gin.Context) {
 
 // ClientLogEntry represents a log entry from a client app
 type ClientLogEntry struct {
-	Timestamp   string `json:"timestamp"`
-	Level       string `json:"level"`
-	Message     string `json:"message"`
-	Error       string `json:"error,omitempty"`
-	StackTrace  string `json:"stackTrace,omitempty"`
+	Timestamp  string `json:"timestamp"`
+	Level      string `json:"level"`
+	Message    string `json:"message"`
+	Error      string `json:"error,omitempty"`
+	StackTrace string `json:"stackTrace,omitempty"`
 }
 
 // ClientLogSubmission represents a batch of logs from a client
@@ -527,20 +529,6 @@ func (s *Server) adminGetUserProfiles(c *gin.Context) {
 }
 
 func (s *Server) getCurrentUser(c *gin.Context) {
-	// Local network access bypass — no real user record
-	if isLocal, exists := c.Get("isLocalAccess"); exists && isLocal.(bool) {
-		c.JSON(http.StatusOK, gin.H{
-			"id":       0,
-			"uuid":     "local-user",
-			"username": "admin",
-			"email":    "",
-			"title":    "Admin",
-			"thumb":    "",
-			"admin":    true,
-		})
-		return
-	}
-
 	userID, exists := c.Get("userID")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Not authenticated"})
@@ -837,11 +825,11 @@ func (s *Server) getUser(c *gin.Context) {
 	if !exists {
 		// Return a default user for unauthenticated requests (dev mode)
 		c.JSON(http.StatusOK, gin.H{
-			"id":       0,
-			"uuid":     uuid.New().String(),
-			"username": "guest",
-			"email":    "",
-			"thumb":    "",
+			"id":        0,
+			"uuid":      uuid.New().String(),
+			"username":  "guest",
+			"email":     "",
+			"thumb":     "",
 			"authToken": c.GetString("token"),
 			"subscription": gin.H{
 				"active": true,
@@ -857,11 +845,11 @@ func (s *Server) getUser(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"id":       user.ID,
-		"uuid":     user.UUID,
-		"username": user.Username,
-		"email":    user.Email,
-		"thumb":    user.Thumb,
+		"id":        user.ID,
+		"uuid":      user.UUID,
+		"username":  user.Username,
+		"email":     user.Email,
+		"thumb":     user.Thumb,
 		"authToken": c.GetString("token"),
 		"subscription": gin.H{
 			"active": true,
@@ -943,20 +931,10 @@ func (s *Server) switchUser(c *gin.Context) {
 		return
 	}
 
-	// Generate new token for this user
-	input := auth.LoginInput{
-		Username: user.Username,
-		Password: "", // Skip password check for user switch
-	}
-	_ = input // We'll generate token directly
-
-	// For now, generate a simple token (in production, use proper auth flow)
+	// Generate a fresh JWT for the switched-to user (profileID=0 = user-level token)
 	token, err := s.authService.SwitchProfile(user, 0)
 	if err != nil {
-		// Generate token using internal method
-		c.JSON(http.StatusOK, gin.H{
-			"authToken": "openflix-switch-" + userUUID,
-		})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
 		return
 	}
 
@@ -2066,13 +2044,13 @@ func (s *Server) getMetadataChildren(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"MediaContainer": gin.H{
-			"size":                  len(metadata),
-			"key":                   fmt.Sprintf("/library/metadata/%d/children", key),
-			"parentRatingKey":       parent.ID,
-			"parentTitle":           parent.Title,
-			"parentYear":            parent.Year,
-			"librarySectionID":      parent.LibraryID,
-			"Metadata":              metadata,
+			"size":             len(metadata),
+			"key":              fmt.Sprintf("/library/metadata/%d/children", key),
+			"parentRatingKey":  parent.ID,
+			"parentTitle":      parent.Title,
+			"parentYear":       parent.Year,
+			"librarySectionID": parent.LibraryID,
+			"Metadata":         metadata,
 		},
 	})
 }
@@ -2533,14 +2511,14 @@ func (s *Server) getSessions(c *gin.Context) {
 		s.db.First(&file, session.MediaFileID)
 
 		sessionData := gin.H{
-			"sessionKey":    session.ID,
-			"ratingKey":     session.MediaItemID,
-			"key":           fmt.Sprintf("/library/metadata/%d", session.MediaItemID),
-			"title":         item.Title,
-			"type":          item.Type,
-			"thumb":         item.Thumb,
-			"viewOffset":    session.ViewOffset,
-			"duration":      session.Duration,
+			"sessionKey": session.ID,
+			"ratingKey":  session.MediaItemID,
+			"key":        fmt.Sprintf("/library/metadata/%d", session.MediaItemID),
+			"title":      item.Title,
+			"type":       item.Type,
+			"thumb":      item.Thumb,
+			"viewOffset": session.ViewOffset,
+			"duration":   session.Duration,
 			"User": gin.H{
 				"id":    user.ID,
 				"title": user.DisplayName,
@@ -3295,6 +3273,7 @@ func (s *Server) streamXtreamVOD(c *gin.Context, file *models.MediaFile) {
 		scheme = "https"
 	}
 	proxyBaseURL := fmt.Sprintf("%s://%s/livetv/xtream/proxy", scheme, c.Request.Host)
+	authToken := c.GetString("token")
 
 	// Check if response is an M3U8 playlist that needs URL rewriting
 	contentType := resp.Header.Get("Content-Type")
@@ -3312,7 +3291,7 @@ func (s *Server) streamXtreamVOD(c *gin.Context, file *models.MediaFile) {
 		}
 
 		// Rewrite all URLs to go through our proxy
-		content := rewriteM3U8ForProxy(string(body), remoteBase, proxyBaseURL)
+		content := rewriteM3U8ForProxy(string(body), remoteBase, proxyBaseURL, authToken)
 
 		log.Printf("✅ Rewrote VOD M3U8 playlist - all URLs now routed through proxy: %s", proxyBaseURL)
 
@@ -3418,7 +3397,7 @@ func rewriteM3U8URIs(content, baseURL string) string {
 }
 
 // rewriteM3U8ForProxy rewrites all URLs in M3U8 content to go through our proxy
-func rewriteM3U8ForProxy(content, remoteBase, proxyBaseURL string) string {
+func rewriteM3U8ForProxy(content, remoteBase, proxyBaseURL, authToken string) string {
 	lines := strings.Split(content, "\n")
 	for i, line := range lines {
 		trimmed := strings.TrimSpace(line)
@@ -3427,7 +3406,7 @@ func rewriteM3U8ForProxy(content, remoteBase, proxyBaseURL string) string {
 			// But check for URI= attributes in comment lines (e.g., EXT-X-KEY)
 			if strings.Contains(trimmed, "URI=\"") {
 				// Rewrite URI="..." to go through our proxy
-				lines[i] = rewriteURIAttribute(line, remoteBase, proxyBaseURL)
+				lines[i] = rewriteURIAttribute(line, remoteBase, proxyBaseURL, authToken)
 			}
 			continue
 		}
@@ -3446,14 +3425,14 @@ func rewriteM3U8ForProxy(content, remoteBase, proxyBaseURL string) string {
 		}
 
 		// Route through our proxy with URL encoding
-		lines[i] = proxyBaseURL + "?url=" + url.QueryEscape(fullURL)
+		lines[i] = buildXtreamProxyURL(proxyBaseURL, fullURL, authToken)
 	}
 
 	return strings.Join(lines, "\n")
 }
 
 // rewriteURIAttribute rewrites URI="..." attributes in M3U8 tags
-func rewriteURIAttribute(line, remoteBase, proxyBaseURL string) string {
+func rewriteURIAttribute(line, remoteBase, proxyBaseURL, authToken string) string {
 	// Find URI="..." and rewrite it
 	uriIdx := strings.Index(line, `URI="`)
 	if uriIdx == -1 {
@@ -3481,9 +3460,24 @@ func rewriteURIAttribute(line, remoteBase, proxyBaseURL string) string {
 	}
 
 	// Route through proxy with URL encoding
-	proxyURL := proxyBaseURL + "?url=" + url.QueryEscape(fullURL)
+	proxyURL := buildXtreamProxyURL(proxyBaseURL, fullURL, authToken)
 
 	return line[:startIdx] + proxyURL + line[endIdx:]
+}
+
+func buildXtreamProxyURL(proxyBaseURL, targetURL, authToken string) string {
+	proxyURL, err := url.Parse(proxyBaseURL)
+	if err != nil {
+		return proxyBaseURL + "?url=" + url.QueryEscape(targetURL)
+	}
+
+	query := proxyURL.Query()
+	query.Set("url", targetURL)
+	if authToken != "" {
+		query.Set("X-Plex-Token", authToken)
+	}
+	proxyURL.RawQuery = query.Encode()
+	return proxyURL.String()
 }
 
 // proxyXtreamM3U8 proxies M3U8 content from Xtream servers and rewrites URLs
@@ -3512,6 +3506,7 @@ func (s *Server) proxyXtreamM3U8(c *gin.Context) {
 		scheme = "https"
 	}
 	proxyBaseURL := fmt.Sprintf("%s://%s/livetv/xtream/proxy", scheme, c.Request.Host)
+	authToken := c.GetString("token")
 
 	// Create HTTP request
 	req, err := http.NewRequestWithContext(c.Request.Context(), "GET", targetURL, nil)
@@ -3559,7 +3554,7 @@ func (s *Server) proxyXtreamM3U8(c *gin.Context) {
 			return
 		}
 
-		content := rewriteM3U8ForProxy(string(body), remoteBase, proxyBaseURL)
+		content := rewriteM3U8ForProxy(string(body), remoteBase, proxyBaseURL, authToken)
 
 		log.Printf("✅ Rewrote M3U8 with proxy base: %s", proxyBaseURL)
 
@@ -3936,19 +3931,19 @@ func (s *Server) adminGetLibraries(c *gin.Context) {
 		activeScansMu.Unlock()
 
 		result[i] = gin.H{
-			"id":        lib.ID,
-			"uuid":      lib.UUID,
-			"title":     lib.Title,
-			"type":      lib.Type,
-			"agent":     lib.Agent,
-			"scanner":   lib.Scanner,
-			"language":  lib.Language,
-			"hidden":    lib.Hidden,
-			"paths":     paths,
-			"itemCount": s.libraryService.GetMediaItemCount(lib.ID),
+			"id":         lib.ID,
+			"uuid":       lib.UUID,
+			"title":      lib.Title,
+			"type":       lib.Type,
+			"agent":      lib.Agent,
+			"scanner":    lib.Scanner,
+			"language":   lib.Language,
+			"hidden":     lib.Hidden,
+			"paths":      paths,
+			"itemCount":  s.libraryService.GetMediaItemCount(lib.ID),
 			"isScanning": scanning,
-			"createdAt": lib.CreatedAt.Unix(),
-			"updatedAt": lib.UpdatedAt.Unix(),
+			"createdAt":  lib.CreatedAt.Unix(),
+			"updatedAt":  lib.UpdatedAt.Unix(),
 		}
 		if lib.ScannedAt != nil {
 			result[i]["scannedAt"] = lib.ScannedAt.Unix()
@@ -4242,13 +4237,13 @@ func (s *Server) adminGetLibraryStats(c *gin.Context) {
 		Scan(&totalDuration)
 
 	c.JSON(http.StatusOK, gin.H{
-		"libraryId":    lib.ID,
-		"movieCount":   movieCount,
-		"showCount":    showCount,
-		"seasonCount":  seasonCount,
-		"episodeCount": episodeCount,
-		"fileCount":    fileCount,
-		"totalSize":    totalSize,
+		"libraryId":     lib.ID,
+		"movieCount":    movieCount,
+		"showCount":     showCount,
+		"seasonCount":   seasonCount,
+		"episodeCount":  episodeCount,
+		"fileCount":     fileCount,
+		"totalSize":     totalSize,
 		"totalDuration": totalDuration,
 	})
 }
@@ -4460,33 +4455,33 @@ type ServerSettings struct {
 	DataDir    string `json:"data_dir,omitempty"`
 
 	// Transcoding
-	HardwareAccel    string `json:"hardware_accel,omitempty"`
-	MaxTranscode     int    `json:"max_transcode_sessions,omitempty"`
-	TranscodeTempDir string `json:"transcode_temp_dir,omitempty"`
+	HardwareAccel     string `json:"hardware_accel,omitempty"`
+	MaxTranscode      int    `json:"max_transcode_sessions,omitempty"`
+	TranscodeTempDir  string `json:"transcode_temp_dir,omitempty"`
 	DefaultVideoCodec string `json:"default_video_codec,omitempty"`
 	DefaultAudioCodec string `json:"default_audio_codec,omitempty"`
 
 	// Live TV
 	LiveTVMaxStreams    int  `json:"livetv_max_streams,omitempty"`
-	TimeshiftBufferHrs int  `json:"timeshift_buffer_hrs,omitempty"`
-	EPGRefreshInterval int  `json:"epg_refresh_interval,omitempty"`
-	ChannelSwitchBuffer int `json:"channel_switch_buffer,omitempty"`
-	TunerSharing       bool `json:"tuner_sharing"`
+	TimeshiftBufferHrs  int  `json:"timeshift_buffer_hrs,omitempty"`
+	EPGRefreshInterval  int  `json:"epg_refresh_interval,omitempty"`
+	ChannelSwitchBuffer int  `json:"channel_switch_buffer,omitempty"`
+	TunerSharing        bool `json:"tuner_sharing"`
 
 	// DVR (extended)
-	RecordingDir      string `json:"recording_dir,omitempty"`
-	PrePadding        int    `json:"pre_padding,omitempty"`
-	PostPadding       int    `json:"post_padding,omitempty"`
-	CommercialDetect  bool   `json:"commercial_detect"`
-	AutoDeleteDays    int    `json:"auto_delete_days,omitempty"`
-	MaxRecordQuality  string `json:"max_record_quality,omitempty"`
+	RecordingDir     string `json:"recording_dir,omitempty"`
+	PrePadding       int    `json:"pre_padding,omitempty"`
+	PostPadding      int    `json:"post_padding,omitempty"`
+	CommercialDetect bool   `json:"commercial_detect"`
+	AutoDeleteDays   int    `json:"auto_delete_days,omitempty"`
+	MaxRecordQuality string `json:"max_record_quality,omitempty"`
 
 	// Live TV & DVR (dedicated settings page)
-	RecordingPrePadding  int    `json:"recording_pre_padding"`
-	RecordingPostPadding int    `json:"recording_post_padding"`
-	RecordingQuality     string `json:"recording_quality,omitempty"`
-	KeepRule             string `json:"keep_rule,omitempty"`
-	AutoDeleteWatched    bool   `json:"auto_delete_watched"`
+	RecordingPrePadding        int    `json:"recording_pre_padding"`
+	RecordingPostPadding       int    `json:"recording_post_padding"`
+	RecordingQuality           string `json:"recording_quality,omitempty"`
+	KeepRule                   string `json:"keep_rule,omitempty"`
+	AutoDeleteWatched          bool   `json:"auto_delete_watched"`
 	CommercialDetectionEnabled bool   `json:"commercial_detection_enabled"`
 	CommercialDetectionMode    string `json:"commercial_detection_mode,omitempty"`
 	AutoSkipCommercials        bool   `json:"auto_skip_commercials"`
@@ -4507,22 +4502,22 @@ type ServerSettings struct {
 	DefaultAudioLanguage    string `json:"default_audio_language,omitempty"`
 
 	// Advanced: Transcoder
-	TranscoderType      string `json:"transcoder_type,omitempty"`
-	DeinterlacerMode    string `json:"deinterlacer_mode,omitempty"`
-	LiveTVBufferSecs    int    `json:"livetv_buffer_secs,omitempty"`
+	TranscoderType   string `json:"transcoder_type,omitempty"`
+	DeinterlacerMode string `json:"deinterlacer_mode,omitempty"`
+	LiveTVBufferSecs int    `json:"livetv_buffer_secs,omitempty"`
 
 	// Advanced: Web Player
-	PlaybackQuality     string `json:"playback_quality,omitempty"`
-	ClientBufferSecs    int    `json:"client_buffer_secs,omitempty"`
+	PlaybackQuality  string `json:"playback_quality,omitempty"`
+	ClientBufferSecs int    `json:"client_buffer_secs,omitempty"`
 
 	// Advanced: Integrations
-	EDLExport           bool   `json:"edl_export"`
-	M3UChannelIDs       bool   `json:"m3u_channel_ids"`
-	VLCLinks            bool   `json:"vlc_links"`
-	HTTPLogging         bool   `json:"http_logging"`
+	EDLExport     bool `json:"edl_export"`
+	M3UChannelIDs bool `json:"m3u_channel_ids"`
+	VLCLinks      bool `json:"vlc_links"`
+	HTTPLogging   bool `json:"http_logging"`
 
 	// Advanced: Experimental
-	ExperimentalHDR     bool   `json:"experimental_hdr"`
+	ExperimentalHDR        bool `json:"experimental_hdr"`
 	ExperimentalLowLatency bool `json:"experimental_low_latency"`
 	ExperimentalAIMetadata bool `json:"experimental_ai_metadata"`
 }
@@ -4579,7 +4574,7 @@ func (s *Server) buildFullSettings() ServerSettings {
 		DefaultAudioCodec: s.getSettingStr("transcode_default_audio_codec", "aac"),
 
 		// Live TV
-		LiveTVMaxStreams:     s.getSettingInt("livetv_max_streams", 0),
+		LiveTVMaxStreams:    s.getSettingInt("livetv_max_streams", 0),
 		TimeshiftBufferHrs:  s.getSettingInt("livetv_timeshift_buffer_hrs", 4),
 		EPGRefreshInterval:  s.config.LiveTV.EPGInterval,
 		ChannelSwitchBuffer: s.getSettingInt("livetv_channel_switch_buffer", 3),
@@ -4661,8 +4656,20 @@ func (s *Server) getClientSettings(c *gin.Context) {
 }
 
 func (s *Server) adminUpdateSettings(c *gin.Context) {
+	rawBody, err := io.ReadAll(c.Request.Body)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "failed to read request body"})
+		return
+	}
+
 	var input ServerSettings
-	if err := c.ShouldBindJSON(&input); err != nil {
+	if err := json.Unmarshal(rawBody, &input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	var rawFields map[string]json.RawMessage
+	if err := json.Unmarshal(rawBody, &rawFields); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -4779,15 +4786,31 @@ func (s *Server) adminUpdateSettings(c *gin.Context) {
 	if s.cloudRegistry != nil {
 		if input.RemoteAccessEnabled {
 			s.cloudRegistry.Start()
+			s.syncInvitesToRegistry()
 		} else {
 			s.cloudRegistry.Stop()
 		}
 	}
-	if input.ExternalURL != "" {
-		s.setSetting("remote_external_url", input.ExternalURL)
-		if s.cloudRegistry != nil {
-			s.cloudRegistry.SetExternalURL(input.ExternalURL)
+	if s.tlsManager != nil {
+		if input.RemoteAccessEnabled {
+			go func() {
+				if err := s.tlsManager.Enable(context.Background()); err != nil {
+					logger.Warnf("Remote TLS enable failed: %v", err)
+				}
+			}()
+		} else {
+			s.tlsManager.Disable()
+			// Clear the HTTPS URL from the registry so clients fall back to plain HTTP/IP.
+			if s.cloudRegistry != nil {
+				s.cloudRegistry.SetExternalURL("")
+			}
 		}
+	}
+	if _, ok := rawFields["external_url"]; ok {
+		s.setSetting("remote_external_url", input.ExternalURL)
+		s.refreshCloudRegistryExternalURL()
+	} else if s.cloudRegistry != nil {
+		s.refreshCloudRegistryExternalURL()
 	}
 
 	// ---- Playback Defaults ----
@@ -4839,7 +4862,6 @@ func (s *Server) adminUpdateSettings(c *gin.Context) {
 		"settings": s.buildFullSettings(),
 	})
 }
-
 
 // handleGenreBackfill runs a batch TMDB genre backfill for movies/shows without genres
 // POST /library/genre-backfill?limit=500&type=movie
@@ -4923,29 +4945,29 @@ func maskAPIKey(key string) string {
 // DVRSettings represents DVR-specific settings
 type DVRSettings struct {
 	MaxConcurrentRecordings int    `json:"maxConcurrentRecordings"` // 0 = unlimited
-	DetectionMethod        string `json:"detection_method"`
-	ComskipPath            string `json:"comskip_path"`
-	Sensitivity            int    `json:"sensitivity"`
-	AutoSkipBehavior       string `json:"auto_skip_behavior"`
-	SkipPromptDuration     int    `json:"skip_prompt_duration"`
-	Enabled                bool   `json:"enabled"`
-	DetectionWorkers       int    `json:"detection_workers"`
-	GenerateThumbnails     bool   `json:"generate_thumbnails"`
-	ShareEdits             bool   `json:"share_edits"`
+	DetectionMethod         string `json:"detection_method"`
+	ComskipPath             string `json:"comskip_path"`
+	Sensitivity             int    `json:"sensitivity"`
+	AutoSkipBehavior        string `json:"auto_skip_behavior"`
+	SkipPromptDuration      int    `json:"skip_prompt_duration"`
+	Enabled                 bool   `json:"enabled"`
+	DetectionWorkers        int    `json:"detection_workers"`
+	GenerateThumbnails      bool   `json:"generate_thumbnails"`
+	ShareEdits              bool   `json:"share_edits"`
 }
 
 func (s *Server) getDVRSettings(c *gin.Context) {
 	settings := DVRSettings{
 		MaxConcurrentRecordings: s.getSettingInt("dvr_max_concurrent", 0),
-		DetectionMethod:        s.getSettingStr("comskip_detection_method", "comskip"),
-		ComskipPath:            s.getSettingStr("comskip_path", "/usr/bin/comskip"),
-		Sensitivity:            s.getSettingInt("comskip_sensitivity", 50),
-		AutoSkipBehavior:       s.getSettingStr("comskip_auto_skip_behavior", "show_prompt"),
-		SkipPromptDuration:     s.getSettingInt("comskip_skip_prompt_duration", 5),
-		Enabled:                s.getSettingBool("commercial_detection_enabled", false),
-		DetectionWorkers:       s.getSettingInt("comskip_detection_workers", 2),
-		GenerateThumbnails:     s.getSettingBool("comskip_generate_thumbnails", false),
-		ShareEdits:             s.getSettingBool("comskip_share_edits", false),
+		DetectionMethod:         s.getSettingStr("comskip_detection_method", "comskip"),
+		ComskipPath:             s.getSettingStr("comskip_path", "/usr/bin/comskip"),
+		Sensitivity:             s.getSettingInt("comskip_sensitivity", 50),
+		AutoSkipBehavior:        s.getSettingStr("comskip_auto_skip_behavior", "show_prompt"),
+		SkipPromptDuration:      s.getSettingInt("comskip_skip_prompt_duration", 5),
+		Enabled:                 s.getSettingBool("commercial_detection_enabled", false),
+		DetectionWorkers:        s.getSettingInt("comskip_detection_workers", 2),
+		GenerateThumbnails:      s.getSettingBool("comskip_generate_thumbnails", false),
+		ShareEdits:              s.getSettingBool("comskip_share_edits", false),
 	}
 
 	c.JSON(http.StatusOK, gin.H{

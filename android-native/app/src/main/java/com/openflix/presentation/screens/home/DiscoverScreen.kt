@@ -98,7 +98,7 @@ fun DiscoverScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF0A0A0A))
+            .background(Color(0xFF0D0918))
     ) {
         // === FULL-SCREEN BACKGROUND ART ===
         currentHeroItem?.let { item ->
@@ -121,9 +121,9 @@ fun DiscoverScreen(
                         Brush.verticalGradient(
                             colors = listOf(
                                 Color.Transparent,
-                                Color(0xFF0A0A0A).copy(alpha = 0.3f),
-                                Color(0xFF0A0A0A).copy(alpha = 0.7f),
-                                Color(0xFF0A0A0A)
+                                Color(0xFF0D0918).copy(alpha = 0.3f),
+                                Color(0xFF0D0918).copy(alpha = 0.7f),
+                                Color(0xFF0D0918)
                             ),
                             startY = 0f,
                             endY = 1200f
@@ -138,7 +138,7 @@ fun DiscoverScreen(
                     .background(
                         Brush.horizontalGradient(
                             colors = listOf(
-                                Color(0xFF0A0A0A).copy(alpha = 0.8f),
+                                Color(0xFF0D0918).copy(alpha = 0.8f),
                                 Color.Transparent,
                                 Color.Transparent
                             ),
@@ -646,7 +646,7 @@ private fun StreamingServiceCard(
             .onFocusChanged { isFocused = it.isFocused },
         shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(8.dp)),
         colors = ClickableSurfaceDefaults.colors(
-            containerColor = Color(0xFF1A1A1A),
+            containerColor = Color(0xFF1A142E),
             focusedContainerColor = Color(0xFF2A2A2A)
         ),
         border = ClickableSurfaceDefaults.border(
@@ -739,7 +739,7 @@ private fun MediaCard(
             .onFocusChanged { isFocused = it.isFocused },
         shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(8.dp)),
         colors = ClickableSurfaceDefaults.colors(
-            containerColor = Color(0xFF1A1A1A),
+            containerColor = Color(0xFF1A142E),
             focusedContainerColor = Color(0xFF2A2A2A)
         ),
         border = ClickableSurfaceDefaults.border(
@@ -925,7 +925,7 @@ private fun LiveChannelCard(
             .onFocusChanged { isFocused = it.isFocused },
         shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(12.dp)),
         colors = ClickableSurfaceDefaults.colors(
-            containerColor = Color(0xFF1A1A1A),
+            containerColor = Color(0xFF1A142E),
             focusedContainerColor = Color(0xFF2A2A2A)
         ),
         border = ClickableSurfaceDefaults.border(
@@ -1120,7 +1120,7 @@ private fun Top10Card(
                     fontSize = if (rank < 10) 140.sp else 100.sp,
                     fontWeight = FontWeight.Black
                 ),
-                color = Color(0xFF1A1A1A),
+                color = Color(0xFF1A142E),
                 modifier = Modifier.offset(x = 20.dp)
             )
         }
@@ -1135,7 +1135,7 @@ private fun Top10Card(
                 .onFocusChanged { isFocused = it.isFocused },
             shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(8.dp)),
             colors = ClickableSurfaceDefaults.colors(
-                containerColor = Color(0xFF1A1A1A),
+                containerColor = Color(0xFF1A142E),
                 focusedContainerColor = Color(0xFF2A2A2A)
             ),
             border = ClickableSurfaceDefaults.border(
@@ -1299,7 +1299,7 @@ private fun FeelingLuckyRow(
                                 .height(120.dp),
                             shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(12.dp)),
                             colors = ClickableSurfaceDefaults.colors(
-                                containerColor = Color(0xFF1A1A1A),
+                                containerColor = Color(0xFF1A142E),
                                 focusedContainerColor = Color(0xFF2A2A2A)
                             ),
                             border = ClickableSurfaceDefaults.border(
@@ -1347,7 +1347,7 @@ private fun FeelingLuckyRow(
                             modifier = Modifier
                                 .width(220.dp)
                                 .height(120.dp)
-                                .background(Color(0xFF1A1A1A), RoundedCornerShape(12.dp)),
+                                .background(Color(0xFF1A142E), RoundedCornerShape(12.dp)),
                             contentAlignment = Alignment.Center
                         ) {
                             Text(

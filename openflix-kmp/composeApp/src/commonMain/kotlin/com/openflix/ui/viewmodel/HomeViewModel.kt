@@ -25,6 +25,7 @@ data class ForYouHeroItem(
 
 data class HomeUiState(
     val isLoading: Boolean = true,
+    val hasLoaded: Boolean = false,
     val error: String? = null,
     val heroItems: List<ForYouHeroItem> = emptyList(),
     val continueWatching: List<MediaItem> = emptyList(),
@@ -47,6 +48,9 @@ class HomeViewModel(
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
 
     fun loadHome() {
+        // Skip reload if data already loaded
+        if (_uiState.value.hasLoaded && !_uiState.value.isLoading) return
+
         viewModelScope.launch {
             _uiState.value = HomeUiState(isLoading = true)
             try {
@@ -59,7 +63,6 @@ class HomeViewModel(
 
                 val onDeck = onDeckDeferred.await()
                 val recentlyAdded = recentDeferred.await()
-                val sections = sectionsDeferred.await()
                 val channels = channelsDeferred.await()
                 val recordings = recordingsDeferred.await()
                     .filter { it.status == RecordingStatus.COMPLETED }
@@ -68,7 +71,39 @@ class HomeViewModel(
                 // Continue watching: items that are in progress
                 val continueWatching = onDeck.filter { it.isInProgress }
 
-                // Load hubs from library sections
+                // Show initial data immediately while hubs load in background
+                val channelHeroes = channels
+                    .filter { ch ->
+                        ch.nowPlaying != null &&
+                            (ch.nowPlaying?.icon != null || ch.nowPlaying?.art != null)
+                    }
+                    .take(2)
+                    .map { channel ->
+                        ForYouHeroItem(
+                            id = "channel_${channel.id}",
+                            title = channel.nowPlaying!!.title,
+                            subtitle = channel.name,
+                            posterPath = channel.nowPlaying?.icon ?: channel.logo,
+                            artPath = channel.nowPlaying?.art ?: channel.nowPlaying?.icon,
+                            badge = "LIVE",
+                            mediaId = null,
+                            channelId = channel.id
+                        )
+                    }
+
+                _uiState.value = HomeUiState(
+                    isLoading = false,
+                    hasLoaded = true,
+                    heroItems = channelHeroes,
+                    continueWatching = continueWatching,
+                    channels = channels,
+                    recentRecordings = recordings,
+                    recentlyAdded = recentlyAdded.take(20),
+                    rows = emptyList()
+                )
+
+                // Now load hubs in background — UI is already visible
+                val sections = sectionsDeferred.await()
                 val allHubItems = mutableListOf<MediaItem>()
                 val rows = mutableListOf<MediaRow>()
                 for (section in sections.take(4)) {
@@ -95,7 +130,7 @@ class HomeViewModel(
                     .distinctBy { (it.grandparentTitle ?: it.title).lowercase() }
                     .take(15)
 
-                // Build hero items: movies first (3), then live channels (2), max 5
+                // Update hero with movie heroes too
                 val movieHeroes = movieItems
                     .filter { it.thumb != null || it.art != null }
                     .take(3)
@@ -107,48 +142,30 @@ class HomeViewModel(
                             posterPath = item.thumb,
                             artPath = item.art ?: item.thumb,
                             badge = "MOVIE",
-                            mediaId = item.key,
+                            mediaId = item.id.toString(),
                             channelId = null
-                        )
-                    }
-
-                val channelHeroes = channels
-                    .filter { ch ->
-                        ch.nowPlaying != null &&
-                            (ch.nowPlaying?.icon != null || ch.nowPlaying?.art != null)
-                    }
-                    .take(2)
-                    .map { channel ->
-                        ForYouHeroItem(
-                            id = "channel_${channel.id}",
-                            title = channel.nowPlaying!!.title,
-                            subtitle = channel.name,
-                            posterPath = channel.nowPlaying?.icon ?: channel.logo,
-                            artPath = channel.nowPlaying?.art ?: channel.nowPlaying?.icon,
-                            badge = "LIVE",
-                            mediaId = null,
-                            channelId = channel.id
                         )
                     }
 
                 val heroItems = (movieHeroes + channelHeroes).take(5)
 
-                _uiState.value = HomeUiState(
-                    isLoading = false,
+                _uiState.value = _uiState.value.copy(
                     heroItems = heroItems,
-                    continueWatching = continueWatching,
                     movies = movieItems,
                     tvShows = tvShowItems,
-                    channels = channels,
-                    recentRecordings = recordings,
-                    recentlyAdded = recentlyAdded.take(20),
                     rows = rows
                 )
             } catch (e: Exception) {
-                _uiState.value = HomeUiState(isLoading = false, error = e.message ?: "Failed to load")
+                if (_uiState.value.isLoading) {
+                    _uiState.value = HomeUiState(isLoading = false, hasLoaded = true, error = e.message ?: "Failed to load")
+                }
             }
         }
     }
 
-    fun refresh() = loadHome()
+    fun refresh() {
+        // Clear cached data so loadHome() doesn't skip
+        _uiState.value = HomeUiState(isLoading = true, hasLoaded = false)
+        loadHome()
+    }
 }

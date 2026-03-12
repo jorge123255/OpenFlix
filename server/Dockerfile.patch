@@ -1,0 +1,2 @@
+FROM sunnyside1/openflix-server:latest
+COPY openflix-server-linux /app/openflix-server

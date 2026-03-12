@@ -87,7 +87,6 @@ const navGroups: NavGroup[] = [
       { name: 'Live TV', href: '/ui/livetv', icon: Tv },
       { name: 'TV Guide', href: '/ui/tvguide', icon: CalendarDays },
       { name: 'On Now', href: '/ui/onnow', icon: MonitorPlay },
-      { name: 'EPG Editor', href: '/ui/livetv/epg-editor', icon: FileEdit },
       { name: 'Tuners', href: '/ui/tuners', icon: Radio },
       { name: 'Channel Collections', href: '/ui/channel-collections', icon: Layers },
       { name: 'Virtual Channels', href: '/ui/virtual-channels', icon: TvMinimal },
@@ -123,7 +122,6 @@ const navGroups: NavGroup[] = [
     items: [
       { name: 'Users', href: '/ui/users', icon: Users },
       { name: 'Remote Access', href: '/ui/remote-access', icon: Globe },
-      { name: 'Family Sharing', href: '/ui/family-sharing', icon: Users },
       { name: 'Settings', href: '/ui/settings', icon: Settings },
       { name: 'Sources', href: '/ui/settings/sources', icon: FolderOpen },
       { name: 'Live TV / DVR', href: '/ui/settings/livetv-dvr', icon: Tv },

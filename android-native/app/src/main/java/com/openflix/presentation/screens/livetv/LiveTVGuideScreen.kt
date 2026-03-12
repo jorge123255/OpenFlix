@@ -61,49 +61,49 @@ import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
 import java.util.*
 
-// OpenFlix theme - dark with cyan accents
+// OpenFlix theme - Xfinity purple/navy (matches iOS)
 private object Theme {
-    // Base colors - matches OpenFlix dark theme
-    val Background = Color(0xFF0D0D0D)  // Near black
-    val Surface = Color(0xFF1A1A1A)     // Dark gray
-    val SurfaceElevated = Color(0xFF242424)  // Slightly lighter
-    val SurfaceHighlight = Color(0xFF2E2E2E)  // Highlighted/selected
-    val Glass = Color(0xFF1F1F1F)
-    val GlassBorder = Color(0xFF333333)
+    // Base colors - deep navy (matches iOS #110C21)
+    val Background = Color(0xFF110C21)  // Deep navy
+    val Surface = Color(0xFF1A142E)     // Navy surface
+    val SurfaceElevated = Color(0xFF1F1F2E)  // Slightly lighter navy
+    val SurfaceHighlight = Color(0xFF2A2440)  // Highlighted/selected
+    val Glass = Color(0xFF1A142E)
+    val GlassBorder = Color(0x26FFFFFF)  // White 15%
 
-    // Accent colors - OpenFlix cyan/teal
-    val Accent = Color(0xFF00D4FF)       // OpenFlix cyan
-    val AccentGlow = Color(0xFF4DE8FF)   // Brighter cyan for glow
-    val AccentSelected = Color(0xFF0A3D4D)  // Selected item background
+    // Accent colors - Xfinity purple
+    val Accent = Color(0xFF6138F5)       // Xfinity purple
+    val AccentGlow = Color(0xFF8B5FF8)   // Brighter purple for glow
+    val AccentSelected = Color(0xFF241E3A)  // Selected item background
     val AccentRed = Color(0xFFFF3B5C)
     val AccentBlue = Color(0xFF3B82F6)
     val AccentGold = Color(0xFFFFB800)
 
-    // Program cell colors - dark with subtle borders
-    val ProgramCell = Color(0xFF1A1A1A)
-    val ProgramCellAlt = Color(0xFF1F1F1F)
-    val ProgramCellSelected = Color(0xFF2A3A3F)
-    val ProgramCellBorder = Color(0xFF2A2A2A)
+    // Program cell colors - navy with subtle borders
+    val ProgramCell = Color(0xFF1A142E)
+    val ProgramCellAlt = Color(0xFF1F1F2E)
+    val ProgramCellSelected = Color(0xFF2A2450)
+    val ProgramCellBorder = Color(0x26FFFFFF)
 
     val TextPrimary = Color.White
-    val TextSecondary = Color(0xFFB0B0B0)
-    val TextMuted = Color(0xFF666666)
+    val TextSecondary = Color(0xB2FFFFFF)  // White 70%
+    val TextMuted = Color(0x80FFFFFF)      // White 50%
 
-    // Category colors - vibrant for contrast
-    val Sports = Color(0xFF10B981)
+    // Category colors - vibrant for contrast (matches iOS EPG)
+    val Sports = Color(0xFF0FBA83)
     val SportsGlow = Color(0xFF34D399)
-    val Movie = Color(0xFFEF4444)
+    val Movie = Color(0xFFF04646)
     val MovieGlow = Color(0xFFF87171)
     val News = Color(0xFF3B82F6)
     val NewsGlow = Color(0xFF60A5FA)
-    val Kids = Color(0xFFF59E0B)
+    val Kids = Color(0xFFF59E0A)
     val KidsGlow = Color(0xFFFBBF24)
-    val Entertainment = Color(0xFF00D4FF)
-    val EntertainmentGlow = Color(0xFF4DE8FF)
+    val Entertainment = Color(0xFF6138F5)
+    val EntertainmentGlow = Color(0xFF8B5FF8)
 
     // Quality badge colors
-    val BadgeUHD = Color(0xFF00D4FF)
-    val BadgeHDR = Color(0xFF10B981)
+    val BadgeUHD = Color(0xFF6138F5)
+    val BadgeHDR = Color(0xFF0FBA83)
     val BadgeDolby = Color(0xFF3B82F6)
     val BadgeCC = Color(0xFF6B7280)
 }

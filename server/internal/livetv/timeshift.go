@@ -47,6 +47,11 @@ type ChannelBuffer struct {
 	mutex       sync.Mutex
 }
 
+type bufferedSegment struct {
+	path  string
+	index int
+}
+
 // TimeShiftSegment represents a buffered segment
 type TimeShiftSegment struct {
 	Index     int       `json:"index"`
@@ -242,30 +247,65 @@ func (tsb *TimeShiftBuffer) GetBufferStatus(channelID uint) (bool, time.Time, ti
 		return false, time.Time{}, 0
 	}
 
-	duration := time.Since(buffer.StartTime)
-	maxDuration := time.Duration(tsb.config.BufferHours) * time.Hour
-	if duration > maxDuration {
-		duration = maxDuration
+	bufferStart := buffer.StartTime
+	if earliestIndex, ok := tsb.earliestRetainedSegmentIndex(buffer.BufferDir); ok {
+		bufferStart = buffer.StartTime.Add(time.Duration(earliestIndex*tsb.config.SegmentLength) * time.Second)
 	}
 
-	return true, buffer.StartTime, duration
+	duration := time.Since(bufferStart)
+	if duration < 0 {
+		duration = 0
+	}
+
+	return true, bufferStart, duration
 }
 
 // GetTimeShiftURL returns a URL for time-shifted playback
 func (tsb *TimeShiftBuffer) GetTimeShiftURL(channelID uint, offsetSeconds int) (string, error) {
 	tsb.mutex.RLock()
-	_, exists := tsb.activeBuffers[channelID]
+	buffer, exists := tsb.activeBuffers[channelID]
 	tsb.mutex.RUnlock()
 
 	if !exists {
 		return "", fmt.Errorf("channel %d is not being buffered", channelID)
 	}
 
-	// Calculate which segment to start from
-	segmentIndex := offsetSeconds / tsb.config.SegmentLength
+	if offsetSeconds < 0 {
+		offsetSeconds = 0
+	}
+
+	earliestIndex, _ := tsb.earliestRetainedSegmentIndex(buffer.BufferDir)
+	segmentIndex := earliestIndex + (offsetSeconds / tsb.config.SegmentLength)
 
 	// Return playlist URL with start offset
 	return fmt.Sprintf("/livetv/timeshift/%d/stream.m3u8?start=%d", channelID, segmentIndex), nil
+}
+
+// GetProgramTimeShiftURL returns a playback URL starting at a program boundary within the buffer.
+func (tsb *TimeShiftBuffer) GetProgramTimeShiftURL(channelID uint, programStart time.Time) (string, error) {
+	tsb.mutex.RLock()
+	buf, exists := tsb.activeBuffers[channelID]
+	tsb.mutex.RUnlock()
+
+	if !exists {
+		return "", fmt.Errorf("channel %d is not being buffered", channelID)
+	}
+
+	currentBufferStart := buf.StartTime
+	if earliestIndex, ok := tsb.earliestRetainedSegmentIndex(buf.BufferDir); ok {
+		currentBufferStart = buf.StartTime.Add(time.Duration(earliestIndex*tsb.config.SegmentLength) * time.Second)
+	}
+
+	if programStart.Before(currentBufferStart) {
+		programStart = currentBufferStart
+	}
+
+	offsetSeconds := int(programStart.Sub(currentBufferStart).Seconds())
+	if offsetSeconds < 0 {
+		offsetSeconds = 0
+	}
+
+	return tsb.GetTimeShiftURL(channelID, offsetSeconds)
 }
 
 // GetCatchUpPrograms returns programs available for catch-up on a channel
@@ -322,29 +362,12 @@ func (tsb *TimeShiftBuffer) GetStartOverURL(channelID uint, channelEPGID string)
 		return "", fmt.Errorf("no current program found: %w", err)
 	}
 
-	// Calculate offset from start of program
-	tsb.mutex.RLock()
-	buf, exists := tsb.activeBuffers[channelID]
-	tsb.mutex.RUnlock()
-
-	if !exists {
-		return "", fmt.Errorf("channel %d is not being buffered", channelID)
-	}
-
-	// Calculate how many seconds back the program started
-	programStart := program.Start
-	if programStart.Before(buf.StartTime) {
-		// Program started before buffer, start from buffer beginning
-		programStart = buf.StartTime
-	}
-
-	offsetSeconds := int(now.Sub(programStart).Seconds())
-
-	return tsb.GetTimeShiftURL(channelID, offsetSeconds)
+	return tsb.GetProgramTimeShiftURL(channelID, program.Start)
 }
 
-// GenerateTimeshiftPlaylist generates an M3U8 playlist for timeshift playback
-func (tsb *TimeShiftBuffer) GenerateTimeshiftPlaylist(channelID uint, startSegment int) (string, error) {
+// GenerateTimeshiftPlaylist generates an M3U8 playlist for timeshift playback.
+// startSegment is the absolute segment index encoded in the filename sequence.
+func (tsb *TimeShiftBuffer) GenerateTimeshiftPlaylist(channelID uint, startSegment int, authToken string) (string, error) {
 	tsb.mutex.RLock()
 	buffer, exists := tsb.activeBuffers[channelID]
 	tsb.mutex.RUnlock()
@@ -353,26 +376,41 @@ func (tsb *TimeShiftBuffer) GenerateTimeshiftPlaylist(channelID uint, startSegme
 		return "", fmt.Errorf("channel %d is not being buffered", channelID)
 	}
 
-	// List available segments
-	segments, err := filepath.Glob(filepath.Join(buffer.BufferDir, "segment_*.ts"))
+	segments, err := tsb.listBufferedSegments(buffer.BufferDir)
 	if err != nil {
 		return "", err
 	}
-
-	sort.Strings(segments)
+	if len(segments) == 0 {
+		return "", fmt.Errorf("no buffered segments available")
+	}
 
 	// Filter segments from startSegment onwards
 	var playlist strings.Builder
 	playlist.WriteString("#EXTM3U\n")
 	playlist.WriteString(fmt.Sprintf("#EXT-X-TARGETDURATION:%d\n", tsb.config.SegmentLength))
-	playlist.WriteString(fmt.Sprintf("#EXT-X-MEDIA-SEQUENCE:%d\n", startSegment))
-
-	for i, seg := range segments {
-		if i >= startSegment {
-			playlist.WriteString(fmt.Sprintf("#EXTINF:%d.0,\n", tsb.config.SegmentLength))
-			playlist.WriteString(fmt.Sprintf("/livetv/timeshift/%d/segment/%s\n",
-				channelID, filepath.Base(seg)))
+	firstSequence := -1
+	for _, seg := range segments {
+		if seg.index < startSegment {
+			continue
 		}
+		if firstSequence == -1 {
+			firstSequence = seg.index
+		}
+	}
+	if firstSequence == -1 {
+		return "", fmt.Errorf("requested start segment %d is no longer buffered", startSegment)
+	}
+	playlist.WriteString(fmt.Sprintf("#EXT-X-MEDIA-SEQUENCE:%d\n", firstSequence))
+	for _, seg := range segments {
+		if seg.index < firstSequence {
+			continue
+		}
+		playlist.WriteString(fmt.Sprintf("#EXTINF:%d.0,\n", tsb.config.SegmentLength))
+		playlist.WriteString(withPlaylistToken(
+			fmt.Sprintf("/livetv/timeshift/%d/segment/%s", channelID, filepath.Base(seg.path)),
+			authToken,
+		))
+		playlist.WriteString("\n")
 	}
 
 	return playlist.String(), nil
@@ -487,6 +525,50 @@ func (tsb *TimeShiftBuffer) Stop() {
 	}
 
 	logger.Log.Info("Stopped all time-shift buffers")
+}
+
+func (tsb *TimeShiftBuffer) earliestRetainedSegmentIndex(bufferDir string) (int, bool) {
+	segments, err := tsb.listBufferedSegments(bufferDir)
+	if err != nil || len(segments) == 0 {
+		return 0, false
+	}
+	return segments[0].index, true
+}
+
+func (tsb *TimeShiftBuffer) listBufferedSegments(bufferDir string) ([]bufferedSegment, error) {
+	paths, err := filepath.Glob(filepath.Join(bufferDir, "segment_*.ts"))
+	if err != nil {
+		return nil, err
+	}
+
+	segments := make([]bufferedSegment, 0, len(paths))
+	for _, seg := range paths {
+		matches := segmentIndexPattern.FindStringSubmatch(filepath.Base(seg))
+		if len(matches) != 2 {
+			continue
+		}
+		idx, err := strconv.Atoi(matches[1])
+		if err != nil {
+			continue
+		}
+		segments = append(segments, bufferedSegment{path: seg, index: idx})
+	}
+
+	sort.Slice(segments, func(i, j int) bool {
+		return segments[i].index < segments[j].index
+	})
+	return segments, nil
+}
+
+func withPlaylistToken(path, authToken string) string {
+	if authToken == "" || authToken == "local-access" {
+		return path
+	}
+	sep := "?"
+	if strings.Contains(path, "?") {
+		sep = "&"
+	}
+	return path + sep + "X-Plex-Token=" + authToken
 }
 
 // IsBuffering returns whether a channel is being buffered

@@ -97,6 +97,6 @@ func (o *ONNXDetector) Status() map[string]interface{} {
 		"model_path":        o.ModelPath,
 		"model_exists":      modelExists,
 		"ready":             hasPython && modelExists,
-		"setup_hint":        "pip3 install onnxruntime numpy; download model to /data/models/commercial_skip.onnx",
+		"setup_hint":        "pip3 install onnxruntime numpy; place model at /data/models/commercial_skip_v5.onnx and scaler at /data/models/scaler_v5.pkl",
 	}
 }

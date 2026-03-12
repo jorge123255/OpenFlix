@@ -25,12 +25,6 @@ import (
 //     use for list filtering.
 func (s *Server) parentalControlMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// Skip for local access without auth
-		if isLocal, exists := c.Get("isLocalAccess"); exists && isLocal.(bool) {
-			c.Next()
-			return
-		}
-
 		userID, exists := c.Get("userID")
 		if !exists {
 			c.Next()

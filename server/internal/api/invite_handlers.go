@@ -4,11 +4,12 @@ import (
 	"crypto/rand"
 	"math/big"
 	"net/http"
-	"sync"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/openflix/openflix-server/internal/auth"
+	"github.com/openflix/openflix-server/internal/models"
 )
 
 const (
@@ -16,21 +17,6 @@ const (
 	inviteTokenExpiry = 7 * 24 * time.Hour // 7 days
 	inviteTokenChars  = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
 )
-
-// inviteEntry holds a pending invite.
-type inviteEntry struct {
-	token     string
-	createdBy uint
-	expiresAt time.Time
-}
-
-// inviteStore holds active invites in memory (survives restarts via re-generation).
-type inviteStore struct {
-	mu      sync.RWMutex
-	invites map[string]*inviteEntry // token → entry
-}
-
-var invites = &inviteStore{invites: make(map[string]*inviteEntry)}
 
 func generateInviteToken() (string, error) {
 	result := make([]byte, inviteTokenLength)
@@ -54,15 +40,16 @@ func (s *Server) createInvite(c *gin.Context) {
 		return
 	}
 
-	entry := &inviteEntry{
-		token:     token,
-		createdBy: userID,
-		expiresAt: time.Now().Add(inviteTokenExpiry),
+	entry := models.InviteToken{
+		Token:     strings.ToUpper(token),
+		CreatedBy: userID,
+		ExpiresAt: time.Now().Add(inviteTokenExpiry),
 	}
 
-	invites.mu.Lock()
-	invites.invites[token] = entry
-	invites.mu.Unlock()
+	if err := s.db.Create(&entry).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to persist invite"})
+		return
+	}
 
 	// Push updated invite list to cloud registry immediately
 	s.syncInvitesToRegistry()
@@ -75,41 +62,31 @@ func (s *Server) createInvite(c *gin.Context) {
 		"token":     token,
 		"deepLink":  deepLink,
 		"machineId": machineID,
-		"expiresAt": entry.expiresAt,
+		"expiresAt": entry.ExpiresAt,
 		"expiresIn": inviteTokenExpiry.Seconds(),
 	})
 }
 
 // GET /api/invite/:token — validate invite and return server info (public, no auth)
 func (s *Server) validateInvite(c *gin.Context) {
-	token := c.Param("token")
-
-	invites.mu.RLock()
-	entry, ok := invites.invites[token]
-	invites.mu.RUnlock()
-
-	if !ok || time.Now().After(entry.expiresAt) {
+	entry, err := s.findActiveInvite(c.Param("token"))
+	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "invite not found or expired"})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"valid":     true,
+		"valid":      true,
 		"serverName": s.config.Server.Name,
-		"machineId": s.config.Server.MachineID,
-		"expiresAt": entry.expiresAt,
+		"machineId":  s.config.Server.MachineID,
+		"expiresAt":  entry.ExpiresAt,
 	})
 }
 
 // POST /api/invite/:token/accept — register a new user via invite
 func (s *Server) acceptInvite(c *gin.Context) {
-	token := c.Param("token")
-
-	invites.mu.RLock()
-	entry, ok := invites.invites[token]
-	invites.mu.RUnlock()
-
-	if !ok || time.Now().After(entry.expiresAt) {
+	entry, err := s.findActiveInvite(c.Param("token"))
+	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "invite not found or expired"})
 		return
 	}
@@ -127,9 +104,11 @@ func (s *Server) acceptInvite(c *gin.Context) {
 	}
 
 	// Consume the invite (single use)
-	invites.mu.Lock()
-	delete(invites.invites, token)
-	invites.mu.Unlock()
+	usedAt := time.Now()
+	if err := s.db.Model(entry).Update("used_at", usedAt).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to consume invite"})
+		return
+	}
 
 	// Update cloud registry with remaining invite tokens
 	s.syncInvitesToRegistry()
@@ -146,14 +125,29 @@ func (s *Server) syncInvitesToRegistry() {
 	if s.cloudRegistry == nil {
 		return
 	}
-	invites.mu.RLock()
-	tokens := make([]string, 0, len(invites.invites))
 	now := time.Now()
-	for t, e := range invites.invites {
-		if now.Before(e.expiresAt) {
-			tokens = append(tokens, t)
-		}
+	var inviteRows []models.InviteToken
+	if err := s.db.
+		Where("used_at IS NULL AND expires_at > ?", now).
+		Find(&inviteRows).Error; err != nil {
+		return
 	}
-	invites.mu.RUnlock()
+
+	tokens := make([]string, 0, len(inviteRows))
+	for _, row := range inviteRows {
+		tokens = append(tokens, row.Token)
+	}
 	s.cloudRegistry.SetInviteTokens(tokens)
+	s.cloudRegistry.RegisterNow()
+}
+
+func (s *Server) findActiveInvite(token string) (*models.InviteToken, error) {
+	var invite models.InviteToken
+	err := s.db.
+		Where("token = ? AND used_at IS NULL AND expires_at > ?", strings.ToUpper(token), time.Now()).
+		First(&invite).Error
+	if err != nil {
+		return nil, err
+	}
+	return &invite, nil
 }

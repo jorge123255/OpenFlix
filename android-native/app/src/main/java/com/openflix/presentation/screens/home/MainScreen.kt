@@ -8,6 +8,7 @@ import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -38,6 +39,7 @@ import com.openflix.presentation.screens.catchup.CatchupScreen
 import com.openflix.presentation.screens.dvr.DVRScreen
 import com.openflix.presentation.screens.watchstats.WatchStatsScreen
 import com.openflix.presentation.screens.epg.EPGGuideScreen
+import com.openflix.presentation.screens.livetv.XfinityLiveTVScreen
 import com.openflix.presentation.screens.movies.MoviesScreen
 import com.openflix.presentation.screens.movies.MoviesScreenModern
 import com.openflix.presentation.screens.onlater.OnLaterScreen
@@ -48,10 +50,13 @@ import com.openflix.presentation.screens.tvshows.TVShowsScreenModern
 import com.openflix.presentation.screens.watchlist.WatchlistScreen
 import com.openflix.presentation.screens.playlist.PlaylistsScreen
 import com.openflix.presentation.theme.OpenFlixColors
+import com.openflix.util.DeviceType
+import com.openflix.util.LocalDeviceType
 
 /**
- * Main screen with modern Fubo-style sidebar navigation.
- * Sidebar collapses to icons and expands on focus.
+ * Main screen with adaptive navigation.
+ * TV: collapsible sidebar with D-pad focus navigation.
+ * Tablet/Phone: bottom navigation bar with touch-friendly tabs.
  */
 @Composable
 fun MainScreen(
@@ -70,6 +75,167 @@ fun MainScreen(
     mpvPlayer: MpvPlayer,
     liveTVPlayer: LiveTVPlayer,
     lastWatchedService: LastWatchedService? = null
+) {
+    val deviceType = LocalDeviceType.current
+
+    if (deviceType.isTV) {
+        TVMainScreen(
+            onNavigateToMediaDetail = onNavigateToMediaDetail,
+            onNavigateToPlayer = onNavigateToPlayer,
+            onNavigateToLiveTVPlayer = onNavigateToLiveTVPlayer,
+            onNavigateToDVRPlayer = onNavigateToDVRPlayer,
+            onNavigateToSettings = onNavigateToSettings,
+            onNavigateToSearch = onNavigateToSearch,
+            onNavigateToMultiview = onNavigateToMultiview,
+            onNavigateToChannelSurfing = onNavigateToChannelSurfing,
+            onNavigateToCatchup = onNavigateToCatchup,
+            onNavigateToChannelGroups = onNavigateToChannelGroups,
+            onNavigateToArchivePlayer = onNavigateToArchivePlayer,
+            onNavigateToBrowseAll = onNavigateToBrowseAll,
+            mpvPlayer = mpvPlayer,
+            liveTVPlayer = liveTVPlayer,
+            lastWatchedService = lastWatchedService
+        )
+    } else {
+        TabletMainScreen(
+            onNavigateToMediaDetail = onNavigateToMediaDetail,
+            onNavigateToPlayer = onNavigateToPlayer,
+            onNavigateToLiveTVPlayer = onNavigateToLiveTVPlayer,
+            onNavigateToDVRPlayer = onNavigateToDVRPlayer,
+            onNavigateToSettings = onNavigateToSettings,
+            onNavigateToSearch = onNavigateToSearch,
+            onNavigateToMultiview = onNavigateToMultiview,
+            onNavigateToChannelSurfing = onNavigateToChannelSurfing,
+            onNavigateToCatchup = onNavigateToCatchup,
+            onNavigateToChannelGroups = onNavigateToChannelGroups,
+            onNavigateToArchivePlayer = onNavigateToArchivePlayer,
+            onNavigateToBrowseAll = onNavigateToBrowseAll,
+            mpvPlayer = mpvPlayer,
+            liveTVPlayer = liveTVPlayer,
+            lastWatchedService = lastWatchedService
+        )
+    }
+}
+
+// Tabs shown in the bottom navigation bar for tablet/phone
+private enum class TabletTab(
+    val title: String,
+    val icon: ImageVector,
+    val selectedIcon: ImageVector
+) {
+    HOME("Home", Icons.Outlined.Home, Icons.Filled.Home),
+    MOVIES("Movies", Icons.Outlined.Movie, Icons.Filled.Movie),
+    TV_SHOWS("TV Shows", Icons.Outlined.Tv, Icons.Filled.Tv),
+    LIVE_TV("Live TV", Icons.Outlined.LiveTv, Icons.Filled.LiveTv),
+    DVR("DVR", Icons.Outlined.FiberManualRecord, Icons.Filled.FiberManualRecord),
+    SETTINGS("Settings", Icons.Outlined.Settings, Icons.Filled.Settings)
+}
+
+@Composable
+private fun TabletMainScreen(
+    onNavigateToMediaDetail: (String) -> Unit,
+    onNavigateToPlayer: (String) -> Unit,
+    onNavigateToLiveTVPlayer: (String) -> Unit,
+    onNavigateToDVRPlayer: (recordingId: String, mode: String) -> Unit,
+    onNavigateToSettings: () -> Unit,
+    onNavigateToSearch: () -> Unit,
+    onNavigateToMultiview: () -> Unit,
+    onNavigateToChannelSurfing: () -> Unit,
+    onNavigateToCatchup: () -> Unit,
+    onNavigateToChannelGroups: () -> Unit,
+    onNavigateToArchivePlayer: (channelId: String, startTime: Long) -> Unit,
+    onNavigateToBrowseAll: (libraryId: String, mediaType: String) -> Unit,
+    mpvPlayer: MpvPlayer,
+    liveTVPlayer: LiveTVPlayer,
+    lastWatchedService: LastWatchedService?
+) {
+    var selectedTab by remember { mutableStateOf(TabletTab.HOME) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(OpenFlixColors.Background)
+            .systemBarsPadding()
+    ) {
+        // Content area
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth()
+        ) {
+            when (selectedTab) {
+                TabletTab.HOME -> ForYouScreen(
+                    onMediaClick = onNavigateToMediaDetail,
+                    onPlayClick = onNavigateToPlayer,
+                    onNavigateToLiveTVPlayer = onNavigateToLiveTVPlayer
+                )
+                TabletTab.MOVIES -> MoviesScreenModern(
+                    onMediaClick = onNavigateToMediaDetail,
+                    onPlayClick = onNavigateToPlayer,
+                    onBrowseAll = { onNavigateToBrowseAll("all", "movie") }
+                )
+                TabletTab.TV_SHOWS -> TVShowsScreenModern(
+                    onMediaClick = onNavigateToMediaDetail,
+                    onPlayClick = onNavigateToPlayer,
+                    onBrowseAll = { onNavigateToBrowseAll("all", "show") }
+                )
+                TabletTab.LIVE_TV -> XfinityLiveTVScreen(
+                    onChannelSelected = onNavigateToLiveTVPlayer,
+                    onNavigateToGuide = { /* Already here or navigate to full EPG */ },
+                    onNavigateToSurfing = onNavigateToChannelSurfing,
+                    onNavigateToCatchup = onNavigateToCatchup,
+                    onNavigateToOnLater = { /* Could add tab or navigate */ },
+                    onNavigateToTeamPass = { /* Could add tab or navigate */ },
+                    onNavigateToGroups = onNavigateToChannelGroups,
+                    onNavigateToMultiview = onNavigateToMultiview,
+                    onArchivePlayback = onNavigateToArchivePlayer
+                )
+                TabletTab.DVR -> DVRScreen(
+                    onRecordingClick = { recordingId, mode ->
+                        onNavigateToDVRPlayer(recordingId, mode)
+                    }
+                )
+                TabletTab.SETTINGS -> SettingsScreen(
+                    onBack = { selectedTab = TabletTab.HOME },
+                    onNavigateToSubtitleStyling = { /* TODO */ },
+                    onNavigateToChannelLogoEditor = { /* TODO */ },
+                    onNavigateToRemoteMapping = { /* TODO */ },
+                    onNavigateToAbout = { /* TODO */ },
+                    onNavigateToLogs = { /* TODO */ },
+                    onNavigateToSources = { /* TODO */ },
+                    onSignOut = { /* TODO */ }
+                )
+            }
+        }
+
+        // Bottom Navigation Bar
+        BottomNavigationBar(
+            selectedTab = selectedTab,
+            onTabSelected = { selectedTab = it }
+        )
+    }
+}
+
+/**
+ * TV main screen with sidebar navigation (original behavior).
+ */
+@Composable
+private fun TVMainScreen(
+    onNavigateToMediaDetail: (String) -> Unit,
+    onNavigateToPlayer: (String) -> Unit,
+    onNavigateToLiveTVPlayer: (String) -> Unit,
+    onNavigateToDVRPlayer: (recordingId: String, mode: String) -> Unit,
+    onNavigateToSettings: () -> Unit,
+    onNavigateToSearch: () -> Unit,
+    onNavigateToMultiview: () -> Unit,
+    onNavigateToChannelSurfing: () -> Unit,
+    onNavigateToCatchup: () -> Unit,
+    onNavigateToChannelGroups: () -> Unit,
+    onNavigateToArchivePlayer: (channelId: String, startTime: Long) -> Unit,
+    onNavigateToBrowseAll: (libraryId: String, mediaType: String) -> Unit,
+    mpvPlayer: MpvPlayer,
+    liveTVPlayer: LiveTVPlayer,
+    lastWatchedService: LastWatchedService?
 ) {
     var selectedTab by remember { mutableStateOf(MainTab.HOME) }
     var isSidebarExpanded by remember { mutableStateOf(false) }
@@ -115,7 +281,7 @@ fun MainScreen(
                     onNavigateToLiveTVPlayer = onNavigateToLiveTVPlayer,
                     onNavigateToGuide = { selectedTab = MainTab.GUIDE },
                     onNavigateToMultiview = onNavigateToMultiview,
-                    onNavigateToSports = null // TODO: Add sports screen navigation
+                    onNavigateToSports = null
                 )
                 MainTab.MOVIES -> MoviesScreenModern(
                     onMediaClick = onNavigateToMediaDetail,
@@ -127,12 +293,16 @@ fun MainScreen(
                     onPlayClick = onNavigateToPlayer,
                     onBrowseAll = { onNavigateToBrowseAll("all", "show") }
                 )
-                MainTab.GUIDE -> EPGGuideScreen(
-                    onBack = { selectedTab = MainTab.HOME },
+                MainTab.GUIDE -> XfinityLiveTVScreen(
                     onChannelSelected = onNavigateToLiveTVPlayer,
-                    onArchivePlayback = { channelId, startTime ->
-                        onNavigateToArchivePlayer(channelId, startTime)
-                    }
+                    onNavigateToGuide = { /* Already here */ },
+                    onNavigateToSurfing = onNavigateToChannelSurfing,
+                    onNavigateToCatchup = onNavigateToCatchup,
+                    onNavigateToOnLater = { selectedTab = MainTab.ON_LATER },
+                    onNavigateToTeamPass = { selectedTab = MainTab.TEAM_PASS },
+                    onNavigateToGroups = onNavigateToChannelGroups,
+                    onNavigateToMultiview = onNavigateToMultiview,
+                    onArchivePlayback = onNavigateToArchivePlayer
                 )
                 MainTab.CATCHUP -> CatchupScreen(
                     onBack = { selectedTab = MainTab.GUIDE },
@@ -142,7 +312,6 @@ fun MainScreen(
                 )
                 MainTab.ON_LATER -> OnLaterScreen(
                     onProgramClick = { item ->
-                        // Navigate to Live TV player with the channel
                         item.channel?.let { channel ->
                             onNavigateToLiveTVPlayer(channel.id.toString())
                         }
@@ -174,7 +343,7 @@ fun MainScreen(
                     onNavigateToRemoteMapping = { /* TODO */ },
                     onNavigateToAbout = { /* TODO */ },
                     onNavigateToLogs = { /* TODO */ },
-                    onNavigateToSources = { /* TODO: Navigate to sources screen */ },
+                    onNavigateToSources = { /* TODO */ },
                     onSignOut = { /* TODO */ }
                 )
             }
@@ -230,7 +399,6 @@ private fun ModernSidebar(
                 ),
             contentAlignment = Alignment.Center
         ) {
-            // Could be profile image or logo icon
             Text(
                 text = "O",
                 style = MaterialTheme.typography.titleLarge,
@@ -367,6 +535,50 @@ private fun SidebarNavItem(
                     fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
                     color = textColor,
                     modifier = Modifier.padding(start = 16.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun BottomNavigationBar(
+    selectedTab: TabletTab,
+    onTabSelected: (TabletTab) -> Unit
+) {
+    // Use a simple Row-based bottom bar with Material3 components to avoid
+    // TV Material3 import conflicts with NavigationBar/NavigationBarItem
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(OpenFlixColors.Surface)
+            .padding(vertical = 8.dp),
+        horizontalArrangement = Arrangement.SpaceEvenly
+    ) {
+        TabletTab.entries.forEach { tab ->
+            val isSelected = selectedTab == tab
+            val color = if (isSelected) OpenFlixColors.Primary else OpenFlixColors.TextSecondary
+
+            Column(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(8.dp))
+                    .clickable { onTabSelected(tab) }
+                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                androidx.compose.material3.Icon(
+                    imageVector = if (isSelected) tab.selectedIcon else tab.icon,
+                    contentDescription = tab.title,
+                    tint = color,
+                    modifier = Modifier.size(24.dp)
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                androidx.compose.material3.Text(
+                    text = tab.title,
+                    color = color,
+                    fontSize = 11.sp,
+                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                    maxLines = 1
                 )
             }
         }

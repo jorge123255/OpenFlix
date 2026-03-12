@@ -324,6 +324,9 @@ func (p *M3UParser) ImportChannels(sourceID uint, channels []ParsedChannel) (int
 		validEPGChannels[id] = true
 	}
 
+	// Track seen stream URLs to reconcile stale channels after import
+	seenStreamURLs := make(map[string]bool)
+
 	// Track seen channels in this import to handle duplicates within the M3U
 	seen := make(map[string]bool)
 
@@ -344,6 +347,7 @@ func (p *M3UParser) ImportChannels(sourceID uint, channels []ParsedChannel) (int
 			continue // Skip duplicate within this import
 		}
 		seen[uniqueKey] = true
+		seenStreamURLs[ch.StreamURL] = true
 
 		// Check if channel already exists - use stream_url + name as unique identifier
 		var existing models.Channel
@@ -386,6 +390,17 @@ func (p *M3UParser) ImportChannels(sourceID uint, channels []ParsedChannel) (int
 			}
 			p.db.Create(&channel)
 			added++
+		}
+	}
+
+	// Reconcile: delete channels from this source that are no longer in the M3U
+	if len(seenStreamURLs) > 0 {
+		var existingURLs []string
+		p.db.Model(&models.Channel{}).Where("m3_u_source_id = ?", sourceID).Pluck("stream_url", &existingURLs)
+		for _, url := range existingURLs {
+			if !seenStreamURLs[url] {
+				p.db.Where("m3_u_source_id = ? AND stream_url = ?", sourceID, url).Delete(&models.Channel{})
+			}
 		}
 	}
 

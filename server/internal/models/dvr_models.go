@@ -55,6 +55,9 @@ type DVRJob struct {
 	DuplicateOfID      *uint `gorm:"index" json:"duplicateOfId,omitempty"`
 	AcceptedDuplicate  bool  `gorm:"default:false" json:"acceptedDuplicate"`
 
+	// Redundant recording (dual-source)
+	Redundant bool `gorm:"default:false" json:"redundant"`
+
 	// Conflict grouping
 	ConflictGroupID *uint `gorm:"index" json:"conflictGroupId,omitempty"`
 

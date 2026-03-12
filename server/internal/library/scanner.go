@@ -18,6 +18,8 @@ import (
 	"gorm.io/gorm"
 )
 
+const missingLibraryPathThreshold = 3
+
 // Scanner handles media file discovery and metadata extraction
 type Scanner struct {
 	db         *gorm.DB
@@ -111,9 +113,22 @@ func (s *Scanner) ScanLibrary(library *models.Library) (*ScanResult, error) {
 	}
 
 	foundFiles := make(map[string]bool)
+	healthyPaths := make(map[uint]bool)
+	purgePaths := make(map[uint]bool)
 
 	// Scan each path
-	for _, libPath := range paths {
+	for i := range paths {
+		libPath := &paths[i]
+		if err := s.prepareLibraryPathScan(libPath); err != nil {
+			result.Errors = append(result.Errors, fmt.Sprintf("Error accessing %s: %v", libPath.Path, err))
+			if libPath.ConsecutiveMissingScans >= missingLibraryPathThreshold {
+				purgePaths[libPath.ID] = true
+			}
+			continue
+		}
+
+		healthyPaths[libPath.ID] = true
+
 		err := filepath.Walk(libPath.Path, func(path string, info os.FileInfo, err error) error {
 			if err != nil {
 				result.Errors = append(result.Errors, fmt.Sprintf("Error accessing %s: %v", path, err))
@@ -187,6 +202,20 @@ func (s *Scanner) ScanLibrary(library *models.Library) (*ScanResult, error) {
 
 	// Remove files that no longer exist
 	for path, file := range existingFiles {
+		matchedPath := matchLibraryPath(path, paths)
+		if matchedPath == nil {
+			s.removeMediaFileByID(file)
+			result.FilesRemoved++
+			continue
+		}
+		if purgePaths[matchedPath.ID] {
+			s.removeMediaFileByID(file)
+			result.FilesRemoved++
+			continue
+		}
+		if !healthyPaths[matchedPath.ID] {
+			continue
+		}
 		if !foundFiles[path] {
 			s.removeMediaFileByID(file)
 			result.FilesRemoved++
@@ -198,6 +227,75 @@ func (s *Scanner) ScanLibrary(library *models.Library) (*ScanResult, error) {
 	s.db.Model(library).Update("scanned_at", &now)
 
 	return result, nil
+}
+
+func (s *Scanner) prepareLibraryPathScan(libPath *models.LibraryPath) error {
+	info, err := os.Stat(libPath.Path)
+	if err != nil {
+		s.markLibraryPathMissing(libPath, err)
+		return err
+	}
+	if !info.IsDir() {
+		dirErr := fmt.Errorf("path is not a directory")
+		s.markLibraryPathMissing(libPath, dirErr)
+		return dirErr
+	}
+	s.markLibraryPathHealthy(libPath)
+	return nil
+}
+
+func (s *Scanner) markLibraryPathMissing(libPath *models.LibraryPath, pathErr error) {
+	now := time.Now()
+	libPath.Healthy = false
+	libPath.ConsecutiveMissingScans++
+	libPath.LastMissingAt = &now
+	libPath.LastError = pathErr.Error()
+
+	s.db.Model(libPath).Updates(map[string]interface{}{
+		"healthy":                   false,
+		"consecutive_missing_scans": libPath.ConsecutiveMissingScans,
+		"last_missing_at":           now,
+		"last_error":                pathErr.Error(),
+	})
+}
+
+func (s *Scanner) markLibraryPathHealthy(libPath *models.LibraryPath) {
+	now := time.Now()
+	libPath.Healthy = true
+	libPath.ConsecutiveMissingScans = 0
+	libPath.LastSeenAt = &now
+	libPath.LastError = ""
+
+	s.db.Model(libPath).Updates(map[string]interface{}{
+		"healthy":                   true,
+		"consecutive_missing_scans": 0,
+		"last_seen_at":              now,
+		"last_error":                "",
+	})
+}
+
+func matchLibraryPath(filePath string, paths []models.LibraryPath) *models.LibraryPath {
+	cleanFilePath := filepath.Clean(filePath)
+	var matched *models.LibraryPath
+
+	for i := range paths {
+		cleanRoot := filepath.Clean(paths[i].Path)
+		if !pathWithinRoot(cleanFilePath, cleanRoot) {
+			continue
+		}
+		if matched == nil || len(cleanRoot) > len(filepath.Clean(matched.Path)) {
+			matched = &paths[i]
+		}
+	}
+
+	return matched
+}
+
+func pathWithinRoot(filePath string, root string) bool {
+	if filePath == root {
+		return true
+	}
+	return strings.HasPrefix(filePath, root+string(os.PathSeparator))
 }
 
 // addMediaFile adds a new media file to the library
@@ -317,7 +415,7 @@ func (s *Scanner) parseFilename(filePath string, libraryType string) ParsedFilen
 
 // MediaInfo contains technical information about a media file
 type MediaInfo struct {
-	Duration    int64  // in milliseconds
+	Duration    int64 // in milliseconds
 	Width       int
 	Height      int
 	VideoCodec  string
@@ -558,12 +656,12 @@ func (s *Scanner) createMediaFile(item *models.MediaItem, filePath string, fileI
 		FileModTime:     fileInfo.ModTime(),
 		FileFingerprint: fileFingerprint(filepath.Base(filePath), fileInfo.Size()),
 		Container:       strings.TrimPrefix(filepath.Ext(filePath), "."),
-		Duration:    mediaInfo.Duration,
-		Bitrate:     int(mediaInfo.Bitrate),
-		Width:       mediaInfo.Width,
-		Height:      mediaInfo.Height,
-		VideoCodec:  mediaInfo.VideoCodec,
-		AudioCodec:  mediaInfo.AudioCodec,
+		Duration:        mediaInfo.Duration,
+		Bitrate:         int(mediaInfo.Bitrate),
+		Width:           mediaInfo.Width,
+		Height:          mediaInfo.Height,
+		VideoCodec:      mediaInfo.VideoCodec,
+		AudioCodec:      mediaInfo.AudioCodec,
 	}
 
 	if err := s.db.Create(&file).Error; err != nil {

@@ -3,9 +3,11 @@ package com.openflix.ui.screens
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -14,10 +16,14 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
@@ -25,21 +31,22 @@ import com.openflix.domain.model.Channel
 import com.openflix.domain.model.ChannelWithPrograms
 import com.openflix.domain.model.Program
 import com.openflix.domain.model.currentTimeMs
-import com.openflix.ui.theme.OpenFlixColors
+import com.openflix.ui.viewmodel.GuideDay
 import com.openflix.ui.viewmodel.LiveTVViewModel
 import org.koin.compose.viewmodel.koinViewModel
 
 // Guide theme colors
 private val GuideBg = Color(0xFF0D0D0D)
 private val GuideSurface = Color(0xFF1A1A1A)
-private val GuideAccent = Color(0xFF6138F5)
+private val GuideAccent = Color(0xFF6C3DF8)
 private val GuideLive = Color(0xFFFF4081)
+private val NowLineColor = Color(0xFFFF4081)
 
 // Dimensions
-private val CHANNEL_WIDTH = 120.dp
+private val CHANNEL_WIDTH = 110.dp
 private val SLOT_WIDTH = 240.dp  // Width per hour
-private val ROW_HEIGHT = 56.dp
-private val HEADER_HEIGHT = 32.dp
+private val ROW_HEIGHT = 64.dp
+private val HEADER_HEIGHT = 36.dp
 
 @Composable
 fun GuideScreen(
@@ -50,6 +57,34 @@ fun GuideScreen(
     val uiState by viewModel.uiState.collectAsState()
     val guide = uiState.guide
     val horizontalScroll = rememberScrollState()
+    val density = LocalDensity.current
+
+    // Load guide data when screen opens
+    LaunchedEffect(Unit) {
+        viewModel.ensureGuideLoaded()
+    }
+
+    val selectedDay = uiState.guideDays.getOrNull(uiState.selectedDayIndex)
+    val isToday = uiState.selectedDayIndex == 0
+
+    // Auto-scroll to "now" for today, or to start for other days
+    LaunchedEffect(guide, uiState.selectedDayIndex) {
+        if (guide.isNotEmpty() && selectedDay != null) {
+            if (isToday) {
+                val nowSec = currentTimeMs() / 1000
+                val elapsedHours = ((nowSec - selectedDay.startSec).toFloat() / 3600f).coerceAtLeast(0f)
+                // Center "now" in the view — scroll so now is ~1/3 from left
+                val nowDp = elapsedHours * SLOT_WIDTH.value
+                val scrollTarget = with(density) { ((nowDp - 80f) * density.density).toInt() }
+                if (scrollTarget > 0) {
+                    horizontalScroll.animateScrollTo(scrollTarget.coerceAtMost(horizontalScroll.maxValue))
+                }
+            } else {
+                // Scroll to beginning for non-today days
+                horizontalScroll.animateScrollTo(0)
+            }
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -60,7 +95,7 @@ fun GuideScreen(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
+                .padding(horizontal = 16.dp, vertical = 10.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -81,18 +116,61 @@ fun GuideScreen(
             )
         }
 
-        if (uiState.isLoading || guide.isEmpty()) {
+        // Day picker — always show
+        if (uiState.guideDays.isNotEmpty()) {
+            LazyRow(
+                contentPadding = PaddingValues(horizontal = 12.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.padding(bottom = 10.dp)
+            ) {
+                items(uiState.guideDays.size) { index ->
+                    val day = uiState.guideDays[index]
+                    val isSelected = index == uiState.selectedDayIndex
+                    DayChip(
+                        day = day,
+                        isSelected = isSelected,
+                        onClick = { viewModel.selectGuideDay(index) }
+                    )
+                }
+            }
+        }
+
+        // Loading overlay for initial load
+        if (uiState.isLoading && guide.isEmpty()) {
             Box(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
             ) {
-                if (uiState.isLoading) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     CircularProgressIndicator(color = Color.White, modifier = Modifier.size(32.dp))
-                } else {
-                    Text("No guide data available", color = Color.Gray, fontSize = 16.sp)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text("Loading guide...", color = Color.Gray, fontSize = 14.sp)
                 }
             }
+        } else if (guide.isEmpty() && !uiState.isGuideLoading) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("No guide data available", color = Color.Gray, fontSize = 16.sp)
+            }
         } else {
+            // Loading bar for day switching
+            if (uiState.isGuideLoading) {
+                LinearProgressIndicator(
+                    modifier = Modifier.fillMaxWidth().height(2.dp),
+                    color = GuideAccent,
+                    trackColor = Color.Transparent
+                )
+            }
+
+            // Calculate "now" position for the red line
+            val nowOffsetDp: Dp? = if (isToday && selectedDay != null) {
+                val nowSec = currentTimeMs() / 1000
+                val elapsedHours = ((nowSec - selectedDay.startSec).toFloat() / 3600f).coerceAtLeast(0f)
+                (elapsedHours * SLOT_WIDTH.value).dp
+            } else null
+
             // Time ruler header
             Row(modifier = Modifier.fillMaxWidth()) {
                 // Channel column header
@@ -112,15 +190,30 @@ fun GuideScreen(
                     )
                 }
 
-                // Scrollable time ruler
-                Row(
+                // Scrollable time ruler with now-line
+                Box(
                     modifier = Modifier
                         .weight(1f)
                         .height(HEADER_HEIGHT)
                         .horizontalScroll(horizontalScroll)
-                        .background(GuideBg)
                 ) {
-                    TimeRuler()
+                    Row(
+                        modifier = Modifier.background(GuideBg)
+                    ) {
+                        if (selectedDay != null) {
+                            TimeRuler(dayStartSec = selectedDay.startSec, isToday = isToday)
+                        }
+                    }
+                    // Now line in header
+                    if (nowOffsetDp != null) {
+                        Box(
+                            modifier = Modifier
+                                .offset(x = nowOffsetDp)
+                                .width(2.dp)
+                                .fillMaxHeight()
+                                .background(NowLineColor)
+                        )
+                    }
                 }
             }
 
@@ -134,22 +227,37 @@ fun GuideScreen(
                             onClick = { onChannelClick(channelWithPrograms.channel.id) }
                         )
 
-                        // Scrollable program row
-                        Row(
+                        // Scrollable program row with now-line overlay
+                        Box(
                             modifier = Modifier
                                 .weight(1f)
                                 .height(ROW_HEIGHT)
                                 .horizontalScroll(horizontalScroll)
                         ) {
-                            GuideProgramRow(
-                                programs = channelWithPrograms.programs,
-                                onProgramClick = { }
-                            )
+                            if (selectedDay != null) {
+                                GuideProgramRow(
+                                    programs = channelWithPrograms.programs,
+                                    dayStartSec = selectedDay.startSec,
+                                    dayEndSec = selectedDay.endSec,
+                                    isToday = isToday,
+                                    onProgramClick = { }
+                                )
+                            }
+                            // Now line in each row
+                            if (nowOffsetDp != null) {
+                                Box(
+                                    modifier = Modifier
+                                        .offset(x = nowOffsetDp)
+                                        .width(1.dp)
+                                        .fillMaxHeight()
+                                        .background(NowLineColor.copy(alpha = 0.6f))
+                                )
+                            }
                         }
                     }
 
                     HorizontalDivider(
-                        color = Color.White.copy(alpha = 0.08f),
+                        color = Color.White.copy(alpha = 0.06f),
                         thickness = 0.5.dp
                     )
                 }
@@ -158,31 +266,61 @@ fun GuideScreen(
     }
 }
 
+// MARK: - Day Chip
+
+@Composable
+private fun DayChip(
+    day: GuideDay,
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(10.dp))
+            .background(if (isSelected) GuideAccent else GuideSurface)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 10.dp)
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                text = day.label,
+                fontSize = 14.sp,
+                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                color = if (isSelected) Color.White else Color.White.copy(alpha = 0.7f)
+            )
+            Text(
+                text = day.dateLabel,
+                fontSize = 11.sp,
+                color = if (isSelected) Color.White.copy(alpha = 0.8f) else Color.White.copy(alpha = 0.4f)
+            )
+        }
+    }
+}
+
 // MARK: - Time Ruler
 
 @Composable
-private fun TimeRuler() {
-    val now = currentTimeMs()
-    // Round to current half hour
-    val halfHourMs = 30 * 60 * 1000L
-    val startMs = (now / halfHourMs) * halfHourMs
+private fun TimeRuler(dayStartSec: Long, isToday: Boolean) {
+    val nowMs = currentTimeMs()
+    val nowSec = nowMs / 1000
 
-    // Show 24 half-hour slots (12 hours)
-    for (i in 0 until 24) {
-        val slotMs = startMs + (i * halfHourMs)
-        val label = if (i == 0) "Now" else formatEpochTime(slotMs)
+    // 24 hours of slots
+    for (hour in 0 until 24) {
+        val slotSec = dayStartSec + (hour * 3600L)
+        val isNowHour = isToday && slotSec <= nowSec && nowSec < slotSec + 3600L
+        val label = if (isNowHour) "Now" else formatEpochTimeSec(slotSec)
 
         Box(
             modifier = Modifier
-                .width(SLOT_WIDTH / 2)  // Each slot is half an hour = half the hourly width
+                .width(SLOT_WIDTH)
                 .height(HEADER_HEIGHT),
             contentAlignment = Alignment.CenterStart
         ) {
             Text(
                 text = label,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Medium,
-                color = if (i == 0) Color.White else Color.Gray,
+                fontSize = 12.sp,
+                fontWeight = if (isNowHour) FontWeight.Bold else FontWeight.Medium,
+                color = if (isNowHour) NowLineColor else Color.Gray,
                 modifier = Modifier.padding(start = 8.dp)
             )
         }
@@ -202,21 +340,21 @@ private fun GuideChannelCell(
             .height(ROW_HEIGHT)
             .background(GuideBg)
             .clickable(onClick = onClick)
-            .padding(horizontal = 8.dp),
+            .padding(horizontal = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(6.dp)
+        horizontalArrangement = Arrangement.spacedBy(4.dp)
     ) {
         // Channel logo
         if (channel.logo != null) {
             AsyncImage(
                 model = channel.logo,
                 contentDescription = channel.name,
-                modifier = Modifier.size(width = 32.dp, height = 20.dp),
+                modifier = Modifier.size(width = 28.dp, height = 20.dp),
                 contentScale = ContentScale.Fit
             )
         }
 
-        Column {
+        Column(modifier = Modifier.weight(1f)) {
             channel.number?.let { number ->
                 Text(
                     text = number.toString(),
@@ -241,34 +379,57 @@ private fun GuideChannelCell(
 @Composable
 private fun GuideProgramRow(
     programs: List<Program>,
+    dayStartSec: Long,
+    dayEndSec: Long,
+    isToday: Boolean,
     onProgramClick: (Program) -> Unit
 ) {
     val now = currentTimeMs()
-    val halfHourMs = 30 * 60 * 1000L
-    val gridStartMs = (now / halfHourMs) * halfHourMs
-    val gridEndMs = gridStartMs + (12 * 3600 * 1000L) // 12 hours
+    val dayStartMs = dayStartSec * 1000L
+    val dayEndMs = dayEndSec * 1000L
 
-    // Each half hour = SLOT_WIDTH/2 in dp
-    val slotWidthDp = SLOT_WIDTH / 2
-    val msPerSlot = halfHourMs.toFloat()
+    // Total width = 24 hours * SLOT_WIDTH per hour
+    val totalWidth = SLOT_WIDTH * 24
 
-    val visiblePrograms = programs.filter { it.endTimeMs > gridStartMs && it.startTimeMs < gridEndMs }
+    val visiblePrograms = programs.filter { it.endTimeMs > dayStartMs && it.startTimeMs < dayEndMs }
 
     Box(
         modifier = Modifier
-            .width(SLOT_WIDTH * 12) // 12 hours total width
+            .width(totalWidth)
             .height(ROW_HEIGHT)
     ) {
+        if (visiblePrograms.isEmpty()) {
+            // Show empty placeholder
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(vertical = 4.dp, horizontal = 1.dp)
+                    .clip(RoundedCornerShape(4.dp))
+                    .background(GuideSurface.copy(alpha = 0.3f)),
+                contentAlignment = Alignment.CenterStart
+            ) {
+                Text(
+                    text = "No listings",
+                    fontSize = 11.sp,
+                    color = Color.Gray.copy(alpha = 0.5f),
+                    modifier = Modifier.padding(start = 8.dp)
+                )
+            }
+        }
+
         visiblePrograms.forEach { program ->
-            val clampedStartMs = maxOf(program.startTimeMs, gridStartMs)
-            val clampedEndMs = minOf(program.endTimeMs, gridEndMs)
-            val offsetFraction = (clampedStartMs - gridStartMs).toFloat() / msPerSlot
-            val durationFraction = (clampedEndMs - clampedStartMs).toFloat() / msPerSlot
+            val clampedStartMs = maxOf(program.startTimeMs, dayStartMs)
+            val clampedEndMs = minOf(program.endTimeMs, dayEndMs)
 
-            val xOffset = slotWidthDp * offsetFraction
-            val width = maxOf(slotWidthDp * durationFraction, 30.dp)
+            // Position based on hours from day start
+            val startHours = (clampedStartMs - dayStartMs).toFloat() / 3_600_000f
+            val durationHours = (clampedEndMs - clampedStartMs).toFloat() / 3_600_000f
 
-            val isNow = program.startTimeMs <= now && program.endTimeMs > now
+            val xOffset = SLOT_WIDTH * startHours
+            val width = maxOf(SLOT_WIDTH * durationHours, 40.dp)
+
+            val isNow = isToday && program.startTimeMs <= now && program.endTimeMs > now
+            val isPast = isToday && program.endTimeMs <= now
             val progress = if (isNow) {
                 ((now - program.startTimeMs).toFloat() / (program.endTimeMs - program.startTimeMs).toFloat()).coerceIn(0f, 1f)
             } else 0f
@@ -277,31 +438,43 @@ private fun GuideProgramRow(
                 modifier = Modifier
                     .offset(x = xOffset)
                     .width(width)
-                    .height(ROW_HEIGHT - 8.dp)
+                    .height(ROW_HEIGHT - 4.dp)
                     .padding(vertical = 2.dp, horizontal = 1.dp)
                     .clip(RoundedCornerShape(6.dp))
-                    .background(if (isNow) GuideAccent.copy(alpha = 0.2f) else GuideSurface)
-                    .border(0.5.dp, Color.White.copy(alpha = 0.06f), RoundedCornerShape(6.dp))
+                    .background(
+                        when {
+                            isNow -> GuideAccent.copy(alpha = 0.25f)
+                            isPast -> GuideSurface.copy(alpha = 0.4f)
+                            else -> GuideSurface
+                        }
+                    )
+                    .then(
+                        if (isNow) Modifier.border(1.dp, GuideAccent.copy(alpha = 0.5f), RoundedCornerShape(6.dp))
+                        else Modifier.border(0.5.dp, Color.White.copy(alpha = 0.06f), RoundedCornerShape(6.dp))
+                    )
                     .clickable { onProgramClick(program) }
-                    .padding(horizontal = 6.dp, vertical = 4.dp)
+                    .padding(horizontal = 8.dp, vertical = 4.dp)
             ) {
-                Column {
+                Column(
+                    modifier = Modifier.fillMaxHeight(),
+                    verticalArrangement = Arrangement.Center
+                ) {
                     Text(
                         text = program.title,
                         fontSize = 12.sp,
                         fontWeight = if (isNow) FontWeight.SemiBold else FontWeight.Normal,
-                        color = Color.White,
+                        color = if (isPast) Color.Gray else Color.White,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
 
                     if (isNow) {
-                        Spacer(modifier = Modifier.height(2.dp))
+                        Spacer(modifier = Modifier.height(3.dp))
                         // Progress bar
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(2.dp)
+                                .height(3.dp)
                                 .clip(RoundedCornerShape(999.dp))
                                 .background(Color.White.copy(alpha = 0.15f))
                         ) {
@@ -317,7 +490,7 @@ private fun GuideProgramRow(
                         Text(
                             text = formatEpochTime(program.startTimeMs),
                             fontSize = 10.sp,
-                            color = Color.Gray
+                            color = Color.Gray.copy(alpha = 0.7f)
                         )
                     }
                 }
@@ -329,12 +502,11 @@ private fun GuideProgramRow(
 // MARK: - Time Formatting
 
 private fun formatEpochTime(epochMs: Long): String {
-    // Simple hour:minute formatting from epoch ms
-    // This is platform-independent using basic math
-    // We extract hours and minutes from the epoch timestamp
-    // Note: This gives UTC time — for local time, we'd need platform-specific code
-    // But since the guide times are already in local epoch, the relative offsets work
-    val totalMinutes = (epochMs / 60000) % (24 * 60)
+    return formatEpochTimeSec(epochMs / 1000)
+}
+
+private fun formatEpochTimeSec(epochSec: Long): String {
+    val totalMinutes = (epochSec / 60) % (24 * 60)
     val hour24 = (totalMinutes / 60).toInt()
     val minute = (totalMinutes % 60).toInt()
     val hour12 = when {

@@ -3,6 +3,23 @@ import AVKit
 import Combine
 import os.log
 
+// CommercialSkipManager.swift is not in the tvOS target — define the type here
+struct CommercialBreak: Codable {
+    let startTime: Double
+    let endTime: Double
+    let duration: Double
+    let confidence: Double
+    let skipped: Bool
+    let userMarked: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case startTime = "start_time"
+        case endTime = "end_time"
+        case duration, confidence, skipped
+        case userMarked = "user_marked"
+    }
+}
+
 private let logger = Logger(subsystem: "com.openflix.tvos", category: "Player")
 
 // MARK: - Stream Info (matching Android)
@@ -159,6 +176,9 @@ class PlayerViewModel: ObservableObject {
     @Published var subtitleTracks: [TrackInfo] = []
     @Published var selectedAudioTrackIndex: Int?
     @Published var selectedSubtitleTrackIndex: Int?
+
+    // Commercial breaks (populated when playing recordings)
+    @Published var commercialBreaks: [CommercialBreak] = []
 
     // Display info
     @Published var isDisplay4K = false

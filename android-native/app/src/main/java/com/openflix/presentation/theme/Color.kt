@@ -3,61 +3,61 @@ package com.openflix.presentation.theme
 import androidx.compose.ui.graphics.Color
 
 /**
- * OpenFlix color palette - Modern streaming app aesthetic
- * Inspired by premium streaming services like Fubo, Apple TV+, Disney+
+ * OpenFlix color palette - Xfinity-inspired purple/navy theme
+ * Matches the iOS app design language exactly.
  */
 object OpenFlixColors {
-    // Primary brand colors - Cyan/Teal accent (modern, not Netflix-red)
-    val Primary = Color(0xFF00D4FF)         // Bright cyan accent
-    val PrimaryDark = Color(0xFF00A8CC)
-    val PrimaryLight = Color(0xFF5CE1FF)
-    val PrimaryMuted = Color(0xFF0891B2)    // For subtle accents
+    // Primary brand colors - Purple accent (matches iOS Xfinity theme)
+    val Primary = Color(0xFF6138F5)         // Xfinity purple accent
+    val PrimaryDark = Color(0xFF5B3DC4)
+    val PrimaryLight = Color(0xFF8B5FF8)
+    val PrimaryMuted = Color(0xFF4B2DB4)    // For subtle accents
 
     // Secondary accent (orange for live/sports)
     val Secondary = Color(0xFFFF6B35)       // Orange for live indicators
     val SecondaryDark = Color(0xFFE55A25)
-    val Accent = Color(0xFFFF3D71)          // Pink/red for important actions
+    val Accent = Color(0xFF7B4FE8)          // Purple variant for actions
 
-    // Background colors - Deep dark grays
-    val Background = Color(0xFF0D0D0D)      // Near black
-    val BackgroundElevated = Color(0xFF141414)
-    val Surface = Color(0xFF1A1A1A)         // Cards/panels
-    val SurfaceVariant = Color(0xFF242424)  // Hover/secondary surfaces
-    val SurfaceHighlight = Color(0xFF2D2D2D) // Highlighted surfaces
-    val Card = Color(0xFF1E1E1E)            // Card backgrounds
-    val CardHover = Color(0xFF282828)       // Card hover state
+    // Background colors - Deep navy blue (matches iOS #110C21)
+    val Background = Color(0xFF110C21)      // Deep navy
+    val BackgroundElevated = Color(0xFF160F2A)
+    val Surface = Color(0xFF1A142E)         // Tab bar / cards (matches iOS)
+    val SurfaceVariant = Color(0xFF1F1F2E)  // Hover/secondary surfaces
+    val SurfaceHighlight = Color(0xFF2A2440) // Highlighted surfaces
+    val Card = Color(0xFF1F1F2E)            // Card backgrounds (matches iOS cardBackground)
+    val CardHover = Color(0xFF2A2450)       // Card hover state
 
-    // Sidebar specific
-    val SidebarBackground = Color(0xFF0A0A0A)
-    val SidebarHover = Color(0xFF1A1A1A)
-    val SidebarSelected = Color(0xFF242424)
+    // Sidebar specific (TV - slightly darker navy)
+    val SidebarBackground = Color(0xFF0D0918)
+    val SidebarHover = Color(0xFF1A142E)
+    val SidebarSelected = Color(0xFF241E3A)
 
-    // Text colors
+    // Text colors (matches iOS opacity-based text)
     val OnBackground = Color(0xFFFFFFFF)    // Primary text
     val OnSurface = Color(0xFFFFFFFF)
-    val OnPrimary = Color(0xFF000000)       // Dark text on cyan
-    val TextPrimary = Color(0xFFF5F5F5)     // Bright white
-    val TextSecondary = Color(0xFFAAAAAA)   // Muted gray
-    val TextTertiary = Color(0xFF666666)    // Subtle gray
-    val TextMuted = Color(0xFF4D4D4D)       // Very subtle
+    val OnPrimary = Color(0xFFFFFFFF)       // White text on purple
+    val TextPrimary = Color(0xFFFFFFFF)     // White
+    val TextSecondary = Color(0xB2FFFFFF)   // White 70% opacity (iOS textSecondary)
+    val TextTertiary = Color(0x80FFFFFF)    // White 50% opacity (iOS textTertiary)
+    val TextMuted = Color(0x4DFFFFFF)       // White 30% opacity
 
     // State colors
     val Success = Color(0xFF00E676)         // Green
-    val Warning = Color(0xFFFFAB00)         // Amber
+    val Warning = Color(0xFFFF6B35)         // Orange (matches iOS warning)
     val Error = Color(0xFFFF5252)           // Red
-    val Info = Color(0xFF40C4FF)            // Light blue
-    val Live = Color(0xFFFF3D3D)            // Red for LIVE badge
+    val Info = Color(0xFF6138F5)            // Purple (brand)
+    val Live = Color(0xFFFF0000)            // Red for LIVE badge (matches iOS)
 
     // Focus colors (for TV navigation)
-    val FocusBorder = Color(0xFFFFFFFF)     // White border on focus
-    val FocusBackground = Color(0x20FFFFFF) // Subtle white overlay
-    val FocusGlow = Color(0x40FFFFFF)       // Glow effect
+    val FocusBorder = Color(0xFF6138F5)     // Purple border on focus
+    val FocusBackground = Color(0x336138F5) // Subtle purple overlay
+    val FocusGlow = Color(0x406138F5)       // Purple glow effect
 
     // Live TV specific
-    val LiveIndicator = Color(0xFFFF3D3D)   // Red LIVE dot
-    val LiveBadge = Color(0xFFFF3D3D)       // LIVE badge background
+    val LiveIndicator = Color(0xFFFF0000)   // Red LIVE dot (matches iOS)
+    val LiveBadge = Color(0xFFFF0000)       // LIVE badge background
     val Recording = Color(0xFFFF3D3D)
-    val Upcoming = Color(0xFF40C4FF)
+    val Upcoming = Color(0xFF6138F5)        // Purple for upcoming
     val Sports = Color(0xFFFF6B35)          // Orange for sports
 
     // Overlay colors
@@ -65,26 +65,26 @@ object OpenFlixColors {
     val OverlayDark = Color(0xE6000000)     // 90% black
     val OverlayLight = Color(0x40000000)    // 25% black
     val OverlayGradientStart = Color(0x00000000)
-    val OverlayGradientEnd = Color(0xCC000000)
+    val OverlayGradientEnd = Color(0x99000000) // 60% black (iOS cardGradient)
 
-    // Progress colors
-    val ProgressBackground = Color(0xFF3D3D3D)
-    val ProgressFill = Color(0xFFFF3D3D)    // Red progress bar
-    val ProgressFillAlt = Color(0xFF00D4FF) // Cyan alternative
+    // Progress colors (matches iOS - white progress on translucent track)
+    val ProgressBackground = Color(0x4DFFFFFF)  // White 30% (iOS progressBackground)
+    val ProgressFill = Color(0xFFFFFFFF)    // White progress bar (iOS)
+    val ProgressFillAlt = Color(0xFF6138F5) // Purple alternative
 
-    // Divider/Border
-    val Divider = Color(0xFF2D2D2D)
-    val Border = Color(0xFF333333)
-    val BorderSubtle = Color(0xFF222222)
+    // Divider/Border (matches iOS white 15% opacity)
+    val Divider = Color(0x26FFFFFF)
+    val Border = Color(0x26FFFFFF)          // White 15% (iOS border)
+    val BorderSubtle = Color(0x1AFFFFFF)    // White 10%
 
     // Gradients (as color pairs)
     val HeroGradientStart = Color(0x00000000)
-    val HeroGradientEnd = Color(0xF0000000)
+    val HeroGradientEnd = Color(0xF0110C21)  // Fade to navy background
 
     // Channel/Category colors
-    val NewsColor = Color(0xFF2196F3)       // Blue
-    val SportsColor = Color(0xFFFF6B35)     // Orange
-    val EntertainmentColor = Color(0xFFE91E63) // Pink
-    val KidsColor = Color(0xFF4CAF50)       // Green
-    val MoviesColor = Color(0xFF9C27B0)     // Purple
+    val NewsColor = Color(0xFF3B82F5)       // Blue
+    val SportsColor = Color(0xFF0FBA83)     // Green (matches iOS EPG sports)
+    val EntertainmentColor = Color(0xFF66D980) // Green
+    val KidsColor = Color(0xFFF59E0A)       // Amber (matches iOS EPG kids)
+    val MoviesColor = Color(0xFFF04646)     // Red (matches iOS EPG movie)
 }

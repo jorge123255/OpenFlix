@@ -7,7 +7,6 @@ import { UsersPage } from './pages/Users'
 import { LibrariesPage } from './pages/Libraries'
 import { MediaPage } from './pages/Media'
 import { LiveTVPage } from './pages/LiveTV'
-import { EPGEditorSimplePage } from './pages/EPGEditorSimple'
 import { TVGuidePage } from './pages/TVGuide'
 import OnLaterPage from './pages/OnLater'
 import OnNowPage from './pages/OnNow'
@@ -54,7 +53,6 @@ import { PersonalSectionsPage } from './pages/PersonalSections'
 import { MetadataEditorPage } from './pages/MetadataEditor'
 import { LabelsPage } from './pages/Labels'
 import { RemoteAccessPage } from './pages/RemoteAccess'
-import { FamilySharingPage } from './pages/FamilySharing'
 import { api } from './api/client'
 
 const queryClient = new QueryClient({
@@ -92,7 +90,6 @@ function App() {
             <Route path="libraries" element={<LibrariesPage />} />
             <Route path="media" element={<MediaPage />} />
             <Route path="livetv" element={<LiveTVPage />} />
-            <Route path="livetv/epg-editor" element={<EPGEditorSimplePage />} />
             <Route path="tvguide" element={<TVGuidePage />} />
             <Route path="onnow" element={<OnNowPage />} />
             <Route path="onlater" element={<OnLaterPage />} />
@@ -139,7 +136,6 @@ function App() {
             <Route path="movies/:id" element={<MovieDetailPage />} />
             <Route path="labels" element={<LabelsPage />} />
             <Route path="remote-access" element={<RemoteAccessPage />} />
-            <Route path="family-sharing" element={<FamilySharingPage />} />
           </Route>
           <Route path="*" element={<Navigate to="/ui" replace />} />
         </Routes>

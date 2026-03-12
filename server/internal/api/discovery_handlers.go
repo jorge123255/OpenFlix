@@ -4,26 +4,54 @@ import (
 	"crypto/rand"
 	"math/big"
 	"net/http"
+	"os"
+	"path/filepath"
 	"sync"
-	"time"
 
 	"github.com/gin-gonic/gin"
 )
 
+// persistClaimTokenFile writes the token to the standard persistent paths so it
+// survives container restarts after an admin-initiated rotation.
+func persistClaimTokenFile(token string) {
+	paths := []string{
+		"/data/claim-token",
+		filepath.Join(os.Getenv("HOME"), ".openflix", "claim-token"),
+	}
+	for _, path := range paths {
+		dir := filepath.Dir(path)
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			continue
+		}
+		if err := os.WriteFile(path, []byte(token), 0644); err == nil {
+			return
+		}
+	}
+}
+
 const (
 	claimTokenLength = 4
-	claimTokenExpiry = 10 * time.Minute
 	claimTokenChars  = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789" // no I/O/0/1 to avoid confusion
 )
 
-// claimTokenStore holds the current claim token and its expiry.
+// claimTokenStore holds the current permanent claim token.
 type claimTokenStore struct {
-	mu      sync.RWMutex
-	token   string
-	expires time.Time
+	mu    sync.RWMutex
+	token string
 }
 
 var claimStore = &claimTokenStore{}
+
+// InitClaimToken loads the persistent token (from config) into the in-memory store
+// at startup so it is immediately available without any manual action.
+func InitClaimToken(token string) {
+	if token == "" {
+		return
+	}
+	claimStore.mu.Lock()
+	claimStore.token = token
+	claimStore.mu.Unlock()
+}
 
 // generateClaimToken creates a random 4-character claim code.
 func generateClaimToken() (string, error) {
@@ -38,7 +66,7 @@ func generateClaimToken() (string, error) {
 	return string(result), nil
 }
 
-// postClaimToken generates a new claim token (admin only).
+// postClaimToken rotates the claim token (admin only).
 // POST /api/claim-token
 func (s *Server) postClaimToken(c *gin.Context) {
 	token, err := generateClaimToken()
@@ -49,50 +77,37 @@ func (s *Server) postClaimToken(c *gin.Context) {
 
 	claimStore.mu.Lock()
 	claimStore.token = token
-	claimStore.expires = time.Now().Add(claimTokenExpiry)
 	claimStore.mu.Unlock()
 
-	// If we have a cloud registry client, update its claim token
+	// Persist so the rotated token survives restarts.
+	persistClaimTokenFile(token)
+
 	if s.cloudRegistry != nil {
 		s.cloudRegistry.SetClaimToken(token)
+		s.cloudRegistry.RegisterNow()
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"token":   token,
-		"expires": claimStore.expires,
-	})
+	c.JSON(http.StatusOK, gin.H{"token": token})
 }
 
-// getClaimToken returns the current claim token if valid.
+// getClaimToken returns the current claim token.
 // GET /api/claim-token
 func (s *Server) getClaimToken(c *gin.Context) {
 	claimStore.mu.RLock()
-	defer claimStore.mu.RUnlock()
+	token := claimStore.token
+	claimStore.mu.RUnlock()
 
-	if claimStore.token == "" || time.Now().After(claimStore.expires) {
-		c.JSON(http.StatusOK, gin.H{
-			"token":   nil,
-			"active":  false,
-			"message": "No active claim token. Generate one with POST /api/claim-token",
-		})
+	if token == "" {
+		c.JSON(http.StatusOK, gin.H{"token": nil, "active": false})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"token":     claimStore.token,
-		"active":    true,
-		"expires":   claimStore.expires,
-		"expiresIn": time.Until(claimStore.expires).Seconds(),
-	})
+	c.JSON(http.StatusOK, gin.H{"token": token, "active": true})
 }
 
-// GetCurrentClaimToken returns the current valid claim token (for cloud registry).
+// GetCurrentClaimToken returns the current claim token (for cloud registry).
 func GetCurrentClaimToken() string {
 	claimStore.mu.RLock()
 	defer claimStore.mu.RUnlock()
-
-	if claimStore.token == "" || time.Now().After(claimStore.expires) {
-		return ""
-	}
 	return claimStore.token
 }

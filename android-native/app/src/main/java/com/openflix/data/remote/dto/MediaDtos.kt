@@ -258,3 +258,29 @@ data class StreamingHubDto(
     @SerializedName("promoted") val promoted: Boolean?,
     @SerializedName("Metadata") val metadata: List<MediaItemDto>?
 )
+
+// === Playback Options DTOs ===
+
+data class PlaybackOptionsResponse(
+    @SerializedName("mediaId") val mediaId: Long,
+    @SerializedName("options") val options: List<PlaybackOptionDto>,
+    @SerializedName("clientPlatform") val clientPlatform: String?
+)
+
+data class PlaybackOptionDto(
+    @SerializedName("fileId") val fileId: Long,
+    @SerializedName("resolution") val resolution: String?,
+    @SerializedName("codec") val codec: String?,
+    @SerializedName("container") val container: String?,
+    @SerializedName("bitrate") val bitrate: Long?,
+    @SerializedName("decision") val decision: PlaybackDecisionDto,
+    @SerializedName("playbackUrl") val playbackUrl: String
+)
+
+data class PlaybackDecisionDto(
+    @SerializedName("mode") val mode: String,
+    @SerializedName("reason") val reason: String?,
+    @SerializedName("transcodeReason") val transcodeReason: String?,
+    @SerializedName("videoDecision") val videoDecision: String?,
+    @SerializedName("audioDecision") val audioDecision: String?
+)

@@ -223,9 +223,9 @@ func (s *EPGScheduler) refreshEPGSource(source *models.EPGSource) {
 	s.refreshCount++
 	s.mutex.Unlock()
 
-	// Count programs for this source
+	// Count programs for this source only.
 	var programCount int64
-	s.db.Model(&models.Program{}).Count(&programCount)
+	s.db.Model(&models.Program{}).Where("epg_source_id = ?", source.ID).Count(&programCount)
 
 	now := time.Now()
 	source.LastFetched = &now

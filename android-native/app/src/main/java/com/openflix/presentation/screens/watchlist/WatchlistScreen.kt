@@ -44,7 +44,7 @@ fun WatchlistScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF0A0A0A))
+            .background(Color(0xFF0D0918))
     ) {
         Column(
             modifier = Modifier.fillMaxSize()
@@ -302,7 +302,7 @@ private fun WatchlistCard(
             .onFocusChanged { isFocused = it.isFocused },
         shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(12.dp)),
         colors = ClickableSurfaceDefaults.colors(
-            containerColor = Color(0xFF1A1A1A),
+            containerColor = Color(0xFF1A142E),
             focusedContainerColor = Color(0xFF252525)
         ),
         border = ClickableSurfaceDefaults.border(

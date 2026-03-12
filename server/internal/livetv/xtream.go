@@ -611,10 +611,13 @@ func (c *XtreamClient) ImportChannels(sourceID uint) (added, updated int, err er
 		categoryMap[cat.CategoryID] = cat.CategoryName
 	}
 
+	seenStreamIDs := make(map[int]bool)
+
 	for _, stream := range streams {
 		// Convert interface{} types to proper types
 		streamID := interfaceToInt(stream.StreamID)
 		categoryIDStr := interfaceToString(stream.CategoryID)
+		seenStreamIDs[streamID] = true
 
 		// Build stream URL
 		streamURL := c.BuildLiveStreamURL(&source, streamID)
@@ -664,6 +667,18 @@ func (c *XtreamClient) ImportChannels(sourceID uint) (added, updated int, err er
 				continue
 			}
 			updated++
+		}
+	}
+
+	// Reconcile: delete channels from this source that are no longer in the Xtream lineup
+	if len(seenStreamIDs) > 0 {
+		var existingIDs []int
+		c.db.Model(&models.Channel{}).Where("xtream_source_id = ? AND xtream_stream_id IS NOT NULL", source.ID).
+			Pluck("xtream_stream_id", &existingIDs)
+		for _, id := range existingIDs {
+			if !seenStreamIDs[id] {
+				c.db.Where("xtream_source_id = ? AND xtream_stream_id = ?", source.ID, id).Delete(&models.Channel{})
+			}
 		}
 	}
 

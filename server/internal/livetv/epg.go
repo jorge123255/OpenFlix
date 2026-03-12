@@ -39,28 +39,28 @@ type XMLTV struct {
 
 // XMLTVChannel represents a channel in XMLTV
 type XMLTVChannel struct {
-	ID          string        `xml:"id,attr"`
-	DisplayName []XMLTVLang   `xml:"display-name"`
-	Icon        *XMLTVIcon    `xml:"icon"`
+	ID          string      `xml:"id,attr"`
+	DisplayName []XMLTVLang `xml:"display-name"`
+	Icon        *XMLTVIcon  `xml:"icon"`
 }
 
 // XMLTVProgramme represents a programme in XMLTV
 type XMLTVProgramme struct {
-	Start           string           `xml:"start,attr"`
-	Stop            string           `xml:"stop,attr"`
-	Channel         string           `xml:"channel,attr"`
-	Title           []XMLTVLang      `xml:"title"`
-	SubTitle        []XMLTVLang      `xml:"sub-title"`
-	Desc            []XMLTVLang      `xml:"desc"`
-	Category        []XMLTVLang      `xml:"category"`
-	Icon            *XMLTVIcon       `xml:"icon"`
-	EpisodeNum      []XMLTVEpNum     `xml:"episode-num"`
-	New             *struct{}        `xml:"new"`              // Empty element indicates new episode
-	Premiere        *XMLTVPremiere   `xml:"premiere"`         // Premiere indicator
-	PreviouslyShown *XMLTVPrevShown  `xml:"previously-shown"` // Rerun indicator
-	Live            *struct{}        `xml:"live"`             // Live broadcast
-	Rating          []XMLTVRating    `xml:"rating"`           // Content rating
-	Date            string           `xml:"date"`             // Original air date (YYYY or YYYYMMDD)
+	Start           string          `xml:"start,attr"`
+	Stop            string          `xml:"stop,attr"`
+	Channel         string          `xml:"channel,attr"`
+	Title           []XMLTVLang     `xml:"title"`
+	SubTitle        []XMLTVLang     `xml:"sub-title"`
+	Desc            []XMLTVLang     `xml:"desc"`
+	Category        []XMLTVLang     `xml:"category"`
+	Icon            *XMLTVIcon      `xml:"icon"`
+	EpisodeNum      []XMLTVEpNum    `xml:"episode-num"`
+	New             *struct{}       `xml:"new"`              // Empty element indicates new episode
+	Premiere        *XMLTVPremiere  `xml:"premiere"`         // Premiere indicator
+	PreviouslyShown *XMLTVPrevShown `xml:"previously-shown"` // Rerun indicator
+	Live            *struct{}       `xml:"live"`             // Live broadcast
+	Rating          []XMLTVRating   `xml:"rating"`           // Content rating
+	Date            string          `xml:"date"`             // Original air date (YYYY or YYYYMMDD)
 }
 
 // XMLTVPremiere represents a premiere element
@@ -151,7 +151,7 @@ func (p *EPGParser) FetchAndParseEPGConditional(url, etag, lastModified string) 
 	if resp.StatusCode == http.StatusNotModified {
 		return &EPGFetchResult{
 			NotModified:  true,
-			ETag:         etag,         // Keep existing values
+			ETag:         etag, // Keep existing values
 			LastModified: lastModified,
 		}, nil
 	}
@@ -210,11 +210,11 @@ func (p *EPGParser) ImportPrograms(sourceID uint, xmltv *XMLTV) (int, error) {
 		}
 	}
 
-	imported := 0
 	now := time.Now()
-
-	// Delete old programs (before today)
-	p.db.Where("start < ?", now.Add(-24*time.Hour)).Delete(&models.Program{})
+	cutoff := now.Add(-24 * time.Hour)
+	programs := make([]models.Program, 0, len(xmltv.Programmes))
+	channelSeen := make(map[string]struct{}, len(channelMap))
+	channelIDs := make([]string, 0, len(channelMap))
 
 	for _, prog := range xmltv.Programmes {
 		channelID, ok := channelMap[prog.Channel]
@@ -324,61 +324,44 @@ func (p *EPGParser) ImportPrograms(sourceID uint, xmltv *XMLTV) (int, error) {
 			isNew = false
 		}
 
-		// Check if program already exists
-		var existing models.Program
-		result := p.db.Where("channel_id = ? AND start = ?", channelID, start).First(&existing)
-
-		if result.Error == nil {
-			// Update existing
-			existing.End = *stop
-			existing.Title = title
-			existing.Description = desc
-			existing.Category = category
-			existing.EpisodeNum = episodeNum
-			existing.Icon = icon
-			existing.Rating = rating
-			existing.IsNew = isNew
-			existing.IsLive = isLive
-			existing.IsPremiere = isPremiere
-			existing.IsSeasonPremiere = isSeasonPremiere
-			existing.IsSeriesPremiere = isSeriesPremiere
-			existing.IsFinale = isFinale
-			existing.IsSeasonFinale = isSeasonFinale
-			existing.IsSeriesFinale = isSeriesFinale
-			if originalAirDate != nil {
-				existing.OriginalAirDate = originalAirDate
-			}
-			p.classifier.ClassifyProgram(&existing)
-			p.db.Save(&existing)
-		} else {
-			// Create new
-			program := models.Program{
-				ChannelID:        channelID,
-				Start:            *start,
-				End:              *stop,
-				Title:            title,
-				Description:      desc,
-				Category:         category,
-				EpisodeNum:       episodeNum,
-				Icon:             icon,
-				Rating:           rating,
-				IsNew:            isNew,
-				IsLive:           isLive,
-				IsPremiere:       isPremiere,
-				IsSeasonPremiere: isSeasonPremiere,
-				IsSeriesPremiere: isSeriesPremiere,
-				IsFinale:         isFinale,
-				IsSeasonFinale:   isSeasonFinale,
-				IsSeriesFinale:   isSeriesFinale,
-				OriginalAirDate:  originalAirDate,
-			}
-			p.classifier.ClassifyProgram(&program)
-			p.db.Create(&program)
-			imported++
+		program := models.Program{
+			ChannelID:        channelID,
+			Start:            *start,
+			End:              *stop,
+			Title:            title,
+			Description:      desc,
+			Category:         category,
+			EpisodeNum:       episodeNum,
+			Icon:             icon,
+			Rating:           rating,
+			IsNew:            isNew,
+			IsLive:           isLive,
+			IsPremiere:       isPremiere,
+			IsSeasonPremiere: isSeasonPremiere,
+			IsSeriesPremiere: isSeriesPremiere,
+			IsFinale:         isFinale,
+			IsSeasonFinale:   isSeasonFinale,
+			IsSeriesFinale:   isSeriesFinale,
+			OriginalAirDate:  originalAirDate,
+		}
+		p.classifier.ClassifyProgram(&program)
+		programs = append(programs, program)
+		if _, ok := channelSeen[channelID]; !ok {
+			channelSeen[channelID] = struct{}{}
+			channelIDs = append(channelIDs, channelID)
 		}
 	}
 
-	return imported, nil
+	result, err := UpsertPrograms(p.db, programs, ProgramCleanupOptions{
+		ChannelIDs:     channelIDs,
+		DeleteBefore:   &cutoff,
+		CheckpointMode: "PASSIVE",
+	})
+	if err != nil {
+		return 0, err
+	}
+
+	return result.Imported + result.Updated, nil
 }
 
 // RefreshEPG refreshes EPG for a source with retry logic and conditional request support
@@ -476,6 +459,28 @@ func (p *EPGParser) GetGuide(start, end time.Time, channelIDs []string) ([]model
 	startStr := start.UTC().Format("2006-01-02 15:04:05+00:00")
 	endStr := end.UTC().Format("2006-01-02 15:04:05+00:00")
 	query := p.db.Where("start < ? AND end > ?", endStr, startStr)
+	query = query.Select([]string{
+		"id",
+		"channel_id",
+		"title",
+		"description",
+		"start",
+		"end",
+		"icon",
+		"art",
+		"category",
+		"teams",
+		"league",
+		"is_new",
+		"is_premiere",
+		"is_live",
+		"is_finale",
+		"is_movie",
+		"is_sports",
+		"is_kids",
+		"is_news",
+		"has_cc",
+	})
 
 	if len(channelIDs) > 0 {
 		query = query.Where("channel_id IN ?", channelIDs)
@@ -487,11 +492,8 @@ func (p *EPGParser) GetGuide(start, end time.Time, channelIDs []string) ([]model
 
 // ImportProgramsFromEPGSource imports programs from a standalone EPG source
 func (p *EPGParser) ImportProgramsFromEPGSource(source *models.EPGSource, xmltv *XMLTV) (int, int, error) {
-	imported := 0
 	now := time.Now()
-
-	// Delete old programs (before today)
-	p.db.Where("start < ?", now.Add(-24*time.Hour)).Delete(&models.Program{})
+	cutoff := now.Add(-24 * time.Hour)
 
 	// Build channel name map from XMLTV channels (ID -> DisplayName)
 	channelSet := make(map[string]bool)
@@ -502,6 +504,12 @@ func (p *EPGParser) ImportProgramsFromEPGSource(source *models.EPGSource, xmltv 
 		if len(ch.DisplayName) > 0 {
 			channelNames[ch.ID] = ch.DisplayName[0].Value
 		}
+	}
+
+	programs := make([]models.Program, 0, len(xmltv.Programmes))
+	channelIDs := make([]string, 0, len(channelSet))
+	for channelID := range channelSet {
+		channelIDs = append(channelIDs, channelID)
 	}
 
 	for _, prog := range xmltv.Programmes {
@@ -550,57 +558,40 @@ func (p *EPGParser) ImportProgramsFromEPGSource(source *models.EPGSource, xmltv 
 			icon = prog.Icon.Src
 		}
 
-		// Check if program already exists
-		var existing models.Program
-		result := p.db.Where("channel_id = ? AND start = ?", prog.Channel, start).First(&existing)
-
-		if result.Error == nil {
-			// Update existing
-			existing.End = *stop
-			existing.Title = title
-			existing.Description = desc
-			existing.Category = category
-			existing.EpisodeNum = episodeNum
-			existing.Icon = icon
-			existing.EPGSourceID = &source.ID
-			// Set call sign from channel display name
-			if name, ok := channelNames[prog.Channel]; ok {
-				existing.CallSign = name
-			}
-			// Classify content
-			p.classifier.ClassifyProgram(&existing)
-			p.db.Save(&existing)
-		} else {
-			// Create new
-			program := models.Program{
-				ChannelID:   prog.Channel,
-				EPGSourceID: &source.ID,
-				Start:       *start,
-				End:         *stop,
-				Title:       title,
-				Description: desc,
-				Category:    category,
-				EpisodeNum:  episodeNum,
-				Icon:        icon,
-			}
-			// Set call sign from channel display name
-			if name, ok := channelNames[prog.Channel]; ok {
-				program.CallSign = name
-			}
-			// Classify content
-			p.classifier.ClassifyProgram(&program)
-			p.db.Create(&program)
-			imported++
+		program := models.Program{
+			ChannelID:   prog.Channel,
+			EPGSourceID: &source.ID,
+			Start:       *start,
+			End:         *stop,
+			Title:       title,
+			Description: desc,
+			Category:    category,
+			EpisodeNum:  episodeNum,
+			Icon:        icon,
 		}
+		if name, ok := channelNames[prog.Channel]; ok {
+			program.CallSign = name
+		}
+		p.classifier.ClassifyProgram(&program)
+		programs = append(programs, program)
 	}
 
-	return imported, len(channelSet), nil
+	result, err := UpsertPrograms(p.db, programs, ProgramCleanupOptions{
+		ChannelIDs:     channelIDs,
+		DeleteBefore:   &cutoff,
+		CheckpointMode: "PASSIVE",
+	})
+	if err != nil {
+		return 0, 0, err
+	}
+
+	return result.Imported + result.Updated, len(channelSet), nil
 }
 
 // ImportProgramsFromGracenote imports programs from Gracenote TV listings
 func (p *EPGParser) ImportProgramsFromGracenote(source *models.EPGSource) (int, int, error) {
-	imported := 0
 	now := time.Now()
+	cutoff := now.Add(-24 * time.Hour)
 
 	// Create Gracenote client
 	gnClient := gracenote.NewBrowserClient(gracenote.Config{
@@ -628,16 +619,13 @@ func (p *EPGParser) ImportProgramsFromGracenote(source *models.EPGSource) (int, 
 		channelSet[channelID] = true
 	}
 
-	// Delete old programs only for THIS source's channels (not globally!)
-	if len(channelSet) > 0 {
-		channelIDs := make([]string, 0, len(channelSet))
-		for chID := range channelSet {
-			channelIDs = append(channelIDs, chID)
-		}
-		p.db.Where("channel_id IN ? AND start < ?", channelIDs, now.Add(-24*time.Hour)).Delete(&models.Program{})
+	channelIDs := make([]string, 0, len(channelSet))
+	for chID := range channelSet {
+		channelIDs = append(channelIDs, chID)
 	}
 
 	// Process each channel and its programs
+	programs := make([]models.Program, 0)
 	for i, channel := range gridResp.Channels {
 		channelID := fmt.Sprintf("gracenote-%s-%s", source.GracenoteAffiliate, channel.ChannelID)
 
@@ -715,62 +703,42 @@ func (p *EPGParser) ImportProgramsFromGracenote(source *models.EPGSource) (int, 
 				}
 			}
 
-			// Check if program already exists
-			var existing models.Program
-			result := p.db.Where("channel_id = ? AND start = ?", channelID, start).First(&existing)
-
-			if result.Error == nil {
-				// Update existing
-				existing.End = end
-				existing.Title = event.Program.Title
-				existing.Description = event.Program.ShortDesc
-				existing.Category = category
-				existing.Icon = icon
-				existing.EPGSourceID = &source.ID
-				existing.CallSign = channel.CallSign
-				existing.ChannelNo = channel.ChannelNo
-				existing.AffiliateName = channel.AffiliateName
-				existing.IsNew = isNew
-				existing.IsLive = isLive
-				existing.IsPremiere = isPremiere
-				existing.IsSeasonPremiere = isSeasonPremiere
-				existing.IsSeriesPremiere = isSeriesPremiere
-				existing.IsFinale = isFinale
-				existing.IsSeasonFinale = isSeasonFinale
-				existing.IsSeriesFinale = isSeriesFinale
-				p.classifier.ClassifyProgram(&existing)
-				p.db.Save(&existing)
-			} else {
-				// Create new
-				program := models.Program{
-					ChannelID:        channelID,
-					EPGSourceID:      &source.ID,
-					CallSign:         channel.CallSign,
-					ChannelNo:        channel.ChannelNo,
-					AffiliateName:    channel.AffiliateName,
-					Start:            start,
-					End:              end,
-					Title:            event.Program.Title,
-					Description:      event.Program.ShortDesc,
-					Category:         category,
-					Icon:             icon,
-					IsNew:            isNew,
-					IsLive:           isLive,
-					IsPremiere:       isPremiere,
-					IsSeasonPremiere: isSeasonPremiere,
-					IsSeriesPremiere: isSeriesPremiere,
-					IsFinale:         isFinale,
-					IsSeasonFinale:   isSeasonFinale,
-					IsSeriesFinale:   isSeriesFinale,
-				}
-				p.classifier.ClassifyProgram(&program)
-				p.db.Create(&program)
-				imported++
+			program := models.Program{
+				ChannelID:        channelID,
+				EPGSourceID:      &source.ID,
+				CallSign:         channel.CallSign,
+				ChannelNo:        channel.ChannelNo,
+				AffiliateName:    channel.AffiliateName,
+				Start:            start,
+				End:              end,
+				Title:            event.Program.Title,
+				Description:      event.Program.ShortDesc,
+				Category:         category,
+				Icon:             icon,
+				IsNew:            isNew,
+				IsLive:           isLive,
+				IsPremiere:       isPremiere,
+				IsSeasonPremiere: isSeasonPremiere,
+				IsSeriesPremiere: isSeriesPremiere,
+				IsFinale:         isFinale,
+				IsSeasonFinale:   isSeasonFinale,
+				IsSeriesFinale:   isSeriesFinale,
 			}
+			p.classifier.ClassifyProgram(&program)
+			programs = append(programs, program)
 		}
 	}
 
-	return imported, len(channelSet), nil
+	result, err := UpsertPrograms(p.db, programs, ProgramCleanupOptions{
+		ChannelIDs:     channelIDs,
+		DeleteBefore:   &cutoff,
+		CheckpointMode: "PASSIVE",
+	})
+	if err != nil {
+		return 0, 0, err
+	}
+
+	return result.Imported + result.Updated, len(channelSet), nil
 }
 
 // RefreshEPGSource refreshes programs from a standalone EPG source with retry logic

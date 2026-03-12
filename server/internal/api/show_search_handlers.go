@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"strconv"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -80,7 +80,8 @@ func (s *Server) handleShowSearch(c *gin.Context) {
 	searchURL := fmt.Sprintf("https://api.themoviedb.org/3/search/tv?api_key=%s&query=%s",
 		s.config.Library.TMDBApiKey, url.QueryEscape(query))
 
-	resp, err := http.Get(searchURL)
+	client := &http.Client{Timeout: 15 * time.Second}
+	resp, err := client.Get(searchURL)
 	if err != nil {
 		logger.Errorf("show search: TMDB search failed: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to search TMDB"})
@@ -244,7 +245,8 @@ func (s *Server) handleShowAirings(c *gin.Context) {
 func (s *Server) fetchTMDBShowDetails(tmdbID int) (*tmdbShowDetailsResponse, error) {
 	detailsURL := fmt.Sprintf("https://api.themoviedb.org/3/tv/%d?api_key=%s",
 		tmdbID, s.config.Library.TMDBApiKey)
-	resp, err := http.Get(detailsURL)
+	client := &http.Client{Timeout: 15 * time.Second}
+	resp, err := client.Get(detailsURL)
 	if err != nil {
 		return nil, err
 	}

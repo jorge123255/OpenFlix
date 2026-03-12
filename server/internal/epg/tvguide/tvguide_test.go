@@ -3,11 +3,16 @@ package tvguide
 import (
 	"context"
 	"fmt"
+	"os"
 	"testing"
 	"time"
 )
 
 func TestProviderLookup(t *testing.T) {
+	if os.Getenv("OPENFLIX_TVGUIDE_INTEGRATION") != "1" {
+		t.Skip("set OPENFLIX_TVGUIDE_INTEGRATION=1 to run live TVGuide integration tests")
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
@@ -28,6 +33,10 @@ func TestProviderLookup(t *testing.T) {
 }
 
 func TestScheduleFetch(t *testing.T) {
+	if os.Getenv("OPENFLIX_TVGUIDE_INTEGRATION") != "1" {
+		t.Skip("set OPENFLIX_TVGUIDE_INTEGRATION=1 to run live TVGuide integration tests")
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
@@ -43,8 +52,12 @@ func TestScheduleFetch(t *testing.T) {
 		for _, sched := range ch.ProgramSchedules {
 			total++
 			flags := DecodeAiringFlags(sched.AiringAttrib)
-			if flags.IsNew { newCount++ }
-			if flags.IsLive { liveCount++ }
+			if flags.IsNew {
+				newCount++
+			}
+			if flags.IsLive {
+				liveCount++
+			}
 		}
 	}
 	fmt.Printf("Total: %d programs, NEW: %d, LIVE: %d\n", total, newCount, liveCount)

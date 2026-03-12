@@ -104,6 +104,9 @@ interface OpenFlixApi {
 
     // === Playback ===
 
+    @GET("api/playback/options/{mediaId}")
+    suspend fun getPlaybackOptions(@Path("mediaId") mediaId: String): Response<PlaybackOptionsResponse>
+
     @GET("video/:/transcode/universal/start")
     suspend fun getPlaybackUrl(
         @Query("path") path: String,
@@ -314,6 +317,9 @@ interface OpenFlixApi {
 
     @DELETE("dvr/recordings/{id}")
     suspend fun deleteRecording(@Path("id") recordingId: String): Response<Void>
+
+    @POST("dvr/recordings/{id}/stop")
+    suspend fun stopRecording(@Path("id") recordingId: String): Response<Unit>
 
     @GET("dvr/stream/{id}")
     suspend fun getRecordingStreamUrl(@Path("id") recordingId: String): Response<StreamResponse>

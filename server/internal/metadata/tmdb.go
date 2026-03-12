@@ -491,8 +491,32 @@ func (t *TMDBAgent) UpdateMovieMetadata(item *models.MediaItem) error {
 		return nil // Silently skip if not configured
 	}
 
+	// Strip resolution/quality tags from the title before searching
+	searchTitle, extractedYear, edition := CleanTitle(item.Title)
+	searchYear := item.Year
+	if searchYear == 0 && extractedYear > 0 {
+		searchYear = extractedYear
+	}
+
+	// Only write the cleaned title back to the DB if the raw title looks like a
+	// filename (dots/underscores as separators, or bracket-enclosed quality tags).
+	// Human-readable titles that happen to contain a token like "HDR" or "DV" are
+	// left in the DB as-is; the cleaned version is used only for the TMDB search.
+	looksLikeFilename := FilenameStyleTitle(item.Title)
+	if searchTitle != item.Title && looksLikeFilename {
+		updates := map[string]interface{}{"title": searchTitle}
+		if edition != "" {
+			updates["edition"] = edition
+		}
+		if extractedYear > 0 && item.Year == 0 {
+			updates["year"] = extractedYear
+		}
+		t.db.Model(item).Updates(updates)
+		item.Title = searchTitle
+	}
+
 	// Search for the movie
-	result, err := t.SearchMovie(item.Title, item.Year)
+	result, err := t.SearchMovie(searchTitle, searchYear)
 	if err != nil {
 		return err
 	}
@@ -569,8 +593,28 @@ func (t *TMDBAgent) UpdateShowMetadata(item *models.MediaItem) error {
 		return nil
 	}
 
+	// Strip resolution/quality tags from the title before searching
+	searchTitle, extractedYear, edition := CleanTitle(item.Title)
+	searchYear := item.Year
+	if searchYear == 0 && extractedYear > 0 {
+		searchYear = extractedYear
+	}
+
+	looksLikeFilename := FilenameStyleTitle(item.Title)
+	if searchTitle != item.Title && looksLikeFilename {
+		updates := map[string]interface{}{"title": searchTitle}
+		if edition != "" {
+			updates["edition"] = edition
+		}
+		if extractedYear > 0 && item.Year == 0 {
+			updates["year"] = extractedYear
+		}
+		t.db.Model(item).Updates(updates)
+		item.Title = searchTitle
+	}
+
 	// Search for the show
-	result, err := t.SearchTV(item.Title, item.Year)
+	result, err := t.SearchTV(searchTitle, searchYear)
 	if err != nil {
 		return err
 	}

@@ -31,8 +31,8 @@ class VideoPlayerViewModel @Inject constructor(
     private var currentPositionMs: Long = 0L
     private var totalDurationMs: Long = 0L
 
-    fun loadMedia(mediaId: String) {
-        Timber.d("loadMedia called with mediaId: $mediaId")
+    fun loadMedia(mediaId: String, fileId: Long? = null) {
+        Timber.d("loadMedia called with mediaId: $mediaId, fileId: $fileId")
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
 
@@ -42,7 +42,7 @@ class VideoPlayerViewModel @Inject constructor(
                     Timber.d("Loaded media: ${mediaItem.title}")
 
                     // Get playback URL
-                    repository.getPlaybackUrl(mediaId).fold(
+                    repository.getPlaybackUrl(mediaId, fileId).fold(
                         onSuccess = { url ->
                             Timber.d("Got playback URL: $url")
 

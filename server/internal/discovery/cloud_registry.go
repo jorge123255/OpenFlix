@@ -151,6 +151,11 @@ func (c *CloudRegistryClient) SetExternalURL(url string) {
 	c.mu.Unlock()
 }
 
+// RegisterNow triggers an immediate heartbeat instead of waiting for the next tick.
+func (c *CloudRegistryClient) RegisterNow() {
+	c.register()
+}
+
 // CloudRegistryStatus holds the current cloud connection status.
 type CloudRegistryStatus struct {
 	Connected bool   `json:"connected"`
@@ -174,7 +179,12 @@ func (c *CloudRegistryClient) register() {
 	externalURL := c.externalURL
 	inviteTokens := make([]string, len(c.inviteTokens))
 	copy(inviteTokens, c.inviteTokens)
+	ctx := c.ctx
 	c.mu.Unlock()
+
+	if ctx == nil {
+		ctx = context.Background()
+	}
 
 	payload := CloudRegistration{
 		MachineID:      c.serverInfo.MachineID,
@@ -194,7 +204,7 @@ func (c *CloudRegistryClient) register() {
 		return
 	}
 
-	req, err := http.NewRequestWithContext(c.ctx, http.MethodPost, c.registryURL+"/register", bytes.NewReader(body))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.registryURL+"/register", bytes.NewReader(body))
 	if err != nil {
 		logger.Warnf("Cloud registry: failed to create request: %v", err)
 		return

@@ -354,12 +354,15 @@ func (s *Service) UpdateUser(userID uint, input UpdateUserInput) (*models.User, 
 	return user, nil
 }
 
-// SwitchProfile generates a new token for a different profile
+// SwitchProfile generates a new token for a different profile.
+// If profileID is 0, generates a user-level token without requiring a profile match.
 func (s *Service) SwitchProfile(user *models.User, profileID uint) (string, error) {
-	// Verify profile belongs to user
-	var profile models.UserProfile
-	if err := s.db.Where("id = ? AND user_id = ?", profileID, user.ID).First(&profile).Error; err != nil {
-		return "", ErrUserNotFound
+	if profileID > 0 {
+		// Verify profile belongs to user
+		var profile models.UserProfile
+		if err := s.db.Where("id = ? AND user_id = ?", profileID, user.ID).First(&profile).Error; err != nil {
+			return "", ErrUserNotFound
+		}
 	}
 
 	return s.generateToken(user, profileID)

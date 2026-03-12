@@ -1,61 +1,125 @@
 package dvr
 
 import (
-	"bufio"
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strconv"
 	"strings"
 
 	"github.com/openflix/openflix-server/internal/models"
 	"gorm.io/gorm"
 )
 
-// ComskipDetector handles commercial detection using Comskip
+// ComskipDetector handles commercial detection.
+// Primary: ONNX neural model via Python script.
+// Fallback: legacy comskip binary (EDL parsing).
 type ComskipDetector struct {
-	db           *gorm.DB
-	comskipPath  string
-	iniPath      string
-	enabled      bool
+	db          *gorm.DB
+	comskipPath string // legacy binary path (may be empty)
+	iniPath     string
+	enabled     bool
+
+	// ONNX model fields
+	onnxEnabled bool
+	pythonPath  string
+	scriptPath  string
+	modelPath   string
+	scalerPath  string
 }
 
-// NewComskipDetector creates a new commercial detector
+// onnxSegment matches the JSON output from commercial_detect.py
+type onnxSegment struct {
+	Start      float64 `json:"start"`
+	End        float64 `json:"end"`
+	Confidence float64 `json:"confidence"`
+	Label      string  `json:"label"`
+}
+
+type onnxResult struct {
+	Segments       []onnxSegment `json:"segments"`
+	Duration       float64       `json:"duration"`
+	ProcessingTime float64       `json:"processing_time"`
+	Error          string        `json:"error,omitempty"`
+}
+
+// NewComskipDetector creates a new commercial detector.
+// It auto-detects the ONNX model and Python, falling back to the comskip binary.
 func NewComskipDetector(db *gorm.DB, comskipPath, iniPath string) *ComskipDetector {
-	// Try to find comskip if not specified
-	if comskipPath == "" {
-		if path, err := exec.LookPath("comskip"); err == nil {
-			comskipPath = path
-		}
-	}
-
-	enabled := comskipPath != "" && fileExists(comskipPath)
-
-	if enabled {
-		log.Printf("Comskip commercial detection enabled: %s", comskipPath)
-	} else {
-		log.Printf("Comskip not found - commercial detection disabled")
-	}
-
-	return &ComskipDetector{
+	d := &ComskipDetector{
 		db:          db,
 		comskipPath: comskipPath,
 		iniPath:     iniPath,
-		enabled:     enabled,
 	}
+
+	// --- Try ONNX model first ---
+	// Data dir is /data inside the container (mounted from appdata/openflix)
+	dataDir := "/data"
+	if v := os.Getenv("OPENFLIX_DATA_DIR"); v != "" {
+		dataDir = v
+	}
+
+	scriptPath := filepath.Join(dataDir, "models", "commercial_detect.py")
+	// Prefer v5 model; fall back to v4 if not present
+	modelPath := filepath.Join(dataDir, "models", "commercial_skip_v5.onnx")
+	scalerPath := filepath.Join(dataDir, "models", "scaler_v5.pkl")
+	if !fileExists(modelPath) {
+		modelPath = filepath.Join(dataDir, "models", "commercial_skip.onnx")
+	}
+	if !fileExists(scalerPath) {
+		scalerPath = filepath.Join(dataDir, "models", "scaler.pkl")
+	}
+
+	pythonPath, _ := exec.LookPath("python3")
+	if pythonPath == "" {
+		pythonPath, _ = exec.LookPath("python")
+	}
+
+	if pythonPath != "" && fileExists(scriptPath) && fileExists(modelPath) && fileExists(scalerPath) {
+		d.onnxEnabled = true
+		d.pythonPath = pythonPath
+		d.scriptPath = scriptPath
+		d.modelPath = modelPath
+		d.scalerPath = scalerPath
+		d.enabled = true
+		log.Printf("ONNX commercial detection enabled (model: %s, scaler: %s)", modelPath, scalerPath)
+		return d
+	}
+
+	// --- Fall back to legacy comskip binary ---
+	if comskipPath == "" {
+		if path, err := exec.LookPath("comskip"); err == nil {
+			comskipPath = path
+			d.comskipPath = comskipPath
+		}
+	}
+
+	if comskipPath != "" && fileExists(comskipPath) {
+		d.enabled = true
+		log.Printf("Legacy comskip binary enabled: %s", comskipPath)
+	} else {
+		log.Printf("Commercial detection unavailable (no ONNX model and no comskip binary)")
+	}
+
+	return d
 }
 
-// IsEnabled returns whether Comskip is available
+// IsEnabled returns whether any commercial detection is available
 func (c *ComskipDetector) IsEnabled() bool {
 	return c.enabled
 }
 
-// DetectCommercials runs Comskip on a recording and stores the results
+// IsONNX returns true if the ONNX model is being used
+func (c *ComskipDetector) IsONNX() bool {
+	return c.onnxEnabled
+}
+
+// DetectCommercials runs commercial detection on a recording and stores the results
 func (c *ComskipDetector) DetectCommercials(recording *models.Recording) error {
 	if !c.enabled {
-		return fmt.Errorf("comskip not available")
+		return fmt.Errorf("commercial detection not available")
 	}
 
 	if recording.FilePath == "" {
@@ -66,189 +130,231 @@ func (c *ComskipDetector) DetectCommercials(recording *models.Recording) error {
 		return fmt.Errorf("recording file not found: %s", recording.FilePath)
 	}
 
-	log.Printf("Running Comskip commercial detection on: %s", recording.FilePath)
+	// Clear any existing segments for this recording
+	c.db.Where("recording_id = ?", recording.ID).Delete(&models.CommercialSegment{})
 
-	// Build comskip command
+	var segments []models.CommercialSegment
+	var err error
+
+	if c.onnxEnabled {
+		segments, err = c.detectWithONNX(recording)
+	} else {
+		segments, err = c.detectWithComskip(recording)
+	}
+
+	if err != nil {
+		return err
+	}
+
+	// Store segments in database
+	for i := range segments {
+		segments[i].RecordingID = recording.ID
+		if err := c.db.Create(&segments[i]).Error; err != nil {
+			log.Printf("Failed to save commercial segment: %v", err)
+		}
+	}
+
+	log.Printf("Detected %d commercial segments in recording %d (ONNX=%v)", len(segments), recording.ID, c.onnxEnabled)
+	return nil
+}
+
+// detectWithONNX calls commercial_detect.py and parses its JSON output
+func (c *ComskipDetector) detectWithONNX(recording *models.Recording) ([]models.CommercialSegment, error) {
+	log.Printf("Running ONNX commercial detection on: %s", recording.FilePath)
+
+	cmd := exec.Command(c.pythonPath,
+		c.scriptPath,
+		"--model", c.modelPath,
+		"--scaler", c.scalerPath,
+		"--input", recording.FilePath,
+		"--output-json",
+	)
+
+	out, err := cmd.Output()
+	if err != nil {
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			return nil, fmt.Errorf("ONNX detection failed: %s", string(exitErr.Stderr))
+		}
+		return nil, fmt.Errorf("ONNX detection failed: %w", err)
+	}
+
+	// The script prints progress lines to stdout before the JSON object.
+	// Find the last line starting with '{' and use that as the JSON payload.
+	// Also replace NaN (invalid JSON) with null before parsing.
+	jsonLine := ""
+	for _, line := range strings.Split(string(out), "\n") {
+		line = strings.TrimSpace(line)
+		if strings.HasPrefix(line, "{") {
+			jsonLine = line
+		}
+	}
+	if jsonLine == "" {
+		return nil, fmt.Errorf("no JSON found in ONNX output")
+	}
+	jsonLine = strings.ReplaceAll(jsonLine, ": NaN", ": null")
+	jsonLine = strings.ReplaceAll(jsonLine, ":NaN", ":null")
+
+	var result onnxResult
+	if err := json.Unmarshal([]byte(jsonLine), &result); err != nil {
+		return nil, fmt.Errorf("failed to parse ONNX output: %w", err)
+	}
+
+	if result.Error != "" {
+		return nil, fmt.Errorf("ONNX model error: %s", result.Error)
+	}
+
+	// Only keep commercial segments (not content)
+	var segments []models.CommercialSegment
+	for _, seg := range result.Segments {
+		if seg.Label != "commercial" {
+			continue
+		}
+		segments = append(segments, models.CommercialSegment{
+			StartTime: seg.Start,
+			EndTime:   seg.End,
+			Duration:  seg.End - seg.Start,
+		})
+	}
+
+	log.Printf("ONNX detection complete: %d commercial breaks found in %.0fs (processing took %.1fs)",
+		len(segments), result.Duration, result.ProcessingTime)
+
+	return segments, nil
+}
+
+// detectWithComskip uses the legacy comskip binary
+func (c *ComskipDetector) detectWithComskip(recording *models.Recording) ([]models.CommercialSegment, error) {
+	log.Printf("Running comskip on: %s", recording.FilePath)
+
 	args := []string{}
-
-	// Add INI file if specified
 	if c.iniPath != "" && fileExists(c.iniPath) {
 		args = append(args, "--ini="+c.iniPath)
 	}
-
-	// Output EDL file (Edit Decision List)
 	args = append(args, "--output="+filepath.Dir(recording.FilePath))
 	args = append(args, recording.FilePath)
 
 	cmd := exec.Command(c.comskipPath, args...)
 	output, err := cmd.CombinedOutput()
-
 	if err != nil {
 		log.Printf("Comskip error: %v, output: %s", err, string(output))
-		// Don't return error - comskip sometimes exits non-zero but still produces output
+		// comskip sometimes exits non-zero but still produces output — continue
 	}
 
-	// Parse the EDL file
 	edlPath := strings.TrimSuffix(recording.FilePath, filepath.Ext(recording.FilePath)) + ".edl"
-	segments, err := c.parseEDL(edlPath)
+	segments, err := parseEDL(edlPath)
 	if err != nil {
-		// Try parsing TXT file as fallback
 		txtPath := strings.TrimSuffix(recording.FilePath, filepath.Ext(recording.FilePath)) + ".txt"
-		segments, err = c.parseComskipTxt(txtPath)
+		segments, err = parseComskipTxt(txtPath)
 		if err != nil {
-			return fmt.Errorf("failed to parse comskip output: %w", err)
+			return nil, fmt.Errorf("failed to parse comskip output: %w", err)
 		}
 	}
 
-	// Store segments in database
-	for _, seg := range segments {
-		seg.RecordingID = recording.ID
-		if err := c.db.Create(&seg).Error; err != nil {
-			log.Printf("Failed to save commercial segment: %v", err)
-		}
-	}
-
-	log.Printf("Detected %d commercial segments in recording %d", len(segments), recording.ID)
-
-	// Clean up comskip output files (keep only EDL for reference)
-	c.cleanupComskipFiles(recording.FilePath)
-
-	return nil
+	cleanupComskipFiles(recording.FilePath)
+	return segments, nil
 }
 
 // parseEDL parses an EDL (Edit Decision List) file
 // Format: start_time end_time action
-// Action: 0=cut, 1=mute, 2=scene marker, 3=commercial break
-func (c *ComskipDetector) parseEDL(path string) ([]models.CommercialSegment, error) {
-	file, err := os.Open(path)
+// Action: 0=cut, 3=commercial break
+func parseEDL(path string) ([]models.CommercialSegment, error) {
+	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
-	defer file.Close()
 
 	var segments []models.CommercialSegment
-	scanner := bufio.NewScanner(file)
-
-	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
+	for _, line := range strings.Split(string(data), "\n") {
+		line = strings.TrimSpace(line)
 		if line == "" || strings.HasPrefix(line, "#") {
 			continue
 		}
 
-		// Parse: start_time end_time action
 		parts := strings.Fields(line)
 		if len(parts) < 3 {
 			continue
 		}
 
-		startTime, err := strconv.ParseFloat(parts[0], 64)
-		if err != nil {
+		var start, end float64
+		var action int
+		if _, err := fmt.Sscan(parts[0], &start); err != nil {
+			continue
+		}
+		if _, err := fmt.Sscan(parts[1], &end); err != nil {
+			continue
+		}
+		if _, err := fmt.Sscan(parts[2], &action); err != nil {
 			continue
 		}
 
-		endTime, err := strconv.ParseFloat(parts[1], 64)
-		if err != nil {
-			continue
-		}
-
-		action, err := strconv.Atoi(parts[2])
-		if err != nil {
-			continue
-		}
-
-		// Action 0 = cut (commercial), 3 = commercial break
 		if action == 0 || action == 3 {
 			segments = append(segments, models.CommercialSegment{
-				StartTime: startTime,
-				EndTime:   endTime,
-				Duration:  endTime - startTime,
+				StartTime: start,
+				EndTime:   end,
+				Duration:  end - start,
 			})
 		}
 	}
 
-	return segments, scanner.Err()
+	return segments, nil
 }
 
-// parseComskipTxt parses a Comskip TXT file (alternative format)
-// Format: Frame start, Frame end
-func (c *ComskipDetector) parseComskipTxt(path string) ([]models.CommercialSegment, error) {
-	file, err := os.Open(path)
+// parseComskipTxt parses a Comskip TXT file (frame-based format)
+func parseComskipTxt(path string) ([]models.CommercialSegment, error) {
+	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
-	defer file.Close()
 
 	var segments []models.CommercialSegment
-	scanner := bufio.NewScanner(file)
+	frameRate := 29.97
 
-	// First line is header with video info
-	// FILE PROCESSING COMPLETE  XXXX FRAMES AT XXXX
-	var frameRate float64 = 29.97 // Default NTSC
-
-	lineNum := 0
-	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
-		lineNum++
-
-		if lineNum == 1 {
-			// Try to extract frame rate from header
+	lines := strings.Split(string(data), "\n")
+	for i, line := range lines {
+		line = strings.TrimSpace(line)
+		if i == 0 {
 			if strings.Contains(line, "FRAMES AT") {
 				parts := strings.Split(line, "FRAMES AT")
 				if len(parts) >= 2 {
-					if fps, err := strconv.ParseFloat(strings.TrimSpace(parts[1]), 64); err == nil {
+					var fps float64
+					if _, err := fmt.Sscan(strings.TrimSpace(parts[1]), &fps); err == nil {
 						frameRate = fps
 					}
 				}
 			}
 			continue
 		}
-
 		if line == "" || !strings.Contains(line, "\t") {
 			continue
 		}
-
-		// Parse: FrameStart\tFrameEnd
 		parts := strings.Split(line, "\t")
 		if len(parts) < 2 {
 			continue
 		}
-
-		startFrame, err := strconv.Atoi(strings.TrimSpace(parts[0]))
-		if err != nil {
+		var startFrame, endFrame int
+		if _, err := fmt.Sscan(strings.TrimSpace(parts[0]), &startFrame); err != nil {
 			continue
 		}
-
-		endFrame, err := strconv.Atoi(strings.TrimSpace(parts[1]))
-		if err != nil {
+		if _, err := fmt.Sscan(strings.TrimSpace(parts[1]), &endFrame); err != nil {
 			continue
 		}
-
-		// Convert frames to seconds
-		startTime := float64(startFrame) / frameRate
-		endTime := float64(endFrame) / frameRate
-
+		start := float64(startFrame) / frameRate
+		end := float64(endFrame) / frameRate
 		segments = append(segments, models.CommercialSegment{
-			StartTime: startTime,
-			EndTime:   endTime,
-			Duration:  endTime - startTime,
+			StartTime: start,
+			EndTime:   end,
+			Duration:  end - start,
 		})
 	}
 
-	return segments, scanner.Err()
+	return segments, nil
 }
 
-// cleanupComskipFiles removes intermediate Comskip files, keeping only EDL
-func (c *ComskipDetector) cleanupComskipFiles(videoPath string) {
-	basePath := strings.TrimSuffix(videoPath, filepath.Ext(videoPath))
-
-	// Files to remove (keep .edl for reference)
-	extensions := []string{".txt", ".log", ".logo.txt", ".ffmeta"}
-
-	for _, ext := range extensions {
-		path := basePath + ext
-		if fileExists(path) {
-			os.Remove(path)
-		}
+// cleanupComskipFiles removes intermediate comskip files
+func cleanupComskipFiles(videoPath string) {
+	base := strings.TrimSuffix(videoPath, filepath.Ext(videoPath))
+	for _, ext := range []string{".txt", ".log", ".logo.txt", ".ffmeta"} {
+		os.Remove(base + ext)
 	}
 }
 
@@ -268,44 +374,4 @@ func (c *ComskipDetector) DeleteCommercialSegments(recordingID uint) error {
 func fileExists(path string) bool {
 	_, err := os.Stat(path)
 	return err == nil
-}
-
-// GenerateDefaultINI creates a default Comskip INI configuration
-func GenerateDefaultINI(path string) error {
-	ini := `; OpenFlix Comskip Configuration
-; Based on US broadcast TV defaults
-
-[Main Settings]
-detect_method=111
-validate_silence=1
-validate_uniform=1
-validate_brightness=1
-
-[Tuning]
-max_avg_brightness=20
-max_brightness=60
-test_brightness=40
-max_volume=500
-non_uniformity=500
-
-[Logo Detection]
-logo_threshold=0.75
-logo_filter=0
-
-[Output]
-output_edl=1
-output_txt=0
-output_vdr=0
-output_ffmeta=0
-output_chapters=0
-
-[Scoring]
-min_show_segment_length=250
-max_commercial_size=240
-min_commercial_size=4
-
-[Padding]
-padding=0
-`
-	return os.WriteFile(path, []byte(ini), 0644)
 }

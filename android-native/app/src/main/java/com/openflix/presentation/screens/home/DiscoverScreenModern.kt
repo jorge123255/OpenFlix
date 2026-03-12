@@ -41,6 +41,7 @@ import com.openflix.domain.model.Channel
 import com.openflix.domain.model.Hub
 import com.openflix.domain.model.MediaItem
 import com.openflix.domain.model.MediaType
+import com.openflix.domain.model.Recording
 import com.openflix.presentation.theme.OpenFlixColors
 import kotlinx.coroutines.delay
 
@@ -88,11 +89,29 @@ fun DiscoverScreenModern(
             AmbientBackground(item = heroItems.getOrNull(heroIndex))
         }
         
+        // Derive section data (matching iOS ForYouView order)
+        val onNowChannels = remember(uiState.channels) {
+            uiState.channels.filter { it.nowPlaying != null }.take(10)
+        }
+        val recentChannels = remember(uiState.channels) {
+            uiState.channels.take(8)
+        }
+        val sportsChannels = remember(uiState.channels) {
+            uiState.channels.filter { channel ->
+                val name = channel.name.lowercase()
+                name.contains("espn") || name.contains("sport") ||
+                    name.contains("fox sports") || name.contains("nfl") ||
+                    name.contains("nba") || name.contains("mlb") ||
+                    name.contains("nhl") || name.contains("golf") ||
+                    channel.category?.lowercase()?.contains("sport") == true
+            }.filter { it.nowPlaying != null }.take(10)
+        }
+
         TvLazyColumn(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(bottom = 48.dp)
         ) {
-            // Hero Section
+            // 1. Hero Section
             if (heroItems.isNotEmpty()) {
                 item {
                     ModernHeroBanner(
@@ -101,17 +120,17 @@ fun DiscoverScreenModern(
                         onIndexChange = { heroIndex = it },
                         onPlay = { onPlayClick(it.id.toString()) },
                         onDetails = { onMediaClick(it.id.toString()) },
-                        onWatchlist = onWatchlistToggle?.let { toggle -> 
+                        onWatchlist = onWatchlistToggle?.let { toggle ->
                             { item: MediaItem -> toggle(item.id.toString()) }
                         }
                     )
                 }
             }
-            
-            // Quick Access Row (Live TV, Multiview, Guide, Sports)
+
+            // Quick Access Row (TV-specific navigation)
             item {
                 QuickAccessRow(
-                    onLiveTVClick = { 
+                    onLiveTVClick = {
                         uiState.channels.firstOrNull()?.let { onNavigateToLiveTVPlayer?.invoke(it.id) }
                     },
                     onMultiviewClick = onNavigateToMultiview,
@@ -119,8 +138,8 @@ fun DiscoverScreenModern(
                     onSportsClick = onNavigateToSports
                 )
             }
-            
-            // Continue Watching
+
+            // 2. Continue Watching
             if (uiState.continueWatching.isNotEmpty()) {
                 item {
                     ModernContentRow(
@@ -134,41 +153,74 @@ fun DiscoverScreenModern(
                     )
                 }
             }
-            
-            // Top 10
-            if (uiState.hubs.isNotEmpty()) {
-                val topItems = uiState.hubs.flatMap { it.items }
-                    .sortedByDescending { it.audienceRating ?: 0.0 }
-                    .take(10)
-                
-                if (topItems.size >= 5) {
-                    item {
-                        ModernTop10Row(
-                            items = topItems,
-                            onItemClick = { onMediaClick(it.id.toString()) }
-                        )
-                    }
+
+            // 3. Movies (poster cards, matching iOS)
+            if (uiState.movies.isNotEmpty()) {
+                item {
+                    ModernContentRow(
+                        title = "Movies",
+                        subtitle = null,
+                        icon = Icons.Default.Movie,
+                        accentColor = OpenFlixColors.Primary,
+                        items = uiState.movies,
+                        style = ContentRowStyle.Poster,
+                        onItemClick = { onMediaClick(it.id.toString()) }
+                    )
                 }
             }
-            
-            // Hub rows
-            items(uiState.hubs) { hub ->
-                ModernContentRow(
-                    title = hub.title,
-                    subtitle = null,
-                    icon = getHubIcon(hub.title),
-                    accentColor = getHubColor(hub.title),
-                    items = hub.items,
-                    style = ContentRowStyle.Poster,
-                    onItemClick = { onMediaClick(it.id.toString()) }
-                )
+
+            // 4. TV Shows (poster cards, matching iOS)
+            if (uiState.tvShows.isNotEmpty()) {
+                item {
+                    ModernContentRow(
+                        title = "TV Shows",
+                        subtitle = null,
+                        icon = Icons.Default.Tv,
+                        accentColor = Color(0xFF9C27B0),
+                        items = uiState.tvShows,
+                        style = ContentRowStyle.Poster,
+                        onItemClick = { onMediaClick(it.id.toString()) }
+                    )
+                }
             }
-            
-            // Live Now (if channels available)
-            if (uiState.channels.isNotEmpty()) {
+
+            // 5. On Now - Live TV (matching iOS)
+            if (onNowChannels.isNotEmpty()) {
                 item {
                     LiveNowRow(
-                        channels = uiState.channels.filter { it.nowPlaying != null }.take(10),
+                        channels = onNowChannels,
+                        onChannelClick = { channel ->
+                            onNavigateToLiveTVPlayer?.invoke(channel.id)
+                        }
+                    )
+                }
+            }
+
+            // 6. New in Your Library - Recordings (matching iOS)
+            if (uiState.recentRecordings.isNotEmpty()) {
+                item {
+                    TVRecordingsRow(recordings = uiState.recentRecordings)
+                }
+            }
+
+            // 7. Recent Channels (matching iOS)
+            if (recentChannels.isNotEmpty()) {
+                item {
+                    TVRecentChannelsRow(
+                        channels = recentChannels,
+                        onChannelClick = { channel ->
+                            onNavigateToLiveTVPlayer?.invoke(channel.id)
+                        }
+                    )
+                }
+            }
+
+            // 8. Sports (conditional, matching iOS)
+            if (sportsChannels.isNotEmpty()) {
+                item {
+                    LiveNowRow(
+                        channels = sportsChannels,
+                        title = "Sports",
                         onChannelClick = { channel ->
                             onNavigateToLiveTVPlayer?.invoke(channel.id)
                         }
@@ -1198,10 +1250,11 @@ private fun RowScope.QuickAccessCard(
 @Composable
 private fun LiveNowRow(
     channels: List<Channel>,
+    title: String = "On Now",
     onChannelClick: (Channel) -> Unit
 ) {
     if (channels.isEmpty()) return
-    
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -1222,12 +1275,23 @@ private fun LiveNowRow(
                     .clip(CircleShape)
                     .background(Color.Red)
             )
-            
+
             Text(
-                text = "Live Now",
+                text = title,
                 fontSize = 22.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color.White
+            )
+
+            // LIVE badge
+            Text(
+                text = "LIVE",
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.White,
+                modifier = Modifier
+                    .background(Color.Red, RoundedCornerShape(4.dp))
+                    .padding(horizontal = 6.dp, vertical = 3.dp)
             )
         }
         
@@ -1335,6 +1399,212 @@ private fun LiveChannelCard(
                         .padding(horizontal = 6.dp, vertical = 2.dp)
                 )
             }
+        }
+    }
+}
+
+// MARK: - TV Recordings Row (matching iOS "New in Your Library")
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun TVRecordingsRow(recordings: List<Recording>) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 32.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .padding(horizontal = 48.dp)
+                .padding(bottom = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = Icons.Default.FiberManualRecord,
+                contentDescription = null,
+                tint = OpenFlixColors.Recording,
+                modifier = Modifier.size(24.dp)
+            )
+            Text(
+                text = "New in Your Library",
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.White
+            )
+        }
+
+        TvLazyRow(
+            contentPadding = PaddingValues(horizontal = 48.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            items(recordings) { recording ->
+                TVRecordingCard(recording = recording)
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun TVRecordingCard(recording: Recording) {
+    var isFocused by remember { mutableStateOf(false) }
+
+    Surface(
+        onClick = { },
+        modifier = Modifier
+            .width(280.dp)
+            .onFocusChanged { isFocused = it.isFocused }
+            .graphicsLayer {
+                val scale = if (isFocused) 1.05f else 1f
+                scaleX = scale
+                scaleY = scale
+            },
+        shape = ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(12.dp)),
+        colors = ClickableSurfaceDefaults.colors(
+            containerColor = OpenFlixColors.Card,
+            focusedContainerColor = OpenFlixColors.Primary.copy(alpha = 0.2f)
+        ),
+        border = ClickableSurfaceDefaults.border(
+            focusedBorder = Border(BorderStroke(2.dp, OpenFlixColors.Primary))
+        )
+    ) {
+        Column {
+            AsyncImage(
+                model = recording.thumb ?: recording.art,
+                contentDescription = recording.title,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(16f / 9f),
+                contentScale = ContentScale.Crop
+            )
+
+            Column(modifier = Modifier.padding(12.dp)) {
+                Text(
+                    text = if (recording.subtitle != null) "${recording.title} - ${recording.subtitle}" else recording.title,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color.White,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                recording.channelName?.let { name ->
+                    Text(
+                        text = name,
+                        fontSize = 12.sp,
+                        color = Color.White.copy(alpha = 0.6f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+        }
+    }
+}
+
+// MARK: - TV Recent Channels Row (matching iOS circular logos)
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun TVRecentChannelsRow(
+    channels: List<Channel>,
+    onChannelClick: (Channel) -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 32.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .padding(horizontal = 48.dp)
+                .padding(bottom = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = Icons.Default.History,
+                contentDescription = null,
+                tint = OpenFlixColors.Primary,
+                modifier = Modifier.size(24.dp)
+            )
+            Text(
+                text = "Recent Channels",
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.White
+            )
+        }
+
+        TvLazyRow(
+            contentPadding = PaddingValues(horizontal = 48.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            items(channels) { channel ->
+                TVRecentChannelCard(
+                    channel = channel,
+                    onClick = { onChannelClick(channel) }
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun TVRecentChannelCard(
+    channel: Channel,
+    onClick: () -> Unit
+) {
+    var isFocused by remember { mutableStateOf(false) }
+
+    Surface(
+        onClick = onClick,
+        modifier = Modifier
+            .onFocusChanged { isFocused = it.isFocused }
+            .graphicsLayer {
+                val scale = if (isFocused) 1.1f else 1f
+                scaleX = scale
+                scaleY = scale
+            },
+        shape = ClickableSurfaceDefaults.shape(shape = CircleShape),
+        colors = ClickableSurfaceDefaults.colors(
+            containerColor = Color.White.copy(alpha = 0.1f),
+            focusedContainerColor = OpenFlixColors.Primary.copy(alpha = 0.2f)
+        ),
+        border = ClickableSurfaceDefaults.border(
+            focusedBorder = Border(BorderStroke(2.dp, OpenFlixColors.Primary))
+        )
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.padding(8.dp)
+        ) {
+            Box(
+                modifier = Modifier.size(70.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                channel.logo?.let { logo ->
+                    AsyncImage(
+                        model = logo,
+                        contentDescription = channel.name,
+                        modifier = Modifier.size(50.dp),
+                        contentScale = ContentScale.Fit
+                    )
+                } ?: Text(
+                    text = channel.name.take(3),
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
+            }
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = channel.number ?: "",
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Medium,
+                color = Color.White.copy(alpha = 0.6f)
+            )
         }
     }
 }

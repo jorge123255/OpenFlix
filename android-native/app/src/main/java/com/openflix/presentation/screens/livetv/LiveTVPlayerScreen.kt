@@ -34,7 +34,9 @@ import com.openflix.domain.model.Program
 import com.openflix.domain.model.ProgramBadge
 import com.openflix.player.LiveTVPlayer
 import com.openflix.presentation.components.livetv.LiveTVPlayerControls
+import com.openflix.presentation.components.player.TabletPlayerControls
 import com.openflix.presentation.theme.OpenFlixColors
+import com.openflix.util.LocalDeviceType
 import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
 import java.util.*
@@ -58,6 +60,19 @@ fun LiveTVPlayerScreen(
     viewModel: LiveTVPlayerViewModel = hiltViewModel(),
     liveTVPlayer: LiveTVPlayer
 ) {
+    val deviceType = LocalDeviceType.current
+
+    if (deviceType.isTabletOrPhone) {
+        TabletLiveTVPlayer(
+            channelId = channelId,
+            onBack = onBack,
+            viewModel = viewModel,
+            liveTVPlayer = liveTVPlayer
+        )
+        return
+    }
+
+    // === TV Version (D-pad/focus controls) ===
     val uiState by viewModel.uiState.collectAsState()
     val focusRequester = remember { FocusRequester() }
 
@@ -638,6 +653,127 @@ fun LiveTVPlayerScreen(
                 onQueryChange = { viewModel.updateSearchQuery(it) },
                 onChannelSelected = { viewModel.selectSearchResult(it) },
                 onDismiss = { viewModel.closeChannelSearch() }
+            )
+        }
+    }
+}
+
+// === Tablet-optimized Live TV Player (touch controls, matching iOS) ===
+
+@Composable
+private fun TabletLiveTVPlayer(
+    channelId: String,
+    onBack: () -> Unit,
+    viewModel: LiveTVPlayerViewModel,
+    liveTVPlayer: LiveTVPlayer
+) {
+    val uiState by viewModel.uiState.collectAsState()
+
+    // Load channels when screen appears
+    LaunchedEffect(channelId) {
+        viewModel.loadChannelsAndPlay(channelId)
+    }
+
+    // Compute program position/duration for progress bar
+    val nowPlaying = uiState.currentChannel?.nowPlaying
+    val programPositionMs = remember(nowPlaying?.startTime) {
+        nowPlaying?.let {
+            val now = System.currentTimeMillis() / 1000
+            ((now - it.startTime) * 1000).coerceAtLeast(0)
+        } ?: 0L
+    }
+    val programDurationMs = remember(nowPlaying?.startTime, nowPlaying?.endTime) {
+        nowPlaying?.let {
+            ((it.endTime - it.startTime) * 1000).coerceAtLeast(0)
+        } ?: 0L
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black)
+    ) {
+        // Video Surface - ExoPlayer PlayerView
+        AndroidView(
+            factory = { ctx ->
+                androidx.media3.ui.PlayerView(ctx).apply {
+                    useController = false
+                    liveTVPlayer.getPlayer()?.let { player = it }
+                }
+            },
+            update = { playerView ->
+                liveTVPlayer.getPlayer()?.let { playerView.player = it }
+            },
+            modifier = Modifier.fillMaxSize()
+        )
+
+        // Loading indicator
+        if (uiState.isLoading || uiState.isBuffering) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                LoadingSpinner(
+                    color = OpenFlixColors.Primary,
+                    modifier = Modifier.size(48.dp)
+                )
+            }
+        }
+
+        // Error display
+        uiState.error?.let { error ->
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.8f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    androidx.compose.material3.Text(
+                        text = "Playback Error",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = OpenFlixColors.Error
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    androidx.compose.material3.Text(
+                        text = error,
+                        fontSize = 16.sp,
+                        color = OpenFlixColors.TextSecondary
+                    )
+                }
+            }
+        }
+
+        // Tablet player controls (touch-friendly, matching iOS)
+        uiState.currentChannel?.let { channel ->
+            TabletPlayerControls(
+                title = channel.name,
+                subtitle = channel.number?.let { "Ch. $it" },
+                isPlaying = !uiState.isPaused,
+                position = programPositionMs,
+                duration = programDurationMs,
+                isLive = true,
+                channelName = channel.name,
+                channelNumber = channel.number,
+                channelLogo = channel.logoUrl,
+                nowPlayingTitle = channel.nowPlaying?.displayTitle,
+                isMuted = uiState.isMuted,
+                isRecording = uiState.isRecording,
+                onPlayPause = { viewModel.togglePause() },
+                onSeekTo = { /* Live TV doesn't support arbitrary seeking */ },
+                onSeekRelative = { seconds ->
+                    if (seconds < 0) viewModel.seekBack(-seconds) else viewModel.seekForward(seconds)
+                },
+                onBack = onBack,
+                onToggleMute = { viewModel.toggleMute() },
+                onChannelUp = { viewModel.channelUp() },
+                onChannelDown = { viewModel.channelDown() },
+                onRecord = { viewModel.scheduleQuickRecording() },
+                onCycleAspectRatio = { viewModel.cycleAspectRatio() },
+                onCycleAudioTrack = { viewModel.cycleAudioTrack() },
+                onCycleSubtitleTrack = { viewModel.cycleSubtitleTrack() },
+                onSleepTimer = { viewModel.toggleSleepTimerPicker() }
             )
         }
     }

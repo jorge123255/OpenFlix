@@ -25,6 +25,12 @@ struct VideoPlayerView: View {
                     aspectRatioMode: viewModel.aspectRatioMode
                 )
                 .ignoresSafeArea()
+                .onTapGesture {
+                    viewModel.showControls.toggle()
+                    if viewModel.showControls {
+                        viewModel.showControlsTemporarily()
+                    }
+                }
             } else {
                 Color.black
                     .ignoresSafeArea()
@@ -71,7 +77,7 @@ struct VideoPlayerView: View {
 
             // Controls overlay - Apple TV style
             if viewModel.showControls && !viewModel.isLoading && contentRatingDismissed {
-                AppleTVPlayerControlsOverlay(viewModel: viewModel) {
+                AppleTVPlayerControlsOverlay(viewModel: viewModel, isRecording: recordingURL != nil) {
                     dismiss()
                 }
             }
@@ -98,6 +104,10 @@ struct VideoPlayerView: View {
     }
 
     private func loadContent() {
+        // If no content rating, skip the rating gate so controls can appear
+        if mediaItem?.contentRating == nil {
+            contentRatingDismissed = true
+        }
         Task {
             if let item = mediaItem {
                 await viewModel.loadMedia(item)
@@ -176,9 +186,11 @@ struct AVPlayerViewRepresentable: UIViewControllerRepresentable {
 
 struct AppleTVPlayerControlsOverlay: View {
     @ObservedObject var viewModel: PlayerViewModel
+    var isRecording: Bool = false
     var onClose: () -> Void
 
     @FocusState private var focusedControl: PlayerControl?
+    @State private var scrubProgress: Double?
 
     enum PlayerControl: Hashable {
         case close, speed, airplay, mute
@@ -226,9 +238,9 @@ struct AppleTVPlayerControlsOverlay: View {
 
     private var topBar: some View {
         HStack(spacing: 16) {
-            // Close button (X in circle)
+            // Close/Back button
             Button(action: onClose) {
-                Image(systemName: "xmark")
+                Image(systemName: isRecording ? "chevron.left" : "xmark")
                     .font(.system(size: 18, weight: .bold))
                     .foregroundColor(.white)
                     .frame(width: 44, height: 44)
@@ -432,33 +444,68 @@ struct AppleTVPlayerControlsOverlay: View {
 
             // Progress bar
             HStack(spacing: 16) {
-                Text(viewModel.currentTimeFormatted)
+                Text(scrubTimeFormatted ?? viewModel.currentTimeFormatted)
                     .font(.subheadline)
                     .foregroundColor(.white)
                     .monospacedDigit()
 
-                // Progress bar with scrubber
+                // Progress bar with scrubber and drag gesture
                 GeometryReader { geometry in
+                    let displayProgress = scrubProgress ?? viewModel.progress
+                    let isScrubbing = scrubProgress != nil
+
                     ZStack(alignment: .leading) {
                         // Background
                         RoundedRectangle(cornerRadius: 3)
                             .fill(Color.white.opacity(0.3))
 
-                        // Progress
+                        // Commercial break markers (if available)
+                        if !viewModel.commercialBreaks.isEmpty {
+                            ForEach(viewModel.commercialBreaks, id: \.startTime) { breakItem in
+                                let startFrac = viewModel.duration > 0 ? breakItem.startTime / viewModel.duration : 0
+                                let endFrac = viewModel.duration > 0 ? breakItem.endTime / viewModel.duration : 0
+                                let width = max(2, (endFrac - startFrac) * geometry.size.width)
+
+                                RoundedRectangle(cornerRadius: 1)
+                                    .fill(Color.yellow.opacity(0.6))
+                                    .frame(width: width, height: 6)
+                                    .offset(x: startFrac * geometry.size.width)
+                            }
+                        }
+
+                        // Progress fill
                         RoundedRectangle(cornerRadius: 3)
                             .fill(Color.white)
-                            .frame(width: geometry.size.width * viewModel.progress)
+                            .frame(width: geometry.size.width * displayProgress)
 
-                        // Scrubber dot
+                        // Scrubber dot (enlarges during scrub)
                         Circle()
                             .fill(Color.white)
-                            .frame(width: 16, height: 16)
-                            .offset(x: geometry.size.width * viewModel.progress - 8)
+                            .frame(width: isScrubbing ? 24 : 16, height: isScrubbing ? 24 : 16)
+                            .shadow(color: .black.opacity(0.3), radius: isScrubbing ? 4 : 2)
+                            .offset(x: geometry.size.width * displayProgress - (isScrubbing ? 12 : 8))
+                            .animation(.easeInOut(duration: 0.15), value: isScrubbing)
                     }
+                    .frame(height: 6)
+                    .padding(.vertical, 19)
+                    .contentShape(Rectangle())
+                    .gesture(
+                        DragGesture(minimumDistance: 0)
+                            .onChanged { value in
+                                let fraction = max(0, min(1, value.location.x / geometry.size.width))
+                                scrubProgress = fraction
+                                viewModel.showControlsTemporarily()
+                            }
+                            .onEnded { value in
+                                let fraction = max(0, min(1, value.location.x / geometry.size.width))
+                                viewModel.seek(to: fraction * viewModel.duration)
+                                scrubProgress = nil
+                            }
+                    )
                 }
-                .frame(height: 6)
+                .frame(height: 44)
 
-                Text(viewModel.remainingTimeFormatted)
+                Text(scrubRemainingFormatted ?? viewModel.remainingTimeFormatted)
                     .font(.subheadline)
                     .foregroundColor(.white)
                     .monospacedDigit()
@@ -540,6 +587,18 @@ struct AppleTVPlayerControlsOverlay: View {
                 }
             }
         }
+    }
+
+    private var scrubTimeFormatted: String? {
+        guard let frac = scrubProgress else { return nil }
+        let time = frac * viewModel.duration
+        return String.formatPlayerTime(seconds: Int(time))
+    }
+
+    private var scrubRemainingFormatted: String? {
+        guard let frac = scrubProgress else { return nil }
+        let remaining = max(0, viewModel.duration - frac * viewModel.duration)
+        return "-" + String.formatPlayerTime(seconds: Int(remaining))
     }
 
     private var subtitleButtonLabel: String {

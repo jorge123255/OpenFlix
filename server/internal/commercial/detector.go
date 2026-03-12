@@ -81,8 +81,8 @@ func DefaultDetectorConfig() DetectorConfig {
 		UseBlackFrame:       true,
 		UseAudioAnalysis:    true,
 		UseLogoDetection:    false, // requires ML model
-		UseONNX:             false, // requires onnxruntime + trained model
-		ONNXModelPath:       "/data/models/commercial_skip.onnx",
+		UseONNX:             true, // AI-based detection via ONNX model
+		ONNXModelPath:       "/data/models/commercial_skip_v5.onnx",
 		ONNXScriptPath:      "/data/models/commercial_detect.py",
 		BlackFrameThreshold: 0.05,
 		SilenceThreshold:    -50,
@@ -123,16 +123,18 @@ func (cd *CommercialDetector) DetectCommercials(ctx context.Context, recordingID
 	var allBreaks []CommercialBreak
 	var methods []string
 
-	// Method 1: Comskip (industry standard)
+	// Method 1: Comskip — industry standard for broadcast TV, use first
+	comskipSucceeded := false
 	if cd.Config.UseComskip {
 		breaks, err := cd.runComskip(ctx, videoPath)
 		if err == nil && len(breaks) > 0 {
 			allBreaks = append(allBreaks, breaks...)
 			methods = append(methods, "comskip")
+			comskipSucceeded = true
 		}
 	}
 
-	// Method 2: Black frame detection
+	// Method 2: Black frame detection (supplements comskip)
 	if cd.Config.UseBlackFrame {
 		breaks, err := cd.detectBlackFrames(ctx, videoPath)
 		if err == nil && len(breaks) > 0 {
@@ -141,7 +143,7 @@ func (cd *CommercialDetector) DetectCommercials(ctx context.Context, recordingID
 		}
 	}
 
-	// Method 3: Audio analysis
+	// Method 3: Audio analysis (supplements comskip)
 	if cd.Config.UseAudioAnalysis {
 		breaks, err := cd.analyzeAudio(ctx, videoPath)
 		if err == nil && len(breaks) > 0 {
@@ -150,8 +152,8 @@ func (cd *CommercialDetector) DetectCommercials(ctx context.Context, recordingID
 		}
 	}
 
-	// Method 4: ONNX AI detection (runs last, highest priority on overlap)
-	if cd.Config.UseONNX {
+	// Method 4: ONNX AI — only use if comskip found nothing
+	if !comskipSucceeded && cd.Config.UseONNX {
 		onnx := &ONNXDetector{
 			ModelPath:  cd.Config.ONNXModelPath,
 			ScriptPath: cd.Config.ONNXScriptPath,
@@ -159,15 +161,14 @@ func (cd *CommercialDetector) DetectCommercials(ctx context.Context, recordingID
 		if onnx.ModelAvailable() {
 			breaks, err := onnx.Detect(ctx, videoPath)
 			if err == nil && len(breaks) > 0 {
-				// ONNX results get a confidence boost
-				for i := range breaks {
-					breaks[i].Confidence = minF64(breaks[i].Confidence*1.2, 1.0)
-				}
-				allBreaks = cd.mergeBreaks(allBreaks, breaks)
+				allBreaks = breaks
 				methods = append(methods, "onnx")
 			}
 		}
 	}
+
+	// Filter out segments shorter than 30 seconds — real commercial breaks are never that short
+	allBreaks = filterShortBreaks(allBreaks, 30.0)
 
 	// Calculate confidence based on method agreement
 	allBreaks = cd.calculateConfidence(allBreaks)
@@ -607,4 +608,16 @@ func minF64(a, b float64) float64 {
 		return a
 	}
 	return b
+}
+
+// filterShortBreaks removes segments shorter than minSeconds — eliminates false positives
+// since real commercial breaks are always at least 30 seconds long
+func filterShortBreaks(breaks []CommercialBreak, minSeconds float64) []CommercialBreak {
+	filtered := breaks[:0]
+	for _, b := range breaks {
+		if b.Duration >= minSeconds {
+			filtered = append(filtered, b)
+		}
+	}
+	return filtered
 }

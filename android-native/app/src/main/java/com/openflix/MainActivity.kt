@@ -21,6 +21,9 @@ import com.openflix.player.LiveTVPlayer
 import com.openflix.player.MpvPlayer
 import com.openflix.presentation.navigation.OpenFlixNavHost
 import com.openflix.presentation.theme.OpenFlixTheme
+import com.openflix.util.DeviceType
+import com.openflix.util.LocalDeviceType
+import com.openflix.util.detectDeviceType
 import dagger.hilt.android.AndroidEntryPoint
 import timber.log.Timber
 import javax.inject.Inject
@@ -54,6 +57,7 @@ class MainActivity : ComponentActivity() {
     // PiP state
     private var pipState by mutableStateOf(PipState())
     private var isInPlayerScreen by mutableStateOf(false)
+    private lateinit var deviceType: DeviceType
 
     override fun onCreate(savedInstanceState: Bundle?) {
         // Install splash screen before super.onCreate()
@@ -63,12 +67,24 @@ class MainActivity : ComponentActivity() {
 
         Timber.d("MainActivity onCreate")
 
-        // Configure immersive mode for TV
-        setupImmersiveMode()
+        // Detect device type
+        deviceType = detectDeviceType(this)
+        Timber.d("Device type: $deviceType")
+
+        // Configure immersive mode only for TV
+        if (deviceType.isTV) {
+            setupImmersiveMode()
+        } else {
+            // On tablet/phone: show system bars normally
+            WindowCompat.setDecorFitsSystemWindows(window, true)
+        }
 
         setContent {
             OpenFlixTheme {
-                CompositionLocalProvider(LocalPipState provides pipState) {
+                CompositionLocalProvider(
+                    LocalPipState provides pipState,
+                    LocalDeviceType provides deviceType
+                ) {
                     OpenFlixNavHost(
                         mpvPlayer = mpvPlayer,
                         liveTVPlayer = liveTVPlayer,
@@ -122,8 +138,8 @@ class MainActivity : ComponentActivity() {
         pipState = pipState.copy(isInPipMode = isInPictureInPictureMode)
         Timber.d("PiP mode changed: $isInPictureInPictureMode")
 
-        if (!isInPictureInPictureMode) {
-            // Returned from PiP to fullscreen
+        if (!isInPictureInPictureMode && deviceType.isTV) {
+            // Returned from PiP to fullscreen (TV only)
             setupImmersiveMode()
         }
     }
@@ -142,8 +158,8 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
-        // Re-apply immersive mode on resume (only if not in PiP)
-        if (!pipState.isInPipMode) {
+        // Re-apply immersive mode on resume (TV only, not in PiP)
+        if (deviceType.isTV && !pipState.isInPipMode) {
             setupImmersiveMode()
         }
     }

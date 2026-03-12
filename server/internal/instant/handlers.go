@@ -1,6 +1,7 @@
 package instant
 
 import (
+	"net/url"
 	"net/http"
 	"strconv"
 
@@ -85,22 +86,29 @@ func (h *InstantSwitchHandlers) handleSwitch(c *gin.Context) {
 		return
 	}
 
-	// Check if we have a cached stream
+	// Check if we have a RingBuffer-cached stream (legacy path)
 	cached, hasCached := h.prebuffer.GetCachedStream(req.ChannelID)
 
-	// Update prebuffer (triggers background caching of adjacent channels)
+	// Check if the HLS session is already running and has segments (preferred path)
+	h.prebuffer.mu.RLock()
+	isReadyFn := h.prebuffer.isSessionReady
+	h.prebuffer.mu.RUnlock()
+	sessionReady := !hasCached && isReadyFn != nil && isReadyFn(req.ChannelID)
+
+	// Update prebuffer — triggers background pre-starting of adjacent channels
 	h.prebuffer.SetActiveChannel(req.ChannelID)
 
+	instant := hasCached || sessionReady
 	response := gin.H{
 		"success":    true,
 		"channel_id": req.ChannelID,
-		"instant":    hasCached,
+		"instant":    instant,
 	}
 
 	if hasCached && cached != nil {
 		response["buffered_bytes"] = cached.Buffer.Len()
 		response["buffered_duration"] = cached.Buffer.BufferedDuration()
-		response["stream_url"] = "/api/instant/stream/" + req.ChannelID
+		response["stream_url"] = buildCachedStreamURL(req.ChannelID, c.GetString("token"))
 	}
 
 	c.JSON(http.StatusOK, response)
@@ -214,4 +222,12 @@ func (h *InstantSwitchHandlers) handleCachedStream(c *gin.Context) {
 	c.Header("X-Instant-Switch", "true")
 
 	c.Data(http.StatusOK, "video/mp2t", data)
+}
+
+func buildCachedStreamURL(channelID, authToken string) string {
+	streamURL := "/api/instant/stream/" + url.PathEscape(channelID)
+	if authToken == "" {
+		return streamURL
+	}
+	return streamURL + "?X-Plex-Token=" + url.QueryEscape(authToken)
 }

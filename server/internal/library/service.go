@@ -146,14 +146,85 @@ func (s *Service) DeleteLibrary(id uint) error {
 		return err
 	}
 
-	// Delete all media items in this library
-	s.db.Where("library_id = ?", id).Delete(&models.MediaItem{})
+	return s.db.Transaction(func(tx *gorm.DB) error {
+		var mediaIDs []uint
+		if err := tx.Model(&models.MediaItem{}).Where("library_id = ?", id).Pluck("id", &mediaIDs).Error; err != nil {
+			return err
+		}
 
-	// Delete library paths
-	s.db.Where("library_id = ?", id).Delete(&models.LibraryPath{})
+		var fileIDs []uint
+		if len(mediaIDs) > 0 {
+			if err := tx.Model(&models.MediaFile{}).Where("media_item_id IN ?", mediaIDs).Pluck("id", &fileIDs).Error; err != nil {
+				return err
+			}
+		}
 
-	// Delete the library
-	return s.db.Delete(library).Error
+		if len(fileIDs) > 0 {
+			if err := tx.Where("media_file_id IN ?", fileIDs).Delete(&models.MediaStream{}).Error; err != nil {
+				return err
+			}
+			if err := tx.Where("media_file_id IN ?", fileIDs).Delete(&models.PlaybackSession{}).Error; err != nil {
+				return err
+			}
+			if err := tx.Where("media_file_id IN ?", fileIDs).Delete(&models.OfflineDownload{}).Error; err != nil {
+				return err
+			}
+		}
+
+		if len(mediaIDs) > 0 {
+			if err := tx.Exec("DELETE FROM media_genres WHERE media_item_id IN ?", mediaIDs).Error; err != nil {
+				return err
+			}
+			if err := tx.Where("media_item_id IN ?", mediaIDs).Delete(&models.CastMember{}).Error; err != nil {
+				return err
+			}
+			if err := tx.Where("media_item_id IN ?", mediaIDs).Delete(&models.WatchHistory{}).Error; err != nil {
+				return err
+			}
+			if err := tx.Where("media_item_id IN ?", mediaIDs).Delete(&models.PlaylistItem{}).Error; err != nil {
+				return err
+			}
+			if err := tx.Where("media_item_id IN ?", mediaIDs).Delete(&models.CollectionItem{}).Error; err != nil {
+				return err
+			}
+			if err := tx.Where("media_item_id IN ?", mediaIDs).Delete(&models.WatchlistItem{}).Error; err != nil {
+				return err
+			}
+			if err := tx.Where("media_item_id IN ?", mediaIDs).Delete(&models.PlaybackSession{}).Error; err != nil {
+				return err
+			}
+			if err := tx.Where("media_item_id IN ?", mediaIDs).Delete(&models.OfflineDownload{}).Error; err != nil {
+				return err
+			}
+			if err := tx.Where("media_item_id IN ?", mediaIDs).Delete(&models.PlayQueueItem{}).Error; err != nil {
+				return err
+			}
+			if err := tx.Where("media_id IN ?", mediaIDs).Delete(&models.PersonalSectionItem{}).Error; err != nil {
+				return err
+			}
+			if err := tx.Where("media_item_id IN ?", mediaIDs).Delete(&models.Bookmark{}).Error; err != nil {
+				return err
+			}
+			if err := tx.Where("media_item_id IN ?", mediaIDs).Delete(&models.Clip{}).Error; err != nil {
+				return err
+			}
+			if err := tx.Where("media_item_id IN ?", mediaIDs).Delete(&models.MediaFile{}).Error; err != nil {
+				return err
+			}
+			if err := tx.Unscoped().Where("library_id = ?", id).Delete(&models.MediaItem{}).Error; err != nil {
+				return err
+			}
+		}
+
+		if err := tx.Where("library_id = ?", id).Delete(&models.LibraryPath{}).Error; err != nil {
+			return err
+		}
+		if err := tx.Unscoped().Where("library_id = ?", id).Delete(&models.Collection{}).Error; err != nil {
+			return err
+		}
+
+		return tx.Delete(library).Error
+	})
 }
 
 // AddPath adds a path to a library

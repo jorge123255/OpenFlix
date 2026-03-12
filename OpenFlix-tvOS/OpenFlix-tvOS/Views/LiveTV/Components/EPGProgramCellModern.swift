@@ -588,6 +588,7 @@ struct EPGQuickNavBar: View {
     
     let sampleChannel = Channel(
         id: "1",
+        epgChannelId: nil,
         number: 206,
         name: "ESPN",
         logo: nil,

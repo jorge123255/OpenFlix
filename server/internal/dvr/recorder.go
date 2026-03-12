@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -38,11 +39,13 @@ type Recorder struct {
 
 // RecordingSession represents an active recording
 type RecordingSession struct {
-	Recording   *models.Recording
-	Process     *exec.Cmd
-	Done        chan struct{}
-	Error       error
-	ErrorOutput string // Captured stderr from FFmpeg
+	Recording    *models.Recording
+	Process      *exec.Cmd
+	Done         chan struct{}
+	WatchdogStop chan struct{}
+	Error        error
+	ErrorOutput  string // Captured stderr from FFmpeg
+	LastFileSize int64
 }
 
 // RecorderConfig holds configuration for the DVR recorder
@@ -1121,9 +1124,10 @@ func (r *Recorder) startRecording(recording *models.Recording) error {
 	cmd.Stderr = &stderr
 
 	session := &RecordingSession{
-		Recording: recording,
-		Process:   cmd,
-		Done:      make(chan struct{}),
+		Recording:    recording,
+		Process:      cmd,
+		Done:         make(chan struct{}),
+		WatchdogStop: make(chan struct{}),
 	}
 
 	r.activeRecords[recording.ID] = session
@@ -1165,10 +1169,16 @@ func (r *Recorder) startRecording(recording *models.Recording) error {
 			}
 
 			// Check if error is retryable (transient stream issues)
+			errStr := ""
+			if session.Error != nil {
+				errStr = session.Error.Error()
+			}
 			isTransientError := strings.Contains(session.ErrorOutput, "Invalid data found") ||
 				strings.Contains(session.ErrorOutput, "Connection refused") ||
 				strings.Contains(session.ErrorOutput, "Connection reset") ||
-				strings.Contains(session.ErrorOutput, "Server returned")
+				strings.Contains(session.ErrorOutput, "Server returned") ||
+				strings.Contains(errStr, "signal: killed") ||
+				strings.Contains(errStr, "signal: interrupt")
 
 			// Check if we have enough time left to retry
 			timeRemaining := recording.EndTime.Sub(time.Now())
@@ -1277,6 +1287,26 @@ func (r *Recorder) onRecordingComplete(recordingID uint) {
 		// Get file size
 		if info, err := os.Stat(recording.FilePath); err == nil {
 			recording.FileSize = info.Size()
+		}
+
+		// Check if recorded duration matches expected duration
+		// This catches cases where stream died but FFmpeg exited cleanly
+		expectedDuration := recording.EndTime.Sub(recording.StartTime)
+		actualDuration := r.getVideoDuration(recording.FilePath)
+		
+		if actualDuration > 0 && expectedDuration > 0 {
+			durationRatio := float64(actualDuration) / float64(expectedDuration)
+			if durationRatio < 0.8 { // Less than 80% of expected duration
+				recording.Status = "partial"
+				recording.LastError = fmt.Sprintf("Only recorded %.0f%% of expected duration (%v of %v)", 
+					durationRatio*100, actualDuration.Round(time.Second), expectedDuration.Round(time.Second))
+				logger.Log.WithFields(map[string]interface{}{
+					"recording_id":     recording.ID,
+					"expected":         expectedDuration.String(),
+					"actual":           actualDuration.String(),
+					"ratio":            fmt.Sprintf("%.1f%%", durationRatio*100),
+				}).Warn("Recording appears incomplete - marking as partial")
+			}
 		}
 	}
 
@@ -2385,4 +2415,30 @@ func maxUint(a, b uint) uint {
 		return a
 	}
 	return b
+}
+
+// getVideoDuration returns the duration of a video file using ffprobe
+func (r *Recorder) getVideoDuration(filePath string) time.Duration {
+	cmd := exec.Command("ffprobe",
+		"-v", "error",
+		"-show_entries", "format=duration",
+		"-of", "default=noprint_wrappers=1:nokey=1",
+		filePath,
+	)
+	output, err := cmd.Output()
+	if err != nil {
+		logger.Log.WithFields(map[string]interface{}{
+			"file":  filePath,
+			"error": err.Error(),
+		}).Debug("Failed to get video duration")
+		return 0
+	}
+
+	durationStr := strings.TrimSpace(string(output))
+	durationSec, err := strconv.ParseFloat(durationStr, 64)
+	if err != nil {
+		return 0
+	}
+
+	return time.Duration(durationSec * float64(time.Second))
 }

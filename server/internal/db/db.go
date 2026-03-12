@@ -37,11 +37,7 @@ func Initialize(cfg config.DatabaseConfig) (*gorm.DB, error) {
 		return nil, fmt.Errorf("failed to connect to database: %w", err)
 	}
 
-	// For SQLite, ensure WAL mode is set (in case DSN already had params)
-	if cfg.Driver == "sqlite" {
-		db.Exec("PRAGMA journal_mode=WAL")
-		db.Exec("PRAGMA busy_timeout=5000")
-	}
+	configureSQLitePragmas(db)
 
 	return db, nil
 }
@@ -125,6 +121,7 @@ func Migrate(db *gorm.DB) error {
 
 		// Settings
 		&models.Setting{},
+		&models.InviteToken{},
 
 		// Client Devices
 		&models.ClientDevice{},
@@ -148,6 +145,8 @@ func Migrate(db *gorm.DB) error {
 		log.Printf("Warning: DVR migration had issues: %v", err)
 	}
 
+	ensureCriticalIndexes(db)
+
 	// Ensure performance indexes exist (idempotent — IF NOT EXISTS).
 	// Run in background so startup isn't blocked on slow NAS-backed SQLite.
 	go ensureIndexes(db)
@@ -164,8 +163,6 @@ func ensureIndexes(db *gorm.DB) {
 		`CREATE INDEX IF NOT EXISTS idx_programs_title_lower ON programs (LOWER(title))`,
 		`CREATE INDEX IF NOT EXISTS idx_programs_start ON programs (start)`,
 		`CREATE INDEX IF NOT EXISTS idx_programs_end ON programs ("end")`,
-		// Composite index for the common pattern: future programs by channel
-		`CREATE INDEX IF NOT EXISTS idx_programs_channel_start ON programs (channel_id, start)`,
 		// DVR jobs: watchdog query (orphaned jobs with legacy_recording_id set)
 		`CREATE INDEX IF NOT EXISTS idx_dvr_jobs_status_legacy ON dvr_jobs (status, legacy_recording_id)`,
 	}
@@ -174,4 +171,32 @@ func ensureIndexes(db *gorm.DB) {
 			log.Printf("Warning: failed to create index: %v", err)
 		}
 	}
+}
+
+func ensureCriticalIndexes(db *gorm.DB) {
+	if err := dedupeProgramsForUpsert(db); err != nil {
+		log.Printf("Warning: failed to dedupe programs before creating unique index: %v", err)
+	}
+	if err := db.Exec(
+		`CREATE UNIQUE INDEX IF NOT EXISTS idx_programs_channel_start_unique ON programs (channel_id, start)`,
+	).Error; err != nil {
+		log.Printf("Warning: failed to create unique programs index: %v", err)
+	}
+	if err := db.Exec(`DROP INDEX IF EXISTS idx_programs_channel_start`).Error; err != nil {
+		log.Printf("Warning: failed to drop redundant programs index: %v", err)
+	}
+}
+
+func dedupeProgramsForUpsert(db *gorm.DB) error {
+	return db.Exec(`
+		DELETE FROM programs
+		WHERE id IN (
+			SELECT older.id
+			FROM programs AS older
+			JOIN programs AS newer
+				ON older.channel_id = newer.channel_id
+				AND older.start = newer.start
+				AND older.id < newer.id
+		)
+	`).Error
 }

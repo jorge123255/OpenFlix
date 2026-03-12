@@ -4,6 +4,7 @@ import Foundation
 
 struct Channel: Identifiable, Hashable {
     let id: String
+    let epgChannelId: String?    // EPG channel identifier (programs map key on server)
     let number: Int?
     let name: String
     let logo: String?
@@ -62,6 +63,7 @@ extension ChannelDTO {
     func toDomain() -> Channel {
         Channel(
             id: safeId,
+            epgChannelId: channelId,
             number: number,
             name: safeName,
             logo: logo ?? thumb,

@@ -330,7 +330,7 @@ func (s *Server) checkGuideProvider() HealthCheckResult {
 	// Check if we have recent program data
 	var programCount int64
 	now := time.Now()
-	s.db.Model(&models.Program{}).Where("end_time > ?", now).Count(&programCount)
+	s.db.Model(&models.Program{}).Where("end > ?", now).Count(&programCount)
 	if programCount == 0 {
 		return HealthCheckResult{
 			Name:    "Guide Provider",
@@ -666,8 +666,8 @@ type SystemStatusResponse struct {
 }
 
 type SystemStatusServer struct {
-	Version  string `json:"version"`
-	Uptime   string `json:"uptime"`
+	Version   string `json:"version"`
+	Uptime    string `json:"uptime"`
 	UptimeSec int64  `json:"uptimeSec"`
 	StartedAt string `json:"startedAt"`
 	OS        string `json:"os"`
@@ -686,30 +686,30 @@ type DiskUsageInfo struct {
 }
 
 type SystemStatusResources struct {
-	CPUCores    int             `json:"cpuCores"`
-	MemUsedMB   uint64          `json:"memUsedMB"`
-	MemTotalMB  uint64          `json:"memTotalMB"`
-	MemPercent  float64         `json:"memPercent"`
-	Goroutines  int             `json:"goroutines"`
-	DiskUsage   []DiskUsageInfo `json:"diskUsage"`
+	CPUCores   int             `json:"cpuCores"`
+	MemUsedMB  uint64          `json:"memUsedMB"`
+	MemTotalMB uint64          `json:"memTotalMB"`
+	MemPercent float64         `json:"memPercent"`
+	Goroutines int             `json:"goroutines"`
+	DiskUsage  []DiskUsageInfo `json:"diskUsage"`
 }
 
 type SystemStatusDatabase struct {
-	SizeMB      float64 `json:"sizeMB"`
-	Libraries   int64   `json:"libraries"`
-	Channels    int64   `json:"channels"`
-	Recordings  int64   `json:"recordings"`
-	Passes      int64   `json:"passes"`
-	Users       int64   `json:"users"`
-	MediaItems  int64   `json:"mediaItems"`
-	Programs    int64   `json:"programs"`
+	SizeMB     float64 `json:"sizeMB"`
+	Libraries  int64   `json:"libraries"`
+	Channels   int64   `json:"channels"`
+	Recordings int64   `json:"recordings"`
+	Passes     int64   `json:"passes"`
+	Users      int64   `json:"users"`
+	MediaItems int64   `json:"mediaItems"`
+	Programs   int64   `json:"programs"`
 }
 
 type SystemStatusComponents struct {
-	FFmpegVersion  string `json:"ffmpegVersion"`
-	ChromeVersion  string `json:"chromeVersion"`
-	ComskipAvail   bool   `json:"comskipAvailable"`
-	TranscodeHW    string `json:"transcodeHW"`
+	FFmpegVersion string `json:"ffmpegVersion"`
+	ChromeVersion string `json:"chromeVersion"`
+	ComskipAvail  bool   `json:"comskipAvailable"`
+	TranscodeHW   string `json:"transcodeHW"`
 }
 
 // getSystemStatus returns detailed system status information

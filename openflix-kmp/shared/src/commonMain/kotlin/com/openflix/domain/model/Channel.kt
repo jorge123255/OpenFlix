@@ -2,6 +2,7 @@ package com.openflix.domain.model
 
 data class Channel(
     val id: String,
+    val channelId: String = "",
     val number: Int? = null,
     val name: String,
     val logo: String? = null,

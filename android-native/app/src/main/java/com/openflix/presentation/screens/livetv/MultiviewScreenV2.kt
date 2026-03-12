@@ -631,7 +631,7 @@ private fun ChannelPickerOverlay(
             modifier = Modifier
                 .width(400.dp)
                 .fillMaxHeight()
-                .background(Color(0xFF1A1A1A))
+                .background(Color(0xFF1A142E))
                 .padding(20.dp)
         ) {
             Text(

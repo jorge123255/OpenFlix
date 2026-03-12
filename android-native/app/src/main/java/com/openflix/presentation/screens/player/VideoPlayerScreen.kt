@@ -18,13 +18,16 @@ import androidx.compose.ui.input.key.*
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.tv.material3.*
 import coil.compose.AsyncImage
 import com.openflix.player.LoadState
 import com.openflix.player.MpvPlayer
 import com.openflix.presentation.components.MpvVideoSurface
+import com.openflix.presentation.components.player.TabletPlayerControls
 import com.openflix.presentation.theme.OpenFlixColors
+import com.openflix.util.LocalDeviceType
 import kotlinx.coroutines.delay
 
 /**
@@ -33,32 +36,28 @@ import kotlinx.coroutines.delay
 @Composable
 fun VideoPlayerScreen(
     mediaId: String,
+    fileId: Long? = null,
     onBack: () -> Unit,
     mpvPlayer: MpvPlayer,
     viewModel: VideoPlayerViewModel = hiltViewModel()
 ) {
+    val deviceType = LocalDeviceType.current
+
     val uiState by viewModel.uiState.collectAsState()
     val playerState by mpvPlayer.playerState.collectAsState()
     val isPlaying by mpvPlayer.isPlaying.collectAsState()
     val position by mpvPlayer.position.collectAsState()
     val duration by mpvPlayer.duration.collectAsState()
 
-    // Overlay visibility
-    var showOverlay by remember { mutableStateOf(true) }
-    val focusRequester = remember { FocusRequester() }
-
     // Initialize player and load media
-    LaunchedEffect(mediaId) {
-        // Initialize mpv first (safe to call multiple times)
+    LaunchedEffect(mediaId, fileId) {
         mpvPlayer.initialize()
-        // Then load media info
-        viewModel.loadMedia(mediaId)
+        viewModel.loadMedia(mediaId, fileId)
     }
 
     // Start playback when we have the URL AND surface is attached
     LaunchedEffect(uiState.streamUrl) {
         uiState.streamUrl?.let { url ->
-            // Wait for surface to be attached (max 5 seconds)
             var attempts = 0
             while (!mpvPlayer.isSurfaceAttached && attempts < 100) {
                 delay(50)
@@ -72,6 +71,155 @@ fun VideoPlayerScreen(
         }
     }
 
+    // Handle back press
+    BackHandler {
+        viewModel.saveProgress(position)
+        mpvPlayer.stop()
+        onBack()
+    }
+
+    if (deviceType.isTabletOrPhone) {
+        TabletVideoPlayer(
+            uiState = uiState,
+            playerState = playerState,
+            isPlaying = isPlaying,
+            position = position,
+            duration = duration,
+            mpvPlayer = mpvPlayer,
+            viewModel = viewModel,
+            onBack = onBack
+        )
+    } else {
+        TVVideoPlayer(
+            uiState = uiState,
+            playerState = playerState,
+            isPlaying = isPlaying,
+            position = position,
+            duration = duration,
+            mpvPlayer = mpvPlayer,
+            viewModel = viewModel,
+            onBack = onBack
+        )
+    }
+}
+
+// === Tablet-optimized VOD Player (touch controls, matching iOS) ===
+
+@Composable
+private fun TabletVideoPlayer(
+    uiState: VideoPlayerUiState,
+    playerState: com.openflix.player.PlayerState,
+    isPlaying: Boolean,
+    position: Long,
+    duration: Long,
+    mpvPlayer: MpvPlayer,
+    viewModel: VideoPlayerViewModel,
+    onBack: () -> Unit
+) {
+    var aspectRatioIndex by remember { mutableIntStateOf(0) }
+    val aspectRatios = remember { listOf("-1", "16:9", "4:3", "2.35:1") }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black)
+    ) {
+        // Video Surface
+        MpvVideoSurface(
+            player = mpvPlayer,
+            modifier = Modifier.fillMaxSize()
+        )
+
+        // Loading indicator
+        if (playerState.loadState == LoadState.LOADING || uiState.isLoading) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                TabletLoadingSpinner()
+            }
+        }
+
+        // Error display
+        if (uiState.error != null || playerState.error != null) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.8f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    androidx.compose.material3.Text(
+                        text = "Playback Error",
+                        fontSize = 20.sp,
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                        color = OpenFlixColors.Error
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    androidx.compose.material3.Text(
+                        text = uiState.error ?: playerState.error ?: "Unknown error",
+                        fontSize = 16.sp,
+                        color = OpenFlixColors.TextSecondary
+                    )
+                }
+            }
+        }
+
+        // Tablet player controls (touch-friendly, matching iOS)
+        if (uiState.mediaInfo != null) {
+            TabletPlayerControls(
+                title = uiState.mediaInfo?.title ?: "",
+                subtitle = uiState.mediaInfo?.subtitle,
+                isPlaying = isPlaying,
+                position = position,
+                duration = duration,
+                isLive = false,
+                isMuted = playerState.isMuted,
+                playbackSpeed = playerState.playbackSpeed,
+                onPlayPause = { mpvPlayer.togglePlayPause() },
+                onSeekTo = { mpvPlayer.seekTo(it) },
+                onSeekRelative = { seconds -> mpvPlayer.seekRelative(seconds) },
+                onBack = {
+                    viewModel.saveProgress(position)
+                    mpvPlayer.stop()
+                    onBack()
+                },
+                onToggleMute = { mpvPlayer.toggleMute() },
+                onCyclePlaybackSpeed = {
+                    val speeds = listOf(0.5f, 0.75f, 1.0f, 1.25f, 1.5f, 2.0f)
+                    val currentIndex = speeds.indexOfFirst {
+                        kotlin.math.abs(it - playerState.playbackSpeed) < 0.01f
+                    }.takeIf { it >= 0 } ?: 2
+                    val nextSpeed = speeds[(currentIndex + 1) % speeds.size]
+                    mpvPlayer.setPlaybackSpeed(nextSpeed)
+                },
+                onCycleAspectRatio = {
+                    aspectRatioIndex = (aspectRatioIndex + 1) % aspectRatios.size
+                    mpvPlayer.setAspectRatio(aspectRatios[aspectRatioIndex])
+                },
+                onCycleAudioTrack = { mpvPlayer.cycleAudioTrack() },
+                onCycleSubtitleTrack = { mpvPlayer.cycleSubtitleTrack() }
+            )
+        }
+    }
+}
+
+// === TV-optimized VOD Player (D-pad/focus controls) ===
+
+@Composable
+private fun TVVideoPlayer(
+    uiState: VideoPlayerUiState,
+    playerState: com.openflix.player.PlayerState,
+    isPlaying: Boolean,
+    position: Long,
+    duration: Long,
+    mpvPlayer: MpvPlayer,
+    viewModel: VideoPlayerViewModel,
+    onBack: () -> Unit
+) {
+    var showOverlay by remember { mutableStateOf(true) }
+    val focusRequester = remember { FocusRequester() }
+
     // Auto-hide overlay
     LaunchedEffect(showOverlay) {
         if (showOverlay && isPlaying) {
@@ -83,14 +231,6 @@ fun VideoPlayerScreen(
     // Request focus on launch
     LaunchedEffect(Unit) {
         focusRequester.requestFocus()
-    }
-
-    // Handle back press
-    BackHandler {
-        // Save progress before exiting
-        viewModel.saveProgress(position)
-        mpvPlayer.stop()
-        onBack()
     }
 
     Box(
@@ -156,13 +296,11 @@ fun VideoPlayerScreen(
                             onBack()
                             true
                         }
-                        // Subtitle button (CAPTIONS or YELLOW)
                         Key(android.view.KeyEvent.KEYCODE_CAPTIONS.toLong()),
                         Key(android.view.KeyEvent.KEYCODE_PROG_YELLOW.toLong()) -> {
                             mpvPlayer.cycleSubtitleTrack()
                             true
                         }
-                        // Audio button (GREEN)
                         Key(android.view.KeyEvent.KEYCODE_PROG_GREEN.toLong()) -> {
                             mpvPlayer.cycleAudioTrack()
                             true
@@ -228,7 +366,7 @@ fun VideoPlayerScreen(
             }
         }
 
-        // Playback overlay
+        // Playback overlay (TV)
         AnimatedVisibility(
             visible = showOverlay && uiState.mediaInfo != null,
             enter = fadeIn(),
@@ -282,7 +420,6 @@ private fun PlayerOverlay(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.Top
             ) {
-                // Back button
                 Button(
                     onClick = onBack,
                     colors = ButtonDefaults.colors(
@@ -294,7 +431,6 @@ private fun PlayerOverlay(
 
                 Spacer(modifier = Modifier.width(24.dp))
 
-                // Poster
                 if (posterUrl != null) {
                     AsyncImage(
                         model = posterUrl,
@@ -306,7 +442,6 @@ private fun PlayerOverlay(
                     Spacer(modifier = Modifier.width(16.dp))
                 }
 
-                // Title
                 Column {
                     Text(
                         text = title,
@@ -341,7 +476,6 @@ private fun PlayerOverlay(
                 .padding(24.dp)
         ) {
             Column {
-                // Progress bar
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
@@ -377,13 +511,11 @@ private fun PlayerOverlay(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Playback controls
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Rewind 10s
                     Button(
                         onClick = { onSeek(maxOf(0, position - 10000)) },
                         colors = ButtonDefaults.colors(
@@ -395,7 +527,6 @@ private fun PlayerOverlay(
 
                     Spacer(modifier = Modifier.width(24.dp))
 
-                    // Play/Pause
                     Button(
                         onClick = onPlayPause,
                         colors = ButtonDefaults.colors(
@@ -407,7 +538,6 @@ private fun PlayerOverlay(
 
                     Spacer(modifier = Modifier.width(24.dp))
 
-                    // Forward 10s
                     Button(
                         onClick = { onSeek(minOf(duration, position + 10000)) },
                         colors = ButtonDefaults.colors(
@@ -419,6 +549,19 @@ private fun PlayerOverlay(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun TabletLoadingSpinner() {
+    androidx.compose.foundation.Canvas(
+        modifier = Modifier.size(64.dp)
+    ) {
+        drawCircle(
+            color = Color.White.copy(alpha = 0.3f),
+            radius = size.minDimension / 2,
+            style = androidx.compose.ui.graphics.drawscope.Stroke(width = 4.dp.toPx())
+        )
     }
 }
 

@@ -11,6 +11,7 @@ import androidx.compose.runtime.getValue
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -25,7 +26,7 @@ import com.openflix.presentation.screens.dvr.DVRPlayerScreen
 import com.openflix.presentation.screens.dvr.DVRScreen
 import com.openflix.presentation.screens.home.DiscoverScreen
 import com.openflix.presentation.screens.home.MainScreen
-import com.openflix.presentation.screens.epg.EPGGuideScreen
+// import com.openflix.presentation.screens.epg.EPGGuideScreenModern // disabled: pre-existing compile errors
 import com.openflix.presentation.screens.livetv.ArchivePlayerScreen
 import com.openflix.presentation.screens.livetv.ChannelGroupsScreen
 import com.openflix.presentation.screens.livetv.ChannelLogoEditorScreen
@@ -34,13 +35,16 @@ import com.openflix.presentation.screens.livetv.ChannelSurfingScreen
 import com.openflix.presentation.screens.livetv.LiveTVPlayerScreen
 import com.openflix.presentation.screens.livetv.LiveTVScreen
 import com.openflix.presentation.screens.livetv.MultiviewScreenV2
+import com.openflix.presentation.screens.livetv.XfinityLiveTVView
 import com.openflix.presentation.screens.media.MediaDetailScreen
+import com.openflix.presentation.screens.media.MediaDetailScreenXfinity
 import com.openflix.presentation.screens.onlater.OnLaterScreen
 import com.openflix.presentation.screens.player.VideoPlayerScreen
 import com.openflix.presentation.screens.allmedia.AllMediaScreen
 import com.openflix.presentation.screens.search.SearchScreen
 import com.openflix.presentation.screens.settings.RemoteMappingScreen
 import com.openflix.presentation.screens.settings.SettingsScreen
+import com.openflix.presentation.screens.sports.TeamDetailScreen
 import com.openflix.presentation.screens.teampass.TeamPassScreen
 import com.openflix.presentation.screens.catchup.CatchupScreen
 import com.openflix.presentation.screens.watchlist.WatchlistScreen
@@ -63,6 +67,8 @@ fun OpenFlixNavHost(
 ) {
     val authViewModel: AuthViewModel = hiltViewModel()
     val isAuthenticated by authViewModel.isAuthenticated.collectAsState()
+    val currentBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = currentBackStackEntry?.destination?.route
 
     // Determine start destination based on auth state
     val startDestination = if (isAuthenticated) {
@@ -110,7 +116,7 @@ fun OpenFlixNavHost(
         composable(NavRoutes.Main.route) {
             MainScreen(
                 onNavigateToMediaDetail = { mediaId ->
-                    navController.navigate(NavRoutes.MediaDetail.createRoute(mediaId))
+                    navController.navigate(NavRoutes.XfinityMediaDetail.createRoute(mediaId))
                 },
                 onNavigateToPlayer = { mediaId ->
                     navController.navigate(NavRoutes.VideoPlayer.createRoute(mediaId))
@@ -162,11 +168,28 @@ fun OpenFlixNavHost(
             MediaDetailScreen(
                 mediaId = mediaId,
                 onBack = { navController.popBackStack() },
-                onPlayMedia = { id ->
-                    navController.navigate(NavRoutes.VideoPlayer.createRoute(id))
+                onPlayMedia = { id, fileId ->
+                    navController.navigate(NavRoutes.VideoPlayer.createRoute(id, fileId))
                 },
                 onNavigateToSeason = { showId, seasonNumber ->
                     navController.navigate(NavRoutes.SeasonDetail.createRoute(showId, seasonNumber))
+                }
+            )
+        }
+
+        // === Media Detail (Xfinity) ===
+        composable(
+            route = NavRoutes.XfinityMediaDetail.route,
+            arguments = listOf(
+                navArgument(NavRoutes.ARG_MEDIA_ID) { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val mediaId = backStackEntry.arguments?.getString(NavRoutes.ARG_MEDIA_ID) ?: return@composable
+            MediaDetailScreenXfinity(
+                mediaId = mediaId,
+                onBack = { navController.popBackStack() },
+                onPlayMedia = { id, fileId ->
+                    navController.navigate(NavRoutes.VideoPlayer.createRoute(id, fileId))
                 }
             )
         }
@@ -248,18 +271,18 @@ fun OpenFlixNavHost(
             )
         }
 
-        // === EPG Guide ===
-        composable(NavRoutes.EPGGuide.route) {
-            EPGGuideScreen(
-                onBack = { navController.popBackStack() },
-                onChannelSelected = { channelId ->
-                    navController.navigate(NavRoutes.LiveTVPlayer.createRoute(channelId))
-                },
-                onArchivePlayback = { channelId, startTime ->
-                    navController.navigate(NavRoutes.ArchivePlayer.createRoute(channelId, startTime))
-                }
-            )
-        }
+        // === EPG Guide === (disabled: EPGGuideScreenModern has pre-existing compile errors)
+        // composable(NavRoutes.EPGGuide.route) {
+        //     EPGGuideScreenModern(
+        //         onBack = { navController.popBackStack() },
+        //         onChannelSelected = { channelId ->
+        //             navController.navigate(NavRoutes.LiveTVPlayer.createRoute(channelId))
+        //         },
+        //         onArchivePlayback = { channelId, startTime ->
+        //             navController.navigate(NavRoutes.ArchivePlayer.createRoute(channelId, startTime))
+        //         }
+        //     )
+        // }
 
         // === Channel Surfing ===
         composable(NavRoutes.ChannelSurfing.route) {
@@ -333,7 +356,7 @@ fun OpenFlixNavHost(
             SearchScreen(
                 onBack = { navController.popBackStack() },
                 onMediaSelected = { mediaId ->
-                    navController.navigate(NavRoutes.MediaDetail.createRoute(mediaId))
+                    navController.navigate(NavRoutes.XfinityMediaDetail.createRoute(mediaId))
                 }
             )
         }
@@ -349,7 +372,7 @@ fun OpenFlixNavHost(
             AllMediaScreen(
                 onBackClick = { navController.popBackStack() },
                 onMediaClick = { mediaId ->
-                    navController.navigate(NavRoutes.MediaDetail.createRoute(mediaId))
+                    navController.navigate(NavRoutes.XfinityMediaDetail.createRoute(mediaId))
                 }
             )
         }
@@ -484,7 +507,7 @@ fun OpenFlixNavHost(
             WatchlistScreen(
                 onBack = { navController.popBackStack() },
                 onMediaClick = { mediaId ->
-                    navController.navigate(NavRoutes.MediaDetail.createRoute(mediaId))
+                    navController.navigate(NavRoutes.XfinityMediaDetail.createRoute(mediaId))
                 },
                 onPlayClick = { mediaId ->
                     navController.navigate(NavRoutes.VideoPlayer.createRoute(mediaId))
@@ -631,6 +654,35 @@ fun OpenFlixNavHost(
         // === Team Pass ===
         composable(NavRoutes.TeamPass.route) {
             TeamPassScreen()
+        }
+
+        // === Xfinity Live TV ===
+        composable(NavRoutes.XfinityLiveTV.route) {
+            XfinityLiveTVView(
+                onWatchChannel = { channelId ->
+                    navController.navigate(NavRoutes.LiveTVPlayer.createRoute(channelId))
+                }
+            )
+        }
+
+        // === Team Detail ===
+        composable(
+            route = NavRoutes.TeamDetail.route,
+            arguments = listOf(
+                navArgument(NavRoutes.ARG_SPORT) { type = NavType.StringType },
+                navArgument(NavRoutes.ARG_LEAGUE) { type = NavType.StringType },
+                navArgument(NavRoutes.ARG_TEAM_ID) { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val sport = backStackEntry.arguments?.getString(NavRoutes.ARG_SPORT) ?: return@composable
+            val league = backStackEntry.arguments?.getString(NavRoutes.ARG_LEAGUE) ?: return@composable
+            val teamId = backStackEntry.arguments?.getString(NavRoutes.ARG_TEAM_ID) ?: return@composable
+            TeamDetailScreen(
+                sport = sport,
+                league = league,
+                teamId = teamId,
+                onBack = { navController.popBackStack() }
+            )
         }
     }
 }

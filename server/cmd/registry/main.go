@@ -33,6 +33,10 @@ const (
 	entryTTL          = 90 * time.Second
 	cleanupInterval   = 30 * time.Second
 	maxLocalAddresses = 10
+
+	// Token lookup rate limit: max requests per window per IP.
+	tokenRateLimit  = 20
+	tokenRateWindow = time.Minute
 )
 
 // db is the global Postgres connection. nil when DATABASE_URL is unset (dev mode).
@@ -93,6 +97,60 @@ func newStore() *store {
 		byToken:  make(map[string]string),
 		byInvite: make(map[string]string),
 	}
+}
+
+// rateLimiter is a simple sliding-window per-IP rate limiter.
+type rateLimiter struct {
+	mu       sync.Mutex
+	requests map[string][]time.Time
+}
+
+func newRateLimiter() *rateLimiter {
+	rl := &rateLimiter{requests: make(map[string][]time.Time)}
+	go func() {
+		ticker := time.NewTicker(5 * time.Minute)
+		defer ticker.Stop()
+		for range ticker.C {
+			rl.mu.Lock()
+			cutoff := time.Now().Add(-tokenRateWindow)
+			for ip, ts := range rl.requests {
+				var recent []time.Time
+				for _, t := range ts {
+					if t.After(cutoff) {
+						recent = append(recent, t)
+					}
+				}
+				if len(recent) == 0 {
+					delete(rl.requests, ip)
+				} else {
+					rl.requests[ip] = recent
+				}
+			}
+			rl.mu.Unlock()
+		}
+	}()
+	return rl
+}
+
+// allow records a request from ip and returns false if the limit is exceeded.
+func (rl *rateLimiter) allow(ip string) bool {
+	rl.mu.Lock()
+	defer rl.mu.Unlock()
+	now := time.Now()
+	cutoff := now.Add(-tokenRateWindow)
+	ts := rl.requests[ip]
+	var recent []time.Time
+	for _, t := range ts {
+		if t.After(cutoff) {
+			recent = append(recent, t)
+		}
+	}
+	if len(recent) >= tokenRateLimit {
+		rl.requests[ip] = recent
+		return false
+	}
+	rl.requests[ip] = append(recent, now)
+	return true
 }
 
 func (s *store) upsert(entry *ServerEntry) {
@@ -288,6 +346,7 @@ func main() {
 	}
 
 	adminSecret = os.Getenv("ADMIN_SECRET")
+	initCloudflare()
 
 	// Resend email API key (optional — if unset, emails are skipped silently)
 	resendAPIKey = os.Getenv("RESEND_API_KEY")
@@ -306,6 +365,7 @@ func main() {
 	}
 
 	registry := newStore()
+	tokenLimiter := newRateLimiter()
 
 	// Background cleanup goroutine
 	go func() {
@@ -435,25 +495,39 @@ func main() {
 			PublicIP:       publicIP,
 			ExternalURL:    payload.ExternalURL,
 			ClaimToken:     strings.ToUpper(payload.ClaimToken),
+			InviteTokens:   payload.InviteTokens,
 			ExpiresAt:      time.Now().Add(entryTTL),
 		}
 		registry.upsert(entry)
+
+		// Keep A record for <machineId>.remote.openflix.io up to date.
+		go UpsertARecord(payload.MachineID, publicIP)
 
 		log.Printf("REGISTER machineId=%s publicIp=%s token=%s", payload.MachineID, publicIP, payload.ClaimToken)
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]any{
-			"registered": true,
-			"publicIp":   publicIP,
+			"registered":   true,
+			"publicIp":     publicIP,
+			"remoteDomain": RemoteDomainFor(payload.MachineID),
 		})
 	})
 
-	// GET /servers?machineId=... or ?token=...
+	// GET /servers?machineId=... or ?token=... or ?invite=...
 	mux.HandleFunc("GET /servers", func(w http.ResponseWriter, r *http.Request) {
 		q := r.URL.Query()
 		machineID := q.Get("machineId")
 		token := q.Get("token")
 		invite := q.Get("invite")
+
+		// Apply rate limiting to token/invite lookups (not machineId — that's authenticated via known ID).
+		if token != "" || invite != "" {
+			ip := extractPublicIP(r)
+			if !tokenLimiter.allow(ip) {
+				http.Error(w, "rate limit exceeded — too many lookup attempts", http.StatusTooManyRequests)
+				return
+			}
+		}
 
 		var entry *ServerEntry
 		switch {
@@ -483,6 +557,47 @@ func main() {
 			LocalAddresses: entry.LocalAddresses,
 			ExternalURL:    entry.ExternalURL,
 		})
+	})
+
+	// POST /dns-challenge — set ACME DNS-01 TXT record for a server's subdomain.
+	// Body: { "machineId": "...", "txtValue": "..." }
+	// Returns: { "recordId": "..." }
+	// Auth: requires the server's license key in Authorization header (reuse validateLicense).
+	mux.HandleFunc("POST /dns-challenge", func(w http.ResponseWriter, r *http.Request) {
+		var body struct {
+			MachineID string `json:"machineId"`
+			TxtValue  string `json:"txtValue"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.MachineID == "" || body.TxtValue == "" {
+			http.Error(w, "machineId and txtValue required", http.StatusBadRequest)
+			return
+		}
+		recordID, err := AddTXTRecord(body.MachineID, body.TxtValue)
+		if err != nil {
+			log.Printf("DNS challenge error for %s: %v", body.MachineID, err)
+			http.Error(w, "dns challenge failed: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]string{"recordId": recordID})
+	})
+
+	// DELETE /dns-challenge — remove ACME TXT record after challenge completes.
+	// Body: { "recordId": "..." }
+	mux.HandleFunc("DELETE /dns-challenge", func(w http.ResponseWriter, r *http.Request) {
+		var body struct {
+			RecordID string `json:"recordId"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.RecordID == "" {
+			http.Error(w, "recordId required", http.StatusBadRequest)
+			return
+		}
+		if err := DeleteTXTRecord(body.RecordID); err != nil {
+			log.Printf("DNS challenge delete error: %v", err)
+			http.Error(w, "delete failed: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
 	})
 
 	// Health check

@@ -4,7 +4,6 @@ import (
 	"net/http"
 	"os"
 	"strings"
-	"time"
 	"unicode"
 
 	"github.com/gin-gonic/gin"
@@ -120,14 +119,13 @@ func (s *Server) saveLicense(c *gin.Context) {
 
 // remoteAccessStatus is returned by GET /api/admin/remote-access
 type remoteAccessStatus struct {
-	Enabled        bool      `json:"enabled"`
-	CloudConnected bool      `json:"cloudConnected"`
-	CloudURL       string    `json:"cloudUrl"`
-	PublicIP       string    `json:"publicIp"`
-	ClaimToken     string    `json:"claimToken"`
-	ClaimExpires   time.Time `json:"claimExpires"`
-	ClaimActive    bool      `json:"claimActive"`
-	MachineID      string    `json:"machineId"`
+	Enabled        bool   `json:"enabled"`
+	CloudConnected bool   `json:"cloudConnected"`
+	CloudURL       string `json:"cloudUrl"`
+	PublicIP       string `json:"publicIp"`
+	ClaimToken     string `json:"claimToken"`
+	ClaimActive    bool   `json:"claimActive"`
+	MachineID      string `json:"machineId"`
 }
 
 // GET /api/admin/remote-access
@@ -145,14 +143,12 @@ func (s *Server) getCloudRegistryStatus(c *gin.Context) {
 		status.PublicIP = cs.PublicIP
 	}
 
-	// Claim token status
-	claimStore.mu.RLock()
-	if claimStore.token != "" && time.Now().Before(claimStore.expires) {
-		status.ClaimToken = claimStore.token
-		status.ClaimExpires = claimStore.expires
+	// Claim token status — permanent, no expiry
+	token := GetCurrentClaimToken()
+	if token != "" {
+		status.ClaimToken = token
 		status.ClaimActive = true
 	}
-	claimStore.mu.RUnlock()
 
 	c.JSON(http.StatusOK, status)
 }

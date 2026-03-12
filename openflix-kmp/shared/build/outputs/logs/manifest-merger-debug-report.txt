@@ -1,0 +1,16 @@
+-- Merging decision tree log ---
+manifest
+ADDED from /Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/openflix-kmp/shared/build/intermediates/tmp/ProcessLibraryManifest/debug/tempAndroidManifest9605656510781617391.xml:2:13-83
+INJECTED from /Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/openflix-kmp/shared/build/intermediates/tmp/ProcessLibraryManifest/debug/tempAndroidManifest9605656510781617391.xml:2:13-83
+	package
+		INJECTED from /Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/openflix-kmp/shared/build/intermediates/tmp/ProcessLibraryManifest/debug/tempAndroidManifest9605656510781617391.xml
+	xmlns:android
+		ADDED from /Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/openflix-kmp/shared/build/intermediates/tmp/ProcessLibraryManifest/debug/tempAndroidManifest9605656510781617391.xml:2:23-81
+uses-sdk
+INJECTED from /Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/openflix-kmp/shared/build/intermediates/tmp/ProcessLibraryManifest/debug/tempAndroidManifest9605656510781617391.xml reason: use-sdk injection requested
+INJECTED from /Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/openflix-kmp/shared/build/intermediates/tmp/ProcessLibraryManifest/debug/tempAndroidManifest9605656510781617391.xml
+INJECTED from /Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/openflix-kmp/shared/build/intermediates/tmp/ProcessLibraryManifest/debug/tempAndroidManifest9605656510781617391.xml
+	android:targetSdkVersion
+		INJECTED from /Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/openflix-kmp/shared/build/intermediates/tmp/ProcessLibraryManifest/debug/tempAndroidManifest9605656510781617391.xml
+	android:minSdkVersion
+		INJECTED from /Users/georgeszulc/.claude-worktrees/plezy-github/confident-lehmann/openflix-kmp/shared/build/intermediates/tmp/ProcessLibraryManifest/debug/tempAndroidManifest9605656510781617391.xml

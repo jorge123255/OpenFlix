@@ -56,8 +56,8 @@ fun ProfileSelectionScreen(
             .background(
                 Brush.verticalGradient(
                     colors = listOf(
-                        Color(0xFF0A0A0A),
-                        Color(0xFF1A1A2E)
+                        Color(0xFF0D0918),
+                        Color(0xFF1A142E)
                     )
                 )
             )

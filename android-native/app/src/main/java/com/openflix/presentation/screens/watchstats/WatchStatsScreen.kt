@@ -32,8 +32,8 @@ import java.util.*
  * Watch Stats color theme - Green/Teal for analytics
  */
 private object StatsTheme {
-    val Background = Color(0xFF0A0A0A)
-    val Surface = Color(0xFF1A1A1A)
+    val Background = Color(0xFF0D0918)
+    val Surface = Color(0xFF1A142E)
     val SurfaceVariant = Color(0xFF252525)
     val Accent = Color(0xFF10B981)  // Emerald green
     val AccentSecondary = Color(0xFF06B6D4)  // Cyan

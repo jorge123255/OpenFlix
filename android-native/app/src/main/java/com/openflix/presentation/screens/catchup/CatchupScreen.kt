@@ -36,9 +36,9 @@ import java.util.*
 
 // Theme colors for Catchup screen
 private object CatchupTheme {
-    val Background = Color(0xFF0D0D0D)
-    val Surface = Color(0xFF1A1A1A)
-    val SurfaceElevated = Color(0xFF242424)
+    val Background = Color(0xFF110C21)
+    val Surface = Color(0xFF1A142E)
+    val SurfaceElevated = Color(0xFF1F1F2E)
     val Accent = Color(0xFF8B5CF6)  // Purple for catch-up
     val AccentGlow = Color(0xFFA78BFA)
     val TextPrimary = Color.White

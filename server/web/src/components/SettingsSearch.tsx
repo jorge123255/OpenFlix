@@ -11,7 +11,40 @@ interface SettingsEntry {
 }
 
 const INDEX: SettingsEntry[] = [
-  // General
+  // ── Nav pages ─────────────────────────────────────────────────────────────
+  { label: 'Dashboard', section: 'Home', route: '/ui', keywords: ['home', 'overview', 'summary'] },
+  { label: 'Libraries', section: 'Media', route: '/ui/libraries', keywords: ['movies', 'tv shows', 'folders', 'scan', 'library'] },
+  { label: 'Media Browser', section: 'Media', route: '/ui/media', keywords: ['movies', 'shows', 'browse', 'media'] },
+  { label: 'Collections', section: 'Media', route: '/ui/collections', keywords: ['groups', 'sets', 'collections'] },
+  { label: 'Artwork', section: 'Media', route: '/ui/artwork', keywords: ['posters', 'images', 'thumbnails', 'artwork'] },
+  { label: 'Metadata', section: 'Media', route: '/ui/metadata', keywords: ['info', 'details', 'tmdb', 'tvdb', 'titles'] },
+  { label: 'Live TV', section: 'Live TV', route: '/ui/livetv', keywords: ['channels', 'stream', 'live', 'iptv', 'hdhr'] },
+  { label: 'TV Guide', section: 'Live TV', route: '/ui/tvguide', keywords: ['epg', 'guide', 'schedule', 'program', 'what is on'] },
+  { label: 'On Now', section: 'Live TV', route: '/ui/onnow', keywords: ['currently airing', 'now', 'live now'] },
+  { label: 'EPG Editor', section: 'Live TV', route: '/ui/livetv/epg-editor', keywords: ['epg', 'edit guide', 'program guide', 'channel mapping'] },
+  { label: 'Tuners', section: 'Live TV', route: '/ui/tuners', keywords: ['hdhr', 'hdhomerun', 'tuner', 'antenna', 'hardware', 'add tuner'] },
+  { label: 'Channel Collections', section: 'Live TV', route: '/ui/channel-collections', keywords: ['channels', 'groups', 'favorites', 'lineup'] },
+  { label: 'Virtual Channels', section: 'Live TV', route: '/ui/virtual-channels', keywords: ['pluto', '24/7', 'loop', 'playlist channel'] },
+  { label: 'DVR', section: 'DVR & Recording', route: '/ui/dvr', keywords: ['recordings', 'record', 'shows', 'dvr'] },
+  { label: 'Passes', section: 'DVR & Recording', route: '/ui/dvr/passes', keywords: ['series pass', 'rules', 'record series', 'auto record', 'subscription'] },
+  { label: 'DVR Schedule', section: 'DVR & Recording', route: '/ui/dvr/schedule', keywords: ['upcoming recordings', 'scheduled', 'queue'] },
+  { label: 'DVR Calendar', section: 'DVR & Recording', route: '/ui/dvr/calendar', keywords: ['calendar', 'month view', 'schedule'] },
+  { label: 'On Later', section: 'DVR & Recording', route: '/ui/onlater', keywords: ['upcoming', 'future airings', 'search guide', 'what is on later'] },
+  { label: 'Team Pass', section: 'DVR & Recording', route: '/ui/teampass', keywords: ['sports', 'team', 'game', 'nfl', 'nba', 'mlb'] },
+  { label: 'Comskip Settings', section: 'DVR & Recording', route: '/ui/comskip', keywords: ['commercial skip', 'ads', 'comskip', 'detection'] },
+  { label: 'Segments', section: 'DVR & Recording', route: '/ui/segments', keywords: ['cut', 'clip', 'trim', 'chapters', 'commercial segments'] },
+  { label: 'Labels', section: 'DVR & Recording', route: '/ui/labels', keywords: ['tags', 'categories', 'labels', 'organize'] },
+  { label: 'Playlists', section: 'Content', route: '/ui/playlists', keywords: ['playlist', 'queue', 'watchlist'] },
+  { label: 'Sections', section: 'Content', route: '/ui/sections', keywords: ['home sections', 'rows', 'featured', 'layout'] },
+  { label: 'VOD', section: 'Content', route: '/ui/vod', keywords: ['download', 'streaming', 'on demand', 'video on demand'] },
+  { label: 'Downloads', section: 'Content', route: '/ui/downloads', keywords: ['download', 'offline', 'queue'] },
+  { label: 'Offline Content', section: 'Content', route: '/ui/offline', keywords: ['offline', 'downloaded', 'mobile'] },
+  { label: 'Upload', section: 'Content', route: '/ui/upload', keywords: ['upload', 'import', 'add media'] },
+  { label: 'Users', section: 'System', route: '/ui/users', keywords: ['accounts', 'users', 'admin', 'permissions', 'profiles', 'family'] },
+  { label: 'Remote Access', section: 'System', route: '/ui/remote-access', keywords: ['away from home', 'cloud', 'vpn', 'external', 'pair', 'claim code', 'invite', 'license', 'outside'] },
+  { label: 'Sources', section: 'System', route: '/ui/settings/sources', keywords: ['m3u', 'iptv', 'epg', 'xmltv', 'library folders', 'xtream', 'channels'] },
+
+  // ── Settings pages ─────────────────────────────────────────────────────────
   { label: 'Server Name', section: 'Server Settings', route: '/ui/settings' , anchor: 'server-settings' },
   { label: 'Server Port', section: 'Server Settings', route: '/ui/settings' , anchor: 'server-settings' },
   { label: 'Log Level', section: 'Server Settings', route: '/ui/settings', anchor: 'server-settings', keywords: ['debug', 'verbose', 'logging'] },

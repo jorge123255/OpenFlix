@@ -12,7 +12,8 @@ struct ChannelsResponse: Codable {
 
 struct ChannelDTO: Codable {
     let idValue: StringOrInt?
-    let tvgId: String?           // EPG channel ID - used as key in programs map
+    let tvgId: String?           // M3U tvg-id attribute
+    let channelId: String?       // EPG channel identifier - this is the programs map key
     let number: Int?
     let name: String?
     let title: String?
@@ -36,6 +37,7 @@ struct ChannelDTO: Codable {
     enum CodingKeys: String, CodingKey {
         case idValue = "id"
         case tvgId
+        case channelId
         case number, name, title, callsign, logo, thumb, art
         case sourceId, sourceName, streamUrl, enabled, hd, isFavorite
         case group, category, archiveEnabled, archiveDays
@@ -45,8 +47,8 @@ struct ChannelDTO: Codable {
     var safeId: String { idValue?.stringValue ?? "" }
     var safeName: String { name ?? title ?? "Unknown Channel" }
 
-    // EPG ID for program lookup - try tvgId first, then id
-    var epgId: String { tvgId ?? idValue?.stringValue ?? "" }
+    // EPG ID for program lookup - channelId is the actual programs map key on the server
+    var epgId: String { channelId ?? tvgId ?? idValue?.stringValue ?? "" }
 }
 
 // MARK: - Programs

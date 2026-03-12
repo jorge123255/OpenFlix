@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/openflix/openflix-server/internal/models"
@@ -318,9 +320,10 @@ func (s *Server) adminSearchTMDB(c *gin.Context) {
 	}
 
 	url := fmt.Sprintf("https://api.themoviedb.org/3/search/%s?api_key=%s&query=%s",
-		searchType, s.config.Library.TMDBApiKey, query)
+		searchType, s.config.Library.TMDBApiKey, url.QueryEscape(query))
 
-	resp, err := http.Get(url)
+	client := &http.Client{Timeout: 15 * time.Second}
+	resp, err := client.Get(url)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to search TMDB"})
 		return
@@ -441,7 +444,7 @@ type TrendingItem struct {
 
 // getTrending returns trending movies/shows from TMDB
 func (s *Server) getTrending(c *gin.Context) {
-	mediaType := c.DefaultQuery("media_type", "all") // all, movie, tv
+	mediaType := c.DefaultQuery("media_type", "all")    // all, movie, tv
 	timeWindow := c.DefaultQuery("time_window", "week") // day, week
 
 	// Validate media_type

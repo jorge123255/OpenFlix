@@ -50,6 +50,7 @@ class LiveTVRepository: ObservableObject {
             var updatedChannel = channels[index]
             updatedChannel = Channel(
                 id: updatedChannel.id,
+                epgChannelId: updatedChannel.epgChannelId,
                 number: updatedChannel.number,
                 name: updatedChannel.name,
                 logo: updatedChannel.logo,
@@ -110,41 +111,38 @@ class LiveTVRepository: ObservableObject {
 
         var result: [ChannelWithPrograms] = []
 
-        // The guide endpoint returns:
-        // - channels: basic channel info (ChannelDTO)
-        // - programs: map of tvgId (EPG channel ID) -> [ProgramDTO]
-        for channelDTO in response.allChannels {
-            let channel = Channel(
-                id: channelDTO.safeId,
-                number: channelDTO.number,
-                name: channelDTO.safeName,
-                logo: channelDTO.logo ?? channelDTO.thumb,
-                sourceId: channelDTO.sourceId?.stringValue,
-                sourceName: channelDTO.sourceName,
-                streamUrl: channelDTO.streamUrl,
-                enabled: channelDTO.enabled ?? true,
-                isFavorite: channelDTO.isFavorite ?? false,
-                group: channelDTO.group ?? channelDTO.category,
-                archiveEnabled: channelDTO.archiveEnabled ?? false,
-                archiveDays: channelDTO.archiveDays ?? 0,
-                nowPlaying: channelDTO.nowPlaying?.toDomain(),
-                nextProgram: channelDTO.nextProgram?.toDomain()
-            )
-
-            // Get programs from the programs map using EPG ID (tvgId), then fall back to database id
-            var programs = response.programsForChannel(id: channelDTO.epgId).map { $0.toDomain() }
-
-            // If no programs found with epgId, try with the database id
-            if programs.isEmpty && channelDTO.tvgId != nil {
-                programs = response.programsForChannel(id: channelDTO.safeId).map { $0.toDomain() }
+        // The guide endpoint may return channels + programs, or just programs.
+        // If channels are present, build from them. Otherwise match programs to pre-loaded channels.
+        if !response.allChannels.isEmpty {
+            for channelDTO in response.allChannels {
+                let channel = Channel(
+                    id: channelDTO.safeId,
+                    epgChannelId: channelDTO.channelId,
+                    number: channelDTO.number,
+                    name: channelDTO.safeName,
+                    logo: channelDTO.logo ?? channelDTO.thumb,
+                    sourceId: channelDTO.sourceId?.stringValue,
+                    sourceName: channelDTO.sourceName,
+                    streamUrl: channelDTO.streamUrl,
+                    enabled: channelDTO.enabled ?? true,
+                    isFavorite: channelDTO.isFavorite ?? false,
+                    group: channelDTO.group ?? channelDTO.category,
+                    archiveEnabled: channelDTO.archiveEnabled ?? false,
+                    archiveDays: channelDTO.archiveDays ?? 0,
+                    nowPlaying: channelDTO.nowPlaying?.toDomain(),
+                    nextProgram: channelDTO.nextProgram?.toDomain()
+                )
+                let programs = response.programsForChannel(id: channelDTO.epgId).map { $0.toDomain() }
+                result.append(ChannelWithPrograms(channel: channel, programs: programs))
             }
-
-            result.append(ChannelWithPrograms(channel: channel, programs: programs))
-        }
-
-        // If guide response was empty, fall back to using existing channels with empty programs
-        if result.isEmpty && !channels.isEmpty {
-            result = channels.map { ChannelWithPrograms(channel: $0, programs: []) }
+        } else if !channels.isEmpty {
+            // Server returned programs map only (no channels list).
+            // Match programs to our pre-loaded channels using epgChannelId (the programs map key).
+            result = channels.map { channel in
+                let epgKey = channel.epgChannelId ?? channel.id
+                let programs = response.programsForChannel(id: epgKey).map { $0.toDomain() }
+                return ChannelWithPrograms(channel: channel, programs: programs)
+            }
         }
 
         return result
@@ -162,6 +160,7 @@ class LiveTVRepository: ObservableObject {
         return (response.channels ?? []).compactMap { dto in
             let channel = Channel(
                 id: dto.safeChannelId,
+                epgChannelId: nil,
                 number: nil,
                 name: dto.safeChannelName,
                 logo: dto.channelLogo,

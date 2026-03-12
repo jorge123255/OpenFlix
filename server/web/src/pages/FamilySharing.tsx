@@ -1,14 +1,12 @@
 import { useState } from 'react'
 import {
   Users,
-  Mail,
   Trash2,
   Shield,
   Copy,
   CheckCircle,
   Loader,
   UserPlus,
-  Send,
   Link,
 } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -179,19 +177,18 @@ function CurrentUsersSection() {
 
 interface InviteResult {
   token: string
-  inviteUrl: string
+  deepLink: string
+  expiresAt: string
 }
 
 function InviteSection() {
-  const [email, setEmail] = useState('')
   const [result, setResult] = useState<InviteResult | null>(null)
   const [error, setError] = useState('')
 
   const inviteMutation = useMutation({
-    mutationFn: (emailAddr: string) => api.createInvite(emailAddr),
+    mutationFn: () => api.createInvite(),
     onSuccess: (data) => {
       setResult(data)
-      setEmail('')
       setError('')
     },
     onError: (err: any) => {
@@ -199,14 +196,9 @@ function InviteSection() {
     },
   })
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    setResult(null)
-    setError('')
-    if (email.trim()) {
-      inviteMutation.mutate(email.trim())
-    }
-  }
+  const expiresLabel = result
+    ? new Date(result.expiresAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+    : ''
 
   return (
     <div className="bg-gray-800 rounded-xl p-6 mb-6">
@@ -216,78 +208,63 @@ function InviteSection() {
       </h2>
 
       <p className="text-sm text-gray-400 mb-4">
-        Send an invite link to allow someone to create an account on your server.
+        Generate an invite code to allow someone to create an account on your server. Each code is single-use and expires in 7 days.
       </p>
 
-      <form onSubmit={handleSubmit}>
-        {error && (
-          <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
-            {error}
-          </div>
-        )}
-
-        <div className="flex gap-2">
-          <div className="flex-1 relative">
-            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="friend@example.com"
-              className="w-full pl-10 pr-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm placeholder-gray-500 focus:outline-none focus:border-indigo-500"
-              required
-            />
-          </div>
-          <button
-            type="submit"
-            disabled={inviteMutation.isPending || !email.trim()}
-            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm transition-colors disabled:opacity-50"
-          >
-            {inviteMutation.isPending ? (
-              <Loader className="h-4 w-4 animate-spin" />
-            ) : (
-              <Send className="h-4 w-4" />
-            )}
-            Send Invite
-          </button>
+      {error && (
+        <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
+          {error}
         </div>
-      </form>
+      )}
+
+      <button
+        onClick={() => inviteMutation.mutate()}
+        disabled={inviteMutation.isPending}
+        className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm transition-colors disabled:opacity-50"
+      >
+        {inviteMutation.isPending ? (
+          <Loader className="h-4 w-4 animate-spin" />
+        ) : (
+          <UserPlus className="h-4 w-4" />
+        )}
+        {inviteMutation.isPending ? 'Generating...' : result ? 'Generate New Code' : 'Generate Invite Code'}
+      </button>
 
       {result && (
         <div className="mt-4 p-4 rounded-lg bg-green-500/10 border border-green-500/20">
           <div className="flex items-center gap-2 mb-3">
             <CheckCircle className="h-4 w-4 text-green-400" />
-            <p className="text-sm font-medium text-green-400">Invite Created!</p>
+            <p className="text-sm font-medium text-green-400">Invite Ready — expires {expiresLabel}</p>
           </div>
-          <p className="text-xs text-gray-400 mb-3">
-            Share this invite link with your friend. It can only be used once.
-          </p>
 
           <div className="space-y-3">
-            {result.inviteUrl && (
+            <div>
+              <p className="text-xs text-gray-500 mb-2">8-character code</p>
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-1.5">
+                  {result.token.split('').map((char, i) => (
+                    <div key={i} className="h-9 w-9 bg-gray-900 border border-green-500/30 rounded-lg flex items-center justify-center text-white text-base font-bold font-mono">
+                      {char}
+                    </div>
+                  ))}
+                </div>
+                <CopyButton text={result.token} />
+              </div>
+            </div>
+
+            {result.deepLink && (
               <div>
-                <p className="text-xs text-gray-500 mb-1">Invite Link</p>
+                <p className="text-xs text-gray-500 mb-1">Or share this link — tapping it opens the app directly</p>
                 <div className="flex items-center gap-2">
                   <div className="flex-1 flex items-center gap-2 px-3 py-2 bg-gray-900 rounded-lg">
                     <Link className="h-3.5 w-3.5 text-gray-500 flex-shrink-0" />
-                    <code className="text-xs text-gray-300 font-mono truncate">{result.inviteUrl}</code>
+                    <code className="text-xs text-gray-300 font-mono truncate">{result.deepLink}</code>
                   </div>
-                  <CopyButton text={result.inviteUrl} />
+                  <CopyButton text={result.deepLink} />
                 </div>
               </div>
             )}
 
-            {result.token && (
-              <div>
-                <p className="text-xs text-gray-500 mb-1">Invite Token</p>
-                <div className="flex items-center gap-2">
-                  <code className="flex-1 px-3 py-2 bg-gray-900 rounded-lg text-xs text-gray-300 font-mono">
-                    {result.token}
-                  </code>
-                  <CopyButton text={result.token} />
-                </div>
-              </div>
-            )}
           </div>
 
           <button

@@ -16,8 +16,6 @@ import (
 	"github.com/openflix/openflix-server/internal/config"
 	"github.com/openflix/openflix-server/internal/ddns"
 	"github.com/openflix/openflix-server/internal/discovery"
-	"github.com/openflix/openflix-server/internal/mdns"
-	"github.com/openflix/openflix-server/internal/upnp"
 	"github.com/openflix/openflix-server/internal/dvr"
 	"github.com/openflix/openflix-server/internal/health"
 	"github.com/openflix/openflix-server/internal/instant"
@@ -25,16 +23,19 @@ import (
 	"github.com/openflix/openflix-server/internal/library"
 	"github.com/openflix/openflix-server/internal/livetv"
 	"github.com/openflix/openflix-server/internal/logger"
+	"github.com/openflix/openflix-server/internal/mdns"
 	"github.com/openflix/openflix-server/internal/metadata"
 	"github.com/openflix/openflix-server/internal/models"
 	"github.com/openflix/openflix-server/internal/multiview"
 	"github.com/openflix/openflix-server/internal/notify"
+	"github.com/openflix/openflix-server/internal/remotetls"
 	"github.com/openflix/openflix-server/internal/scheduler"
 	"github.com/openflix/openflix-server/internal/search"
 	"github.com/openflix/openflix-server/internal/sports"
 	"github.com/openflix/openflix-server/internal/subtitles"
 	"github.com/openflix/openflix-server/internal/transcode"
 	"github.com/openflix/openflix-server/internal/updater"
+	"github.com/openflix/openflix-server/internal/upnp"
 	limiter "github.com/ulule/limiter/v3"
 	mgin "github.com/ulule/limiter/v3/drivers/middleware/gin"
 	"github.com/ulule/limiter/v3/drivers/store/memory"
@@ -59,23 +60,24 @@ type Server struct {
 	metadataScheduler *metadata.Scheduler
 	epgEnricher       *livetv.EPGEnricher
 	dvrEnricher       *dvr.Enricher
-	remoteAccess       *livetv.RemoteAccessManager
-	prebuffer          *instant.PrebufferManager
-	multiviewManager   *multiview.MultiviewManager
-	searchEngine       *search.SearchEngine
-	updater            *updater.Updater
-	jobQueue           *jobq.JobQueue
-	clipManager        *dvr.ClipManager
-	bandwidthManager   *transcode.BandwidthManager
-	ddnsClient         *ddns.Client
-	notifyManager      *notify.NotificationManager
-	healthMonitor      *health.StreamHealthMonitor
-	taskScheduler      *scheduler.TaskScheduler
-	subtitleManager    *subtitles.SubtitleManager
-	cloudRegistry      *discovery.CloudRegistryClient
-	discoveryService   *discovery.DiscoveryService
-	mdnsService        *mdns.Service
-	upnpManager        *upnp.Manager
+	remoteAccess      *livetv.RemoteAccessManager
+	prebuffer         *instant.PrebufferManager
+	multiviewManager  *multiview.MultiviewManager
+	searchEngine      *search.SearchEngine
+	updater           *updater.Updater
+	jobQueue          *jobq.JobQueue
+	clipManager       *dvr.ClipManager
+	bandwidthManager  *transcode.BandwidthManager
+	ddnsClient        *ddns.Client
+	notifyManager     *notify.NotificationManager
+	healthMonitor     *health.StreamHealthMonitor
+	taskScheduler     *scheduler.TaskScheduler
+	subtitleManager   *subtitles.SubtitleManager
+	cloudRegistry     *discovery.CloudRegistryClient
+	tlsManager        *remotetls.Manager
+	discoveryService  *discovery.DiscoveryService
+	mdnsService       *mdns.Service
+	upnpManager       *upnp.Manager
 }
 
 // NewServer creates a new API server
@@ -191,6 +193,68 @@ func NewServer(cfg *config.Config, db *gorm.DB) *Server {
 
 	// Initialize Instant Switch Prebuffer Manager
 	prebuffer := instant.NewPrebufferManager(6, 500, dataDir)
+
+	// Wire stream URL resolver — looks up the raw upstream URL for a channel.
+	prebuffer.SetStreamURLResolver(func(channelID string) string {
+		id, err := strconv.ParseUint(channelID, 10, 32)
+		if err != nil {
+			return ""
+		}
+		var ch models.Channel
+		if db.Select("stream_url").First(&ch, id).Error != nil {
+			return ""
+		}
+		return ch.StreamURL
+	})
+
+	// Wire adjacent channel resolver — returns channels whose number is ± 1.
+	prebuffer.SetAdjacentChannelResolver(func(channelID string) []string {
+		id, err := strconv.ParseUint(channelID, 10, 32)
+		if err != nil {
+			return nil
+		}
+		var ch models.Channel
+		if db.Select("number").First(&ch, id).Error != nil || ch.Number == 0 {
+			return nil
+		}
+		num := ch.Number
+		var adjacent []models.Channel
+		db.Select("id").Where("number IN ? AND enabled = ?", []int{num - 1, num + 1}, true).Find(&adjacent)
+		ids := make([]string, len(adjacent))
+		for i, a := range adjacent {
+			ids[i] = fmt.Sprintf("%d", a.ID)
+		}
+		return ids
+	})
+
+	// Wire session starter — pre-starts the HLS segmenter for adjacent channels
+	// so the manifest is ready instantly when the client requests it.
+	prebuffer.SetStartSessionFunc(func(channelID, streamURL string) {
+		id, err := strconv.ParseUint(channelID, 10, 32)
+		if err != nil || streamURL == "" {
+			return
+		}
+		getOrStartHLSSession(uint(id), streamURL)
+	})
+
+	// Wire session readiness check — used to report instant: true in /api/instant/switch.
+	prebuffer.SetIsSessionReadyFunc(func(channelID string) bool {
+		id, err := strconv.ParseUint(channelID, 10, 32)
+		if err != nil {
+			return false
+		}
+		hlsSessionsMu.RLock()
+		sess := hlsSessions[uint(id)]
+		hlsSessionsMu.RUnlock()
+		if sess == nil {
+			return false
+		}
+		sess.mu.RLock()
+		ready := sess.active && sess.maxSeq >= 0
+		sess.mu.RUnlock()
+		return ready
+	})
+
 	logger.Info("Instant Switch Prebuffer Manager initialized")
 
 	// Initialize full-text search engine
@@ -248,11 +312,16 @@ func NewServer(cfg *config.Config, db *gorm.DB) *Server {
 		}
 		return nil
 	})
-	taskSched.RegisterTask("library_scan", "Library Scan", "Scan library paths for new media", "0 * * * *", 30*time.Minute, func(ctx context.Context) error {
-		logger.Info("[scheduler:library_scan] scanning libraries for new media")
+	taskSched.RegisterTask("library_scan", "Library Scan", "Scan library paths and reconcile stale local media", "0 * * * *", 30*time.Minute, func(ctx context.Context) error {
+		logger.Info("[scheduler:library_scan] scanning libraries and reconciling local media")
 		var libs []models.Library
-		db.Preload("Paths").Find(&libs)
+		if err := db.WithContext(ctx).Preload("Paths").Find(&libs).Error; err != nil {
+			return err
+		}
 		for i := range libs {
+			if err := ctx.Err(); err != nil {
+				return err
+			}
 			if _, err := scanner.ScanLibrary(&libs[i]); err != nil {
 				logger.Warnf("[scheduler:library_scan] failed to scan library %d: %v", libs[i].ID, err)
 			}
@@ -272,7 +341,7 @@ func NewServer(cfg *config.Config, db *gorm.DB) *Server {
 			return fmt.Errorf("failed to get db connection: %w", err)
 		}
 		vacuumSQL := fmt.Sprintf("VACUUM INTO '%s'", backupPath)
-		if _, err := sqlDB.Exec(vacuumSQL); err != nil {
+		if _, err := sqlDB.ExecContext(ctx, vacuumSQL); err != nil {
 			return fmt.Errorf("VACUUM INTO failed: %w", err)
 		}
 		logger.Infof("[scheduler:backup_db] backup created: %s", backupPath)
@@ -282,7 +351,10 @@ func NewServer(cfg *config.Config, db *gorm.DB) *Server {
 		logger.Info("[scheduler:prune_recordings] checking recordings for cleanup")
 		// Delete recordings that are failed and older than 7 days
 		cutoff := time.Now().AddDate(0, 0, -7)
-		result := db.Where("status = ? AND updated_at < ?", "failed", cutoff).Delete(&models.Recording{})
+		result := db.WithContext(ctx).Where("status = ? AND updated_at < ?", "failed", cutoff).Delete(&models.Recording{})
+		if result.Error != nil {
+			return result.Error
+		}
 		if result.RowsAffected > 0 {
 			logger.Infof("[scheduler:prune_recordings] cleaned up %d failed recordings", result.RowsAffected)
 		}
@@ -292,7 +364,9 @@ func NewServer(cfg *config.Config, db *gorm.DB) *Server {
 		logger.Info("[scheduler:subtitle_search] checking for media missing subtitles")
 		// Placeholder: count media without subtitles
 		var count int64
-		db.Model(&models.MediaItem{}).Where("type IN ? AND subtitle_path = ''", []string{"movie", "episode"}).Count(&count)
+		if err := db.WithContext(ctx).Model(&models.MediaItem{}).Where("type IN ? AND subtitle_path = ''", []string{"movie", "episode"}).Count(&count).Error; err != nil {
+			return err
+		}
 		if count > 0 {
 			logger.Infof("[scheduler:subtitle_search] found %d items without subtitles", count)
 		}
@@ -301,7 +375,10 @@ func NewServer(cfg *config.Config, db *gorm.DB) *Server {
 	taskSched.RegisterTask("cleanup_sessions", "Cleanup Sessions", "Clean expired playback sessions", "*/30 * * * *", 5*time.Minute, func(ctx context.Context) error {
 		// Delete sessions not updated in the last 2 hours
 		cutoff := time.Now().Add(-2 * time.Hour)
-		result := db.Where("updated_at < ?", cutoff).Delete(&models.PlaybackSession{})
+		result := db.WithContext(ctx).Where("updated_at < ?", cutoff).Delete(&models.PlaybackSession{})
+		if result.Error != nil {
+			return result.Error
+		}
 		if result.RowsAffected > 0 {
 			logger.Infof("[scheduler:cleanup_sessions] cleaned up %d stale sessions", result.RowsAffected)
 		}
@@ -323,9 +400,14 @@ func NewServer(cfg *config.Config, db *gorm.DB) *Server {
 
 		// Refresh M3U sources
 		var m3uSources []models.M3USource
-		db.Where("enabled = ?", true).Find(&m3uSources)
+		if err := db.WithContext(ctx).Where("enabled = ?", true).Find(&m3uSources).Error; err != nil {
+			return err
+		}
 		parser := livetv.NewM3UParser(db)
 		for i := range m3uSources {
+			if err := ctx.Err(); err != nil {
+				return err
+			}
 			src := &m3uSources[i]
 			logger.Infof("[scheduler:source_refresh] refreshing M3U source: %s", src.Name)
 			if err := parser.RefreshSource(src); err != nil {
@@ -335,6 +417,9 @@ func NewServer(cfg *config.Config, db *gorm.DB) *Server {
 			// Auto-import VOD/series if enabled
 			importer := livetv.NewVODImporter(db)
 			if src.ImportVOD && src.VODLibraryID != nil {
+				if err := ctx.Err(); err != nil {
+					return err
+				}
 				result, err := importer.ImportM3UVOD(src.ID)
 				if err != nil {
 					logger.Warnf("[scheduler:source_refresh] VOD import failed for %s: %v", src.Name, err)
@@ -343,6 +428,9 @@ func NewServer(cfg *config.Config, db *gorm.DB) *Server {
 				}
 			}
 			if src.ImportSeries && src.SeriesLibraryID != nil {
+				if err := ctx.Err(); err != nil {
+					return err
+				}
 				result, err := importer.ImportM3USeries(src.ID)
 				if err != nil {
 					logger.Warnf("[scheduler:source_refresh] series import failed for %s: %v", src.Name, err)
@@ -354,12 +442,20 @@ func NewServer(cfg *config.Config, db *gorm.DB) *Server {
 
 		// Refresh Xtream sources
 		var xtreamSources []models.XtreamSource
-		db.Where("enabled = ?", true).Find(&xtreamSources)
+		if err := db.WithContext(ctx).Where("enabled = ?", true).Find(&xtreamSources).Error; err != nil {
+			return err
+		}
 		for i := range xtreamSources {
+			if err := ctx.Err(); err != nil {
+				return err
+			}
 			src := &xtreamSources[i]
 			logger.Infof("[scheduler:source_refresh] refreshing Xtream source: %s", src.Name)
 			client := livetv.NewXtreamClient(db)
 			if src.ImportLive {
+				if err := ctx.Err(); err != nil {
+					return err
+				}
 				added, updated, err := client.ImportChannels(src.ID)
 				if err != nil {
 					logger.Warnf("[scheduler:source_refresh] Xtream channel import failed for %s: %v", src.Name, err)
@@ -369,6 +465,9 @@ func NewServer(cfg *config.Config, db *gorm.DB) *Server {
 			}
 			importer := livetv.NewVODImporter(db)
 			if src.ImportVOD && src.VODLibraryID != nil {
+				if err := ctx.Err(); err != nil {
+					return err
+				}
 				result, err := importer.ImportXtreamVOD(src.ID)
 				if err != nil {
 					logger.Warnf("[scheduler:source_refresh] Xtream VOD import failed for %s: %v", src.Name, err)
@@ -377,6 +476,9 @@ func NewServer(cfg *config.Config, db *gorm.DB) *Server {
 				}
 			}
 			if src.ImportSeries && src.SeriesLibraryID != nil {
+				if err := ctx.Err(); err != nil {
+					return err
+				}
 				result, err := importer.ImportXtreamSeries(src.ID)
 				if err != nil {
 					logger.Warnf("[scheduler:source_refresh] Xtream series import failed for %s: %v", src.Name, err)
@@ -450,15 +552,16 @@ func NewServer(cfg *config.Config, db *gorm.DB) *Server {
 		searchEngine:      searchEngine,
 		updater:           appUpdater,
 		jobQueue:          jobQueue,
-		clipManager:        clipManager,
-		bandwidthManager:   bandwidthManager,
-		ddnsClient:         ddnsClient,
-		notifyManager:      notifyManager,
-		healthMonitor:      healthMonitor,
-		taskScheduler:      taskSched,
+		clipManager:       clipManager,
+		bandwidthManager:  bandwidthManager,
+		ddnsClient:        ddnsClient,
+		notifyManager:     notifyManager,
+		healthMonitor:     healthMonitor,
+		taskScheduler:     taskSched,
 	}
-	// Start cloud registry if configured
-	if cfg.Server.CloudRegistryURL != "" {
+	// Start cloud registry only if both a URL and a license key are present.
+	// No point registering without a license — the iOS app can't claim an unlicensed server.
+	if cfg.Server.CloudRegistryURL != "" && cfg.Server.LicenseKey != "" {
 		localAddrs := discovery.GetLocalAddresses()
 		serverInfo := discovery.ServerInfo{
 			Name:           cfg.Server.Name,
@@ -469,18 +572,47 @@ func NewServer(cfg *config.Config, db *gorm.DB) *Server {
 			Protocol:       "http",
 			LocalAddresses: localAddrs,
 		}
+		// Load the persistent claim token into memory so it's immediately usable
+		// without any manual action — the app can always connect remotely.
+		InitClaimToken(cfg.Server.ClaimToken)
 		s.cloudRegistry = discovery.NewCloudRegistryClient(cfg.Server.CloudRegistryURL, serverInfo, cfg.Server.ClaimToken)
 		if s.cloudRegistry != nil {
 			if cfg.Server.LicenseKey != "" {
 				s.cloudRegistry.SetLicenseKey(cfg.Server.LicenseKey)
 			}
-			// If the user has configured a custom external URL (cloudflared tunnel or domain),
-			// broadcast it via the registry so iOS clients use it instead of the raw public IP.
-			if extURL := s.getSettingStr("remote_external_url", ""); extURL != "" {
-				s.cloudRegistry.SetExternalURL(extURL)
-			}
 			s.cloudRegistry.Start()
+			s.syncInvitesToRegistry()
 		}
+	}
+
+	// Initialize TLS manager for remote HTTPS access (Channels DVR-style DNS-01 cert provisioning).
+	// Requires OPENFLIX_CLOUD_REGISTRY_URL — registry handles DNS TXT records via Cloudflare.
+	if cfg.Server.CloudRegistryURL != "" && cfg.Server.MachineID != "" {
+		domain := cfg.Server.MachineID + ".remote.openflix.io"
+		tlsMgr := remotetls.New(
+			cfg.Server.MachineID,
+			domain,
+			cfg.Server.CloudRegistryURL,
+			filepath.Join(dataDir, "tls"),
+			false, // production certs
+			http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				s.router.ServeHTTP(w, r)
+			}),
+		)
+		// When HTTPS is ready, update the cloud registry to advertise the HTTPS URL
+		// so clients connect via https://domain:32443 instead of plain http://ip:32400.
+		tlsMgr.SetOnReady(func(httpsURL string) {
+			if s.cloudRegistry != nil {
+				s.cloudRegistry.SetExternalURL(httpsURL)
+			}
+		})
+		s.tlsManager = tlsMgr
+		if s.getSettingStr("remote_access_enabled", "") == "true" {
+			if err := tlsMgr.Enable(context.Background()); err != nil {
+				logger.Warnf("Remote TLS enable failed: %v", err)
+			}
+		}
+		s.refreshCloudRegistryExternalURL()
 	}
 
 	// Start UPnP port mapping for automatic remote access (no port forwarding needed)
@@ -548,6 +680,30 @@ func NewServer(cfg *config.Config, db *gorm.DB) *Server {
 func (s *Server) Run() error {
 	addr := fmt.Sprintf("%s:%d", s.config.Server.Host, s.config.Server.Port)
 	return s.router.Run(addr)
+}
+
+func (s *Server) refreshCloudRegistryExternalURL() {
+	if s.cloudRegistry == nil {
+		return
+	}
+
+	if extURL := strings.TrimSpace(s.getSettingStr("remote_external_url", "")); extURL != "" {
+		s.cloudRegistry.SetExternalURL(extURL)
+		s.cloudRegistry.RegisterNow()
+		return
+	}
+
+	if s.tlsManager != nil {
+		status := s.tlsManager.GetStatus()
+		if status.Enabled && status.HasCert && status.URL != "" {
+			s.cloudRegistry.SetExternalURL(status.URL)
+			s.cloudRegistry.RegisterNow()
+			return
+		}
+	}
+
+	s.cloudRegistry.SetExternalURL("")
+	s.cloudRegistry.RegisterNow()
 }
 
 // reinitializeTMDBAgent creates or updates the TMDB agent with a new API key
@@ -618,8 +774,8 @@ func (s *Server) setupRouter() {
 
 	// Invite API
 	r.POST("/api/invite", s.authRequired(), s.adminRequired(), s.createInvite)
-	r.GET("/api/invite/:token", s.validateInvite)           // public — app checks before showing register form
-	r.POST("/api/invite/:token/accept", s.acceptInvite)     // public — creates the account
+	r.GET("/api/invite/:token", s.validateInvite)       // public — app checks before showing register form
+	r.POST("/api/invite/:token/accept", s.acceptInvite) // public — creates the account
 
 	// Diagnostics & System Status API (admin only)
 	r.GET("/api/diagnostics/health-check", s.authRequired(), s.adminRequired(), s.runHealthChecks)
@@ -869,8 +1025,8 @@ func (s *Server) setupRouter() {
 	{
 		personalSections.GET("", s.getPersonalSections)
 		personalSections.POST("", s.createPersonalSection)
-		personalSections.POST("/preview", s.previewSmartFilter)  // Must be before /:id
-		personalSections.GET("/genres", s.getAvailableGenres)    // Must be before /:id
+		personalSections.POST("/preview", s.previewSmartFilter) // Must be before /:id
+		personalSections.GET("/genres", s.getAvailableGenres)   // Must be before /:id
 		personalSections.GET("/:id", s.getPersonalSection)
 		personalSections.PUT("/:id", s.updatePersonalSection)
 		personalSections.DELETE("/:id", s.deletePersonalSection)
@@ -892,9 +1048,9 @@ func (s *Server) setupRouter() {
 	// Public endpoints for external integrations (Channels DVR, etc.)
 	livetvPublic := r.Group("/livetv")
 	{
-		livetvPublic.GET("/export.m3u", s.exportChannelsM3U)      // M3U playlist with tvc-guide-stationid
-		livetvPublic.GET("/export.xml", s.exportEPGXMLTV)         // XMLTV EPG guide data
-		livetvPublic.GET("/lineup.json", s.exportChannelsLineup)  // JSON lineup
+		livetvPublic.GET("/export.m3u", s.exportChannelsM3U)     // M3U playlist with tvc-guide-stationid
+		livetvPublic.GET("/export.xml", s.exportEPGXMLTV)        // XMLTV EPG guide data
+		livetvPublic.GET("/lineup.json", s.exportChannelsLineup) // JSON lineup
 	}
 
 	livetv := r.Group("/livetv")
@@ -915,16 +1071,18 @@ func (s *Server) setupRouter() {
 		livetv.GET("/on-now", s.getOnNowChannels) // Lightweight: only currently-airing channels for home screen
 		livetv.GET("/channels/:id", s.getChannel)
 		livetv.PUT("/channels/:id", s.updateChannel)
-		livetv.POST("/channels/bulk-map", s.bulkMapChannels)         // Bulk map multiple channels
-		livetv.POST("/channels/auto-detect", s.autoDetectChannels)   // Auto-detect EPG mappings
+		livetv.POST("/channels/bulk-map", s.bulkMapChannels)             // Bulk map multiple channels
+		livetv.POST("/channels/auto-detect", s.autoDetectChannels)       // Auto-detect EPG mappings
 		livetv.POST("/channels/map-numbers", s.mapChannelNumbersFromM3U) // Map channel numbers from M3U
-		livetv.DELETE("/channels/:id/epg-mapping", s.unmapChannel) // Remove EPG mapping
-		livetv.GET("/channels/:id/suggestions", s.getSuggestedMatches) // Get suggested EPG matches
+		livetv.DELETE("/channels/:id/epg-mapping", s.unmapChannel)       // Remove EPG mapping
+		livetv.GET("/channels/:id/suggestions", s.getSuggestedMatches)   // Get suggested EPG matches
 		livetv.POST("/channels/:id/favorite", s.toggleChannelFavorite)
 		livetv.POST("/channels/:id/refresh-epg", s.refreshChannelEPG) // Refresh EPG mapping
-		livetv.GET("/channels/:id/stream", s.proxyChannelStream)        // Proxy channel stream for web playback
+		livetv.GET("/channels/:id/stream", s.proxyChannelStream)          // Proxy channel stream for web playback
 		livetv.GET("/stream/:id", s.proxyChannelStream)                  // Short-form alias used by iOS app
-		livetv.GET("/channels/:id/hls-segment", s.proxyHLSSegment)    // Proxy HLS segments for web playback
+		livetv.GET("/channels/:id/hls-segment", s.proxyHLSSegment)       // Proxy HLS segments for web playback
+		livetv.GET("/channels/:id/stream.m3u8", s.channelHLSManifest)    // Live HLS manifest (server-side segmenter)
+		livetv.GET("/channels/:id/segment/:seq", s.channelHLSSegment)    // Live HLS TS segment
 
 		// Channel Groups (Failover)
 		livetv.GET("/channel-groups", s.getChannelGroups)
@@ -1260,9 +1418,9 @@ func (s *Server) setupRouter() {
 		onlater.GET("/kids", s.handleGetOnLaterKids)
 		onlater.GET("/news", s.handleGetOnLaterNews)
 		onlater.GET("/premieres", s.handleGetOnLaterPremieres)
-		onlater.GET("/holiday", s.handleGetOnLaterHoliday)       // holiday-themed programming
-		onlater.GET("/halloween", s.handleGetOnLaterHalloween)   // halloween/horror programming
-		onlater.GET("/seasonal", s.handleGetOnLaterSeasonal)     // special events (olympics, awards, etc.)
+		onlater.GET("/holiday", s.handleGetOnLaterHoliday)     // holiday-themed programming
+		onlater.GET("/halloween", s.handleGetOnLaterHalloween) // halloween/horror programming
+		onlater.GET("/seasonal", s.handleGetOnLaterSeasonal)   // special events (olympics, awards, etc.)
 		onlater.GET("/tonight", s.handleGetOnLaterTonight)
 		onlater.GET("/week", s.handleGetOnLaterWeek)
 		onlater.GET("/search", s.handleSearchOnLater)
@@ -1335,6 +1493,14 @@ func (s *Server) setupRouter() {
 		ddnsGroup.POST("/test", s.testDDNS)
 		ddnsGroup.POST("/update", s.forceUpdateDDNS)
 		ddnsGroup.DELETE("/disable", s.disableDDNS)
+	}
+
+	// ============ Remote Access (TLS/HTTPS) API ============
+	remoteAccessGroup := r.Group("/api/remote-access")
+	remoteAccessGroup.Use(s.authRequired(), s.adminRequired())
+	{
+		remoteAccessGroup.GET("", s.getTLSStatus)
+		remoteAccessGroup.POST("/enable", s.postTLSEnable)
 	}
 
 	// ============ Instant Switch API ============
@@ -1651,17 +1817,12 @@ func (s *Server) corsMiddleware() gin.HandlerFunc {
 
 func (s *Server) authRequired() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// Check if local access is enabled and request is from localhost
+		// Local access is for app usage on the LAN, not for admin control.
 		if s.config.Auth.AllowLocalAccess && s.isLocalRequest(c) {
-			// Allow local access without authentication
-			// Set default local user context
-			c.Set("token", "local-access")
-			c.Set("userID", uint(0))
-			c.Set("userUUID", "local-user")
-			c.Set("isAdmin", true) // Local users have full access
-			c.Set("isLocalAccess", true)
-			c.Next()
-			return
+			if s.applyLocalAccessContext(c) {
+				c.Next()
+				return
+			}
 		}
 
 		// Check X-Plex-Token header (Plex-compatible)
@@ -1702,6 +1863,34 @@ func (s *Server) authRequired() gin.HandlerFunc {
 		c.Set("isAdmin", claims.IsAdmin)
 		c.Next()
 	}
+}
+
+func (s *Server) applyLocalAccessContext(c *gin.Context) bool {
+	var user models.User
+	if err := s.db.Order("is_admin DESC").Order("id ASC").First(&user).Error; err != nil {
+		return false
+	}
+
+	var profile models.UserProfile
+	_ = s.db.Where("user_id = ?", user.ID).Order("id ASC").First(&profile).Error
+
+	claims := &auth.Claims{
+		UserID:   user.ID,
+		UUID:     user.UUID,
+		Username: user.Username,
+		IsAdmin:  user.IsAdmin,
+	}
+	if profile.ID != 0 {
+		claims.ProfileID = profile.ID
+	}
+
+	c.Set("token", "local-access")
+	c.Set("claims", claims)
+	c.Set("userID", user.ID)
+	c.Set("userUUID", user.UUID)
+	c.Set("isAdmin", user.IsAdmin)
+	c.Set("isLocalAccess", true)
+	return true
 }
 
 // isLocalRequest checks if the request is from localhost or local network

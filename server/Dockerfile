@@ -159,6 +159,9 @@ RUN mkdir -p /data /app/downloads /app/recordings /app/transcode /app/config
 # Copy Comskip configuration
 COPY comskip.ini /app/config/comskip.ini
 
+# Bundle ONNX commercial detection model so users get AI skip out of the box
+COPY models/ /app/models/
+
 # Note: downloads/ folder will be created at runtime if needed for APK files
 
 # Copy entrypoint script

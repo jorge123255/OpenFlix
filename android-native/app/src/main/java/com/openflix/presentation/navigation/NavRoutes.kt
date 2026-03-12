@@ -67,6 +67,17 @@ sealed class NavRoutes(val route: String) {
     // === Team Pass ===
     data object TeamPass : NavRoutes("teampass")
 
+    // === Xfinity-style screens ===
+    data object XfinityLiveTV : NavRoutes("xfinity_livetv")
+    data object XfinityMediaDetail : NavRoutes("xfinity_media/{mediaId}") {
+        fun createRoute(mediaId: String) = "xfinity_media/$mediaId"
+    }
+
+    // === Sports ===
+    data object TeamDetail : NavRoutes("team/{sport}/{league}/{teamId}") {
+        fun createRoute(sport: String, league: String, teamId: String) = "team/$sport/$league/$teamId"
+    }
+
     // === DVR ===
     data object DVR : NavRoutes("dvr")
     data object DVRPlayer : NavRoutes("dvr/player/{recordingId}?mode={mode}") {
@@ -80,8 +91,12 @@ sealed class NavRoutes(val route: String) {
     }
 
     // === Video Playback ===
-    data object VideoPlayer : NavRoutes("player/{mediaId}") {
-        fun createRoute(mediaId: String) = "player/$mediaId"
+    data object VideoPlayer : NavRoutes("player/{mediaId}?fileId={fileId}") {
+        fun createRoute(mediaId: String, fileId: Long? = null) = if (fileId != null) {
+            "player/$mediaId?fileId=$fileId"
+        } else {
+            "player/$mediaId"
+        }
     }
 
     // === Settings & Utility ===
@@ -124,6 +139,10 @@ sealed class NavRoutes(val route: String) {
         const val ARG_PROFILE_ID = "profileId"
         const val ARG_LIBRARY_ID = "libraryId"
         const val ARG_MEDIA_TYPE = "mediaType"
+        const val ARG_FILE_ID = "fileId"
         const val ARG_SOURCE_ID = "sourceId"
+        const val ARG_SPORT = "sport"
+        const val ARG_LEAGUE = "league"
+        const val ARG_TEAM_ID = "teamId"
     }
 }

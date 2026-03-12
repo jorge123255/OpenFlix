@@ -4,6 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.openflix.data.repository.MediaRepository
 import com.openflix.domain.model.MediaItem
+import com.openflix.domain.model.MediaType
+import com.openflix.domain.model.PlaybackOption
 import com.openflix.domain.model.Season
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
@@ -33,8 +35,13 @@ class MediaDetailViewModel @Inject constructor(
                     loadRelatedContent(mediaId)
 
                     // Load seasons for TV shows
-                    if (mediaItem.type == com.openflix.domain.model.MediaType.SHOW) {
+                    if (mediaItem.type == MediaType.SHOW) {
                         loadSeasons(mediaId)
+                    }
+
+                    // Load playback options for playable types
+                    if (mediaItem.type == MediaType.MOVIE || mediaItem.type == MediaType.EPISODE) {
+                        loadPlaybackOptions(mediaId)
                     }
 
                     _uiState.update { it.copy(isLoading = false) }
@@ -79,6 +86,33 @@ class MediaDetailViewModel @Inject constructor(
             )
         }
     }
+
+    private fun loadPlaybackOptions(mediaId: String) {
+        viewModelScope.launch {
+            val result = mediaRepository.getPlaybackOptions(mediaId)
+            result.fold(
+                onSuccess = { options ->
+                    _uiState.update {
+                        it.copy(
+                            playbackOptions = options,
+                            selectedOption = options.firstOrNull()
+                        )
+                    }
+                },
+                onFailure = { error ->
+                    Timber.w(error, "Failed to load playback options")
+                }
+            )
+        }
+    }
+
+    fun selectPlaybackOption(option: PlaybackOption) {
+        _uiState.update { it.copy(selectedOption = option) }
+    }
+
+    fun toggleVersionPicker() {
+        _uiState.update { it.copy(showVersionPicker = !it.showVersionPicker) }
+    }
 }
 
 data class MediaDetailUiState(
@@ -86,5 +120,8 @@ data class MediaDetailUiState(
     val mediaItem: MediaItem? = null,
     val seasons: List<Season> = emptyList(),
     val relatedItems: List<MediaItem> = emptyList(),
+    val playbackOptions: List<PlaybackOption> = emptyList(),
+    val selectedOption: PlaybackOption? = null,
+    val showVersionPicker: Boolean = false,
     val error: String? = null
 )

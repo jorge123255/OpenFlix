@@ -14,12 +14,21 @@ type StreamURLResolver func(channelID string) string
 // AdjacentChannelResolver gets adjacent channels for a given channel
 type AdjacentChannelResolver func(channelID string) []string
 
+// StartSessionFunc pre-starts a live stream session for a channel so it is
+// ready for instant playback. channelID is the string channel ID, streamURL
+// is the raw upstream URL.
+type StartSessionFunc func(channelID, streamURL string)
+
+// IsSessionReadyFunc returns true if a live session for channelID already has
+// buffered data and can serve a manifest immediately.
+type IsSessionReadyFunc func(channelID string) bool
+
 // PrebufferManager maintains background streams for instant channel switching
 type PrebufferManager struct {
 	mu                sync.RWMutex
 	enabled           bool
 	activeChannel     string
-	cachedStreams     map[string]*CachedStream
+	cachedStreams      map[string]*CachedStream
 	favorites         []string
 	recentChannels    []string
 	maxCached         int
@@ -30,6 +39,8 @@ type PrebufferManager struct {
 	cancel            context.CancelFunc
 	streamURLResolver StreamURLResolver
 	adjacentResolver  AdjacentChannelResolver
+	startSession      StartSessionFunc
+	isSessionReady    IsSessionReadyFunc
 }
 
 // CachedStream holds a pre-buffered stream ready for instant playback
@@ -81,6 +92,20 @@ func (pm *PrebufferManager) SetAdjacentChannelResolver(resolver AdjacentChannelR
 	pm.adjacentResolver = resolver
 }
 
+// SetStartSessionFunc sets the callback used to pre-start a live stream session.
+func (pm *PrebufferManager) SetStartSessionFunc(f StartSessionFunc) {
+	pm.mu.Lock()
+	defer pm.mu.Unlock()
+	pm.startSession = f
+}
+
+// SetIsSessionReadyFunc sets the callback used to check if a session has data.
+func (pm *PrebufferManager) SetIsSessionReadyFunc(f IsSessionReadyFunc) {
+	pm.mu.Lock()
+	defer pm.mu.Unlock()
+	pm.isSessionReady = f
+}
+
 // SetEnabled enables or disables the prebuffer manager
 func (pm *PrebufferManager) SetEnabled(enabled bool) {
 	pm.mu.Lock()
@@ -126,8 +151,8 @@ func (pm *PrebufferManager) SetActiveChannel(channelID string) {
 
 // GetCachedStream returns a pre-buffered stream if available
 func (pm *PrebufferManager) GetCachedStream(channelID string) (*CachedStream, bool) {
-	pm.mu.RLock()
-	defer pm.mu.RUnlock()
+	pm.mu.Lock()
+	defer pm.mu.Unlock()
 
 	stream, exists := pm.cachedStreams[channelID]
 	if exists && stream.IsLive && stream.Buffer.Len() > 0 {
@@ -212,32 +237,38 @@ func (pm *PrebufferManager) updatePrebuffer() {
 	}
 }
 
-// startPrebuffer begins background buffering for a channel
+// startPrebuffer begins background buffering for a channel.
+// If a StartSessionFunc is wired up it pre-starts the live HLS session so the
+// manifest is ready immediately when the client requests it. Falls back to the
+// legacy RingBuffer/HLS-fetcher approach when no session func is provided.
 func (pm *PrebufferManager) startPrebuffer(channelID string) {
 	if pm.streamURLResolver == nil {
 		return
 	}
 
-	// Get stream URL for channel
 	streamURL := pm.streamURLResolver(channelID)
 	if streamURL == "" {
 		return
 	}
 
-	ctx, cancel := context.WithCancel(pm.ctx)
+	// Preferred path: delegate to the HLS session manager so the segmenter is
+	// already running when the client asks for stream.m3u8.
+	if pm.startSession != nil {
+		pm.startSession(channelID, streamURL)
+		return
+	}
 
+	// Legacy path: keep a RingBuffer in-process via the HLS fetcher.
+	ctx, cancel := context.WithCancel(pm.ctx)
 	stream := &CachedStream{
 		ChannelID:  channelID,
 		StreamURL:  streamURL,
-		Buffer:     NewRingBuffer(10 * 1024 * 1024), // 10MB per stream
+		Buffer:     NewRingBuffer(10 * 1024 * 1024),
 		LastAccess: time.Now(),
 		IsLive:     true,
 		cancel:     cancel,
 	}
-
 	pm.cachedStreams[channelID] = stream
-
-	// Start background fetching
 	go stream.fetchLoop(ctx, pm.client)
 }
 

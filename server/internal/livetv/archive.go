@@ -24,9 +24,9 @@ var archiveSegmentPattern = regexp.MustCompile(`segment_(\d+)\.ts$`)
 type ArchiveConfig struct {
 	FFmpegPath     string
 	ArchiveDir     string
-	SegmentLength  int  // Segment length in seconds (default 6)
-	CleanupMinutes int  // How often to run cleanup (default 30)
-	MaxDays        int  // Maximum archive days allowed (default 7)
+	SegmentLength  int // Segment length in seconds (default 6)
+	CleanupMinutes int // How often to run cleanup (default 30)
+	MaxDays        int // Maximum archive days allowed (default 7)
 }
 
 // ArchiveManager manages continuous recording for catch-up TV
@@ -469,8 +469,8 @@ func (am *ArchiveManager) GetArchivePlaylistURL(programID uint) (string, error) 
 	return fmt.Sprintf("/livetv/archive/%d/stream.m3u8", programID), nil
 }
 
-// GenerateArchivePlaylist generates an M3U8 playlist for an archived program
-func (am *ArchiveManager) GenerateArchivePlaylist(programID uint) (string, error) {
+// GenerateArchivePlaylist generates an M3U8 playlist for an archived program.
+func (am *ArchiveManager) GenerateArchivePlaylist(programID uint, authToken string) (string, error) {
 	var program models.ArchiveProgram
 	if err := am.db.First(&program, programID).Error; err != nil {
 		return "", fmt.Errorf("archive program not found: %w", err)
@@ -490,7 +490,11 @@ func (am *ArchiveManager) GenerateArchivePlaylist(programID uint) (string, error
 
 	for _, seg := range segments {
 		playlist.WriteString(fmt.Sprintf("#EXTINF:%d.0,\n", program.SegmentDuration))
-		playlist.WriteString(fmt.Sprintf("/livetv/archive/%d/segment/%s\n", programID, filepath.Base(seg)))
+		playlist.WriteString(withPlaylistToken(
+			fmt.Sprintf("/livetv/archive/%d/segment/%s", programID, filepath.Base(seg)),
+			authToken,
+		))
+		playlist.WriteString("\n")
 	}
 
 	playlist.WriteString("#EXT-X-ENDLIST\n")
@@ -528,6 +532,10 @@ func (am *ArchiveManager) GetSegmentPath(programID uint, segmentName string) (st
 	var program models.ArchiveProgram
 	if err := am.db.First(&program, programID).Error; err != nil {
 		return "", fmt.Errorf("archive program not found: %w", err)
+	}
+
+	if segmentName == "" || filepath.Base(segmentName) != segmentName || !strings.HasSuffix(segmentName, ".ts") {
+		return "", fmt.Errorf("invalid segment name")
 	}
 
 	segPath := filepath.Join(program.ArchiveDir, segmentName)

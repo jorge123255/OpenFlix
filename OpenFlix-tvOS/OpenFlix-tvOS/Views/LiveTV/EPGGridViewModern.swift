@@ -176,44 +176,61 @@ struct EPGGridViewModern: View {
             // Programs
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 2) {
-                    ForEach(visiblePrograms(for: channelWithPrograms)) { program in
-                        let width = programWidth(for: program)
-                        
-                        EPGProgramCellModern(
-                            program: program,
-                            channel: channelWithPrograms.channel,
-                            width: width,
-                            height: rowHeight - 4,
-                            onSelect: {
-                                onChannelSelect(channelWithPrograms.channel)
-                            }
-                        )
-                        .contextMenu {
-                            Button {
-                                selectedProgram = program
-                                selectedChannelForDetail = channelWithPrograms.channel
-                                showProgramDetail = true
-                            } label: {
-                                Label("Details", systemImage: "info.circle")
-                            }
-                            
-                            Button {
-                                onChannelSelect(channelWithPrograms.channel)
-                            } label: {
-                                Label("Watch Now", systemImage: "play.fill")
-                            }
-                            
-                            if !program.hasRecording && !program.hasEnded {
+                    let visible = visiblePrograms(for: channelWithPrograms)
+                    if visible.isEmpty {
+                        // No EPG data placeholder
+                        ZStack {
+                            LinearGradient(
+                                colors: [Color.white.opacity(0.05), Color.black.opacity(0.3)],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                            Text("No guide data")
+                                .font(.system(size: 15))
+                                .foregroundColor(EPGTheme.textSecondary.opacity(0.5))
+                        }
+                        .frame(width: CGFloat(timeSlots.count) * timeSlotWidth, height: rowHeight - 4)
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                        .padding(.vertical, 2)
+                    } else {
+                        ForEach(visible) { program in
+                            let width = programWidth(for: program)
+
+                            EPGProgramCellModern(
+                                program: program,
+                                channel: channelWithPrograms.channel,
+                                width: width,
+                                height: rowHeight - 4,
+                                onSelect: {
+                                    onChannelSelect(channelWithPrograms.channel)
+                                }
+                            )
+                            .contextMenu {
                                 Button {
-                                    // Record
+                                    selectedProgram = program
+                                    selectedChannelForDetail = channelWithPrograms.channel
+                                    showProgramDetail = true
                                 } label: {
-                                    Label("Record", systemImage: "record.circle")
+                                    Label("Details", systemImage: "info.circle")
+                                }
+
+                                Button {
+                                    onChannelSelect(channelWithPrograms.channel)
+                                } label: {
+                                    Label("Watch Now", systemImage: "play.fill")
+                                }
+
+                                if !program.hasRecording && !program.hasEnded {
+                                    Button {
+                                        // Record
+                                    } label: {
+                                        Label("Record", systemImage: "record.circle")
+                                    }
                                 }
                             }
                         }
+                        Spacer(minLength: 0)
                     }
-                    
-                    Spacer(minLength: CGFloat(timeSlots.count) * timeSlotWidth)
                 }
                 .padding(.vertical, 2)
             }
@@ -256,10 +273,31 @@ struct EPGGridViewModern: View {
     // MARK: - Helpers
     
     private var filteredGuide: [ChannelWithPrograms] {
-        guard let selectedGroup = viewModel.selectedGroup else {
-            return viewModel.guide
+        let base: [ChannelWithPrograms]
+        if let selectedGroup = viewModel.selectedGroup {
+            base = viewModel.guide.filter { $0.channel.group == selectedGroup }
+        } else {
+            base = viewModel.guide
         }
-        return viewModel.guide.filter { $0.channel.group == selectedGroup }
+
+        // Deduplicate by channel number: prefer the entry with more programs.
+        var numberMap = [Int: Int]()   // channel number -> index in result
+        var result: [ChannelWithPrograms] = []
+        for cwp in base {
+            if let number = cwp.channel.number {
+                if let existingIdx = numberMap[number] {
+                    if cwp.programs.count > result[existingIdx].programs.count {
+                        result[existingIdx] = cwp
+                    }
+                } else {
+                    numberMap[number] = result.count
+                    result.append(cwp)
+                }
+            } else {
+                result.append(cwp)
+            }
+        }
+        return result
     }
     
     private var timeSlots: [Date] {

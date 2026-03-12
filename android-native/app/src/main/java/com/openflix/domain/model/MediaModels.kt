@@ -255,3 +255,37 @@ enum class StreamType {
         }
     }
 }
+
+data class PlaybackOption(
+    val fileId: Long,
+    val resolution: String?,
+    val codec: String?,
+    val container: String?,
+    val bitrate: Long?,
+    val playbackMode: PlaybackMode,
+    val reason: String?,
+    val playbackUrl: String
+) {
+    val displayName: String
+        get() = buildString {
+            resolution?.let { append(it) }
+            codec?.let { append(" • $it") }
+            bitrate?.let {
+                val mbps = it / 1_000_000.0
+                if (mbps >= 1.0) append(" • ${"%.1f".format(mbps)} Mbps")
+                else append(" • ${it / 1000} kbps")
+            }
+        }.ifEmpty { "Default" }
+}
+
+enum class PlaybackMode {
+    DIRECT_PLAY, DIRECT_STREAM, TRANSCODE;
+
+    companion object {
+        fun fromString(mode: String) = when (mode) {
+            "direct_play" -> DIRECT_PLAY
+            "direct_stream" -> DIRECT_STREAM
+            else -> TRANSCODE
+        }
+    }
+}

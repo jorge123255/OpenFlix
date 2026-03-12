@@ -178,8 +178,24 @@ func (s *Server) createJob(c *gin.Context) {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Program not found"})
 			return
 		}
-		startTime = program.Start
-		endTime = program.End
+
+		// Apply padding. Default to 5 min post-padding so shows that run
+		// slightly long don't get cut off. Client can override by sending
+		// paddingStart/paddingEnd explicitly (values in seconds).
+		const defaultPostPadding = 5 * 60 // 5 minutes
+		postPad := req.PaddingEnd
+		if postPad == 0 {
+			postPad = defaultPostPadding
+		}
+		prePad := req.PaddingStart // 0 by default — don't eat into the previous show
+
+		startTime = program.Start.Add(-time.Duration(prePad) * time.Second)
+		endTime = program.End.Add(time.Duration(postPad) * time.Second)
+
+		// Propagate the effective padding back so the job stores it
+		req.PaddingStart = prePad
+		req.PaddingEnd = postPad
+
 		if title == "" {
 			title = program.Title
 		}

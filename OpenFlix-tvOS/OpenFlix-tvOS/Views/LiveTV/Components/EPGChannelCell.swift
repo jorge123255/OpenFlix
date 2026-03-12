@@ -280,6 +280,7 @@ struct ChannelListCell: View {
 #Preview {
     let sampleChannel = Channel(
         id: "1",
+        epgChannelId: nil,
         number: 101,
         name: "ESPN HD",
         logo: nil,

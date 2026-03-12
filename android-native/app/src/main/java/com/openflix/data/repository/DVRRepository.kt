@@ -99,6 +99,20 @@ class DVRRepository @Inject constructor(
         }
     }
 
+    suspend fun stopRecording(recordingId: String): Result<Unit> {
+        return try {
+            val response = api.stopRecording(recordingId)
+            if (response.isSuccessful) {
+                Result.success(Unit)
+            } else {
+                Result.failure(Exception("Failed to stop recording"))
+            }
+        } catch (e: Exception) {
+            Timber.e(e, "Error stopping recording: $recordingId")
+            Result.failure(e)
+        }
+    }
+
     suspend fun getRecordingStreamUrl(recordingId: String): Result<String> {
         return try {
             // The server streams the file directly at /dvr/stream/{id}

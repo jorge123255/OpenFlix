@@ -823,8 +823,13 @@ class ApiClient {
   }
 
   // Claim token for cloud discovery
-  async getClaimToken(): Promise<{ token: string; expiresAt: string }> {
-    const response = await this.client.get<{ token: string; expiresAt: string }>('/api/claim-token')
+  async getClaimToken(): Promise<{ token: string | null; active: boolean }> {
+    const response = await this.client.get<{ token: string | null; active: boolean }>('/api/claim-token')
+    return response.data
+  }
+
+  async rotateClaimToken(): Promise<{ token: string }> {
+    const response = await this.client.post<{ token: string }>('/api/claim-token')
     return response.data
   }
 
@@ -849,9 +854,20 @@ class ApiClient {
     return response.data
   }
 
+  // TLS / HTTPS remote access
+  async getTLSStatus(): Promise<{ enabled: boolean; hasCert: boolean; domain: string; url: string; certExpiry?: string }> {
+    const response = await this.client.get('/api/remote-access')
+    return response.data
+  }
+
+  async setTLSEnabled(enabled: boolean): Promise<{ enabled: boolean; hasCert: boolean; domain: string; url: string; certExpiry?: string }> {
+    const response = await this.client.post('/api/remote-access/enable', { enabled })
+    return response.data
+  }
+
   // Invite / family sharing
-  async createInvite(email: string): Promise<{ token: string; inviteUrl: string }> {
-    const response = await this.client.post<{ token: string; inviteUrl: string }>('/api/invite', { email })
+  async createInvite(): Promise<{ token: string; deepLink: string; machineId: string; expiresAt: string }> {
+    const response = await this.client.post('/api/invite')
     return response.data
   }
 

@@ -10,6 +10,8 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -129,7 +131,11 @@ fun MoviesScreenModern(
                             genres = uiState.genreHubs.map { it.genre },
                             selectedGenre = selectedGenre,
                             onGenreSelected = { genre ->
-                                selectedGenre = if (selectedGenre == genre) null else genre
+                                selectedGenre = when {
+                                    genre == "__all__" -> null
+                                    selectedGenre == genre -> null
+                                    else -> genre
+                                }
                             },
                             onBrowseAll = onBrowseAll
                         )
@@ -174,7 +180,7 @@ fun MoviesScreenModern(
                     } else {
                         uiState.genreHubs
                     }
-                    
+
                     itemsIndexed(displayedGenres) { index, genreHub ->
                         ModernContentRow(
                             title = genreHub.genre,
@@ -205,7 +211,7 @@ private fun TheaterModeHeroModern(
 ) {
     var currentIndex by remember { mutableStateOf(0) }
     var isAutoPlaying by remember { mutableStateOf(true) }
-    
+
     val currentItem = items.getOrNull(currentIndex) ?: return
     val currentTrailer = trailers[currentItem.id]
 
@@ -228,7 +234,7 @@ private fun TheaterModeHeroModern(
             contentDescription = null,
             modifier = Modifier
                 .fillMaxSize()
-                .graphicsLayer { 
+                .graphicsLayer {
                     scaleX = 1.1f
                     scaleY = 1.1f
                 },
@@ -283,37 +289,6 @@ private fun TheaterModeHeroModern(
                 .padding(start = 48.dp, bottom = 48.dp)
                 .widthIn(max = 600.dp)
         ) {
-            // MOVIES badge
-            Surface(
-                shape = RoundedCornerShape(20.dp),
-                colors = NonInteractiveSurfaceDefaults.colors(
-                    containerColor = AccentTeal.copy(alpha = 0.2f)
-                ),
-                border = Border(BorderStroke(1.dp, AccentTeal.copy(alpha = 0.5f)))
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Movie,
-                        contentDescription = null,
-                        tint = AccentTeal,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Text(
-                        text = "MOVIE",
-                        color = AccentTeal,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 2.sp
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
             // Title with glow effect
             Text(
                 text = currentItem.title,
@@ -396,12 +371,12 @@ private fun TheaterModeHeroModern(
                     targetValue = if (playFocused) 1.08f else 1f,
                     animationSpec = spring(dampingRatio = 0.7f, stiffness = 300f)
                 )
-                
+
                 Button(
                     onClick = { onPlayClick(currentItem) },
                     modifier = Modifier
                         .scale(playScale)
-                        .onFocusChanged { 
+                        .onFocusChanged {
                             playFocused = it.isFocused
                             if (it.isFocused) isAutoPlaying = false
                         },
@@ -445,8 +420,12 @@ private fun TheaterModeHeroModern(
                         contentColor = Color.White
                     ),
                     border = ButtonDefaults.border(
-                        border = Border(BorderStroke(1.dp, Color.White.copy(alpha = 0.5f))),
-                        focusedBorder = Border(BorderStroke(2.dp, Color.White))
+                        border = Border(
+                            border = BorderStroke(
+                                width = if (infoFocused) 2.dp else 1.dp,
+                                color = if (infoFocused) Color.White else Color.White.copy(alpha = 0.5f)
+                            )
+                        )
                     ),
                     shape = ButtonDefaults.shape(shape = RoundedCornerShape(28.dp)),
                     contentPadding = PaddingValues(horizontal = 24.dp, vertical = 16.dp)
@@ -485,8 +464,8 @@ private fun TheaterModeHeroModern(
                             contentColor = Color.White
                         ),
                         border = ButtonDefaults.border(
-                            border = Border(BorderStroke(1.dp, Color.White.copy(alpha = 0.3f)))
-                        ),
+                        border = Border(border = BorderStroke(1.dp, Color.White.copy(alpha = 0.3f)))
+                    ),
                         shape = ButtonDefaults.shape(shape = RoundedCornerShape(28.dp)),
                         contentPadding = PaddingValues(horizontal = 20.dp, vertical = 16.dp)
                     ) {
@@ -520,7 +499,7 @@ private fun TheaterModeHeroModern(
                                 .width(width)
                                 .clip(RoundedCornerShape(3.dp))
                                 .background(
-                                    if (index == currentIndex) AccentTeal 
+                                    if (index == currentIndex) Color.White
                                     else Color.White.copy(alpha = 0.4f)
                                 )
                         )
@@ -547,7 +526,7 @@ private fun GenreFilterBarModern(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         contentPadding = PaddingValues(horizontal = 48.dp)
     ) {
-        // Browse All button
+        // Browse All button - styled like an unselected chip (matching iOS)
         item {
             var focused by remember { mutableStateOf(false) }
             val scale by animateFloatAsState(
@@ -555,52 +534,55 @@ private fun GenreFilterBarModern(
                 animationSpec = spring(dampingRatio = 0.7f, stiffness = 300f)
             )
 
-            Surface(
-                onClick = onBrowseAll,
+            Box(
                 modifier = Modifier
                     .scale(scale)
-                    .onFocusChanged { focused = it.isFocused },
-                shape = ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(24.dp)),
-                colors = ClickableSurfaceDefaults.colors(
-                    containerColor = AccentTeal.copy(alpha = 0.15f)
-                ),
-                border = ClickableSurfaceDefaults.border(
-                    border = Border(BorderStroke(1.dp, AccentTeal.copy(alpha = 0.5f)))
-                )
+                    .onFocusChanged { focused = it.isFocused }
+                    .clip(RoundedCornerShape(50))
+                    .background(
+                        when {
+                            focused -> AccentTeal.copy(alpha = 0.3f)
+                            else -> Color.White.copy(alpha = 0.1f)
+                        }
+                    )
+                    .then(
+                        if (focused) Modifier.border(BorderStroke(1.dp, AccentTeal), RoundedCornerShape(50))
+                        else Modifier
+                    )
+                    .clickable(onClick = onBrowseAll)
             ) {
                 Row(
-                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
+                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
                         imageVector = Icons.Default.GridView,
                         contentDescription = null,
-                        tint = AccentTeal,
+                        tint = Color.White.copy(alpha = 0.9f),
                         modifier = Modifier.size(18.dp)
                     )
                     Text(
                         text = "Browse All",
-                        color = AccentTeal,
+                        color = Color.White.copy(alpha = 0.9f),
                         fontSize = 14.sp,
-                        fontWeight = FontWeight.SemiBold
+                        fontWeight = FontWeight.Medium
                     )
                 }
             }
         }
 
-        // Divider
+        // "All Genres" chip - selected when no genre is active (matching iOS)
         item {
-            Box(
-                modifier = Modifier
-                    .width(1.dp)
-                    .height(32.dp)
-                    .background(Color.White.copy(alpha = 0.2f))
+            GenrePillModern(
+                genre = "All Genres",
+                isSelected = selectedGenre == null,
+                onSelect = { onGenreSelected("__all__") }
             )
         }
 
-        // Genre pills
-        items(genres.take(12)) { genre ->
+        // Genre pills (limit to 10 matching iOS prefix(10))
+        items(genres.take(10)) { genre ->
             GenrePillModern(
                 genre = genre,
                 isSelected = genre == selectedGenre,
@@ -621,30 +603,37 @@ private fun GenrePillModern(
         targetValue = if (focused) 1.05f else 1f,
         animationSpec = spring(dampingRatio = 0.7f, stiffness = 300f)
     )
-    val color = genreColor(genre)
 
-    Surface(
-        onClick = onSelect,
+    // Match iOS: accent color for ALL chips, capsule shape
+    Box(
         modifier = Modifier
             .scale(scale)
-            .onFocusChanged { focused = it.isFocused },
-        shape = ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(20.dp)),
-        colors = ClickableSurfaceDefaults.colors(
-            containerColor = when {
-                isSelected -> color.copy(alpha = 0.5f)
-                focused -> color.copy(alpha = 0.3f)
-                else -> Color.White.copy(alpha = 0.1f)
-            }
-        ),
-        border = ClickableSurfaceDefaults.border(
-            focusedBorder = Border(BorderStroke(2.dp, Color.White))
-        )
+            .onFocusChanged { focused = it.isFocused }
+            .clip(RoundedCornerShape(50))
+            .background(
+                when {
+                    isSelected -> AccentTeal
+                    focused -> AccentTeal.copy(alpha = 0.3f)
+                    else -> Color.White.copy(alpha = 0.1f)
+                }
+            )
+            .then(
+                when {
+                    focused && !isSelected -> Modifier.border(BorderStroke(1.dp, AccentTeal), RoundedCornerShape(50))
+                    else -> Modifier
+                }
+            )
+            .clickable(onClick = onSelect)
     ) {
         Text(
             text = genre,
-            color = if (focused || isSelected) Color.White else Color.White.copy(alpha = 0.9f),
+            // iOS: selected = black text, unselected = white text
+            color = when {
+                isSelected -> Color.Black
+                else -> Color.White
+            },
             fontSize = 14.sp,
-            fontWeight = if (focused || isSelected) FontWeight.Bold else FontWeight.Medium,
+            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
             modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp)
         )
     }
@@ -744,17 +733,18 @@ private fun ModernPosterCard(
         animationSpec = spring(dampingRatio = 0.7f, stiffness = 300f)
     )
 
-    Surface(
-        onClick = onItemClick,
+    Box(
         modifier = Modifier
-            .width(160.dp)
-            .height(240.dp)
+            .width(180.dp)
+            .height(270.dp)
             .scale(scale)
-            .onFocusChanged { focused = it.isFocused },
-        shape = ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(12.dp)),
-        border = ClickableSurfaceDefaults.border(
-            focusedBorder = Border(BorderStroke(4.dp, AccentTeal))
-        )
+            .onFocusChanged { focused = it.isFocused }
+            .clip(RoundedCornerShape(12.dp))
+            .background(Color.Black.copy(alpha = 0.2f))
+            .then(
+                if (focused) Modifier.border(BorderStroke(4.dp, AccentTeal), RoundedCornerShape(12.dp)) else Modifier
+            )
+            .clickable(onClick = onItemClick)
     ) {
         Box {
             // Poster image
@@ -833,17 +823,18 @@ private fun ModernContinueCard(
         }
     } ?: 0f
 
-    Surface(
-        onClick = onPlayClick,
+    Box(
         modifier = Modifier
             .width(320.dp)
             .height(200.dp)
             .scale(scale)
-            .onFocusChanged { focused = it.isFocused },
-        shape = ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(16.dp)),
-        border = ClickableSurfaceDefaults.border(
-            focusedBorder = Border(BorderStroke(4.dp, AccentTeal))
-        )
+            .onFocusChanged { focused = it.isFocused }
+            .clip(RoundedCornerShape(16.dp))
+            .background(Color.Black.copy(alpha = 0.2f))
+            .then(
+                if (focused) Modifier.border(BorderStroke(4.dp, AccentTeal), RoundedCornerShape(16.dp)) else Modifier
+            )
+            .clickable(onClick = onPlayClick)
     ) {
         Box {
             // Background
@@ -927,11 +918,10 @@ private fun ModernContinueCard(
 
 @Composable
 private fun MetadataPillModern(text: String) {
-    Surface(
-        shape = RoundedCornerShape(16.dp),
-        colors = NonInteractiveSurfaceDefaults.colors(
-            containerColor = Color.White.copy(alpha = 0.15f)
-        )
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(16.dp))
+            .background(Color.White.copy(alpha = 0.15f))
     ) {
         Text(
             text = text,

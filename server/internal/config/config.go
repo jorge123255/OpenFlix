@@ -13,6 +13,10 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// DefaultTMDBApiKey is a built-in API key for out-of-box metadata support.
+// Users can override via OPENFLIX_TMDB_API_KEY env var or config file.
+const DefaultTMDBApiKey = "eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiIwMWY3ZTZlMWE5OTBhY2E5NWNiNTJjOTJmZWFkZTNmYiIsIm5iZiI6MTcwMzMxMTA5Mi41NTcsInN1YiI6IjY1ODY3NmY0ODgxM2U0NmJlMzhlOWVmOCIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.EZ6o7m1EKpuQfru4eQpK0U2A_sKnFWLYKCil7CGcvIU"
+
 // generateMachineID creates a random unique identifier for this server instance
 func generateMachineID() string {
 	bytes := make([]byte, 16)
@@ -151,6 +155,7 @@ func DefaultConfig() *Config {
 		Library: LibraryConfig{
 			ScanInterval: 60,
 			MetadataLang: "en",
+			TMDBApiKey:   DefaultTMDBApiKey, // Works out of the box
 		},
 		LiveTV: LiveTVConfig{
 			Enabled:     true,

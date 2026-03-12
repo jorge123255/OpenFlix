@@ -6,9 +6,7 @@ import (
 	"github.com/openflix/openflix-server/internal/api"
 	"github.com/openflix/openflix-server/internal/config"
 	"github.com/openflix/openflix-server/internal/db"
-	"github.com/openflix/openflix-server/internal/discovery"
 	"github.com/openflix/openflix-server/internal/logger"
-	"github.com/openflix/openflix-server/internal/mdns"
 )
 
 func main() {
@@ -39,35 +37,6 @@ func main() {
 	// Run migrations
 	if err := db.Migrate(database); err != nil {
 		logger.Log.Fatalf("Failed to run migrations: %v", err)
-	}
-
-	// Start discovery service for auto-discovery on local network
-	if cfg.Server.DiscoveryEnabled {
-		discoveryService := discovery.NewDiscoveryService(
-			cfg.Server.Name,
-			"1.0.0",
-			cfg.Server.MachineID,
-			cfg.Server.Host,
-			cfg.Server.Port,
-		)
-		if err := discoveryService.Start(); err != nil {
-			logger.Log.Warnf("Failed to start discovery service: %v", err)
-		} else {
-			defer discoveryService.Stop()
-		}
-
-		// Start mDNS service for Bonjour discovery
-		mdnsService := mdns.NewService(
-			cfg.Server.Name,
-			cfg.Server.Port,
-			cfg.Server.MachineID,
-			"1.0.0",
-		)
-		if err := mdnsService.Start(); err != nil {
-			logger.Log.Warnf("Failed to start mDNS service: %v", err)
-		} else {
-			defer mdnsService.Stop()
-		}
 	}
 
 	// Create and start API server

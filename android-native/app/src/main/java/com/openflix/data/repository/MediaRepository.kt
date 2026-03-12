@@ -443,10 +443,18 @@ class MediaRepository @Inject constructor(
         return Result.failure(Exception("Failed after $maxRetries attempts"))
     }
 
-    suspend fun getPlaybackUrl(mediaId: String): Result<String> {
+    suspend fun getPlaybackUrl(mediaId: String, fileId: Long? = null): Result<String> {
         return try {
             val baseUrl = getServerBaseUrl()
-            Timber.d("getPlaybackUrl: baseUrl=$baseUrl, mediaId=$mediaId")
+            Timber.d("getPlaybackUrl: baseUrl=$baseUrl, mediaId=$mediaId, fileId=$fileId")
+
+            // If a specific fileId was provided, build URL directly
+            if (fileId != null) {
+                val playbackUrl = baseUrl.trimEnd('/') + "/library/parts/$fileId/file"
+                Timber.d("Playback URL (fileId): $playbackUrl")
+                return Result.success(playbackUrl)
+            }
+
             // Get metadata which contains the media file info
             val response = api.getMetadata(mediaId)
             Timber.d("getPlaybackUrl: response code=${response.code()}, isSuccessful=${response.isSuccessful}")
@@ -471,6 +479,40 @@ class MediaRepository @Inject constructor(
         } catch (e: Exception) {
             Timber.e(e, "Error getting playback URL: $mediaId")
             Result.failure(e)
+        }
+    }
+
+    suspend fun getPlaybackOptions(mediaId: String): Result<List<PlaybackOption>> {
+        return try {
+            val response = api.getPlaybackOptions(mediaId)
+            if (response.isSuccessful && response.body() != null) {
+                val options = response.body()!!.options.map { dto ->
+                    PlaybackOption(
+                        fileId = dto.fileId,
+                        resolution = dto.resolution,
+                        codec = dto.codec,
+                        container = dto.container,
+                        bitrate = dto.bitrate,
+                        playbackMode = PlaybackMode.fromString(dto.decision.mode),
+                        reason = dto.decision.reason,
+                        playbackUrl = dto.playbackUrl
+                    )
+                }.sortedBy { option ->
+                    when (option.playbackMode) {
+                        PlaybackMode.DIRECT_PLAY -> 0
+                        PlaybackMode.DIRECT_STREAM -> 1
+                        PlaybackMode.TRANSCODE -> 2
+                    }
+                }
+                Timber.d("Loaded ${options.size} playback options for mediaId=$mediaId")
+                Result.success(options)
+            } else {
+                Timber.w("Failed to get playback options: ${response.code()}")
+                Result.success(emptyList())
+            }
+        } catch (e: Exception) {
+            Timber.e(e, "Error getting playback options: $mediaId")
+            Result.success(emptyList())
         }
     }
 

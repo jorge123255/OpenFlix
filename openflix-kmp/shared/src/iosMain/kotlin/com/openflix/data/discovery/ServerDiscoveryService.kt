@@ -22,53 +22,58 @@ actual class ServerDiscoveryService {
     }
 
     private suspend fun discoverViaBonjour(timeoutMs: Long): List<DiscoveredServer> {
+        // NSNetServiceBrowser requires the main RunLoop for delegate callbacks
         return withTimeoutOrNull(timeoutMs) {
-            suspendCancellableCoroutine { continuation ->
-                val servers = mutableListOf<DiscoveredServer>()
-                var resumed = false
+            withContext(Dispatchers.Main) {
+                suspendCancellableCoroutine { continuation ->
+                    val servers = mutableListOf<DiscoveredServer>()
+                    var resumed = false
 
-                val delegate = BonjourBrowserDelegate(
-                    onServiceFound = { service ->
-                        // Resolve the service to get host/port
-                        val resolveDelegate = BonjourResolveDelegate(
-                            onResolved = { host, port, txtRecords ->
-                                if (host.isNotEmpty() && host != "0.0.0.0") {
-                                    val version = txtRecords["version"] ?: ""
-                                    val machineId = txtRecords["machineId"] ?: ""
-                                    val server = DiscoveredServer(
-                                        name = service.name,
-                                        host = host,
-                                        port = port,
-                                        protocol = "http",
-                                        version = version,
-                                        machineId = machineId
-                                    )
-                                    servers.add(server)
-                                    if (!resumed) {
-                                        resumed = true
-                                        continuation.resume(servers)
+                    // Hold strong references to prevent GC before callbacks fire
+                    var resolveDelegate: BonjourResolveDelegate? = null
+
+                    val delegate = BonjourBrowserDelegate(
+                        onServiceFound = { service ->
+                            resolveDelegate = BonjourResolveDelegate(
+                                onResolved = { host, port, txtRecords ->
+                                    if (host.isNotEmpty() && host != "0.0.0.0") {
+                                        val version = txtRecords["version"] ?: ""
+                                        val machineId = txtRecords["machineId"] ?: ""
+                                        val server = DiscoveredServer(
+                                            name = service.name,
+                                            host = host,
+                                            port = port,
+                                            protocol = "http",
+                                            version = version,
+                                            machineId = machineId
+                                        )
+                                        servers.add(server)
+                                        if (!resumed) {
+                                            resumed = true
+                                            continuation.resume(servers)
+                                        }
                                     }
-                                }
-                            },
-                            onFailed = { /* ignore resolve failures */ }
-                        )
-                        service.delegate = resolveDelegate
-                        service.resolveWithTimeout(5.0)
-                    },
-                    onStopped = {
-                        if (!resumed) {
-                            resumed = true
-                            continuation.resume(servers)
+                                },
+                                onFailed = { /* ignore resolve failures */ }
+                            )
+                            service.delegate = resolveDelegate
+                            service.resolveWithTimeout(5.0)
+                        },
+                        onStopped = {
+                            if (!resumed) {
+                                resumed = true
+                                continuation.resume(servers)
+                            }
                         }
+                    )
+
+                    val browser = NSNetServiceBrowser()
+                    browser.delegate = delegate
+                    browser.searchForServicesOfType("_openflix._tcp.", inDomain = "local.")
+
+                    continuation.invokeOnCancellation {
+                        browser.stop()
                     }
-                )
-
-                val browser = NSNetServiceBrowser()
-                browser.delegate = delegate
-                browser.searchForServicesOfType("_openflix._tcp.", inDomain = "local.")
-
-                continuation.invokeOnCancellation {
-                    browser.stop()
                 }
             }
         } ?: emptyList()

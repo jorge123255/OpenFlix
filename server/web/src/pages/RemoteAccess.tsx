@@ -87,47 +87,13 @@ function UPnPSection() {
           </div>
         </div>
       ) : (
-        <div className="space-y-4">
-          <div className="flex items-start gap-3 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
-            <XCircle className="h-5 w-5 text-yellow-400 flex-shrink-0 mt-0.5" />
-            <div>
-              <p className="text-sm font-medium text-yellow-400">UPnP not available on your router</p>
-              <p className="text-xs text-gray-400 mt-0.5">
-                {upnp?.message || 'Your router does not support automatic port mapping (UPnP/IGD).'}
-              </p>
-            </div>
-          </div>
-
-          <div className="space-y-3">
-            <p className="text-sm font-medium text-gray-300">Choose a remote access method:</p>
-
-            {/* Option A: Tailscale (recommended) */}
-            <div className="p-3 bg-gray-900 border border-gray-700 rounded-lg">
-              <p className="text-sm font-medium text-white mb-1">Option A — Tailscale VPN <span className="text-xs text-indigo-400 font-normal">(recommended, free)</span></p>
-              <p className="text-xs text-gray-400">Enable Tailscale below. No port forwarding needed — creates a private encrypted tunnel directly to your device.</p>
-            </div>
-
-            {/* Option B: Port forward manually */}
-            <div className="p-3 bg-gray-900 border border-gray-700 rounded-lg">
-              <p className="text-sm font-medium text-white mb-1">Option B — Manual port forwarding</p>
-              <p className="text-xs text-gray-400 mb-2">Forward TCP port <span className="font-mono text-gray-300">{window.location.port || '32400'}</span> on your router to this server's LAN IP.</p>
-              <div className="text-xs text-gray-500 space-y-0.5">
-                <p className="font-medium text-gray-400">Ubiquiti / UniFi routers:</p>
-                <p>Settings → Firewall &amp; Security → Port Forwarding → Add Rule</p>
-                <p>Protocol: TCP, External Port: {window.location.port || '32400'}, Internal IP: (this server's IP), Internal Port: {window.location.port || '32400'}</p>
-              </div>
-            </div>
-
-            {/* Option C: Cloudflared tunnel */}
-            <div className="p-3 bg-gray-900 border border-gray-700 rounded-lg">
-              <p className="text-sm font-medium text-white mb-1">Option C — Cloudflare Tunnel <span className="text-xs text-gray-400 font-normal">(no port forwarding)</span></p>
-              <p className="text-xs text-gray-400 mb-2">
-                Run a free Cloudflare Tunnel (cloudflared) to expose this server via a stable HTTPS URL. Set the URL it generates in "External URL Override" below.
-              </p>
-              <div className="p-2 bg-gray-950 rounded text-xs font-mono text-gray-300">
-                docker run -d cloudflare/cloudflared:latest tunnel --url http://YOUR_SERVER_IP:{window.location.port || '32400'}
-              </div>
-            </div>
+        <div className="flex items-start gap-3 p-3 bg-gray-700/50 border border-gray-600 rounded-lg">
+          <XCircle className="h-5 w-5 text-gray-400 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-medium text-gray-300">UPnP not available on your router</p>
+            <p className="text-xs text-gray-500 mt-0.5">
+              {upnp?.message || 'Your router does not support automatic port mapping (UPnP/IGD).'}
+            </p>
           </div>
         </div>
       )}
@@ -153,10 +119,16 @@ function CloudDiscoverySection() {
     retry: 1,
   })
 
-  const { data: claimToken, isLoading: claimLoading, refetch: refetchClaim } = useQuery({
+  const { data: claimToken, isLoading: claimLoading } = useQuery({
     queryKey: ['claimToken'],
     queryFn: () => api.getClaimToken(),
-    enabled: false,
+  })
+
+  const rotateClaim = useMutation({
+    mutationFn: () => api.rotateClaimToken(),
+    onSuccess: (data) => {
+      queryClient.setQueryData(['claimToken'], { token: data.token, active: true })
+    },
   })
 
   useEffect(() => {
@@ -284,28 +256,25 @@ function CloudDiscoverySection() {
           <div>
             <p className="text-sm font-medium text-gray-300 mb-1">App Pairing Code</p>
             <p className="text-xs text-gray-500 mb-3">
-              Generate a 4-character code to pair the OpenFlix app with this server when away from home.
+              Your permanent 4-character code for pairing the OpenFlix app when away from home. The code stays the same across restarts.
             </p>
-            <button
-              onClick={() => refetchClaim()}
-              disabled={claimLoading}
-              className="flex items-center gap-2 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-gray-300 hover:text-white rounded-lg text-sm transition-colors disabled:opacity-50"
-            >
-              {claimLoading ? <Loader className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-              Generate Claim Code
-            </button>
           </div>
 
-          {claimToken && (
+          {claimLoading ? (
+            <div className="flex items-center gap-2 text-gray-400 text-sm">
+              <Loader className="h-4 w-4 animate-spin" />
+              Loading...
+            </div>
+          ) : claimToken?.token ? (
             <div className="p-4 rounded-lg bg-indigo-500/10 border border-indigo-500/20">
               <div className="flex items-center gap-2 mb-2">
                 <Key className="h-4 w-4 text-indigo-400" />
-                <p className="text-sm font-medium text-indigo-300">Claim Code</p>
+                <p className="text-sm font-medium text-indigo-300">Pairing Code</p>
               </div>
               <p className="text-xs text-gray-400 mb-3">
                 Enter this code in the OpenFlix app under "Away from Home" to connect.
               </p>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 mb-3">
                 <div className="flex items-center gap-2">
                   {claimToken.token.split('').map((char, i) => (
                     <div key={i} className="h-10 w-10 bg-gray-900 border border-indigo-500/40 rounded-lg flex items-center justify-center text-white text-lg font-bold font-mono">
@@ -315,11 +284,16 @@ function CloudDiscoverySection() {
                 </div>
                 <CopyButton text={claimToken.token.toUpperCase()} />
               </div>
-              <p className="text-xs text-gray-500 mt-2">
-                Expires: {new Date(claimToken.expiresAt).toLocaleString()}
-              </p>
+              <button
+                onClick={() => rotateClaim.mutate()}
+                disabled={rotateClaim.isPending}
+                className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-300 transition-colors disabled:opacity-50"
+              >
+                {rotateClaim.isPending ? <Loader className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
+                Rotate code
+              </button>
             </div>
-          )}
+          ) : null}
         </div>
       )}
     </SettingSection>
@@ -572,6 +546,191 @@ function TailscaleSection() {
   )
 }
 
+function FamilySharingSection() {
+  const [invite, setInvite] = useState<{ token: string; deepLink: string; expiresAt: string } | null>(null)
+  const [copied, setCopied] = useState<'code' | 'link' | null>(null)
+
+  const generateMutation = useMutation({
+    mutationFn: () => api.createInvite(),
+    onSuccess: (data) => setInvite(data),
+  })
+
+  const copyText = async (text: string, type: 'code' | 'link') => {
+    await navigator.clipboard.writeText(text)
+    setCopied(type)
+    setTimeout(() => setCopied(null), 2000)
+  }
+
+  const expiresLabel = invite
+    ? new Date(invite.expiresAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+    : ''
+
+  return (
+    <SettingSection
+      title="Family Sharing"
+      icon={<Key className="h-5 w-5 text-indigo-400" />}
+    >
+      <div className="p-4 rounded-lg bg-gray-900 border border-gray-700 text-sm text-gray-400 space-y-1">
+        <p className="text-gray-300 font-medium">Invite family members to your server</p>
+        <p>
+          Generate an invite code and share it with anyone you want to give access to.
+          They'll enter it in the OpenFlix app to create their own account on your server — with their own watch history and progress.
+        </p>
+        <p className="text-xs text-gray-500 mt-1">Each code is single-use and expires in 7 days.</p>
+      </div>
+
+      <button
+        onClick={() => generateMutation.mutate()}
+        disabled={generateMutation.isPending}
+        className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-lg text-sm transition-colors"
+      >
+        {generateMutation.isPending ? <Loader className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+        {generateMutation.isPending ? 'Generating...' : invite ? 'Generate New Code' : 'Generate Invite Code'}
+      </button>
+
+      {invite && (
+        <div className="p-4 rounded-lg bg-indigo-500/10 border border-indigo-500/20 space-y-4">
+          {/* 8-char code display */}
+          <div>
+            <p className="text-xs text-gray-400 mb-2">Invite code — expires {expiresLabel}</p>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-1.5">
+                {invite.token.split('').map((char, i) => (
+                  <div key={i} className="h-10 w-10 bg-gray-900 border border-indigo-500/40 rounded-lg flex items-center justify-center text-white text-lg font-bold font-mono">
+                    {char}
+                  </div>
+                ))}
+              </div>
+              <button
+                onClick={() => copyText(invite.token, 'code')}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-gray-300 hover:text-white rounded-lg text-sm transition-colors"
+              >
+                {copied === 'code' ? <CheckCircle className="h-3.5 w-3.5 text-green-400" /> : <Copy className="h-3.5 w-3.5" />}
+                {copied === 'code' ? 'Copied!' : 'Copy'}
+              </button>
+            </div>
+          </div>
+
+          {/* Deep link */}
+          <div>
+            <p className="text-xs text-gray-400 mb-1.5">Or share this link — tapping it opens the app directly</p>
+            <div className="flex items-center gap-2">
+              <code className="flex-1 px-3 py-1.5 bg-gray-900 rounded-lg text-xs text-gray-300 font-mono break-all">{invite.deepLink}</code>
+              <button
+                onClick={() => copyText(invite.deepLink, 'link')}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-gray-300 hover:text-white rounded-lg text-sm transition-colors whitespace-nowrap"
+              >
+                {copied === 'link' ? <CheckCircle className="h-3.5 w-3.5 text-green-400" /> : <Copy className="h-3.5 w-3.5" />}
+                {copied === 'link' ? 'Copied!' : 'Copy link'}
+              </button>
+            </div>
+          </div>
+
+          <div className="text-xs text-gray-500 border-t border-indigo-500/20 pt-3">
+            <p className="font-medium text-gray-400 mb-1">How to use:</p>
+            <ol className="space-y-0.5 list-decimal list-inside">
+              <li>Share the code or link with your family member</li>
+              <li>They open OpenFlix → "Other ways to connect" → enter the code</li>
+              <li>They create their own username and password</li>
+              <li>Done — they're connected to your server</li>
+            </ol>
+          </div>
+        </div>
+      )}
+
+      {generateMutation.isError && (
+        <p className="text-sm text-red-400">Failed to generate invite. Make sure cloud discovery is enabled.</p>
+      )}
+    </SettingSection>
+  )
+}
+
+function HTTPSSection() {
+  const { data: tls, isLoading } = useQuery({
+    queryKey: ['tlsStatus'],
+    queryFn: () => api.getTLSStatus(),
+    refetchInterval: (q) => {
+      const d = q.state.data
+      // Poll every 5s while enabled but cert not yet provisioned
+      if (d?.enabled && !d?.hasCert) return 5000
+      return false
+    },
+    retry: 1,
+  })
+
+  const enabled = tls?.enabled ?? false
+  const hasCert = tls?.hasCert ?? false
+  const provisioning = enabled && !hasCert
+
+  return (
+    <SettingSection
+      title="HTTPS Remote Access"
+      icon={<Shield className="h-5 w-5 text-indigo-400" />}
+    >
+      <p className="text-sm text-gray-400">
+        HTTPS is automatically enabled when Cloud Discovery is turned on. A free Let's Encrypt certificate
+        is provisioned for your server's unique domain — no configuration needed.
+      </p>
+
+      {isLoading ? (
+        <div className="flex items-center gap-2 text-gray-400 text-sm">
+          <Loader className="h-4 w-4 animate-spin" />
+          Checking HTTPS status...
+        </div>
+      ) : provisioning ? (
+        <div className="flex items-center gap-3 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+          <Loader className="h-4 w-4 animate-spin text-yellow-400 flex-shrink-0" />
+          <div>
+            <p className="text-sm font-medium text-yellow-400">Provisioning certificate</p>
+            <p className="text-xs text-gray-400 mt-0.5">Setting DNS record and running ACME challenge. Takes ~60 seconds.</p>
+          </div>
+        </div>
+      ) : hasCert && tls?.url ? (
+        <div className="p-3 bg-green-500/10 border border-green-500/20 rounded-lg space-y-2">
+          <div className="flex items-center gap-2">
+            <CheckCircle className="h-4 w-4 text-green-400 flex-shrink-0" />
+            <p className="text-sm font-medium text-green-400">
+              HTTPS active
+              {tls.certExpiry && <span className="text-xs font-normal text-gray-500 ml-2">cert expires {new Date(tls.certExpiry).toLocaleDateString()}</span>}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <code className="flex-1 px-3 py-1.5 bg-gray-900 rounded-lg text-xs text-gray-300 font-mono">{tls.url}</code>
+            <CopyButton text={tls.url} />
+          </div>
+        </div>
+      ) : !enabled ? (
+        <div className="flex items-center gap-2 p-3 bg-gray-700/40 border border-gray-700 rounded-lg">
+          <XCircle className="h-4 w-4 text-gray-500 flex-shrink-0" />
+          <p className="text-sm text-gray-500">Enable Cloud Discovery above to activate HTTPS.</p>
+        </div>
+      ) : null}
+
+      <div className="p-4 rounded-lg bg-gray-900 border border-gray-700 text-sm text-gray-400 space-y-2">
+        <p className="text-gray-300 font-medium text-xs uppercase tracking-wide">Required: Port Forwarding</p>
+        <p className="text-xs">Forward <span className="text-white font-mono">TCP port 32443</span> on your router to this server's local IP address so remote clients can reach the HTTPS endpoint.</p>
+        <div className="p-3 bg-gray-950 rounded-lg text-xs space-y-2 font-mono">
+          <div className="flex gap-4">
+            <span className="text-gray-500 w-32 shrink-0">Protocol</span>
+            <span className="text-white">TCP</span>
+          </div>
+          <div className="flex gap-4">
+            <span className="text-gray-500 w-32 shrink-0">External port</span>
+            <span className="text-white">32443</span>
+          </div>
+          <div className="flex gap-4">
+            <span className="text-gray-500 w-32 shrink-0">Internal port</span>
+            <span className="text-white">32443</span>
+          </div>
+        </div>
+        <p className="text-xs text-gray-500">
+          On most routers: look for "Port Forwarding" or "Virtual Server" under the WAN or Advanced section.
+        </p>
+      </div>
+    </SettingSection>
+  )
+}
+
 function ExternalUrlSection() {
   const queryClient = useQueryClient()
   const [externalUrl, setExternalUrl] = useState('')
@@ -665,6 +824,8 @@ export function RemoteAccessPage() {
 
       <UPnPSection />
       <CloudDiscoverySection />
+      <FamilySharingSection />
+      <HTTPSSection />
       <TailscaleSection />
       <ExternalUrlSection />
     </div>

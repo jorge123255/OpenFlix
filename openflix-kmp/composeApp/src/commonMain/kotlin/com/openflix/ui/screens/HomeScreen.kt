@@ -45,6 +45,7 @@ import kotlinx.coroutines.delay
 @Composable
 fun HomeScreen(
     onMediaClick: (String) -> Unit = {},
+    onChannelClick: (Channel) -> Unit = {},
     viewModel: HomeViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -74,100 +75,151 @@ fun HomeScreen(
                 }.filter { it.nowPlaying != null }.take(10)
             }
 
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(OpenFlixColors.Background),
-                contentPadding = PaddingValues(bottom = 100.dp)
-            ) {
-                // 1. Hero Banner Carousel
-                if (uiState.heroItems.isNotEmpty()) {
-                    item(key = "hero") {
-                        HeroBannerCarousel(
-                            items = uiState.heroItems,
-                            onItemClick = { hero ->
-                                hero.mediaId?.let { onMediaClick(it) }
-                            }
+            val hasContent = uiState.heroItems.isNotEmpty() ||
+                uiState.continueWatching.isNotEmpty() ||
+                uiState.movies.isNotEmpty() ||
+                uiState.tvShows.isNotEmpty() ||
+                uiState.channels.isNotEmpty() ||
+                uiState.recentRecordings.isNotEmpty() ||
+                uiState.recentlyAdded.isNotEmpty()
+
+            if (!hasContent) {
+                // Empty state — no sources configured yet
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(OpenFlixColors.Background),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier.padding(32.dp)
+                    ) {
+                        Text(
+                            text = "Welcome to OpenFlix",
+                            fontSize = 22.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = OpenFlixColors.TextPrimary
                         )
-                    }
-                }
-
-                // 2. Continue Watching
-                if (uiState.continueWatching.isNotEmpty()) {
-                    item(key = "continue_watching") {
-                        ForYouGallerySection(title = "Continue Watching") {
-                            ContinueWatchingRow(
-                                items = uiState.continueWatching,
-                                onItemClick = { onMediaClick(it.key) }
-                            )
-                        }
-                    }
-                }
-
-                // 3. Movies (120x180 poster cards)
-                if (uiState.movies.isNotEmpty()) {
-                    item(key = "movies") {
-                        ForYouGallerySection(title = "Movies", showViewAll = true) {
-                            MediaPosterRow(
-                                items = uiState.movies,
-                                onItemClick = { onMediaClick(it.key) }
-                            )
-                        }
-                    }
-                }
-
-                // 4. TV Shows (120x180 poster cards)
-                if (uiState.tvShows.isNotEmpty()) {
-                    item(key = "tv_shows") {
-                        ForYouGallerySection(title = "TV Shows", showViewAll = true) {
-                            MediaPosterRow(
-                                items = uiState.tvShows,
-                                onItemClick = { onMediaClick(it.key) }
-                            )
-                        }
-                    }
-                }
-
-                // 5. On Now - Live TV (LIVE badge)
-                if (onNowChannels.isNotEmpty()) {
-                    item(key = "on_now") {
-                        ForYouGallerySection(
-                            title = "On Now",
-                            badge = "LIVE",
-                            badgeColor = OpenFlixColors.LiveIndicator
+                        Text(
+                            text = "Add channels and media sources in the web dashboard to get started.",
+                            fontSize = 15.sp,
+                            color = OpenFlixColors.TextSecondary,
+                            lineHeight = 22.sp
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(OpenFlixColors.Primary)
+                                .clickable(onClick = viewModel::refresh)
+                                .padding(horizontal = 24.dp, vertical = 12.dp)
                         ) {
-                            OnNowRow(channels = onNowChannels, onChannelClick = { })
+                            Text(
+                                text = "Refresh",
+                                fontWeight = FontWeight.SemiBold,
+                                color = OpenFlixColors.OnPrimary
+                            )
                         }
                     }
                 }
-
-                // 6. New in Your Library (recordings)
-                if (uiState.recentRecordings.isNotEmpty()) {
-                    item(key = "recordings") {
-                        ForYouGallerySection(title = "New in Your Library") {
-                            RecordingsRow(recordings = uiState.recentRecordings)
+            } else {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(OpenFlixColors.Background),
+                    contentPadding = PaddingValues(bottom = 100.dp)
+                ) {
+                    // 1. Hero Banner Carousel
+                    if (uiState.heroItems.isNotEmpty()) {
+                        item(key = "hero") {
+                            HeroBannerCarousel(
+                                items = uiState.heroItems,
+                                onItemClick = { hero ->
+                                    hero.mediaId?.let { onMediaClick(it) }
+                                }
+                            )
                         }
                     }
-                }
 
-                // 7. Recent Channels (circular logos)
-                if (recentChannels.isNotEmpty()) {
-                    item(key = "recent_channels") {
-                        ForYouGallerySection(title = "Recent Channels") {
-                            RecentChannelsRow(channels = recentChannels, onChannelClick = { })
+                    // 2. Continue Watching
+                    if (uiState.continueWatching.isNotEmpty()) {
+                        item(key = "continue_watching") {
+                            ForYouGallerySection(title = "Continue Watching") {
+                                ContinueWatchingRow(
+                                    items = uiState.continueWatching,
+                                    onItemClick = { onMediaClick(it.id.toString()) }
+                                )
+                            }
                         }
                     }
-                }
 
-                // 8. Sports (conditional, LIVE badge)
-                if (sportsChannels.isNotEmpty()) {
-                    item(key = "sports") {
-                        ForYouGallerySection(
-                            title = "Sports",
-                            badge = "LIVE",
-                            badgeColor = OpenFlixColors.LiveIndicator
-                        ) {
-                            OnNowRow(channels = sportsChannels, onChannelClick = { })
+                    // 3. Movies (120x180 poster cards)
+                    if (uiState.movies.isNotEmpty()) {
+                        item(key = "movies") {
+                            ForYouGallerySection(title = "Movies", showViewAll = true) {
+                                MediaPosterRow(
+                                    items = uiState.movies,
+                                    onItemClick = { onMediaClick(it.id.toString()) }
+                                )
+                            }
+                        }
+                    }
+
+                    // 4. TV Shows (120x180 poster cards)
+                    if (uiState.tvShows.isNotEmpty()) {
+                        item(key = "tv_shows") {
+                            ForYouGallerySection(title = "TV Shows", showViewAll = true) {
+                                MediaPosterRow(
+                                    items = uiState.tvShows,
+                                    onItemClick = { onMediaClick(it.id.toString()) }
+                                )
+                            }
+                        }
+                    }
+
+                    // 5. On Now - Live TV (LIVE badge)
+                    if (onNowChannels.isNotEmpty()) {
+                        item(key = "on_now") {
+                            ForYouGallerySection(
+                                title = "On Now",
+                                badge = "LIVE",
+                                badgeColor = OpenFlixColors.LiveIndicator
+                            ) {
+                                OnNowRow(channels = onNowChannels, onChannelClick = onChannelClick)
+                            }
+                        }
+                    }
+
+                    // 6. New in Your Library (recordings)
+                    if (uiState.recentRecordings.isNotEmpty()) {
+                        item(key = "recordings") {
+                            ForYouGallerySection(title = "New in Your Library") {
+                                RecordingsRow(recordings = uiState.recentRecordings)
+                            }
+                        }
+                    }
+
+                    // 7. Recent Channels (circular logos)
+                    if (recentChannels.isNotEmpty()) {
+                        item(key = "recent_channels") {
+                            ForYouGallerySection(title = "Recent Channels") {
+                                RecentChannelsRow(channels = recentChannels, onChannelClick = onChannelClick)
+                            }
+                        }
+                    }
+
+                    // 8. Sports (conditional, LIVE badge)
+                    if (sportsChannels.isNotEmpty()) {
+                        item(key = "sports") {
+                            ForYouGallerySection(
+                                title = "Sports",
+                                badge = "LIVE",
+                                badgeColor = OpenFlixColors.LiveIndicator
+                            ) {
+                                OnNowRow(channels = sportsChannels, onChannelClick = onChannelClick)
+                            }
                         }
                     }
                 }

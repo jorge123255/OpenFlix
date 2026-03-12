@@ -21,6 +21,7 @@ import (
 
 // CommercialResponse represents a commercial segment in Android-compatible format
 type CommercialResponse struct {
+	ID    uint  `json:"id"`
 	Start int64 `json:"start"` // milliseconds
 	End   int64 `json:"end"`   // milliseconds
 }
@@ -29,6 +30,8 @@ type CommercialResponse struct {
 type RecordingResponse struct {
 	models.Recording
 	Commercials []CommercialResponse `json:"commercials"`
+	HlsUrl      string               `json:"hlsUrl"`
+	StreamUrl   string               `json:"streamUrl"`
 }
 
 // toRecordingResponse converts a Recording with CommercialSegments to Android-compatible format
@@ -36,6 +39,7 @@ func toRecordingResponse(r models.Recording) RecordingResponse {
 	commercials := make([]CommercialResponse, len(r.Commercials))
 	for i, c := range r.Commercials {
 		commercials[i] = CommercialResponse{
+			ID:    c.ID,
 			Start: int64(c.StartTime * 1000), // Convert seconds to milliseconds
 			End:   int64(c.EndTime * 1000),
 		}
@@ -45,6 +49,8 @@ func toRecordingResponse(r models.Recording) RecordingResponse {
 	return RecordingResponse{
 		Recording:   r,
 		Commercials: commercials,
+		HlsUrl:      fmt.Sprintf("/dvr/recordings/%d/hls/master.m3u8", r.ID),
+		StreamUrl:   fmt.Sprintf("/dvr/stream/%d", r.ID),
 	}
 }
 
@@ -303,8 +309,8 @@ func (s *Server) recordFromProgram(c *gin.Context) {
 
 	// Check for duplicate recording (same title + overlapping time = already scheduled)
 	var existingRec models.Recording
-	if err := s.db.Where("user_id = ? AND status IN ? AND title = ? AND start_time = ? AND end_time = ?",
-		userID, []string{"scheduled", "recording", "completed"}, program.Title, program.Start, program.End).First(&existingRec).Error; err == nil {
+	if err := s.db.Where("user_id = ? AND status IN ? AND program_id = ?",
+		userID, []string{"scheduled", "recording", "completed"}, programID).First(&existingRec).Error; err == nil {
 		c.JSON(http.StatusConflict, gin.H{
 			"error":       "A recording for this program already exists",
 			"recordingId": existingRec.ID,
@@ -312,10 +318,9 @@ func (s *Server) recordFromProgram(c *gin.Context) {
 		return
 	}
 
-	// Check for conflicts before creating
-	var conflicts []models.Recording
-	s.db.Where("user_id = ? AND status IN ? AND start_time < ? AND end_time > ?",
-		userID, []string{"scheduled", "recording"}, program.End, program.Start).Find(&conflicts)
+	// Check for conflicts before creating — use recordEnd (post-padded) so we
+	// correctly detect adjacent recordings that the padding window now overlaps.
+	// recordEnd is computed below; read it after the padding block.
 
 	// Set priority (default 50)
 	prio := 50
@@ -327,6 +332,25 @@ func (s *Server) recordFromProgram(c *gin.Context) {
 		prio = *priority
 	}
 
+	// Apply default 5-minute post-padding so shows that run slightly long
+	// don't get cut off. The client can override by sending paddingEnd (seconds).
+	const defaultPostPadding = 5 * 60 // 5 minutes
+	postPadSec := 0
+	if pp, ok := raw["paddingEnd"]; ok && pp != nil {
+		if ppf, ok := pp.(float64); ok && ppf > 0 {
+			postPadSec = int(ppf)
+		}
+	}
+	if postPadSec == 0 {
+		postPadSec = defaultPostPadding
+	}
+	recordEnd := program.End.Add(time.Duration(postPadSec) * time.Second)
+
+	// Conflict check against the padded window
+	var conflicts []models.Recording
+	s.db.Where("user_id = ? AND status IN ? AND start_time < ? AND end_time > ?",
+		userID, []string{"scheduled", "recording"}, recordEnd, program.Start).Find(&conflicts)
+
 	// Create the recording with program metadata
 	progID := uint(programID)
 	recording := models.Recording{
@@ -337,7 +361,7 @@ func (s *Server) recordFromProgram(c *gin.Context) {
 		Subtitle:     program.Subtitle,
 		Description:  program.Description,
 		StartTime:    program.Start,
-		EndTime:      program.End,
+		EndTime:      recordEnd,
 		Status:       "scheduled",
 		SeriesRecord: seriesRecord,
 		Category:     program.Category,
@@ -410,20 +434,21 @@ func (s *Server) scheduleFutureSeriesRecordings(userID uint, channelID string, s
 			continue // Skip already scheduled
 		}
 
+		const seriesPostPadding = 5 * 60 // 5 minutes — match the one-off recording policy
 		programID := prog.ID
 		recording := models.Recording{
-			UserID:            userID,
-			ChannelID:         0, // Will need to look up by channel ID
-			ProgramID:         &programID,
-			Title:             prog.Title,
-			Description:       prog.Description,
-			StartTime:         prog.Start,
-			EndTime:           prog.End,
-			Status:            "scheduled",
-			SeriesRecord:      true,
-			SeriesParentID:    &parentRecordingID,
-			Category:          prog.Category,
-			EpisodeNum:        prog.EpisodeNum,
+			UserID:         userID,
+			ChannelID:      0, // Will need to look up by channel ID
+			ProgramID:      &programID,
+			Title:          prog.Title,
+			Description:    prog.Description,
+			StartTime:      prog.Start,
+			EndTime:        prog.End.Add(time.Duration(seriesPostPadding) * time.Second),
+			Status:         "scheduled",
+			SeriesRecord:   true,
+			SeriesParentID: &parentRecordingID,
+			Category:       prog.Category,
+			EpisodeNum:     prog.EpisodeNum,
 		}
 
 		// Get the channel ID
@@ -498,6 +523,9 @@ func (s *Server) deleteRecording(c *gin.Context) {
 			logger.WithError(err).WithField("edlPath", edlPath).Warn("Failed to remove EDL file from disk")
 		}
 	}
+	// Remove HLS segment cache for this recording
+	hlsCacheDir := filepath.Join(os.TempDir(), "openflix-hls", fmt.Sprintf("%d", recording.ID))
+	_ = os.RemoveAll(hlsCacheDir)
 
 	if err := s.db.Delete(&recording).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete recording"})
@@ -1288,12 +1316,19 @@ func (s *Server) getRecordingHLSPlaylist(c *gin.Context) {
 	segmentDuration := 10.0 // 10 second segments
 	numSegments := int(duration/segmentDuration) + 1
 
+	isLive := recording.Status == "recording"
+
 	var playlist strings.Builder
 	playlist.WriteString("#EXTM3U\n")
 	playlist.WriteString("#EXT-X-VERSION:3\n")
 	playlist.WriteString(fmt.Sprintf("#EXT-X-TARGETDURATION:%d\n", int(segmentDuration)+1))
 	playlist.WriteString("#EXT-X-MEDIA-SEQUENCE:0\n")
-	playlist.WriteString("#EXT-X-PLAYLIST-TYPE:VOD\n")
+	if isLive {
+		// EVENT type: player polls for new segments; no ENDLIST until recording stops
+		playlist.WriteString("#EXT-X-PLAYLIST-TYPE:EVENT\n")
+	} else {
+		playlist.WriteString("#EXT-X-PLAYLIST-TYPE:VOD\n")
+	}
 
 	for i := 0; i < numSegments; i++ {
 		startTime := float64(i) * segmentDuration
@@ -1307,7 +1342,9 @@ func (s *Server) getRecordingHLSPlaylist(c *gin.Context) {
 		playlist.WriteString(fmt.Sprintf("#EXTINF:%.3f,\n", segDuration))
 		playlist.WriteString(fmt.Sprintf("segment_%d.ts?start=%.3f&duration=%.3f\n", i, startTime, segDuration))
 	}
-	playlist.WriteString("#EXT-X-ENDLIST\n")
+	if !isLive {
+		playlist.WriteString("#EXT-X-ENDLIST\n")
+	}
 
 	c.Header("Content-Type", "application/vnd.apple.mpegurl")
 	c.Header("Cache-Control", "no-cache")
@@ -1347,22 +1384,33 @@ func (s *Server) getRecordingHLSSegment(c *gin.Context) {
 		return
 	}
 
-	// Use ffmpeg to extract the segment
-	// Source file should already be remuxed with proper timestamps
-	// Use fast copy mode for quick segment generation
+	// Check disk cache first to avoid re-transcoding the same segment
+	cacheDir := filepath.Join(os.TempDir(), "openflix-hls", fmt.Sprintf("%d", recording.ID))
+	_ = os.MkdirAll(cacheDir, 0755)
+	// Safe cache filename from start/duration params
+	safeStart := strings.ReplaceAll(startTime, ".", "_")
+	safeDur := strings.ReplaceAll(duration, ".", "_")
+	cacheFile := filepath.Join(cacheDir, fmt.Sprintf("seg_%s_%s.ts", safeStart, safeDur))
+
+	if data, err := os.ReadFile(cacheFile); err == nil {
+		c.Header("Content-Type", "video/mp2t")
+		c.Header("Cache-Control", "max-age=86400")
+		c.Data(http.StatusOK, "video/mp2t", data)
+		return
+	}
+
+	// Use ffmpeg to extract the segment (fast copy, no re-encode)
 	cmd := exec.Command("ffmpeg",
-		"-ss", startTime,        // Input seeking (fast)
+		"-ss", startTime,
 		"-i", recording.FilePath,
 		"-t", duration,
-		"-map", "0:v:0",         // First video stream
-		"-map", "0:a:0?",        // First audio stream (optional)
-		"-c", "copy",            // Copy both codecs (fast)
+		"-map", "0:v:0",
+		"-map", "0:a:0?",
+		"-c", "copy",
 		"-f", "mpegts",
-		"-")
+		cacheFile)
 
-	output, err := cmd.Output()
-	if err != nil {
-		// Log the ffmpeg stderr for debugging
+	if err := cmd.Run(); err != nil {
 		if exitErr, ok := err.(*exec.ExitError); ok {
 			logger.Log.WithField("stderr", string(exitErr.Stderr)).Error("FFmpeg failed")
 		}
@@ -1371,9 +1419,15 @@ func (s *Server) getRecordingHLSSegment(c *gin.Context) {
 		return
 	}
 
+	data, err := os.ReadFile(cacheFile)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read segment"})
+		return
+	}
+
 	c.Header("Content-Type", "video/mp2t")
-	c.Header("Cache-Control", "max-age=3600")
-	c.Data(http.StatusOK, "video/mp2t", output)
+	c.Header("Cache-Control", "max-age=86400")
+	c.Data(http.StatusOK, "video/mp2t", data)
 }
 
 // getVideoDuration uses ffprobe to get video duration in seconds
