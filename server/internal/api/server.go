@@ -212,10 +212,12 @@ func NewServer(cfg *config.Config, db *gorm.DB) *Server {
 		id, err := strconv.ParseUint(channelID, 10, 32)
 		if err != nil {
 			return nil
+	})
 		}
 		var ch models.Channel
 		if db.Select("number").First(&ch, id).Error != nil || ch.Number == 0 {
 			return nil
+	})
 		}
 		num := ch.Number
 		var adjacent []models.Channel
@@ -312,6 +314,7 @@ func NewServer(cfg *config.Config, db *gorm.DB) *Server {
 		}
 		return nil
 	})
+	})
 	taskSched.RegisterTask("library_scan", "Library Scan", "Scan library paths and reconcile stale local media", "0 * * * *", 30*time.Minute, func(ctx context.Context) error {
 		logger.Info("[scheduler:library_scan] scanning libraries and reconciling local media")
 		var libs []models.Library
@@ -327,6 +330,7 @@ func NewServer(cfg *config.Config, db *gorm.DB) *Server {
 			}
 		}
 		return nil
+	})
 	})
 	taskSched.RegisterTask("backup_db", "Database Backup", "Create a backup of the database", "0 3 * * *", 10*time.Minute, func(ctx context.Context) error {
 		logger.Info("[scheduler:backup_db] creating database backup")
@@ -347,6 +351,7 @@ func NewServer(cfg *config.Config, db *gorm.DB) *Server {
 		logger.Infof("[scheduler:backup_db] backup created: %s", backupPath)
 		return nil
 	})
+	})
 	taskSched.RegisterTask("prune_recordings", "Prune Recordings", "Clean up old recordings per retention rules", "0 4 * * *", 15*time.Minute, func(ctx context.Context) error {
 		logger.Info("[scheduler:prune_recordings] checking recordings for cleanup")
 		// Delete recordings that are failed and older than 7 days
@@ -360,6 +365,7 @@ func NewServer(cfg *config.Config, db *gorm.DB) *Server {
 		}
 		return nil
 	})
+	})
 	taskSched.RegisterTask("subtitle_search", "Subtitle Search", "Search subtitles for media missing them", "0 2 * * *", 30*time.Minute, func(ctx context.Context) error {
 		logger.Info("[scheduler:subtitle_search] checking for media missing subtitles")
 		// Placeholder: count media without subtitles
@@ -371,6 +377,7 @@ func NewServer(cfg *config.Config, db *gorm.DB) *Server {
 			logger.Infof("[scheduler:subtitle_search] found %d items without subtitles", count)
 		}
 		return nil
+	})
 	})
 	taskSched.RegisterTask("cleanup_sessions", "Cleanup Sessions", "Clean expired playback sessions", "*/30 * * * *", 5*time.Minute, func(ctx context.Context) error {
 		// Delete sessions not updated in the last 2 hours
@@ -384,6 +391,7 @@ func NewServer(cfg *config.Config, db *gorm.DB) *Server {
 		}
 		return nil
 	})
+	})
 	taskSched.RegisterTask("health_check", "Health Check", "System health check", "*/5 * * * *", 2*time.Minute, func(ctx context.Context) error {
 		// Check database connectivity
 		sqlDB, err := db.DB()
@@ -394,6 +402,7 @@ func NewServer(cfg *config.Config, db *gorm.DB) *Server {
 			return fmt.Errorf("database ping failed: %w", err)
 		}
 		return nil
+	})
 	})
 	taskSched.RegisterTask("source_refresh", "Source Refresh", "Refresh M3U and Xtream sources (channels + VOD/series)", "0 */12 * * *", 60*time.Minute, func(ctx context.Context) error {
 		logger.Info("[scheduler:source_refresh] refreshing all sources")
@@ -490,8 +499,8 @@ func NewServer(cfg *config.Config, db *gorm.DB) *Server {
 
 		logger.Info("[scheduler:source_refresh] all sources refreshed")
 		return nil
+	})
 
-	// Refresh HDHomeRun tuners and import any new channels (every 6 hours)
 	// Refresh HDHomeRun tuners and import any new channels (every 6 hours)
 	taskSched.RegisterTask("tuner_refresh", "Tuner Refresh",
 		"Discover HDHomeRun tuners and import lineup changes", "0 */6 * * *", 5*time.Minute,
@@ -531,6 +540,7 @@ func NewServer(cfg *config.Config, db *gorm.DB) *Server {
 				}
 			}
 			return nil
+	})
 		})
 	// Monitor tracked shows for new seasons (every 12 hours)
 	taskSched.RegisterTask("monitor_new_seasons", "Monitor New Seasons",
@@ -539,6 +549,7 @@ func NewServer(cfg *config.Config, db *gorm.DB) *Server {
 			agent := scanner.GetTMDBAgent()
 			if agent == nil || !agent.IsConfigured() {
 				return nil
+	})
 			}
 			var notifyFn metadata.NotifyFn
 			if notifyManager != nil {
