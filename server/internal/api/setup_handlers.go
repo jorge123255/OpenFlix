@@ -15,7 +15,11 @@ func (s *Server) getSetupStatus(c *gin.Context) {
 
 	// Check if any library sources exist
 	var sourceCount int64
-	s.db.Model(&models.LibrarySource{}).Count(&sourceCount)
+	s.db.Model(&models.Library{}).Count(&sourceCount)
+	
+	// Check if any channels exist (for live TV setup)
+	var channelCount int64
+	s.db.Model(&models.Channel{}).Count(&channelCount)
 
 	// Check if setup was explicitly completed (stored in settings)
 	var setting models.Setting
@@ -25,12 +29,13 @@ func (s *Server) getSetupStatus(c *gin.Context) {
 	}
 
 	// Needs setup if: no tuners AND no sources AND not explicitly completed
-	needsSetup := tunerCount == 0 && sourceCount == 0 && !setupComplete
+	needsSetup := tunerCount == 0 && sourceCount == 0 && channelCount == 0 && !setupComplete
 
 	c.JSON(http.StatusOK, gin.H{
 		"needsSetup":    needsSetup,
 		"tunerCount":    tunerCount,
 		"sourceCount":   sourceCount,
+		"channelCount":  channelCount,
 		"setupComplete": setupComplete,
 	})
 }

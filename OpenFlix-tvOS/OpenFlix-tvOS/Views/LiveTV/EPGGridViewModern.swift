@@ -102,6 +102,22 @@ struct EPGGridViewModern: View {
                 )
             }
         }
+        .fullScreenCover(isPresented: $showSearch) {
+            EPGSearchView(
+                viewModel: viewModel,
+                isPresented: $showSearch,
+                onChannelSelect: { channel in
+                    showSearch = false
+                    onChannelSelect(channel)
+                },
+                onProgramSelect: { program, channel in
+                    showSearch = false
+                    selectedProgram = program
+                    selectedChannelForDetail = channel
+                    showProgramDetail = true
+                }
+            )
+        }
     }
     
     // MARK: - Main Grid
