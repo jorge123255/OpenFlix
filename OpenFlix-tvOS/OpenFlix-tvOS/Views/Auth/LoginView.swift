@@ -10,6 +10,7 @@ struct LoginView: View {
     @State private var isDiscovering = false
     @State private var showRegister = false
     @State private var isServerConnected = false
+    @State private var showAwayFromHome = false
 
     @FocusState private var focusedField: Field?
 
@@ -62,6 +63,10 @@ struct LoginView: View {
         }
         .sheet(isPresented: $showRegister) {
             RegisterView()
+        }
+        .fullScreenCover(isPresented: $showAwayFromHome) {
+            AwayFromHomeSheet(isPresented: $showAwayFromHome)
+                .environmentObject(authViewModel)
         }
     }
 
@@ -162,6 +167,23 @@ struct LoginView: View {
             .buttonStyle(.card)
             .disabled(serverURL.isEmpty)
             .opacity(serverURL.isEmpty ? 0.5 : 1)
+
+            // Away From Home
+            Button(action: { showAwayFromHome = true }) {
+                HStack(spacing: 12) {
+                    Image(systemName: "globe")
+                        .font(.title3)
+                        .foregroundColor(OpenFlixColors.primary)
+                    Text("Away from Home")
+                        .font(.subheadline)
+                        .foregroundColor(OpenFlixColors.textSecondary)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+                .background(OpenFlixColors.surfaceVariant)
+                .cornerRadius(8)
+            }
+            .buttonStyle(.card)
 
             // Error
             if let error = authViewModel.error {

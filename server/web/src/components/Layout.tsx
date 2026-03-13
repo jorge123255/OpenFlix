@@ -48,8 +48,9 @@ import {
   Globe,
   type LucideIcon,
 } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useCurrentUser, useLogout } from '../hooks/useAuth'
+import { useSetupCheck } from '../hooks/useSetupCheck'
 import { SettingsSearch } from './SettingsSearch'
 
 interface NavItem {
@@ -218,6 +219,18 @@ export function Layout() {
   const { data: user } = useCurrentUser()
   const logout = useLogout()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  
+  // Auto-redirect to setup wizard if nothing configured
+  const setupChecked = useSetupCheck()
+  
+  // Show loading while checking setup status
+  if (!setupChecked) {
+    return (
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-500"></div>
+      </div>
+    )
+  }
 
   const handleLogout = async () => {
     await logout.mutateAsync()

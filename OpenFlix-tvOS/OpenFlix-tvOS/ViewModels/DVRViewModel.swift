@@ -16,6 +16,7 @@ class DVRViewModel: ObservableObject {
         case recordings = "Recordings"
         case scheduled = "Scheduled"
         case series = "Series"
+        case passes = "Passes"
     }
 
     // MARK: - Load

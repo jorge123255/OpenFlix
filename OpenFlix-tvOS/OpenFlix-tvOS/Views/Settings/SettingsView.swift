@@ -89,6 +89,13 @@ struct SettingsView: View {
                                 .foregroundColor(.secondary)
                         }
                     }
+
+                    NavigationLink(destination: TVChannelEditorView()) {
+                        HStack {
+                            Image(systemName: "list.bullet.rectangle")
+                            Text("Channel Editor")
+                        }
+                    }
                 }
 
                 // Playback Section

@@ -55,6 +55,8 @@ struct DVRView: View {
                 scheduledContent
             case .series:
                 seriesRulesContent
+            case .passes:
+                TVPassManagementView()
             }
         }
     }

@@ -1628,6 +1628,8 @@ func (s *Server) setupRouter() {
 		setupGroup.GET("/tuners", s.getTuners)
 		setupGroup.POST("/tuners", s.addTuner)
 		setupGroup.POST("/tuners/:id/import", s.importTunerChannels)
+		setupGroup.GET("/status", s.getSetupStatus)
+		setupGroup.POST("/complete", s.markSetupComplete)
 	}
 
 	// ============ Tuner API (HDHR) ============
