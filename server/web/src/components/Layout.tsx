@@ -48,7 +48,7 @@ import {
   Globe,
   type LucideIcon,
 } from 'lucide-react'
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useCurrentUser, useLogout } from '../hooks/useAuth'
 import { useSetupCheck } from '../hooks/useSetupCheck'
 import { SettingsSearch } from './SettingsSearch'

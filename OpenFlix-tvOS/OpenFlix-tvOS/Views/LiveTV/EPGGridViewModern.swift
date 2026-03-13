@@ -15,6 +15,7 @@ struct EPGGridViewModern: View {
     @State private var selectedChannelForDetail: Channel?
     @State private var showMiniPlayer = true
     @State private var showQuickNav = true
+    @State private var showSearch = false
     
     // Focus
     @FocusState private var focusedSection: EPGSection?
@@ -43,7 +44,7 @@ struct EPGGridViewModern: View {
                         onJumpToNow: scrollToNow,
                         onJumpToPrimetime: scrollToPrimetime,
                         onShowCategories: { /* toggle filter */ },
-                        onSearch: { /* show search */ }
+                        onSearch: { showSearch = true }
                     )
                     .focused($focusedSection, equals: .quickNav)
                     .transition(.move(edge: .top).combined(with: .opacity))
