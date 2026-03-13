@@ -1,14 +1,19 @@
 import SwiftUI
 
 // MARK: - Away From Home (tvOS)
-// Lets users connect remotely using a 4-char pairing code (owner) or
-// 8-char invite code (family). Uses an on-screen D-pad keyboard since
-// tvOS has no hardware keyboard for text fields by default.
+// Multi-phase view: code entry → login (pairing) or register (invite)
 
 struct AwayFromHomeSheet: View {
     @EnvironmentObject var authViewModel: AuthViewModel
     @Binding var isPresented: Bool
 
+    private enum Phase {
+        case codeEntry
+        case login(serverURL: URL, serverName: String)
+        case invite(serverURL: URL, inviteToken: String, serverName: String)
+    }
+
+    @State private var phase: Phase = .codeEntry
     @State private var code = ""
     @State private var errorMessage: String?
     @State private var isConnecting = false
@@ -21,18 +26,45 @@ struct AwayFromHomeSheet: View {
         ZStack {
             bg.ignoresSafeArea()
 
-            HStack(spacing: 80) {
-                // Left panel — instructions
-                leftPanel
+            switch phase {
+            case .codeEntry:
+                codeEntryView
 
-                // Right panel — code entry + keyboard
-                rightPanel
+            case .login(let serverURL, let serverName):
+                RemoteLoginView(
+                    serverURL: serverURL,
+                    serverName: serverName,
+                    accentColor: accentColor,
+                    cardBg: cardBg,
+                    onSuccess: { isPresented = false },
+                    onBack: { phase = .codeEntry }
+                )
+                .environmentObject(authViewModel)
+
+            case .invite(let serverURL, let inviteToken, let serverName):
+                InviteRegisterView(
+                    serverURL: serverURL,
+                    inviteToken: inviteToken,
+                    serverName: serverName,
+                    accentColor: accentColor,
+                    cardBg: cardBg,
+                    onSuccess: { isPresented = false },
+                    onBack: { phase = .codeEntry }
+                )
+                .environmentObject(authViewModel)
             }
-            .padding(60)
         }
     }
 
-    // MARK: - Left Panel
+    // MARK: - Code Entry
+
+    private var codeEntryView: some View {
+        HStack(spacing: 80) {
+            leftPanel
+            rightPanel
+        }
+        .padding(60)
+    }
 
     private var leftPanel: some View {
         VStack(alignment: .leading, spacing: 24) {
@@ -89,14 +121,10 @@ struct AwayFromHomeSheet: View {
         }
     }
 
-    // MARK: - Right Panel
-
     private var rightPanel: some View {
         VStack(spacing: 32) {
-            // Code display boxes
             codeDisplayBoxes
 
-            // Code type hint
             Group {
                 if code.count == 4 {
                     Text("Pairing code — connecting as owner")
@@ -114,7 +142,6 @@ struct AwayFromHomeSheet: View {
             }
             .font(.subheadline)
 
-            // Error
             if let error = errorMessage {
                 HStack(spacing: 8) {
                     Image(systemName: "exclamationmark.triangle.fill")
@@ -127,17 +154,15 @@ struct AwayFromHomeSheet: View {
                 .cornerRadius(8)
             }
 
-            // TV Keypad
             TVCodeKeypad(code: $code, maxLength: 8)
 
-            // Action buttons
             HStack(spacing: 24) {
                 Button("Cancel") {
                     isPresented = false
                 }
                 .buttonStyle(TVSecondaryButtonStyle())
 
-                Button(action: connect) {
+                Button(action: connectCode) {
                     Group {
                         if isConnecting {
                             ProgressView().tint(.white)
@@ -154,8 +179,6 @@ struct AwayFromHomeSheet: View {
         }
         .frame(maxWidth: 500)
     }
-
-    // MARK: - Code Boxes
 
     private var codeDisplayBoxes: some View {
         HStack(spacing: 12) {
@@ -179,15 +202,12 @@ struct AwayFromHomeSheet: View {
                             .foregroundColor(.white)
                     }
                 }
-                // Separator between 4 and 8 chars
                 .padding(.trailing, index == 3 ? 8 : 0)
             }
         }
     }
 
-    // MARK: - Connect
-
-    private func connect() {
+    private func connectCode() {
         guard code.count >= 4 else { return }
         isConnecting = true
         errorMessage = nil
@@ -195,14 +215,253 @@ struct AwayFromHomeSheet: View {
         Task {
             do {
                 if code.count == 8 {
-                    try await authViewModel.resolveInvite(code: code)
+                    let (serverURL, serverName, token) = try await authViewModel.resolveInviteCode(code: code)
+                    phase = .invite(serverURL: serverURL, inviteToken: token, serverName: serverName)
                 } else {
-                    try await authViewModel.resolvePairingCode(code: code)
+                    let (serverURL, serverName) = try await authViewModel.resolvePairingCode(code: code)
+                    phase = .login(serverURL: serverURL, serverName: serverName)
                 }
-                isPresented = false
             } catch {
                 errorMessage = error.localizedDescription
-                isConnecting = false
+            }
+            isConnecting = false
+        }
+    }
+}
+
+// MARK: - Remote Login (after pairing code)
+
+private struct RemoteLoginView: View {
+    @EnvironmentObject var authViewModel: AuthViewModel
+    let serverURL: URL
+    let serverName: String
+    let accentColor: Color
+    let cardBg: Color
+    let onSuccess: () -> Void
+    let onBack: () -> Void
+
+    @State private var username = ""
+    @State private var password = ""
+    @FocusState private var focused: LoginField?
+
+    enum LoginField { case username, password }
+
+    var body: some View {
+        HStack(spacing: 80) {
+            // Left — server info
+            VStack(alignment: .leading, spacing: 24) {
+                ZStack {
+                    Circle()
+                        .fill(accentColor.opacity(0.2))
+                        .frame(width: 100, height: 100)
+                    Image(systemName: "checkmark.seal.fill")
+                        .font(.system(size: 48))
+                        .foregroundColor(.green)
+                }
+
+                Text("Server Found")
+                    .font(.system(size: 48, weight: .bold))
+                    .foregroundColor(.white)
+
+                Text(serverName)
+                    .font(.title2)
+                    .foregroundColor(accentColor)
+
+                Text(serverURL.absoluteString)
+                    .font(.subheadline)
+                    .foregroundColor(.gray)
+
+                Spacer()
+
+                Button("Back") { onBack() }
+                    .buttonStyle(TVSecondaryButtonStyle())
+            }
+            .frame(maxWidth: 500)
+
+            // Right — credentials
+            VStack(spacing: 28) {
+                Text("Sign In")
+                    .font(.system(size: 36, weight: .bold))
+                    .foregroundColor(.white)
+
+                VStack(spacing: 16) {
+                    TextField("Username", text: $username)
+                        .textFieldStyle(.plain)
+                        .font(.system(size: 24))
+                        .padding(20)
+                        .background(cardBg)
+                        .cornerRadius(12)
+                        .focused($focused, equals: .username)
+
+                    SecureField("Password", text: $password)
+                        .textFieldStyle(.plain)
+                        .font(.system(size: 24))
+                        .padding(20)
+                        .background(cardBg)
+                        .cornerRadius(12)
+                        .focused($focused, equals: .password)
+                }
+
+                if let error = authViewModel.error {
+                    Text(error)
+                        .foregroundColor(.red)
+                        .font(.subheadline)
+                }
+
+                Button(action: signIn) {
+                    Group {
+                        if authViewModel.isLoading {
+                            ProgressView().tint(.white)
+                        } else {
+                            Text("Sign In")
+                                .fontWeight(.semibold)
+                        }
+                    }
+                }
+                .buttonStyle(TVPrimaryButtonStyle(accentColor: accentColor))
+                .disabled(username.isEmpty || password.isEmpty || authViewModel.isLoading)
+                .opacity(username.isEmpty || password.isEmpty ? 0.5 : 1)
+            }
+            .frame(maxWidth: 500)
+        }
+        .padding(60)
+    }
+
+    private func signIn() {
+        Task {
+            await authViewModel.login(
+                serverURL: serverURL,
+                username: username,
+                password: password,
+                rememberMe: true
+            )
+            if authViewModel.isAuthenticated {
+                onSuccess()
+            }
+        }
+    }
+}
+
+// MARK: - Invite Register (after invite code)
+
+private struct InviteRegisterView: View {
+    @EnvironmentObject var authViewModel: AuthViewModel
+    let serverURL: URL
+    let inviteToken: String
+    let serverName: String
+    let accentColor: Color
+    let cardBg: Color
+    let onSuccess: () -> Void
+    let onBack: () -> Void
+
+    @State private var username = ""
+    @State private var email = ""
+    @State private var password = ""
+    @FocusState private var focused: RegField?
+
+    enum RegField { case username, email, password }
+
+    var body: some View {
+        HStack(spacing: 80) {
+            // Left — invite info
+            VStack(alignment: .leading, spacing: 24) {
+                ZStack {
+                    Circle()
+                        .fill(Color.orange.opacity(0.2))
+                        .frame(width: 100, height: 100)
+                    Image(systemName: "person.badge.plus")
+                        .font(.system(size: 48))
+                        .foregroundColor(.orange)
+                }
+
+                Text("Create Account")
+                    .font(.system(size: 48, weight: .bold))
+                    .foregroundColor(.white)
+
+                Text("on \(serverName)")
+                    .font(.title2)
+                    .foregroundColor(.orange)
+
+                Text("You're joining as a family member. Enter your details to create your account.")
+                    .font(.subheadline)
+                    .foregroundColor(.gray)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Spacer()
+
+                Button("Back") { onBack() }
+                    .buttonStyle(TVSecondaryButtonStyle())
+            }
+            .frame(maxWidth: 500)
+
+            // Right — registration form
+            VStack(spacing: 24) {
+                VStack(spacing: 16) {
+                    TextField("Username", text: $username)
+                        .textFieldStyle(.plain)
+                        .font(.system(size: 24))
+                        .padding(20)
+                        .background(cardBg)
+                        .cornerRadius(12)
+                        .focused($focused, equals: .username)
+
+                    TextField("Email (optional)", text: $email)
+                        .textFieldStyle(.plain)
+                        .font(.system(size: 24))
+                        .padding(20)
+                        .background(cardBg)
+                        .cornerRadius(12)
+                        .focused($focused, equals: .email)
+
+                    SecureField("Password", text: $password)
+                        .textFieldStyle(.plain)
+                        .font(.system(size: 24))
+                        .padding(20)
+                        .background(cardBg)
+                        .cornerRadius(12)
+                        .focused($focused, equals: .password)
+                }
+
+                if let error = authViewModel.error {
+                    Text(error)
+                        .foregroundColor(.red)
+                        .font(.subheadline)
+                }
+
+                Button(action: register) {
+                    Group {
+                        if authViewModel.isLoading {
+                            ProgressView().tint(.white)
+                        } else {
+                            Text("Create Account")
+                                .fontWeight(.semibold)
+                        }
+                    }
+                }
+                .buttonStyle(TVPrimaryButtonStyle(accentColor: accentColor))
+                .disabled(username.isEmpty || password.isEmpty || authViewModel.isLoading)
+                .opacity(username.isEmpty || password.isEmpty ? 0.5 : 1)
+            }
+            .frame(maxWidth: 500)
+        }
+        .padding(60)
+    }
+
+    private func register() {
+        Task {
+            do {
+                try await authViewModel.acceptInviteCode(
+                    serverURL: serverURL,
+                    inviteToken: inviteToken,
+                    username: username,
+                    email: email,
+                    password: password
+                )
+                if authViewModel.isAuthenticated {
+                    onSuccess()
+                }
+            } catch {
+                authViewModel.error = error.localizedDescription
             }
         }
     }

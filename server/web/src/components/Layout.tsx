@@ -67,7 +67,6 @@ const navGroups: NavGroup[] = [
   {
     label: '',
     items: [
-      { name: 'Setup Wizard', href: '/ui/setup', icon: ListTodo },
       { name: 'Dashboard', href: '/ui', icon: LayoutDashboard },
       { name: 'Search', href: '/ui/search', icon: Search },
     ],
@@ -75,7 +74,6 @@ const navGroups: NavGroup[] = [
   {
     label: 'Media',
     items: [
-      { name: 'Setup Wizard', href: '/ui/setup', icon: ListTodo },
       { name: 'Libraries', href: '/ui/libraries', icon: FolderOpen },
       { name: 'Media', href: '/ui/media', icon: Film },
       { name: 'Collections', href: '/ui/collections', icon: FolderHeart },
@@ -86,7 +84,6 @@ const navGroups: NavGroup[] = [
   {
     label: 'Live TV',
     items: [
-      { name: 'Setup Wizard', href: '/ui/setup', icon: ListTodo },
       { name: 'Live TV', href: '/ui/livetv', icon: Tv },
       { name: 'TV Guide', href: '/ui/tvguide', icon: CalendarDays },
       { name: 'On Now', href: '/ui/onnow', icon: MonitorPlay },
@@ -98,7 +95,6 @@ const navGroups: NavGroup[] = [
   {
     label: 'DVR & Recording',
     items: [
-      { name: 'Setup Wizard', href: '/ui/setup', icon: ListTodo },
       { name: 'DVR', href: '/ui/dvr', icon: Video },
       { name: 'Passes', href: '/ui/dvr/passes', icon: ListFilter },
       { name: 'Schedule', href: '/ui/dvr/schedule', icon: CalendarDays },
@@ -113,7 +109,6 @@ const navGroups: NavGroup[] = [
   {
     label: 'Content',
     items: [
-      { name: 'Setup Wizard', href: '/ui/setup', icon: ListTodo },
       { name: 'Playlists', href: '/ui/playlists', icon: ListMusic },
       { name: 'Sections', href: '/ui/sections', icon: LayoutList },
       { name: 'VOD', href: '/ui/vod', icon: CloudDownload },

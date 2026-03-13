@@ -272,6 +272,92 @@ class AuthViewModel: ObservableObject {
     func selectServer(_ server: DiscoveredServer) async {
         await autoConnectToServer(server)
     }
+
+    // MARK: - Remote Access / Away From Home
+
+    private let cloudRegistryURL = "https://discover.openflix.io"
+
+    /// Resolves a 4-character pairing code via the cloud registry.
+    /// Returns (serverURL, serverName) on success, throws on failure.
+    func resolvePairingCode(code: String) async throws -> (URL, String) {
+        let urlString = "\(cloudRegistryURL)/servers?token=\(code)"
+        guard let url = URL(string: urlString) else { throw URLError(.badURL) }
+        var request = URLRequest(url: url)
+        request.timeoutInterval = 10
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
+            throw NSError(domain: "OpenFlix", code: 0, userInfo: [NSLocalizedDescriptionKey: "Invalid pairing code"])
+        }
+        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let host = (json["publicIp"] as? String ?? json["host"] as? String),
+              !host.isEmpty else {
+            throw NSError(domain: "OpenFlix", code: 0, userInfo: [NSLocalizedDescriptionKey: "Server not found for this code"])
+        }
+        let port = json["port"] as? Int ?? 32400
+        let name = json["name"] as? String ?? "OpenFlix Server"
+        guard let serverURL = URL(string: "http://\(host):\(port)") else { throw URLError(.badURL) }
+        return (serverURL, name)
+    }
+
+    /// Resolves an 8-character invite code via the cloud registry.
+    /// Returns (serverURL, serverName, inviteToken) on success, throws on failure.
+    func resolveInviteCode(code: String) async throws -> (URL, String, String) {
+        let urlString = "\(cloudRegistryURL)/servers?invite=\(code)"
+        guard let url = URL(string: urlString) else { throw URLError(.badURL) }
+        var request = URLRequest(url: url)
+        request.timeoutInterval = 10
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
+            throw NSError(domain: "OpenFlix", code: 0, userInfo: [NSLocalizedDescriptionKey: "Invalid invite code"])
+        }
+        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let host = (json["publicIp"] as? String ?? json["host"] as? String),
+              !host.isEmpty else {
+            throw NSError(domain: "OpenFlix", code: 0, userInfo: [NSLocalizedDescriptionKey: "Server not found for this invite"])
+        }
+        let port = json["port"] as? Int ?? 32400
+        let name = json["name"] as? String ?? "OpenFlix Server"
+        let token = json["inviteToken"] as? String ?? code
+        guard let serverURL = URL(string: "http://\(host):\(port)") else { throw URLError(.badURL) }
+        return (serverURL, name, token)
+    }
+
+    /// Accepts an invite: registers a new account on the home server and auto-connects.
+    func acceptInviteCode(serverURL: URL, inviteToken: String, username: String, email: String, password: String) async throws {
+        isLoading = true
+        error = nil
+        defer { isLoading = false }
+
+        struct AcceptBody: Encodable {
+            let username: String
+            let email: String
+            let password: String
+        }
+        struct AcceptResponse: Decodable {
+            let authToken: String
+        }
+
+        await OpenFlixAPI.shared.configure(serverURL: serverURL, token: nil)
+        UserDefaults.standard.serverURL = serverURL
+
+        let acceptURL = serverURL.appendingPathComponent("api/invite/\(inviteToken)/accept")
+        var request = URLRequest(url: acceptURL)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try JSONEncoder().encode(AcceptBody(username: username, email: email, password: password))
+        request.timeoutInterval = 15
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
+            throw NSError(domain: "OpenFlix", code: 0, userInfo: [NSLocalizedDescriptionKey: "Failed to accept invite"])
+        }
+        let accepted = try JSONDecoder().decode(AcceptResponse.self, from: data)
+
+        await OpenFlixAPI.shared.configure(serverURL: serverURL, token: accepted.authToken)
+        KeychainHelper.shared.saveToken(accepted.authToken)
+        isAuthenticated = true
+        try? await loadProfiles()
+    }
 }
 
 // MARK: - Discovered Server Model
