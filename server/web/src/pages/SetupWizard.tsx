@@ -217,14 +217,45 @@ function StepTuners({
   const [adding, setAdding] = useState(false)
   const [addError, setAddError] = useState<string | null>(null)
   const [hasScanned, setHasScanned] = useState(false)
+  const [existingTuners, setExistingTuners] = useState<Array<{id: number; deviceId: string; name: string; channelCount: number}>>([])
 
-  // Auto-discover on mount
+  // Load existing tuners AND discover new ones on mount
   useEffect(() => {
     if (!hasScanned) {
-      handleDiscover()
+      loadExistingAndDiscover()
       setHasScanned(true)
     }
   }, [hasScanned])
+
+  const loadExistingAndDiscover = async () => {
+    setDiscovering(true)
+    setDiscoverError(null)
+    
+    // First, load existing tuners from database
+    try {
+      const existingRes = await fetch("/api/setup/tuners", { headers: authHeaders })
+      if (existingRes.ok) {
+        const existing = await existingRes.json()
+        if (Array.isArray(existing) && existing.length > 0) {
+          setExistingTuners(existing.map((t: any) => ({
+            id: t.id,
+            deviceId: t.deviceId || t.device_id,
+            name: t.name || t.modelNumber || "HDHomeRun",
+            channelCount: t.channelCount || t.channel_count || 0
+          })))
+          // If we have existing tuners, no need to show error
+          setDiscovering(false)
+          return
+        }
+      }
+    } catch (e) {
+      console.log("Could not load existing tuners")
+    }
+    
+    // Then discover new devices on network
+    await handleDiscover()
+  }
+
 
   const handleDiscover = async () => {
     setDiscovering(true)
@@ -335,8 +366,25 @@ function StepTuners({
         </div>
       )}
 
+      {/* Already configured tuners from database */}
+      {!discovering && existingTuners.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-xs font-semibold uppercase tracking-wider text-green-400">✓ Already Configured</p>
+          {existingTuners.map((t) => (
+            <div key={t.deviceId} className="flex items-center gap-3 bg-green-500/10 border border-green-500/30 rounded-lg p-4">
+              <CheckCircle className="w-6 h-6 text-green-400 shrink-0" />
+              <div>
+                <p className="text-white font-medium">{t.name}</p>
+                <p className="text-sm text-gray-400">{t.deviceId} · {t.channelCount} channels</p>
+              </div>
+            </div>
+          ))}
+          <p className="text-sm text-gray-500 text-center mt-2">Your tuner is already set up! You can skip this step.</p>
+        </div>
+      )}
+
       {/* No devices found message */}
-      {!discovering && discovered.length === 0 && state.tuners.length === 0 && (
+      {!discovering && discovered.length === 0 && state.tuners.length === 0 && existingTuners.length === 0 && (
         <div className="text-center py-4">
           {discoverError ? (
             <p className="text-gray-400">{discoverError}</p>
