@@ -236,8 +236,9 @@ function StepTuners({
       const existingRes = await fetch("/api/setup/tuners", { headers: authHeaders })
       if (existingRes.ok) {
         const existing = await existingRes.json()
-        if (Array.isArray(existing) && existing.length > 0) {
-          setExistingTuners(existing.map((t: any) => ({
+        const devices = existing.devices || existing
+        if (Array.isArray(devices) && devices.length > 0) {
+          setExistingTuners(devices.map((t: any) => ({
             id: t.id,
             deviceId: t.deviceId || t.device_id,
             name: t.name || t.modelNumber || "HDHomeRun",
