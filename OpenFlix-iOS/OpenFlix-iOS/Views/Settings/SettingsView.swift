@@ -943,7 +943,9 @@ struct SourcesView: View {
 // MARK: - Tuner Discovery View
 
 struct TunerDiscoveryView: View {
+    @State private var existingDevices: [HDHomeRunDeviceDTO] = []
     @State private var discovered: [DiscoveredTunerDTO] = []
+    @State private var isLoadingExisting = false
     @State private var isScanning = false
     @State private var importingId: String?
     @State private var importedIds: Set<String> = []
@@ -951,10 +953,40 @@ struct TunerDiscoveryView: View {
 
     var body: some View {
         ScrollView {
-            VStack(spacing: 16) {
-                // Scan button header
+            VStack(spacing: 20) {
+                // My Tuners section
                 VStack(spacing: 8) {
-                    Text("HDHomeRun & Network Tuners")
+                    Text("My Tuners")
+                        .font(.system(size: 13, weight: .heavy))
+                        .foregroundColor(.gray)
+                        .textCase(.uppercase)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+
+                    if isLoadingExisting {
+                        HStack {
+                            ProgressView().scaleEffect(0.8).tint(.white)
+                            Text("Loading...").foregroundColor(.gray)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.vertical, 8)
+                    } else if existingDevices.isEmpty {
+                        Text("No tuners added yet.")
+                            .font(.system(size: 14))
+                            .foregroundColor(.gray)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.vertical, 8)
+                    } else {
+                        ForEach(existingDevices, id: \.deviceId) { device in
+                            existingTunerCard(device)
+                        }
+                    }
+                }
+
+                Divider().background(Color.white.opacity(0.1))
+
+                // Discover new section
+                VStack(spacing: 8) {
+                    Text("Add New Tuner")
                         .font(.system(size: 13, weight: .heavy))
                         .foregroundColor(.gray)
                         .textCase(.uppercase)
@@ -991,29 +1023,30 @@ struct TunerDiscoveryView: View {
                         .multilineTextAlignment(.center)
                 }
 
-                if discovered.isEmpty && !isScanning {
-                    VStack(spacing: 12) {
-                        Image(systemName: "network.slash")
-                            .font(.system(size: 44))
-                            .foregroundColor(.gray.opacity(0.4))
-                        Text("No tuners found")
-                            .foregroundColor(.white)
-                            .font(.system(size: 17, weight: .medium))
-                        Text("Make sure your HDHomeRun is on the same network and tap Scan.")
-                            .foregroundColor(.gray)
-                            .font(.system(size: 13))
-                            .multilineTextAlignment(.center)
+                if !discovered.isEmpty {
+                    ForEach(discovered, id: \.url) { tuner in
+                        tunerCard(tuner)
                     }
-                    .padding(.top, 40)
-                }
-
-                ForEach(discovered, id: \.url) { tuner in
-                    tunerCard(tuner)
                 }
             }
             .padding(16)
         }
-        .task { await scan() }
+        .task { await loadExisting() }
+    }
+
+    private func loadExisting() async {
+        isLoadingExisting = true
+        defer { isLoadingExisting = false }
+        do {
+            let resp = try await OpenFlixAPI.shared.getTuners()
+            existingDevices = resp.devices
+            // Mark already-added device IDs so Add button shows "Added"
+            for dev in resp.devices {
+                if let id = dev.deviceId { importedIds.insert(id) }
+            }
+        } catch {
+            // Silently fail — show empty state
+        }
     }
 
     private func scan() async {
@@ -1022,10 +1055,61 @@ struct TunerDiscoveryView: View {
         defer { isScanning = false }
         do {
             let resp = try await OpenFlixAPI.shared.discoverTuners()
-            discovered = resp.discovered
+            // Filter out devices already in existingDevices
+            let existingIds = Set(existingDevices.compactMap(\.deviceId))
+            discovered = resp.discovered.filter { tuner in
+                guard let id = tuner.deviceId else { return true }
+                return !existingIds.contains(id)
+            }
+            if discovered.isEmpty {
+                error = "No new tuners found on your network."
+            }
         } catch {
             self.error = "Scan failed: \(error.localizedDescription)"
         }
+    }
+
+    @ViewBuilder
+    private func existingTunerCard(_ device: HDHomeRunDeviceDTO) -> some View {
+        HStack(spacing: 14) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(Color.green.opacity(0.15))
+                    .frame(width: 44, height: 44)
+                Image(systemName: "antenna.radiowaves.left.and.right")
+                    .foregroundColor(.green)
+                    .font(.system(size: 18))
+            }
+            VStack(alignment: .leading, spacing: 4) {
+                Text(device.modelNumber ?? device.deviceId ?? "HDHomeRun")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(.white)
+                    .lineLimit(1)
+                HStack(spacing: 6) {
+                    if let ip = device.localIp {
+                        Text(ip)
+                            .font(.system(size: 12))
+                            .foregroundColor(.gray)
+                    }
+                    if let tuners = device.tunerCount, tuners > 0 {
+                        Text("• \(tuners) tuner\(tuners == 1 ? "" : "s")")
+                            .font(.system(size: 12))
+                            .foregroundColor(.gray)
+                    }
+                }
+            }
+            Spacer()
+            Text("Added")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundColor(.green)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(Color.green.opacity(0.12))
+                .cornerRadius(8)
+        }
+        .padding(14)
+        .background(settingsCardBg)
+        .cornerRadius(14)
     }
 
     @ViewBuilder
@@ -1386,11 +1470,438 @@ private func chipButton(_ title: String, icon: String, action: @escaping () -> V
     .buttonStyle(.plain)
 }
 
-// formatter already declared elsewhere in app; guard against redeclaration
-private let relativeDateFormatter: DateFormatter = {
-    let f = DateFormatter()
-    f.doesRelativeDateFormatting = true
-    f.dateStyle = .short
-    f.timeStyle = .short
+private let relativeDateFormatter: RelativeDateTimeFormatter = {
+    let f = RelativeDateTimeFormatter()
+    f.unitsStyle = .short
     return f
 }()
+
+// MARK: - Edit M3U Source View
+
+struct EditM3USourceView: View {
+    let source: M3USource
+    var onSave: (String?, String?, String?) -> Void
+    @Environment(\.dismiss) var dismiss
+
+    @State private var name: String
+    @State private var url: String
+    @State private var epgUrl: String
+
+    init(source: M3USource, onSave: @escaping (String?, String?, String?) -> Void) {
+        self.source = source
+        self.onSave = onSave
+        _name = State(initialValue: source.name)
+        _url = State(initialValue: source.url)
+        _epgUrl = State(initialValue: source.epgUrl ?? "")
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Source Details") {
+                    TextField("Name", text: $name)
+                    TextField("M3U URL", text: $url)
+                        .keyboardType(.URL)
+                        .autocapitalization(.none)
+                    TextField("EPG URL (optional)", text: $epgUrl)
+                        .keyboardType(.URL)
+                        .autocapitalization(.none)
+                }
+            }
+            .navigationTitle("Edit M3U Source")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") {
+                        onSave(
+                            name != source.name ? name : nil,
+                            url != source.url ? url : nil,
+                            epgUrl != (source.epgUrl ?? "") ? (epgUrl.isEmpty ? nil : epgUrl) : nil
+                        )
+                        dismiss()
+                    }
+                    .disabled(name.isEmpty || url.isEmpty)
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Edit Xtream Source View
+
+struct EditXtreamSourceView: View {
+    let source: XtreamSource
+    var onSave: (String?, Bool?, Bool?, Bool?, Bool?) -> Void
+    @Environment(\.dismiss) var dismiss
+
+    @State private var name: String
+    @State private var enabled: Bool
+    @State private var importLive: Bool
+    @State private var importVod: Bool
+    @State private var importSeries: Bool
+
+    init(source: XtreamSource, onSave: @escaping (String?, Bool?, Bool?, Bool?, Bool?) -> Void) {
+        self.source = source
+        self.onSave = onSave
+        _name = State(initialValue: source.name)
+        _enabled = State(initialValue: source.enabled)
+        _importLive = State(initialValue: source.importLive)
+        _importVod = State(initialValue: source.importVod)
+        _importSeries = State(initialValue: source.importSeries)
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Source Details") {
+                    TextField("Name", text: $name)
+                    Toggle("Enabled", isOn: $enabled)
+                }
+                Section("Import Settings") {
+                    Toggle("Import Live Channels", isOn: $importLive)
+                    Toggle("Import VOD", isOn: $importVod)
+                    Toggle("Import Series", isOn: $importSeries)
+                }
+                Section {
+                    HStack {
+                        Text("Server")
+                        Spacer()
+                        Text(source.serverUrl).foregroundColor(.secondary).lineLimit(1)
+                    }
+                    HStack {
+                        Text("Username")
+                        Spacer()
+                        Text(source.username).foregroundColor(.secondary)
+                    }
+                }
+            }
+            .navigationTitle("Edit Xtream Source")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") {
+                        onSave(
+                            name != source.name ? name : nil,
+                            enabled != source.enabled ? enabled : nil,
+                            importLive != source.importLive ? importLive : nil,
+                            importVod != source.importVod ? importVod : nil,
+                            importSeries != source.importSeries ? importSeries : nil
+                        )
+                        dismiss()
+                    }
+                    .disabled(name.isEmpty)
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Add M3U Source View
+
+struct AddM3USourceView: View {
+    @EnvironmentObject var settingsViewModel: SettingsViewModel
+    @Environment(\.dismiss) var dismiss
+
+    @State private var name = ""
+    @State private var url = ""
+    @State private var epgUrl = ""
+    @State private var importVod = false
+    @State private var importSeries = false
+    @State private var selectedVodLibrary = ""
+    @State private var selectedSeriesLibrary = ""
+    @State private var isLoading = false
+    @State private var error: String?
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Source") {
+                    TextField("Name", text: $name)
+                    TextField("M3U URL", text: $url).keyboardType(.URL).autocapitalization(.none)
+                    TextField("EPG URL (optional)", text: $epgUrl).keyboardType(.URL).autocapitalization(.none)
+                }
+                Section("Import Options") {
+                    Toggle("Import VOD", isOn: $importVod)
+                    if importVod && !settingsViewModel.libraries.isEmpty {
+                        Picker("VOD Library", selection: $selectedVodLibrary) {
+                            Text("Select Library").tag("")
+                            ForEach(settingsViewModel.libraries) { lib in Text(lib.name).tag(lib.id) }
+                        }
+                    }
+                    Toggle("Import Series", isOn: $importSeries)
+                    if importSeries && !settingsViewModel.libraries.isEmpty {
+                        Picker("Series Library", selection: $selectedSeriesLibrary) {
+                            Text("Select Library").tag("")
+                            ForEach(settingsViewModel.libraries) { lib in Text(lib.name).tag(lib.id) }
+                        }
+                    }
+                }
+                if let error { Section { Text(error).foregroundColor(.red) } }
+            }
+            .navigationTitle("Add M3U Source")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Add") { addSource() }
+                        .disabled(name.isEmpty || url.isEmpty || isLoading)
+                }
+            }
+        }
+    }
+
+    private func addSource() {
+        isLoading = true
+        Task {
+            do {
+                try await settingsViewModel.addM3USource(name: name, url: url, epgUrl: epgUrl.isEmpty ? nil : epgUrl)
+                if let source = settingsViewModel.m3uSources.last {
+                    if importVod && !selectedVodLibrary.isEmpty {
+                        try? await settingsViewModel.importM3UVOD(sourceId: source.id, libraryId: selectedVodLibrary)
+                    }
+                    if importSeries && !selectedSeriesLibrary.isEmpty {
+                        try? await settingsViewModel.importM3USeries(sourceId: source.id, libraryId: selectedSeriesLibrary)
+                    }
+                }
+                dismiss()
+            } catch { self.error = error.localizedDescription }
+            isLoading = false
+        }
+    }
+}
+
+// MARK: - Add Xtream Source View
+
+struct AddXtreamSourceView: View {
+    @EnvironmentObject var settingsViewModel: SettingsViewModel
+    @Environment(\.dismiss) var dismiss
+
+    @State private var name = ""
+    @State private var serverUrl = ""
+    @State private var username = ""
+    @State private var password = ""
+    @State private var importLive = true
+    @State private var importVod = false
+    @State private var importSeries = false
+    @State private var isLoading = false
+    @State private var error: String?
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Connection") {
+                    TextField("Name", text: $name)
+                    TextField("Server URL", text: $serverUrl).keyboardType(.URL).autocapitalization(.none)
+                    TextField("Username", text: $username).autocapitalization(.none)
+                    SecureField("Password", text: $password)
+                }
+                Section("Import Options") {
+                    Toggle("Import Live Channels", isOn: $importLive)
+                    Toggle("Import VOD", isOn: $importVod)
+                    Toggle("Import Series", isOn: $importSeries)
+                }
+                if let error { Section { Text(error).foregroundColor(.red) } }
+            }
+            .navigationTitle("Add Xtream Source")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Add") { addSource() }
+                        .disabled(name.isEmpty || serverUrl.isEmpty || username.isEmpty || password.isEmpty || isLoading)
+                }
+            }
+        }
+    }
+
+    private func addSource() {
+        isLoading = true
+        Task {
+            do {
+                try await settingsViewModel.addXtreamSource(name: name, serverUrl: serverUrl, username: username, password: password)
+                if let source = settingsViewModel.xtreamSources.last {
+                    if importVod  { try? await settingsViewModel.importXtreamVOD(sourceId: source.id) }
+                    if importSeries { try? await settingsViewModel.importXtreamSeries(sourceId: source.id) }
+                }
+                dismiss()
+            } catch { self.error = error.localizedDescription }
+            isLoading = false
+        }
+    }
+}
+
+// MARK: - Add EPG Source View
+
+struct AddEPGSourceView: View {
+    @EnvironmentObject var settingsViewModel: SettingsViewModel
+    @Environment(\.dismiss) var dismiss
+
+    @State private var name = ""
+    @State private var selectedType: EPGSourceType = .tvguide
+    @State private var xmltvUrl = ""
+    @State private var zipCode = ""
+    @State private var tvguideDays = 13
+    @State private var providers: [TVGuideProviderDTO] = []
+    @State private var selectedProvider: TVGuideProviderDTO?
+    @State private var isSearching = false
+    @State private var hasSearched = false
+    @State private var isLoading = false
+    @State private var error: String?
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Provider") {
+                    HStack(spacing: 12) {
+                        providerButton(.tvguide,   label: "TV Guide",  icon: "tv",                              color: .purple)
+                        providerButton(.xmltv,     label: "XMLTV",     icon: "doc.text",                        color: .blue)
+                        providerButton(.gracenote, label: "Gracenote", icon: "antenna.radiowaves.left.and.right", color: .green)
+                    }
+                    .listRowBackground(Color.clear)
+                    .listRowInsets(EdgeInsets())
+                    .padding(.vertical, 4)
+                }
+                Section("Name") { TextField("e.g. YouTube TV - Chicago", text: $name) }
+                switch selectedType {
+                case .tvguide:  tvguideFields
+                case .xmltv, .gracenote:
+                    Section("XMLTV URL") {
+                        TextField("http://example.com/guide.xml", text: $xmltvUrl)
+                            .keyboardType(.URL).autocapitalization(.none)
+                    }
+                }
+                if let error { Section { Text(error).foregroundColor(.red).font(.caption) } }
+            }
+            .navigationTitle("Add EPG Source")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Add") { addSource() }
+                        .disabled(!canAdd || isLoading)
+                        .fontWeight(.bold)
+                }
+            }
+        }
+    }
+
+    private var canAdd: Bool {
+        guard !name.isEmpty else { return false }
+        switch selectedType {
+        case .tvguide: return selectedProvider != nil && !zipCode.isEmpty
+        case .xmltv, .gracenote: return !xmltvUrl.isEmpty
+        }
+    }
+
+    @ViewBuilder
+    private var tvguideFields: some View {
+        Section("Location") {
+            HStack {
+                TextField("Zip Code", text: $zipCode).keyboardType(.numberPad)
+                Button {
+                    searchProviders()
+                } label: {
+                    if isSearching { ProgressView().scaleEffect(0.8) } else { Text("Search").fontWeight(.semibold) }
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.purple)
+                .disabled(zipCode.count < 5 || isSearching)
+            }
+        }
+        if hasSearched {
+            Section("Provider (\(providers.count) found)") {
+                if providers.isEmpty {
+                    Text("No providers found for this zip code").foregroundColor(.secondary).font(.caption)
+                } else {
+                    ForEach(providers) { provider in
+                        Button {
+                            selectedProvider = provider
+                            if name.isEmpty { name = provider.name }
+                        } label: {
+                            HStack {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(provider.name).font(.subheadline).foregroundColor(.primary)
+                                    HStack(spacing: 6) {
+                                        Text(provider.type.capitalized)
+                                            .font(.caption2).padding(.horizontal, 4).padding(.vertical, 1)
+                                            .background(Color.purple.opacity(0.15)).cornerRadius(3)
+                                        if let city = provider.city, let state = provider.state {
+                                            Text("\(city), \(state)").font(.caption2)
+                                        }
+                                    }
+                                    .foregroundColor(.secondary)
+                                }
+                                Spacer()
+                                if selectedProvider?.id == provider.id {
+                                    Image(systemName: "checkmark.circle.fill").foregroundColor(.purple).font(.title3)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        if selectedProvider != nil {
+            Section("Settings") {
+                Picker("Days to Fetch", selection: $tvguideDays) {
+                    Text("3 days").tag(3)
+                    Text("7 days").tag(7)
+                    Text("13 days (max)").tag(13)
+                }
+            }
+        }
+    }
+
+    private func providerButton(_ type: EPGSourceType, label: String, icon: String, color: Color) -> some View {
+        Button {
+            withAnimation(.easeInOut(duration: 0.2)) { selectedType = type }
+        } label: {
+            VStack(spacing: 4) {
+                Image(systemName: icon).font(.title3)
+                Text(label).font(.caption).fontWeight(.medium)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 10)
+            .background(selectedType == type ? color : Color(.systemGray5))
+            .foregroundColor(selectedType == type ? .white : .primary)
+            .cornerRadius(10)
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func searchProviders() {
+        isSearching = true; error = nil
+        Task {
+            do {
+                let response = try await settingsViewModel.discoverTVGuideProviders(zip: zipCode)
+                providers = response.providers
+                hasSearched = true
+                selectedProvider = nil
+            } catch { self.error = "Failed to search: \(error.localizedDescription)" }
+            isSearching = false
+        }
+    }
+
+    private func addSource() {
+        isLoading = true; error = nil
+        Task {
+            do {
+                switch selectedType {
+                case .tvguide:
+                    guard let provider = selectedProvider else { return }
+                    try await settingsViewModel.addEPGSource(name: name, url: nil, type: "tvguide",
+                        tvguideProviderId: String(provider.id), tvguideZipCode: zipCode, tvguideDays: tvguideDays)
+                case .xmltv:
+                    try await settingsViewModel.addEPGSource(name: name, url: xmltvUrl, type: "xmltv")
+                case .gracenote:
+                    try await settingsViewModel.addEPGSource(name: name, url: xmltvUrl, type: "gracenote")
+                }
+                if let newSource = settingsViewModel.epgSources.last {
+                    try? await settingsViewModel.refreshEPGSource(newSource)
+                }
+                dismiss()
+            } catch { self.error = error.localizedDescription }
+            isLoading = false
+        }
+    }
+}

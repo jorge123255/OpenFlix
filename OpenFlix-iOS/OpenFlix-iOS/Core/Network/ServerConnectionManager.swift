@@ -59,7 +59,10 @@ final class ServerConnectionManager: ObservableObject {
 
     func connect(to server: SavedServer) async -> URL? {
         if let localURL = await firstReachableURL(from: server.localURLs, timeout: 2) {
-            return await finalizeConnection(for: server, url: localURL, type: .local)
+            // Only treat as local if it's actually a private/LAN IP.
+            // HTTPS URLs or external hostnames in localURLs are stale remote entries.
+            let type: ConnectionType = isPrivateNetworkURL(localURL) ? .local : .remote
+            return await finalizeConnection(for: server, url: localURL, type: type)
         }
 
         if let tailscale = server.tailscaleURL,
@@ -226,6 +229,17 @@ final class ServerConnectionManager: ObservableObject {
         }
         return 32400
     }
+}
+
+private func isPrivateNetworkURL(_ url: URL) -> Bool {
+    guard let host = url.host else { return false }
+    return host == "localhost" || host == "127.0.0.1" || host == "::1"
+        || host.hasPrefix("192.168.") || host.hasPrefix("10.")
+        || (host.hasPrefix("172.") && {
+            let parts = host.split(separator: ".")
+            guard parts.count >= 2, let second = Int(parts[1]) else { return false }
+            return second >= 16 && second <= 31
+        }())
 }
 
 private func mergeUniqueURLs(existing: [String], incoming: [String]) -> [String] {

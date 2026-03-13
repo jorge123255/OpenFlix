@@ -308,6 +308,12 @@ struct LoginView: View {
                             if let server = await authViewModel.discoverViaCloud(claimToken: awayCode) {
                                 showAwayFromHomeSheet = false
                                 await authViewModel.selectServer(server, isRemote: true)
+                                // If token check passed, user is authenticated and goes home.
+                                // If not, show the login form pre-filled with the remote server URL.
+                                if !authViewModel.isAuthenticated {
+                                    serverURL = server.url.absoluteString
+                                    withAnimation { isServerConnected = true }
+                                }
                             } else {
                                 awayError = "Server not found. Check your code."
                             }

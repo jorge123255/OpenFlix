@@ -1255,9 +1255,9 @@ enum APIEndpoint {
         case .instantSwitchCached: return "/api/instant/cached"
         case .instantSwitchStream(let id): return "/api/instant/stream/\(id)"
         // Downloads
-        case .createInvite: return "/api/v2/home/invite"
-        case .getClaimToken: return "/discovery/claim-token"
-        case .generateClaimToken: return "/discovery/claim-token"
+        case .createInvite: return "/api/invite"
+        case .getClaimToken: return "/api/claim-token"
+        case .generateClaimToken: return "/api/claim-token"
         case .getAppDownloads: return "/downloads"
         case .downloadApp(let f): return "/downloads/\(f)"
         }

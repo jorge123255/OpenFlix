@@ -76,7 +76,20 @@ struct HealthSummaryResponse: Codable {
 }
 
 // MARK: - Tuners / HDHR
-struct TunersResponse: Codable { let tuners: [TunerDTO] }
+// Server returns {"devices": [...], "count": N} from GET /api/tuners
+struct TunersResponse: Codable {
+    let devices: [HDHomeRunDeviceDTO]
+    let count: Int?
+}
+struct HDHomeRunDeviceDTO: Codable {
+    let deviceId: String?
+    let localIp: String?
+    let baseUrl: String?
+    let modelNumber: String?
+    let firmwareName: String?
+    let firmwareVersion: String?
+    let tunerCount: Int?
+}
 struct TunerDTO: Codable {
     let id: StringOrInt; let name: String; let url: String?
     let model: String?; let deviceId: String?; let channelCount: Int?

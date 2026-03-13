@@ -7,8 +7,12 @@ struct PlaylistsView: View {
     @State private var showCreateSheet = false
     @State private var selectedPlaylist: Playlist?
 
+    private let bg     = Color(red: 17/255, green: 12/255, blue: 33/255)
+    private let accent = Color(red: 97/255, green: 56/255, blue: 245/255)
+
     var body: some View {
-        NavigationStack {
+        ZStack {
+            bg.ignoresSafeArea()
             Group {
                 if viewModel.isLoading && viewModel.playlists.isEmpty {
                     LoadingView(message: "Loading playlists...")
@@ -22,14 +26,16 @@ struct PlaylistsView: View {
                     playlistGrid
                 }
             }
-            .navigationTitle("Playlists")
-            .toolbar {
-                ToolbarItem(placement: .primaryAction) {
-                    Button {
-                        showCreateSheet = true
-                    } label: {
-                        Label("New Playlist", systemImage: "plus")
-                    }
+        }
+        .navigationTitle("Playlists")
+        .navigationBarTitleDisplayMode(.large)
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button {
+                    showCreateSheet = true
+                } label: {
+                    Image(systemName: "plus")
+                        .foregroundColor(accent)
                 }
             }
         }
@@ -42,27 +48,45 @@ struct PlaylistsView: View {
     }
 
     private var emptyState: some View {
-        EmptyStateView(
-            icon: "music.note.list",
-            title: "No Playlists",
-            message: "Create playlists to organize your media."
-        ) {
-            showCreateSheet = true
+        VStack(spacing: 20) {
+            Spacer()
+            Image(systemName: "music.note.list")
+                .font(.system(size: 52))
+                .foregroundColor(.gray.opacity(0.4))
+            Text("No Playlists")
+                .font(.system(size: 20, weight: .semibold))
+                .foregroundColor(.white)
+            Text("Create playlists to organize your media.")
+                .font(.system(size: 15))
+                .foregroundColor(.gray)
+            Button {
+                showCreateSheet = true
+            } label: {
+                Text("Create Playlist")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 24)
+                    .padding(.vertical, 12)
+                    .background(accent)
+                    .cornerRadius(12)
+            }
+            .buttonStyle(.plain)
+            Spacer()
         }
     }
 
     private var playlistGrid: some View {
         ScrollView {
             LazyVGrid(columns: [
-                GridItem(.adaptive(minimum: 250, maximum: 350), spacing: 24)
-            ], spacing: 24) {
+                GridItem(.adaptive(minimum: 160, maximum: 200), spacing: 16)
+            ], spacing: 16) {
                 ForEach(viewModel.playlists) { playlist in
                     PlaylistCard(playlist: playlist) {
                         selectedPlaylist = playlist
                     }
                 }
             }
-            .padding(48)
+            .padding(16)
         }
     }
 }

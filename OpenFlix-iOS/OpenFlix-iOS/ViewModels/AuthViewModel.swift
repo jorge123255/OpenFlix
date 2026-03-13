@@ -71,13 +71,17 @@ class AuthViewModel: ObservableObject {
             log("Init: Auto-reconnect failed, trying saved URL...")
 
             if let savedURL = UserDefaults.standard.serverURL, await testServerConnection(savedURL) {
+                let host = savedURL.host ?? ""
+                let scheme = savedURL.scheme ?? "http"
+                let isRemoteURL = scheme == "https" || (!host.hasPrefix("192.168.") && !host.hasPrefix("10.") && host != "localhost" && host != "127.0.0.1" && !host.isEmpty)
                 await autoConnectToServer(DiscoveredServer(
                     name: "OpenFlix Server",
                     version: "unknown",
-                    machineId: UserDefaults.standard.lastMachineId ?? savedURL.host ?? "server",
-                    host: savedURL.host ?? "",
-                    port: savedURL.port ?? 32400
-                ))
+                    machineId: UserDefaults.standard.lastMachineId ?? host,
+                    host: host,
+                    port: savedURL.port ?? 32400,
+                    scheme: scheme
+                ), isRemote: isRemoteURL)
                 isDiscovering = false
                 return
             }
@@ -349,13 +353,24 @@ class AuthViewModel: ObservableObject {
             let publicIp = json["publicIp"] as? String ?? json["host"] as? String ?? ""
             let port = json["port"] as? Int ?? 32400
             let version = json["version"] as? String ?? "unknown"
+            let externalUrl = json["externalUrl"] as? String
 
-            // Connect via publicIp:port (user forwards port 32400 on their router)
-            guard !publicIp.isEmpty else { return nil }
-            let server = DiscoveredServer(name: name, version: version, machineId: machineId, host: publicIp, port: port)
-            if await testServerConnection(server.url) {
-                serverConnectionManager.saveDiscoveredServer(server, isRemote: true)
-                return server
+            guard !publicIp.isEmpty || externalUrl != nil else { return nil }
+
+            let candidateURLs: [URL] = [
+                externalUrl.flatMap { URL(string: $0) },
+                publicIp.isEmpty ? nil : URL(string: "http://\(publicIp):\(port)")
+            ].compactMap { $0 }
+
+            for candidateURL in candidateURLs {
+                if await testServerConnection(candidateURL) {
+                    let server = DiscoveredServer(name: name, version: version, machineId: machineId,
+                                                  host: candidateURL.host ?? publicIp,
+                                                  port: candidateURL.port ?? port,
+                                                  scheme: candidateURL.scheme ?? "http")
+                    serverConnectionManager.saveDiscoveredServer(server, isRemote: true)
+                    return server
+                }
             }
         } catch {
             print("DISCOVERY: Cloud lookup failed: \(error)")
@@ -389,13 +404,26 @@ class AuthViewModel: ObservableObject {
             let port = json["port"] as? Int ?? 32400
             let version = json["version"] as? String ?? "unknown"
             let machineId = json["machineId"] as? String ?? ""
+            let externalUrl = json["externalUrl"] as? String
 
-            guard !host.isEmpty else { return nil }
+            guard !host.isEmpty || externalUrl != nil else { return nil }
 
-            let server = DiscoveredServer(name: name, version: version, machineId: machineId, host: host, port: port)
-            if await testServerConnection(server.url) {
-                serverConnectionManager.saveDiscoveredServer(server, isRemote: true)
-                return server
+            // Prefer externalUrl (cloudflared tunnel) over direct publicIp:port
+            // since the server is unlikely to have port 32400 forwarded externally.
+            let candidateURLs: [URL] = [
+                externalUrl.flatMap { URL(string: $0) },
+                URL(string: "http://\(host):\(port)")
+            ].compactMap { $0 }
+
+            for candidateURL in candidateURLs {
+                if await testServerConnection(candidateURL) {
+                    let server = DiscoveredServer(name: name, version: version, machineId: machineId,
+                                                  host: candidateURL.host ?? host,
+                                                  port: candidateURL.port ?? port,
+                                                  scheme: candidateURL.scheme ?? "http")
+                    serverConnectionManager.saveDiscoveredServer(server, isRemote: true)
+                    return server
+                }
             }
         } catch {
             print("DISCOVERY: Cloud claim lookup failed: \(error)")
@@ -495,14 +523,41 @@ class AuthViewModel: ObservableObject {
         isLoading = true
         defer { isLoading = false }
 
+        serverConnectionManager.saveDiscoveredServer(server, isRemote: isRemote)
+        UserDefaults.standard.serverURL = server.url
+        UserDefaults.standard.lastMachineId = server.machineId
+        KeychainHelper.shared.saveMachineId(server.machineId)
+        connectionType = isRemote ? .remote : .local
+
+        if isRemote {
+            // For remote connections, try the saved auth token first.
+            // If it's still valid the user goes straight home; if not, the
+            // login form will appear (isAuthenticated stays false).
+            let savedToken = KeychainHelper.shared.getToken()
+            NSLog("AUTH: autoConnectToServer REMOTE url=%@ hasToken=%@", server.url.absoluteString, savedToken != nil ? "YES" : "NO")
+            await OpenFlixAPI.shared.configure(serverURL: server.url, token: savedToken)
+            var tokenValid = false
+            if savedToken != nil {
+                tokenValid = await authRepository.checkAuthStatus()
+            }
+            if tokenValid {
+                isAuthenticated = true
+                currentUser = authRepository.currentUser
+                try? await loadProfiles()
+                if profiles.count == 1, let profile = profiles.first {
+                    currentProfile = profile
+                    UserDefaults.standard.currentProfileUUID = profile.uuid
+                }
+                await serverConnectionManager.refreshConnectionInfo(baseURL: server.url)
+            }
+            // If token invalid → isAuthenticated stays false → LoginView shows login form
+            // with the server already pre-configured, so user just enters credentials.
+            return
+        }
+
         do {
-            serverConnectionManager.saveDiscoveredServer(server, isRemote: isRemote)
-            // Configure API with discovered server
+            // Local connection: no login required
             await OpenFlixAPI.shared.configure(serverURL: server.url, token: nil)
-            UserDefaults.standard.serverURL = server.url
-            UserDefaults.standard.lastMachineId = server.machineId
-            KeychainHelper.shared.saveMachineId(server.machineId)
-            connectionType = isRemote ? .remote : .local
 
             // Enable local access mode - no login required
             isLocalAccessMode = true
@@ -520,7 +575,6 @@ class AuthViewModel: ObservableObject {
                 }
             } catch {
                 print("Profile loading failed (non-fatal, continuing): \(error)")
-                // Profiles aren't required for local access - continue without them
             }
 
             await serverConnectionManager.refreshConnectionInfo(baseURL: server.url)
@@ -528,7 +582,6 @@ class AuthViewModel: ObservableObject {
             print("Auto-connected to local server: \(server.name) at \(server.url)")
         } catch {
             print("Failed to auto-connect: \(error)")
-            // Fall back to manual login
             isLocalAccessMode = false
             autoConnected = false
         }
@@ -707,7 +760,8 @@ class AuthViewModel: ObservableObject {
             version: "unknown",
             machineId: machineId,
             host: url.host ?? "",
-            port: url.port ?? 32400
+            port: url.port ?? 32400,
+            scheme: url.scheme ?? "http"
         ), isRemote: isRemote)
 
         return true
@@ -752,7 +806,7 @@ class AuthViewModel: ObservableObject {
         // unreachable (away from home). Try to reconnect via cloud registry.
         if !hasValidToken, let token = savedToken, let machineId = UserDefaults.standard.lastMachineId {
             if let cloudServer = await discoverViaCloud(machineId: machineId) {
-                guard let serverURL = URL(string: "http://\(cloudServer.host):\(cloudServer.port)") else { return }
+                guard let serverURL = URL(string: "\(cloudServer.scheme)://\(cloudServer.host):\(cloudServer.port)") else { return }
                 await OpenFlixAPI.shared.configure(serverURL: serverURL, token: token)
                 KeychainHelper.shared.saveToken(token)
                 hasValidToken = await authRepository.checkAuthStatus()
@@ -937,11 +991,12 @@ struct DiscoveredServer: Identifiable {
     let machineId: String
     let host: String
     let port: Int
+    var scheme: String = "http"
 
     var id: String { machineId }
 
     var url: URL {
-        URL(string: "http://\(host):\(port)")!
+        URL(string: "\(scheme)://\(host):\(port)")!
     }
 }
 

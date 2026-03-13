@@ -230,7 +230,7 @@ function StepTuners({
     setDiscovering(true)
     setDiscoverError(null)
     try {
-      const res = await fetch('/api/tuners/discover', { method: 'POST', headers: authHeaders })
+      const res = await fetch('/api/setup/tuners/discover', { method: 'POST', headers: authHeaders })
       if (!res.ok) throw new Error('Discovery failed')
       const data = await res.json() as { devices: Array<{ deviceId: string; modelNumber: string; baseUrl: string }> }
       const existingIds = new Set(state.tuners.map((t) => t.deviceId))
@@ -250,7 +250,7 @@ function StepTuners({
     setAdding(true)
     setAddError(null)
     try {
-      const res = await fetch('/api/tuners', {
+      const res = await fetch('/api/setup/tuners', {
         method: 'POST',
         headers: authHeaders,
         body: JSON.stringify({ url }),

@@ -12,6 +12,12 @@ struct AuthResponse: Codable {
     let token: String
     let user: UserDTO
     let expiresAt: Int?
+
+    enum CodingKeys: String, CodingKey {
+        case token = "authToken"
+        case user
+        case expiresAt
+    }
 }
 
 struct UserDTO: Codable {

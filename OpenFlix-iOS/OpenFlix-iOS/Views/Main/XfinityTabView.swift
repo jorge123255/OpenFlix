@@ -214,8 +214,8 @@ struct XfinityTabView: View {
             XfinityProfilePickerSheet()
         }
         // When profile is cleared from Settings, show profile picker
-        .onChange(of: authViewModel.currentProfile == nil) { isNil in
-            if isNil && !showSettings {
+        .onChange(of: authViewModel.currentProfile?.id) { profileId in
+            if profileId == nil {
                 showProfilePicker = true
             }
         }

@@ -72,31 +72,31 @@ struct WatchStatsView: View {
             // Top 4 stat cards (2x2 grid)
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
                 miniStatCard(
-                    title: "Watch Time",
+                    title: "Recorded",
                     value: viewModel.stats.totalWatchTimeFormatted,
-                    subtitle: viewModel.stats.watchTimeChange,
+                    subtitle: "\(viewModel.stats.programsCompleted) completed",
                     icon: "clock.fill",
                     color: accent
                 )
                 miniStatCard(
-                    title: "Programs",
+                    title: "Recordings",
                     value: "\(viewModel.stats.programsWatched)",
-                    subtitle: "\(viewModel.stats.programsCompleted) completed",
+                    subtitle: "\(viewModel.stats.programsCompleted) finished",
                     icon: "play.rectangle.fill",
                     color: Color(red: 0.6, green: 0.3, blue: 1.0)
                 )
                 miniStatCard(
                     title: "Channels",
                     value: "\(viewModel.stats.uniqueChannels)",
-                    subtitle: viewModel.stats.favoriteChannel.map { "Fav: \($0)" } ?? "—",
+                    subtitle: viewModel.stats.favoriteChannel.map { "Top: \($0)" } ?? "—",
                     icon: "tv.fill",
                     color: Color(red: 0.1, green: 0.75, blue: 0.55)
                 )
                 miniStatCard(
-                    title: "Live TV",
-                    value: viewModel.stats.liveWatchTimeFormatted,
-                    subtitle: "\(viewModel.stats.livePercentage)% of total",
-                    icon: "dot.radiowaves.left.and.right",
+                    title: "Storage",
+                    value: viewModel.stats.storageFormatted,
+                    subtitle: "\(viewModel.stats.liveWatchTime) streaming now",
+                    icon: "internaldrive.fill",
                     color: Color(red: 0.9, green: 0.25, blue: 0.25)
                 )
             }
@@ -393,12 +393,13 @@ struct StatCard: View {
 // MARK: - Models
 
 struct WatchStats {
-    var totalWatchTime: Int = 0
-    var programsWatched: Int = 0
-    var programsCompleted: Int = 0
+    var totalWatchTime: Int = 0      // minutes
+    var programsWatched: Int = 0     // total recordings
+    var programsCompleted: Int = 0   // completed recordings
     var uniqueChannels: Int = 0
     var favoriteChannel: String?
-    var liveWatchTime: Int = 0
+    var liveWatchTime: Int = 0       // active sessions count
+    var storageMB: Int = 0
     var dailyWatchTime: [DayWatchTime] = []
     var genreBreakdown: [GenreStats] = []
     var topChannels: [ChannelStats] = []
@@ -409,15 +410,14 @@ struct WatchStats {
         let h = totalWatchTime / 60; let m = totalWatchTime % 60
         return h > 0 ? "\(h)h \(m)m" : "\(m)m"
     }
-    var liveWatchTimeFormatted: String {
-        let h = liveWatchTime / 60; let m = liveWatchTime % 60
-        return h > 0 ? "\(h)h \(m)m" : "\(m)m"
+    var liveWatchTimeFormatted: String { "\(liveWatchTime)" }
+    var livePercentage: Int { liveWatchTime }
+    var storageFormatted: String {
+        if storageMB == 0 { return "—" }
+        if storageMB >= 1024 { return String(format: "%.1f GB", Double(storageMB) / 1024) }
+        return "\(storageMB) MB"
     }
-    var livePercentage: Int {
-        guard totalWatchTime > 0 else { return 0 }
-        return Int(Double(liveWatchTime) / Double(totalWatchTime) * 100)
-    }
-    var watchTimeChange: String { "+12% vs last period" }
+    var watchTimeChange: String { "" }
 }
 
 struct DayWatchTime: Identifiable {
@@ -465,43 +465,135 @@ struct ActivityItem: Identifiable {
 class WatchStatsViewModel: ObservableObject {
     @Published var stats = WatchStats()
     @Published var isLoading = false
+    @Published var error: String?
+
+    private let iso = ISO8601DateFormatter()
 
     func loadStats(for period: WatchStatsView.StatsPeriod) {
         isLoading = true
+        error = nil
         Task {
-            try? await Task.sleep(nanoseconds: 400_000_000)
-            stats = WatchStats(
-                totalWatchTime: 1247,
-                programsWatched: 42,
-                programsCompleted: 28,
-                uniqueChannels: 15,
-                favoriteChannel: "ESPN",
-                liveWatchTime: 480,
-                dailyWatchTime: [
-                    DayWatchTime(label: "Mon", hours: 2.5),
-                    DayWatchTime(label: "Tue", hours: 1.8),
-                    DayWatchTime(label: "Wed", hours: 3.2),
-                    DayWatchTime(label: "Thu", hours: 2.0),
-                    DayWatchTime(label: "Fri", hours: 4.5),
-                    DayWatchTime(label: "Sat", hours: 5.0),
-                    DayWatchTime(label: "Sun", hours: 3.8)
-                ],
-                genreBreakdown: [
-                    GenreStats(name: "Sports",  percentage: 35, color: Color(red: 0.1, green: 0.75, blue: 0.55)),
-                    GenreStats(name: "Drama",   percentage: 25, color: Color(red: 0.6, green: 0.3,  blue: 1.0)),
-                    GenreStats(name: "News",    percentage: 20, color: Color(red: 0.23, green: 0.51, blue: 0.96)),
-                    GenreStats(name: "Comedy",  percentage: 12, color: Color(red: 0.96, green: 0.62, blue: 0.04)),
-                    GenreStats(name: "Other",   percentage: 8,  color: Color(red: 0.42, green: 0.45, blue: 0.5))
-                ],
-                topChannels: [],
-                topShows: [],
-                recentActivity: [
-                    ActivityItem(icon: "play.fill",  iconColor: Color(red: 0.1, green: 0.75, blue: 0.55), description: "Watched NFL Game",       timeAgo: "2h ago"),
-                    ActivityItem(icon: "tv.fill",    iconColor: Color(red: 0.23, green: 0.51, blue: 0.96), description: "Tuned to CNN",           timeAgo: "4h ago"),
-                    ActivityItem(icon: "film.fill",  iconColor: Color(red: 0.6, green: 0.3, blue: 1.0),   description: "Finished Breaking Bad S5", timeAgo: "Yesterday")
-                ]
-            )
+            await fetchStats(for: period)
             isLoading = false
         }
+    }
+
+    private func fetchStats(for period: WatchStatsView.StatsPeriod) async {
+        // Fetch in parallel
+        async let recordingStatsTask = try? OpenFlixAPI.shared.getRecordingStats()
+        async let recordingsTask     = try? OpenFlixAPI.shared.getRecordings(status: "completed")
+        async let sessionsTask       = try? OpenFlixAPI.shared.getSessions()
+
+        let recordingStats = await recordingStatsTask
+        let recordingsResp = await recordingsTask
+        let sessionsResp   = await sessionsTask
+
+        let recordings = recordingsResp?.allRecordings ?? []
+        let activeSessions = sessionsResp?.MediaContainer.Metadata?.count ?? 0
+
+        // Filter recordings to the selected period
+        let cutoff = cutoffDate(for: period)
+        let periodRecordings = recordings.filter { rec in
+            guard let start = rec.startDate else { return true }
+            return start >= cutoff
+        }
+
+        // Top channels from recordings in period
+        var channelMinutes: [String: (name: String, logo: String?, minutes: Int)] = [:]
+        for rec in periodRecordings {
+            guard let ch = rec.channelName else { continue }
+            let mins = (rec.duration ?? 0) / 60_000  // ms → minutes
+            let existing = channelMinutes[ch] ?? (name: ch, logo: rec.channelLogo, minutes: 0)
+            channelMinutes[ch] = (name: ch, logo: rec.channelLogo ?? existing.logo, minutes: existing.minutes + mins)
+        }
+        let topChannels = channelMinutes.values
+            .sorted { $0.minutes > $1.minutes }
+            .prefix(5)
+            .map { ChannelStats(id: $0.name, name: $0.name, logoUrl: $0.logo, watchTimeMinutes: $0.minutes) }
+
+        // Recent activity from recordings (last 8)
+        let recent = periodRecordings
+            .sorted { ($0.startDate ?? .distantPast) > ($1.startDate ?? .distantPast) }
+            .prefix(8)
+        let recentActivity = recent.map { rec -> ActivityItem in
+            let icon = rec.isMovie == true ? "film.fill" : "play.rectangle.fill"
+            let color = Color(red: 0.6, green: 0.3, blue: 1.0)
+            let ago = rec.startDate.map { timeAgo($0) } ?? ""
+            return ActivityItem(icon: icon, iconColor: color, description: rec.safeTitle, timeAgo: ago)
+        }
+
+        // Daily recording hours for chart (last 7 days / 30 days depending on period)
+        let dailyWatchTime = buildDailyWatchTime(from: periodRecordings, period: period)
+
+        // Totals
+        let totalMins = periodRecordings.reduce(0) { $0 + ($1.duration ?? 0) / 60_000 }
+        let uniqueChannels = Set(periodRecordings.compactMap(\.channelName)).count
+        let favoriteChannel = channelMinutes.values.max(by: { $0.minutes < $1.minutes })?.name
+        let totalRecordings = recordingStats?.total ?? periodRecordings.count
+        let completed = recordingStats?.completed ?? periodRecordings.count
+        let storageMB = (recordingStats?.totalSize ?? 0) / (1024 * 1024)
+
+        stats = WatchStats(
+            totalWatchTime: totalMins,
+            programsWatched: totalRecordings,
+            programsCompleted: completed,
+            uniqueChannels: uniqueChannels,
+            favoriteChannel: favoriteChannel,
+            liveWatchTime: activeSessions,  // repurposed: active session count
+            storageMB: storageMB,
+            dailyWatchTime: dailyWatchTime,
+            genreBreakdown: [],
+            topChannels: Array(topChannels),
+            topShows: [],
+            recentActivity: Array(recentActivity)
+        )
+    }
+
+    private func cutoffDate(for period: WatchStatsView.StatsPeriod) -> Date {
+        let cal = Calendar.current
+        switch period {
+        case .today: return cal.startOfDay(for: Date())
+        case .week:  return cal.date(byAdding: .day, value: -7, to: Date()) ?? Date()
+        case .month: return cal.date(byAdding: .month, value: -1, to: Date()) ?? Date()
+        case .year:  return cal.date(byAdding: .year, value: -1, to: Date()) ?? Date()
+        }
+    }
+
+    private func buildDailyWatchTime(from recordings: [RecordingDTO], period: WatchStatsView.StatsPeriod) -> [DayWatchTime] {
+        let cal = Calendar.current
+        var dayMap: [Date: Double] = [:]
+
+        for rec in recordings {
+            guard let date = rec.startDate else { continue }
+            let day = cal.startOfDay(for: date)
+            let hours = Double(rec.duration ?? 0) / 3_600_000.0
+            dayMap[day, default: 0] += hours
+        }
+
+        let dayCount: Int
+        let labelFmt = DateFormatter()
+        switch period {
+        case .today:
+            return []
+        case .week:
+            dayCount = 7; labelFmt.dateFormat = "EEE"
+        case .month:
+            dayCount = 30; labelFmt.dateFormat = "d"
+        case .year:
+            dayCount = 12; labelFmt.dateFormat = "MMM"
+        }
+
+        return (0..<dayCount).compactMap { i -> DayWatchTime? in
+            guard let date = Calendar.current.date(byAdding: .day, value: -(dayCount - 1 - i), to: Calendar.current.startOfDay(for: Date())) else { return nil }
+            let hours = dayMap[date] ?? 0
+            return DayWatchTime(label: labelFmt.string(from: date), hours: hours)
+        }
+    }
+
+    private func timeAgo(_ date: Date) -> String {
+        let diff = Date().timeIntervalSince(date)
+        if diff < 3600 { return "\(Int(diff / 60))m ago" }
+        if diff < 86400 { return "\(Int(diff / 3600))h ago" }
+        return "\(Int(diff / 86400))d ago"
     }
 }

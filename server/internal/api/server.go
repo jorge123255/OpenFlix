@@ -1621,6 +1621,15 @@ func (s *Server) setupRouter() {
 		healthGroup.GET("/summary", s.adminRequired(), s.getHealthSummary)
 	}
 
+	// ============ Setup Wizard API (no auth required) ============
+	setupGroup := r.Group("/api/setup")
+	{
+		setupGroup.POST("/tuners/discover", s.discoverTuners)
+		setupGroup.GET("/tuners", s.getTuners)
+		setupGroup.POST("/tuners", s.addTuner)
+		setupGroup.POST("/tuners/:id/import", s.importTunerChannels)
+	}
+
 	// ============ Tuner API (HDHR) ============
 	tunerGroup := r.Group("/api/tuners")
 	tunerGroup.Use(s.authRequired())

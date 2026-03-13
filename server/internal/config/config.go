@@ -223,6 +223,11 @@ func Load() (*Config, error) {
 	// This ensures the machine ID survives container recreates even without config.yaml.
 	persistMachineID(cfg)
 
+	// Load claim token from persisted file if not already in config.
+	// The claim token is written to /data/claim-token when generated via POST /api/claim-token
+	// but config.yaml is not updated — so we must read it back here on restart.
+	loadClaimTokenFile(cfg)
+
 	// Ensure data directories exist
 	if err := ensureDirectories(cfg); err != nil {
 		return nil, err
@@ -267,6 +272,29 @@ func persistMachineID(cfg *Config) {
 		}
 		if err := os.WriteFile(path, []byte(cfg.Server.MachineID), 0644); err == nil {
 			return // saved successfully
+		}
+	}
+}
+
+// loadClaimTokenFile reads the claim token from the persisted file if the config
+// doesn't already have one. The file is written by discovery_handlers.go when the
+// admin rotates the token via POST /api/claim-token, but config.yaml is not updated
+// at that time — so we need to read it back here on every restart.
+func loadClaimTokenFile(cfg *Config) {
+	if cfg.Server.ClaimToken != "" {
+		return // already set from config.yaml
+	}
+	paths := []string{
+		"/data/claim-token",
+		filepath.Join(os.Getenv("HOME"), ".openflix", "claim-token"),
+	}
+	for _, path := range paths {
+		if data, err := os.ReadFile(path); err == nil {
+			token := strings.TrimSpace(string(data))
+			if len(token) == 4 {
+				cfg.Server.ClaimToken = token
+				return
+			}
 		}
 	}
 }
