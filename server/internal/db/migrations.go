@@ -2,6 +2,7 @@ package db
 
 import (
 	"fmt"
+	"strings"
 	"log"
 	"time"
 
@@ -294,15 +295,19 @@ func migrateSeriesRules(db *gorm.DB) {
 	for _, sr := range rules {
 		legacyID := sr.ID
 
-		// Build Query DSL from the rule's Name as a title filter
-		// Conditions (EQ/NE/IN/NI/GT/LT) are already in Channels DVR JSON format
-		query := `[{"field":"title","op":"LIKE","value":"` + escapeJSON(sr.Name) + `"}]`
+		// Build Query DSL from the rule name as title filter
+		titleQuery := `[{"field":"title","op":"LIKE","value":"` + escapeJSON(sr.Name) + `"}]`
+		query := titleQuery
 
-		// If the rule has EQ conditions set, prefer those as the query
-		if sr.EQ != "" {
-			query = sr.EQ
+		// If NewOnly is set, add isNew filter alongside title
+		if sr.NewOnly {
+			query = `[{"field":"title","op":"LIKE","value":"` + escapeJSON(sr.Name) + `"},{"field":"isNew","op":"EQ","value":"true"}]`
 		}
 
+		// Only use raw EQ if it already contains a title condition
+		if sr.EQ != "" && strings.Contains(sr.EQ, `"title"`) {
+			query = sr.EQ
+		}
 		dvrRule := models.DVRRule{
 			UserID:             sr.UserID,
 			Name:               sr.Name,

@@ -20,8 +20,30 @@ import {
   Wifi,
   Layout,
   Layers,
+  Users,
+  UserPlus,
+  UserMinus,
+  GitMerge,
+  AlertTriangle,
 } from 'lucide-react'
 import { api } from '../api/client'
+
+interface User {
+  id: number
+  uuid: string
+  username: string
+  title: string
+  thumb: string
+  admin: boolean
+  restricted: boolean
+}
+
+interface DeviceUser {
+  id: number
+  deviceId: number
+  userId: number
+  user?: User
+}
 
 interface ClientDevice {
   id: number
@@ -48,6 +70,7 @@ interface ClientDevice {
   enableDownloads: boolean
   createdAt: string
   updatedAt: string
+  assignedUsers?: DeviceUser[]
 }
 
 const PLATFORM_LABELS: Record<string, string> = {
@@ -161,6 +184,160 @@ function isOnline(lastSeen: string) {
 }
 
 // Global Client Settings Panel component
+interface DuplicateGroup {
+  key: string
+  devices: ClientDevice[]
+}
+
+function DuplicatesPanel() {
+  const queryClient = useQueryClient()
+  const [mergeConfirm, setMergeConfirm] = useState<{ targetId: number; sourceId: number } | null>(null)
+
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ['deviceDuplicates'],
+    queryFn: async () => {
+      const res = await api.client.get('/api/devices/duplicates')
+      return (res.data?.duplicateGroups || []) as DuplicateGroup[]
+    },
+  })
+
+  const mergeDevicesMutation = useMutation({
+    mutationFn: async ({ targetId, sourceId }: { targetId: number; sourceId: number }) => {
+      const res = await api.client.post('/api/devices/merge', { targetId, sourceId })
+      return res.data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['devices'] })
+      queryClient.invalidateQueries({ queryKey: ['deviceDuplicates'] })
+    },
+  })
+
+  const handleMerge = async () => {
+    if (!mergeConfirm) return
+    await mergeDevicesMutation.mutateAsync(mergeConfirm)
+    setMergeConfirm(null)
+    refetch()
+  }
+
+  if (isLoading) return <div className="text-gray-400">Scanning for duplicates...</div>
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+            <AlertTriangle className="h-5 w-5 text-yellow-400" />
+            Suspected Duplicate Devices
+          </h2>
+          <p className="text-sm text-gray-400 mt-1">
+            Devices with the same platform + model that may have re-registered with a new UUID.
+          </p>
+        </div>
+        <button
+          onClick={() => refetch()}
+          className="flex items-center gap-2 px-3 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-sm transition-colors"
+        >
+          <RefreshCw className="h-4 w-4" /> Refresh
+        </button>
+      </div>
+
+      {!data || data.length === 0 ? (
+        <div className="bg-gray-800 rounded-xl p-12 text-center">
+          <GitMerge className="h-12 w-12 text-gray-600 mx-auto mb-3" />
+          <p className="text-gray-400 font-medium">No duplicate devices found</p>
+          <p className="text-gray-500 text-sm mt-1">
+            All registered devices appear to be unique.
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-6">
+          {data.map((group) => (
+            <div key={group.key} className="bg-gray-800 rounded-xl p-5">
+              <div className="flex items-center gap-2 mb-4">
+                <AlertTriangle className="h-4 w-4 text-yellow-400" />
+                <h3 className="text-white font-medium">
+                  {group.devices[0].deviceModel || group.devices[0].platform || group.key} — {group.devices.length} duplicates
+                </h3>
+                <span className="px-2 py-0.5 text-xs bg-yellow-500/20 text-yellow-400 rounded-full">
+                  {group.devices.length} devices
+                </span>
+              </div>
+              <div className="space-y-3">
+                {group.devices.map((device, idx) => (
+                  <div
+                    key={device.id}
+                    className={`flex items-center justify-between p-3 rounded-lg ${
+                      idx === 0 ? 'bg-indigo-500/10 border border-indigo-500/30' : 'bg-gray-900'
+                    }`}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-white text-sm font-medium truncate">{device.displayName || 'Unnamed'}</span>
+                        {idx === 0 && (
+                          <span className="px-1.5 py-0.5 text-xs bg-indigo-600/30 text-indigo-400 rounded">
+                            Keep
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex gap-3 mt-0.5 text-xs text-gray-500">
+                        <span className="font-mono truncate max-w-[120px]">{device.deviceId}</span>
+                        <span>{device.ipAddress}</span>
+                        <span>{formatLastSeen(device.lastSeen)}</span>
+                      </div>
+                    </div>
+                    {idx !== 0 && (
+                      <button
+                        onClick={() =>
+                          setMergeConfirm({ targetId: group.devices[0].id, sourceId: device.id })
+                        }
+                        className="flex items-center gap-1.5 ml-3 px-3 py-1.5 text-xs bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400 rounded-lg transition-colors"
+                      >
+                        <GitMerge className="h-3.5 w-3.5" />
+                        Merge into top
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Merge Confirmation Modal */}
+      {mergeConfirm && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+          <div className="bg-gray-800 rounded-xl p-6 max-w-sm w-full mx-4">
+            <h3 className="text-white font-semibold mb-2 flex items-center gap-2">
+              <GitMerge className="h-5 w-5 text-yellow-400" />
+              Merge Devices
+            </h3>
+            <p className="text-gray-400 text-sm mb-4">
+              The source device will be removed. Settings from the target device will be kept and updated with the latest connection info.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setMergeConfirm(null)}
+                className="px-4 py-2 text-sm bg-gray-700 hover:bg-gray-600 text-white rounded-lg"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleMerge}
+                disabled={mergeDevicesMutation.isPending}
+                className="px-4 py-2 text-sm bg-yellow-600 hover:bg-yellow-700 disabled:opacity-50 text-white rounded-lg flex items-center gap-2"
+              >
+                <GitMerge className="h-4 w-4" />
+                {mergeDevicesMutation.isPending ? 'Merging...' : 'Merge'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 function GlobalClientSettingsPanel() {
   const queryClient = useQueryClient()
   const [searchQuery, setSearchQuery] = useState('')
@@ -369,7 +546,9 @@ export function DeviceManagerPage() {
   const [selectedDevice, setSelectedDevice] = useState<ClientDevice | null>(null)
   const [editForm, setEditForm] = useState<Partial<ClientDevice & { sidebarList: string[] }>>({})
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null)
-  const [activeTab, setActiveTab] = useState<'devices' | 'global-settings'>('devices')
+  const [activeTab, setActiveTab] = useState<'devices' | 'duplicates' | 'global-settings'>('devices')
+  const [showAssignUsers, setShowAssignUsers] = useState(false)
+  const [pendingUserIds, setPendingUserIds] = useState<number[]>([])
 
   const { data: devices, isLoading } = useQuery({
     queryKey: ['devices'],
@@ -378,6 +557,33 @@ export function DeviceManagerPage() {
       return (res.data?.devices || []) as ClientDevice[]
     },
     refetchInterval: 10000,
+  })
+
+  const { data: allUsers = [] } = useQuery({
+    queryKey: ['users'],
+    queryFn: async () => {
+      const res = await api.client.get('/api/users')
+      return (res.data?.users || res.data || []) as User[]
+    },
+  })
+
+  const assignUsers = useMutation({
+    mutationFn: async ({ deviceId, userIds }: { deviceId: number; userIds: number[] }) => {
+      await api.client.put(`/api/devices/${deviceId}/users`, { userIds })
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['devices'] })
+      setShowAssignUsers(false)
+    },
+  })
+
+  const removeUser = useMutation({
+    mutationFn: async ({ deviceId, userId }: { deviceId: number; userId: number }) => {
+      await api.client.delete(`/api/devices/${deviceId}/users/${userId}`)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['devices'] })
+    },
   })
 
   const updateDevice = useMutation({
@@ -410,6 +616,8 @@ export function DeviceManagerPage() {
 
   const openDeviceEditor = (device: ClientDevice) => {
     setSelectedDevice(device)
+    setShowAssignUsers(false)
+    setPendingUserIds((device.assignedUsers || []).map((du) => du.userId))
     setEditForm({
       displayName: device.displayName,
       kioskMode: device.kioskMode,
@@ -475,6 +683,16 @@ export function DeviceManagerPage() {
           Client Devices
         </button>
         <button
+          onClick={() => setActiveTab('duplicates')}
+          className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+            activeTab === 'duplicates'
+              ? 'bg-indigo-600 text-white'
+              : 'text-gray-400 hover:text-white hover:bg-gray-700'
+          }`}
+        >
+          Duplicates
+        </button>
+        <button
           onClick={() => setActiveTab('global-settings')}
           className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
             activeTab === 'global-settings'
@@ -488,6 +706,8 @@ export function DeviceManagerPage() {
 
       {activeTab === 'global-settings' ? (
         <GlobalClientSettingsPanel />
+      ) : activeTab === 'duplicates' ? (
+        <DuplicatesPanel />
       ) : (
         <div className="flex gap-6">
           {/* Device List */}
@@ -529,6 +749,11 @@ export function DeviceManagerPage() {
                           {device.kidsOnlyMode && (
                             <span className="flex items-center gap-1 text-xs px-1.5 py-0.5 bg-pink-500/20 text-pink-400 rounded-full">
                               <Baby className="h-3 w-3" />Kids
+                            </span>
+                          )}
+                          {(device.assignedUsers || []).length > 0 && (
+                            <span className="flex items-center gap-1 text-xs px-1.5 py-0.5 bg-cyan-500/20 text-cyan-400 rounded-full">
+                              <Users className="h-3 w-3" />{(device.assignedUsers || []).length} user{(device.assignedUsers || []).length !== 1 ? 's' : ''}
                             </span>
                           )}
                         </div>
@@ -854,6 +1079,127 @@ export function DeviceManagerPage() {
                       </div>
                     ))}
                   </div>
+                </div>
+
+                <hr className="border-gray-700" />
+
+                {/* Family Sharing */}
+                <div>
+                  <h4 className="text-sm font-medium text-gray-300 mb-3 flex items-center gap-2">
+                    <Users className="h-4 w-4 text-cyan-400" />
+                    Family Sharing
+                  </h4>
+                  <p className="text-xs text-gray-500 mb-3">
+                    Assign users to this device. Restrictions from assigned users are applied automatically. If no users are assigned, the device is unrestricted.
+                  </p>
+
+                  {/* Assigned users list */}
+                  {(selectedDevice.assignedUsers || []).length > 0 ? (
+                    <div className="space-y-2 mb-3">
+                      {(selectedDevice.assignedUsers || []).map((du) => (
+                        <div key={du.id} className="flex items-center justify-between p-2 bg-gray-900 rounded-lg">
+                          <div className="flex items-center gap-2">
+                            {du.user?.thumb ? (
+                              <img src={du.user.thumb} className="h-7 w-7 rounded-full object-cover" alt="" />
+                            ) : (
+                              <div className="h-7 w-7 rounded-full bg-indigo-600 flex items-center justify-center text-xs text-white font-medium">
+                                {(du.user?.title || du.user?.username || '?')[0].toUpperCase()}
+                              </div>
+                            )}
+                            <div>
+                              <p className="text-sm text-white">{du.user?.title || du.user?.username}</p>
+                              <div className="flex gap-1 mt-0.5">
+                                {du.user?.admin && (
+                                  <span className="text-xs px-1 py-0.5 bg-yellow-500/20 text-yellow-400 rounded">Admin</span>
+                                )}
+                                {du.user?.restricted && (
+                                  <span className="text-xs px-1 py-0.5 bg-pink-500/20 text-pink-400 rounded">Kids</span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => removeUser.mutate({ deviceId: selectedDevice.id, userId: du.userId })}
+                            disabled={removeUser.isPending}
+                            className="p-1 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded transition-colors"
+                            title="Remove user"
+                          >
+                            <UserMinus className="h-4 w-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="p-3 bg-gray-900 rounded-lg text-center mb-3">
+                      <p className="text-xs text-gray-500">No users assigned — device is unrestricted</p>
+                    </div>
+                  )}
+
+                  {/* Assign users picker */}
+                  {showAssignUsers ? (
+                    <div className="bg-gray-900 rounded-lg p-3">
+                      <p className="text-xs text-gray-400 mb-2">Select users to assign:</p>
+                      <div className="space-y-1 max-h-40 overflow-y-auto mb-3">
+                        {allUsers.map((user) => {
+                          const isSelected = pendingUserIds.includes(user.id)
+                          return (
+                            <button
+                              key={user.id}
+                              onClick={() =>
+                                setPendingUserIds(
+                                  isSelected
+                                    ? pendingUserIds.filter((id) => id !== user.id)
+                                    : [...pendingUserIds, user.id]
+                                )
+                              }
+                              className={`w-full flex items-center gap-2 px-2 py-1.5 rounded text-left text-sm transition-colors ${
+                                isSelected
+                                  ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/30'
+                                  : 'text-gray-400 hover:text-white hover:bg-gray-800'
+                              }`}
+                            >
+                              <div className={`h-2.5 w-2.5 rounded border flex items-center justify-center ${isSelected ? 'bg-indigo-500 border-indigo-500' : 'border-gray-600'}`}>
+                                {isSelected && <span className="text-white text-[8px]">✓</span>}
+                              </div>
+                              <div className="h-5 w-5 rounded-full bg-indigo-700 flex items-center justify-center text-[10px] text-white flex-shrink-0">
+                                {(user.title || user.username)[0].toUpperCase()}
+                              </div>
+                              <span>{user.title || user.username}</span>
+                              {user.restricted && (
+                                <span className="ml-auto text-[10px] px-1 py-0.5 bg-pink-500/20 text-pink-400 rounded">Kids</span>
+                              )}
+                            </button>
+                          )
+                        })}
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => setShowAssignUsers(false)}
+                          className="flex-1 px-3 py-1.5 text-xs bg-gray-700 hover:bg-gray-600 text-white rounded-lg"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={() => assignUsers.mutate({ deviceId: selectedDevice.id, userIds: pendingUserIds })}
+                          disabled={assignUsers.isPending}
+                          className="flex-1 px-3 py-1.5 text-xs bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-lg"
+                        >
+                          {assignUsers.isPending ? 'Saving...' : 'Apply'}
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        setPendingUserIds((selectedDevice.assignedUsers || []).map((du) => du.userId))
+                        setShowAssignUsers(true)
+                      }}
+                      className="flex items-center gap-2 px-3 py-2 text-sm text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/10 rounded-lg transition-colors w-full"
+                    >
+                      <UserPlus className="h-4 w-4" />
+                      Assign Users
+                    </button>
+                  )}
                 </div>
 
                 <hr className="border-gray-700" />

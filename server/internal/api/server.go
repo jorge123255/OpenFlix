@@ -1097,7 +1097,7 @@ func (s *Server) setupRouter() {
 	}
 
 	livetv := r.Group("/livetv")
-	livetv.Use(s.authRequired())
+	livetv.Use(s.authRequired(), s.deviceFeatureMiddleware("livetv"))
 	{
 		// Sources (M3U playlists)
 		livetv.GET("/sources", s.getLiveTVSources)
@@ -1224,7 +1224,7 @@ func (s *Server) setupRouter() {
 
 	// ============ DVR API ============
 	dvrGroup := r.Group("/dvr")
-	dvrGroup.Use(s.authRequired())
+	dvrGroup.Use(s.authRequired(), s.deviceFeatureMiddleware("dvr"))
 	{
 		// Recordings
 		dvrGroup.GET("/recordings", s.getRecordings)
@@ -1671,7 +1671,7 @@ func (s *Server) setupRouter() {
 
 	// ============ Offline Downloads API ============
 	offline := r.Group("/api/offline")
-	offline.Use(s.authRequired())
+	offline.Use(s.authRequired(), s.deviceFeatureMiddleware("downloads"))
 	{
 		offline.POST("/request", s.requestOfflineDownload)
 		offline.GET("/downloads", s.listOfflineDownloads)
@@ -1813,10 +1813,16 @@ func (s *Server) setupRouter() {
 	adminDevices := r.Group("/api/devices")
 	adminDevices.Use(s.authRequired(), s.adminRequired())
 	{
-		adminDevices.GET("", s.listDevices)
+		adminDevices.GET("", s.listDevicesWithUsers)
 		adminDevices.GET("/:id", s.getDevice)
 		adminDevices.PUT("/:id", s.updateDevice)
 		adminDevices.DELETE("/:id", s.deleteDevice)
+		adminDevices.POST("/merge", s.mergeDevices)
+		adminDevices.GET("/duplicates", s.findDeviceDuplicates)
+		// Family sharing endpoints
+		adminDevices.GET("/:id/users", s.getDeviceUsers)
+		adminDevices.PUT("/:id/users", s.assignDeviceUsers)
+		adminDevices.DELETE("/:id/users/:userId", s.removeDeviceUser)
 	}
 
 	// Images - support both /thumb/:id and /thumb (simple)

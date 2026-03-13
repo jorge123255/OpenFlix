@@ -172,7 +172,7 @@ func (s *Server) registerDevice(c *gin.Context) {
 		// Device does not exist, create with sensible defaults
 		device = models.ClientDevice{
 			DeviceID:        req.DeviceID,
-			DisplayName:     req.Platform + " Device",
+			DisplayName:     smartDeviceName(req.DeviceModel, req.Platform),
 			Platform:        req.Platform,
 			LastSeen:        time.Now(),
 			IPAddress:       c.ClientIP(),
@@ -191,10 +191,6 @@ func (s *Server) registerDevice(c *gin.Context) {
 			EnableDVR:       true,
 			EnableLiveTV:    true,
 			EnableDownloads: true,
-		}
-
-		if device.DisplayName == " Device" || device.DisplayName == "" {
-			device.DisplayName = "Unknown Device"
 		}
 
 		if err := s.db.Create(&device).Error; err != nil {
@@ -255,5 +251,137 @@ func (s *Server) getMyDeviceSettings(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"device":       device,
 		"restrictions": restrictions,
+	})
+}
+
+// smartDeviceName returns a human-friendly device name.
+// It prefers the model string (e.g., "iPhone 17 Pro", "Apple TV 4K") over the generic platform label.
+func smartDeviceName(deviceModel, platform string) string {
+	if deviceModel != "" {
+		return deviceModel
+	}
+	switch platform {
+	case "apple_tv":
+		return "Apple TV"
+	case "android_tv":
+		return "Android TV"
+	case "fire_tv":
+		return "Fire TV"
+	case "ios":
+		return "iPhone"
+	case "android":
+		return "Android Device"
+	case "web":
+		return "Web Browser"
+	default:
+		if platform != "" {
+			return platform + " Device"
+		}
+		return "Unknown Device"
+	}
+}
+
+// mergeDevices merges source device into target, preserving target settings and removing source.
+// POST /api/devices/merge  body: {"targetId": 1, "sourceId": 2}
+func (s *Server) mergeDevices(c *gin.Context) {
+	var req struct {
+		TargetID uint `json:"targetId" binding:"required"`
+		SourceID uint `json:"sourceId" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "targetId and sourceId are required"})
+		return
+	}
+	if req.TargetID == req.SourceID {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "targetId and sourceId must be different"})
+		return
+	}
+
+	var target, source models.ClientDevice
+	if err := s.db.First(&target, req.TargetID).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "target device not found"})
+		return
+	}
+	if err := s.db.First(&source, req.SourceID).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "source device not found"})
+		return
+	}
+
+	// Keep the most recent LastSeen, merge device info from source if target is missing it
+	if source.LastSeen.After(target.LastSeen) {
+		target.LastSeen = source.LastSeen
+		target.IPAddress = source.IPAddress
+		target.ConnectionType = source.ConnectionType
+		target.AppVersion = source.AppVersion
+	}
+	if target.DeviceModel == "" && source.DeviceModel != "" {
+		target.DeviceModel = source.DeviceModel
+	}
+	if target.OSVersion == "" && source.OSVersion != "" {
+		target.OSVersion = source.OSVersion
+	}
+	if target.Platform == "" && source.Platform != "" {
+		target.Platform = source.Platform
+	}
+
+	if err := s.db.Save(&target).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update target device"})
+		return
+	}
+	// Delete the source device
+	if err := s.db.Delete(&models.ClientDevice{}, req.SourceID).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to delete source device"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "devices merged",
+		"device":  target,
+	})
+}
+
+// findDeviceDuplicates returns groups of devices that are likely duplicates.
+// Devices are grouped by (platform, device_model) and only groups with >1 device are returned.
+// GET /api/devices/duplicates
+func (s *Server) findDeviceDuplicates(c *gin.Context) {
+	var devices []models.ClientDevice
+	if err := s.db.Order("last_seen DESC").Find(&devices).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch devices"})
+		return
+	}
+
+	type DuplicateGroup struct {
+		Key     string               `json:"key"`
+		Devices []models.ClientDevice `json:"devices"`
+	}
+	groups := map[string]*DuplicateGroup{}
+	order := []string{}
+
+	for _, d := range devices {
+		model := d.DeviceModel
+		if model == "" {
+			model = "unknown"
+		}
+		key := d.Platform + "|" + model
+		if _, ok := groups[key]; !ok {
+			groups[key] = &DuplicateGroup{Key: key}
+			order = append(order, key)
+		}
+		groups[key].Devices = append(groups[key].Devices, d)
+	}
+
+	var duplicateGroups []DuplicateGroup
+	for _, k := range order {
+		if len(groups[k].Devices) > 1 {
+			duplicateGroups = append(duplicateGroups, *groups[k])
+		}
+	}
+	if duplicateGroups == nil {
+		duplicateGroups = []DuplicateGroup{}
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"duplicateGroups": duplicateGroups,
+		"count":           len(duplicateGroups),
 	})
 }

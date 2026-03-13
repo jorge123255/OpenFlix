@@ -125,6 +125,7 @@ func Migrate(db *gorm.DB) error {
 
 		// Client Devices
 		&models.ClientDevice{},
+		&models.DeviceUser{},
 
 		// Offline Downloads
 		&models.OfflineDownload{},

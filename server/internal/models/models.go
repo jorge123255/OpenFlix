@@ -840,6 +840,17 @@ type ClientDevice struct {
 
 	CreatedAt time.Time `json:"createdAt"`
 	UpdatedAt time.Time `json:"updatedAt"`
+
+	// Family sharing: users allowed to use this device (nil = unrestricted)
+	AssignedUsers []DeviceUser `gorm:"foreignKey:DeviceID" json:"assignedUsers,omitempty"`
+}
+
+// DeviceUser is a junction table linking devices to allowed users (family sharing)
+type DeviceUser struct {
+	ID             uint          `gorm:"primaryKey" json:"id"`
+	DeviceID       uint          `gorm:"uniqueIndex:idx_device_user;not null" json:"deviceId"`
+	UserID         uint          `gorm:"uniqueIndex:idx_device_user;not null" json:"userId"`
+	User           *User         `gorm:"foreignKey:UserID" json:"user,omitempty"`
 }
 
 // ========== Personal Section Models ==========
