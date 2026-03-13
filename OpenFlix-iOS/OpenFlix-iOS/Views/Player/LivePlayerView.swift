@@ -591,12 +591,12 @@ class LivePlayerViewModel: ObservableObject {
         currentChannel = channel
         error = nil
         isBuffering = true
-        
-        guard let streamURL = channel.streamUrl, let url = URL(string: streamURL) else {
+
+        guard let url = liveTVRepository.getStreamURL(for: channel) else {
             error = "Invalid stream URL"
             return
         }
-        
+
         // Create player
         let playerItem = AVPlayerItem(url: url)
         player = AVPlayer(playerItem: playerItem)

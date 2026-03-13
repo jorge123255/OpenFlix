@@ -3237,8 +3237,12 @@ func (s *Server) streamXtreamVOD(c *gin.Context, file *models.MediaFile) {
 
 	log.Printf("Proxying Xtream VOD: %s", vodURL)
 
-	// Create HTTP request to fetch the VOD stream
-	req, err := http.NewRequestWithContext(c.Request.Context(), "GET", vodURL, nil)
+	// Create HTTP request to fetch the VOD stream.
+	// Use a background context with a generous timeout instead of the request context so that
+	// a slow-to-respond upstream (or an iOS client that cancels early) doesn't abort the fetch.
+	fetchCtx, fetchCancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer fetchCancel()
+	req, err := http.NewRequestWithContext(fetchCtx, "GET", vodURL, nil)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create request"})
 		return
@@ -3404,6 +3408,32 @@ func rewriteM3U8URIs(content, baseURL string) string {
 }
 
 // rewriteM3U8ForProxy rewrites all URLs in M3U8 content to go through our proxy
+// resolveM3U8Path resolves an HLS relative path (starting with "/") to a full URL.
+// Some IPTV CDNs embed the CDN hostname as the first path component:
+//
+//	"/cdn.example.com/file2/TOKEN/seg.ts" → "https://cdn.example.com/file2/TOKEN/seg.ts"
+//
+// If the first component looks like a domain (contains ".", no "/"), we build
+// the HTTPS URL directly. Otherwise returns "" to signal normal resolution.
+func resolveM3U8Path(path, remoteBase string) string {
+	// path starts with "/" — split off first component
+	rest := strings.TrimPrefix(path, "/")
+	slash := strings.Index(rest, "/")
+	var firstComponent, remainingPath string
+	if slash == -1 {
+		firstComponent = rest
+		remainingPath = ""
+	} else {
+		firstComponent = rest[:slash]
+		remainingPath = rest[slash:] // includes leading "/"
+	}
+	// A domain-like component contains at least one "." and no "/" or "="
+	if strings.Contains(firstComponent, ".") && !strings.Contains(firstComponent, "=") {
+		return "https://" + firstComponent + remainingPath
+	}
+	return ""
+}
+
 func rewriteM3U8ForProxy(content, remoteBase, proxyBaseURL, authToken string) string {
 	lines := strings.Split(content, "\n")
 	for i, line := range lines {
@@ -3424,8 +3454,12 @@ func rewriteM3U8ForProxy(content, remoteBase, proxyBaseURL, authToken string) st
 			// Already absolute URL
 			fullURL = trimmed
 		} else if strings.HasPrefix(trimmed, "/") {
-			// Relative to server root
-			fullURL = remoteBase + trimmed
+			// Relative to server root — but some IPTV CDNs embed the CDN domain as the
+			// first path component: "/cdn.example.com/file2/...". Resolve these as
+			// "https://cdn.example.com/file2/..." rather than prepending the Xtream server.
+			if fullURL = resolveM3U8Path(trimmed, remoteBase); fullURL == "" {
+				fullURL = remoteBase + trimmed
+			}
 		} else {
 			// Relative to current path - just use as is with remote base
 			fullURL = remoteBase + "/" + trimmed
@@ -3461,7 +3495,11 @@ func rewriteURIAttribute(line, remoteBase, proxyBaseURL, authToken string) strin
 	if strings.HasPrefix(uri, "http://") || strings.HasPrefix(uri, "https://") {
 		fullURL = uri
 	} else if strings.HasPrefix(uri, "/") {
-		fullURL = remoteBase + uri
+		if resolved := resolveM3U8Path(uri, remoteBase); resolved != "" {
+			fullURL = resolved
+		} else {
+			fullURL = remoteBase + uri
+		}
 	} else {
 		fullURL = remoteBase + "/" + uri
 	}
@@ -3699,6 +3737,15 @@ func (s *Server) transcodeStart(c *gin.Context) {
 func (s *Server) serveTranscodePlaylist(c *gin.Context, sessionID string, playlistPath string) {
 	basePath := fmt.Sprintf("/video/-/transcode/universal/session/%s/", sessionID)
 
+	// Include auth token in segment URLs so AVPlayer can fetch them when connected remotely.
+	// At home, isLocalRequest() bypasses auth for segments; remotely the token is required.
+	tokenSuffix := ""
+	if token, exists := c.Get("token"); exists {
+		if tokenStr, ok := token.(string); ok && tokenStr != "" {
+			tokenSuffix = "?X-Plex-Token=" + tokenStr
+		}
+	}
+
 	// If we know the file duration, generate a full VOD playlist immediately.
 	// This makes AVPlayer show a real scrubber rather than a "Live" badge.
 	if session := s.transcoder.GetSession(sessionID); session != nil && session.FileDuration > 0 {
@@ -3727,7 +3774,7 @@ func (s *Server) serveTranscodePlaylist(c *gin.Context, sessionID string, playli
 				break
 			}
 			sb.WriteString(fmt.Sprintf("#EXTINF:%.6f,\n", dur))
-			sb.WriteString(fmt.Sprintf("%ssegment%05d.ts\n", basePath, i))
+			sb.WriteString(fmt.Sprintf("%ssegment%05d.ts%s\n", basePath, i, tokenSuffix))
 		}
 		sb.WriteString("#EXT-X-ENDLIST\n")
 		c.Header("Content-Type", "application/vnd.apple.mpegurl")
@@ -3750,7 +3797,7 @@ func (s *Server) serveTranscodePlaylist(c *gin.Context, sessionID string, playli
 			hasEndList = true
 		}
 		if trimmed != "" && !strings.HasPrefix(trimmed, "#") && !strings.HasPrefix(trimmed, "http") {
-			rewritten = append(rewritten, basePath+trimmed)
+			rewritten = append(rewritten, basePath+trimmed+tokenSuffix)
 		} else {
 			rewritten = append(rewritten, line)
 		}

@@ -20,7 +20,14 @@ class LiveTVRepository: ObservableObject {
     }
 
     func getChannelStream(id: String) async throws -> URL {
-        // Use direct stream URL from channel data (same LAN as IPTV provider)
+        // When connected remotely, use the server HLS proxy so streams route through
+        // the home server's IP (IPTV providers are often IP-restricted to home).
+        let isRemote = ServerConnectionManager.shared.currentServer?.connectionType == .remote
+        if isRemote {
+            if let url = hlsProxyURL(for: id) { return url }
+        }
+
+        // Local: use direct stream URL from channel data for minimal latency
         if let channel = channels.first(where: { $0.id == id }),
            let streamUrl = channel.streamUrl,
            let url = URL(string: streamUrl) {
@@ -40,8 +47,22 @@ class LiveTVRepository: ObservableObject {
         return url
     }
 
-    /// Get stream URL for a channel directly from the channel data
+    /// Returns the server-side HLS proxy URL for a channel (works remotely).
+    /// The server fetches the IPTV stream from the home IP and re-segments it as HLS.
+    func hlsProxyURL(for channelId: String) -> URL? {
+        guard let serverURL = UserDefaults.standard.serverURL else { return nil }
+        let base = serverURL.appendingPathComponent("livetv/channels/\(channelId)/stream.m3u8")
+        guard var components = URLComponents(url: base, resolvingAgainstBaseURL: true) else { return nil }
+        if let token = KeychainHelper.shared.getToken() {
+            components.queryItems = [URLQueryItem(name: "X-Plex-Token", value: token)]
+        }
+        return components.url
+    }
+
+    /// Get stream URL for a channel — remote-aware.
     func getStreamURL(for channel: Channel) -> URL? {
+        let isRemote = ServerConnectionManager.shared.currentServer?.connectionType == .remote
+        if isRemote { return hlsProxyURL(for: channel.id) }
         guard let streamUrl = channel.streamUrl else { return nil }
         return URL(string: streamUrl)
     }

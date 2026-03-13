@@ -334,11 +334,27 @@ class PlayerViewModel: ObservableObject {
 
             let resumeOffset = mediaToPlay.viewOffset ?? item.viewOffset
 
-            // M3U VOD items have a direct stream URL — play without server transcoding
+            // M3U/Xtream VOD items have a stream URL — resolve it against the server base URL
+            // if it's a server-relative path (starts with "/"), otherwise use it directly.
             let url: URL
-            if let streamUrl = mediaToPlay.streamUrl, let directURL = URL(string: streamUrl) {
-                logger.info("Using direct stream URL for VOD item: \(streamUrl)")
-                url = directURL
+            if let streamUrl = mediaToPlay.streamUrl {
+                let resolvedURL: URL?
+                if streamUrl.hasPrefix("/"), let serverURL = UserDefaults.standard.serverURL {
+                    // Server-relative path (e.g., Xtream VOD proxy) — prepend server base URL
+                    var components = URLComponents(url: serverURL.appendingPathComponent(streamUrl), resolvingAgainstBaseURL: true)
+                    if let token = KeychainHelper.shared.getToken() {
+                        components?.queryItems = [URLQueryItem(name: "X-Plex-Token", value: token)]
+                    }
+                    resolvedURL = components?.url
+                } else {
+                    resolvedURL = URL(string: streamUrl)
+                }
+                if let directURL = resolvedURL {
+                    logger.info("Using stream URL for VOD item: \(directURL.absoluteString)")
+                    url = directURL
+                } else {
+                    url = try await mediaRepository.getPlaybackURL(mediaItem: mediaToPlay, offset: resumeOffset)
+                }
             } else {
                 url = try await mediaRepository.getPlaybackURL(mediaItem: mediaToPlay, offset: resumeOffset)
             }

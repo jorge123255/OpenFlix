@@ -787,6 +787,7 @@ struct LiveChannelPlayerView: View {
     let onDismiss: () -> Void
     @StateObject private var vlcPlayer = VLCPlayerViewModel()
     @StateObject private var dvrRepository = DVRRepository()
+    @StateObject private var liveTVRepo = LiveTVRepository()
     @State private var showControls = true
     @State private var controlsHideTask: Task<Void, Never>?
     @State private var showSleepPicker = false
@@ -812,7 +813,7 @@ struct LiveChannelPlayerView: View {
         ZStack {
             Color.black.ignoresSafeArea()
 
-            if let streamUrl = channel.streamUrl, let url = URL(string: streamUrl) {
+            if liveTVRepo.getStreamURL(for: channel) != nil {
                 VLCPlayerView(viewModel: vlcPlayer)
                     .ignoresSafeArea()
             } else {
@@ -931,7 +932,7 @@ struct LiveChannelPlayerView: View {
                         behindLive = true
                     },
                     onGoLive: {
-                        if let streamUrl = channel.streamUrl, let url = URL(string: streamUrl) {
+                        if let url = liveTVRepo.getStreamURL(for: channel) {
                             vlcPlayer.stop()
                             vlcPlayer.play(url: url)
                             userPaused = false
@@ -1002,7 +1003,7 @@ struct LiveChannelPlayerView: View {
             }
         }
         .onAppear {
-            if let streamUrl = channel.streamUrl, let url = URL(string: streamUrl) {
+            if let url = liveTVRepo.getStreamURL(for: channel) {
                 vlcPlayer.play(url: url)
             }
             viewModel.selectChannel(channel)
@@ -1041,7 +1042,7 @@ struct LiveChannelPlayerView: View {
                 switchToChannel(picked)
             } else {
                 // Normal close: resume the channel that was playing before multiview
-                if let url = URL(string: channel.streamUrl ?? "") {
+                if let url = liveTVRepo.getStreamURL(for: channel) {
                     vlcPlayer.play(url: url)
                 }
             }
@@ -1124,7 +1125,7 @@ struct LiveChannelPlayerView: View {
         channel = newChannel
         viewModel.selectChannel(newChannel)
 
-        if let streamUrl = newChannel.streamUrl, let url = URL(string: streamUrl) {
+        if let url = liveTVRepo.getStreamURL(for: newChannel) {
             vlcPlayer.play(url: url)
         }
 
