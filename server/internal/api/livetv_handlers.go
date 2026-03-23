@@ -325,6 +325,8 @@ func (s *Server) importM3USeries(c *gin.Context) {
 
 // getChannels returns all channels, optionally filtered
 func (s *Server) getChannels(c *gin.Context) {
+	lite := c.Query("lite") == "true" // skip now/next program enrichment
+
 	cacheKey := ""
 	if s.guideCache != nil {
 		nowBucket := time.Now().UTC().Truncate(time.Minute).Unix()
@@ -335,6 +337,7 @@ func (s *Server) getChannels(c *gin.Context) {
 			c.Query("group"),
 			c.Query("enabled"),
 			c.Query("limit"),
+			lite,
 		)
 		if cached, found := s.guideCache.Get(cacheKey); found {
 			if response, ok := cached.(gin.H); ok {
@@ -368,7 +371,7 @@ func (s *Server) getChannels(c *gin.Context) {
 	}
 
 	var channels []models.Channel
-	if err := query.Order("number, name").Find(&channels).Error; err != nil {
+	if err := query.Order("number, sub_channel, name").Find(&channels).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch channels"})
 		return
 	}
@@ -379,109 +382,6 @@ func (s *Server) getChannels(c *gin.Context) {
 	sourceNames := make(map[uint]string)
 	for _, src := range m3uSources {
 		sourceNames[src.ID] = src.Name
-	}
-
-	// Collect all channel IDs that have EPG data
-	channelIDs := make([]string, 0, len(channels))
-	for _, ch := range channels {
-		if ch.ChannelID != "" {
-			channelIDs = append(channelIDs, ch.ChannelID)
-		}
-	}
-
-	// Batch-fetch current and next programs in 2 queries instead of N*2
-	nowStr := time.Now().UTC().Format("2006-01-02 15:04:05+00:00")
-	nowMap := make(map[string]*models.Program, len(channelIDs))
-	nextMap := make(map[string]*models.Program, len(channelIDs))
-
-	if len(channelIDs) > 0 {
-		// Current programs: one row per channel_id (latest start ≤ now AND end > now)
-		var nowPrograms []models.Program
-		s.db.Select([]string{
-			"id",
-			"channel_id",
-			"call_sign",
-			"channel_no",
-			"affiliate_name",
-			"title",
-			"subtitle",
-			"description",
-			"start",
-			"end",
-			"icon",
-			"art",
-			"category",
-			"rating",
-			"is_movie",
-			"is_sports",
-			"is_kids",
-			"is_news",
-			"is_new",
-			"is_live",
-			"is_premiere",
-			"is_finale",
-			"teams",
-			"league",
-			"has_cc",
-			"epg_source_id",
-			"program_id",
-		}).
-			Where("channel_id IN ? AND start <= ? AND \"end\" > ?", channelIDs, nowStr, nowStr).
-			Order("channel_id, start DESC").
-			Find(&nowPrograms)
-		for i := range nowPrograms {
-			p := &nowPrograms[i]
-			// Keep the most recently started program per channel
-			if existing, ok := nowMap[p.ChannelID]; !ok || p.Start.After(existing.Start) {
-				p.Icon = fixProgramImageURL(p.Icon)
-				p.Art = fixProgramImageURL(p.Art)
-				nowMap[p.ChannelID] = p
-			}
-		}
-
-		// Next programs: earliest start > now per channel_id
-		// Use a subquery approach: fetch all upcoming, then pick earliest per channel in Go
-		var nextPrograms []models.Program
-		s.db.Select([]string{
-			"id",
-			"channel_id",
-			"call_sign",
-			"channel_no",
-			"affiliate_name",
-			"title",
-			"subtitle",
-			"description",
-			"start",
-			"end",
-			"icon",
-			"art",
-			"category",
-			"rating",
-			"is_movie",
-			"is_sports",
-			"is_kids",
-			"is_news",
-			"is_new",
-			"is_live",
-			"is_premiere",
-			"is_finale",
-			"teams",
-			"league",
-			"has_cc",
-			"epg_source_id",
-			"program_id",
-		}).
-			Where("channel_id IN ? AND start > ?", channelIDs, nowStr).
-			Order("channel_id, start ASC").
-			Find(&nextPrograms)
-		for i := range nextPrograms {
-			p := &nextPrograms[i]
-			if _, ok := nextMap[p.ChannelID]; !ok {
-				p.Icon = fixProgramImageURL(p.Icon)
-				p.Art = fixProgramImageURL(p.Art)
-				nextMap[p.ChannelID] = p
-			}
-		}
 	}
 
 	type ChannelWithProgram struct {
@@ -495,9 +395,56 @@ func (s *Server) getChannels(c *gin.Context) {
 	for i, ch := range channels {
 		enrichedChannels[i].Channel = ch
 		enrichedChannels[i].SourceName = sourceNames[ch.M3USourceID]
-		if ch.ChannelID != "" {
-			enrichedChannels[i].NowPlaying = nowMap[ch.ChannelID]
-			enrichedChannels[i].NextProgram = nextMap[ch.ChannelID]
+	}
+
+	// Skip program enrichment in lite mode (admin channel list doesn't need it)
+	if !lite {
+		channelIDs := make([]string, 0, len(channels))
+		for _, ch := range channels {
+			if ch.ChannelID != "" {
+				channelIDs = append(channelIDs, ch.ChannelID)
+			}
+		}
+
+		nowStr := time.Now().UTC().Format("2006-01-02 15:04:05+00:00")
+		nowMap := make(map[string]*models.Program, len(channelIDs))
+		nextMap := make(map[string]*models.Program, len(channelIDs))
+
+		if len(channelIDs) > 0 {
+			var nowPrograms []models.Program
+			s.db.Select([]string{"id", "channel_id", "call_sign", "channel_no", "affiliate_name", "title", "subtitle", "description", "start", "end", "icon", "art", "category", "rating", "is_movie", "is_sports", "is_kids", "is_news", "is_new", "is_live", "is_premiere", "is_finale", "teams", "league", "has_cc", "epg_source_id", "program_id"}).
+				Where("channel_id IN ? AND start <= ? AND \"end\" > ?", channelIDs, nowStr, nowStr).
+				Order("channel_id, start DESC").
+				Find(&nowPrograms)
+			for i := range nowPrograms {
+				p := &nowPrograms[i]
+				if existing, ok := nowMap[p.ChannelID]; !ok || p.Start.After(existing.Start) {
+					p.Icon = fixProgramImageURL(p.Icon)
+					p.Art = fixProgramImageURL(p.Art)
+					nowMap[p.ChannelID] = p
+				}
+			}
+
+			var nextPrograms []models.Program
+			s.db.Select([]string{"id", "channel_id", "call_sign", "channel_no", "affiliate_name", "title", "subtitle", "description", "start", "end", "icon", "art", "category", "rating", "is_movie", "is_sports", "is_kids", "is_news", "is_new", "is_live", "is_premiere", "is_finale", "teams", "league", "has_cc", "epg_source_id", "program_id"}).
+				Where("channel_id IN ? AND start > ?", channelIDs, nowStr).
+				Order("channel_id, start ASC").
+				Find(&nextPrograms)
+			for i := range nextPrograms {
+				p := &nextPrograms[i]
+				if _, ok := nextMap[p.ChannelID]; !ok {
+					p.Icon = fixProgramImageURL(p.Icon)
+					p.Art = fixProgramImageURL(p.Art)
+					nextMap[p.ChannelID] = p
+				}
+			}
+		}
+
+		for i, ch := range channels {
+			if ch.ChannelID != "" {
+				enrichedChannels[i].NowPlaying = nowMap[ch.ChannelID]
+				enrichedChannels[i].NextProgram = nextMap[ch.ChannelID]
+			}
 		}
 	}
 
@@ -552,7 +499,7 @@ func (s *Server) getOnNowChannels(c *gin.Context) {
 
 	var channels []models.Channel
 	s.db.Where("channel_id IN ? AND enabled = ?", channelIDs, true).
-		Order("number, name").
+		Order("number, sub_channel, name").
 		Limit(limit).
 		Find(&channels)
 
@@ -696,6 +643,17 @@ func (s *Server) updateChannel(c *gin.Context) {
 			channel.TVGId = channel.ChannelID
 		}
 		channel.ChannelID = req.ChannelID
+
+		// Snapshot EPG call sign + channel number from a representative program so that
+		// future TVGuide station-ID rotations can still remap by call sign.
+		var sample models.Program
+		if err := s.db.Select("call_sign, channel_no, affiliate_name").
+			Where("channel_id = ? AND call_sign != ''", req.ChannelID).
+			First(&sample).Error; err == nil {
+			channel.EPGCallSign = sample.CallSign
+			channel.EPGChannelNo = sample.ChannelNo
+			channel.EPGAffiliate = sample.AffiliateName
+		}
 	}
 
 	if err := s.db.Save(&channel).Error; err != nil {
@@ -1228,6 +1186,40 @@ func (s *Server) proxyChannelGroupStream(c *gin.Context) {
 }
 
 // unmapChannel removes EPG mapping from a channel
+// deleteChannel permanently removes a channel and its associated programs.
+// DELETE /livetv/channels/:id
+func (s *Server) deleteChannel(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid channel ID"})
+		return
+	}
+
+	var channel models.Channel
+	if err := s.db.First(&channel, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Channel not found"})
+		return
+	}
+
+	// Delete programs for this channel first (both by channel_id and tvg_id).
+	lookupIDs := []string{channel.ChannelID}
+	if channel.TVGId != "" && channel.TVGId != channel.ChannelID {
+		lookupIDs = append(lookupIDs, channel.TVGId)
+	}
+	s.db.Where("channel_id IN ?", lookupIDs).Delete(&models.Program{})
+
+	if err := s.db.Delete(&channel).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete channel"})
+		return
+	}
+
+	if s.guideCache != nil {
+		s.guideCache.InvalidateAll()
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Channel deleted"})
+}
+
 func (s *Server) unmapChannel(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
@@ -1241,9 +1233,17 @@ func (s *Server) unmapChannel(c *gin.Context) {
 		return
 	}
 
-	// Clear EPG mapping
+	// Clear EPG mapping — restore original stream channel ID from TVGId if available
 	channel.EPGSourceID = nil
-	channel.ChannelID = ""
+	if channel.TVGId != "" {
+		channel.ChannelID = channel.TVGId
+		channel.TVGId = ""
+	} else {
+		channel.ChannelID = ""
+	}
+	channel.EPGCallSign = ""
+	channel.EPGChannelNo = ""
+	channel.EPGAffiliate = ""
 
 	if err := s.db.Save(&channel).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to unmap channel"})
@@ -1830,7 +1830,7 @@ func (s *Server) getGuide(c *gin.Context) {
 	// Get channels - only include channels with EPG mapping (channelId) for the guide
 	// This filters out VOD entries that were imported as channels
 	var channels []models.Channel
-	channelQuery := s.db.Where("enabled = ?", true).Where("channel_id != ''").Order("number, name")
+	channelQuery := s.db.Where("enabled = ?", true).Where("channel_id != ''").Order("number, sub_channel, name")
 	if sourceID != "" {
 		channelQuery = channelQuery.Where("m3_u_source_id = ?", sourceID)
 	}
@@ -2001,7 +2001,7 @@ func (s *Server) getChannelGuide(c *gin.Context) {
 func (s *Server) getWhatsOnNow(c *gin.Context) {
 	// Get enabled channels
 	var channels []models.Channel
-	if err := s.db.Where("enabled = ?", true).Order("number, name").Find(&channels).Error; err != nil {
+	if err := s.db.Where("enabled = ?", true).Order("number, sub_channel, name").Find(&channels).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch channels"})
 		return
 	}
@@ -2012,6 +2012,8 @@ func (s *Server) getWhatsOnNow(c *gin.Context) {
 		SourceID    uint            `json:"sourceId"`
 		ChannelID   string          `json:"channelId"`
 		Number      int             `json:"number"`
+		SubChannel  int             `json:"subChannel"`
+		DisplayNumber string        `json:"displayNumber"` // e.g. "5", "5.1", "5.2"
 		Name        string          `json:"name"`
 		Logo        string          `json:"logo,omitempty"`
 		Group       string          `json:"group,omitempty"`
@@ -2034,11 +2036,17 @@ func (s *Server) getWhatsOnNow(c *gin.Context) {
 	results := make([]ChannelWithPrograms, 0, len(channels))
 
 	for _, ch := range channels {
+		displayNum := fmt.Sprintf("%d", ch.Number)
+		if ch.SubChannel > 0 {
+			displayNum = fmt.Sprintf("%d.%d", ch.Number, ch.SubChannel)
+		}
 		item := ChannelWithPrograms{
 			ID:              ch.ID,
 			SourceID:        ch.M3USourceID,
 			ChannelID:       ch.ChannelID,
 			Number:          ch.Number,
+			SubChannel:      ch.SubChannel,
+			DisplayNumber:   displayNum,
 			Name:            ch.Name,
 			Logo:            ch.Logo,
 			Group:           ch.Group,
@@ -3488,14 +3496,24 @@ func (s *Server) refreshTVGuideEPG(source *models.EPGSource) error {
 	s.db.Find(&existingChannels)
 
 	// Create lookup maps for fast matching
-	channelByNumber := make(map[string]*models.Channel)  // "2" -> channel
-	channelByCallSign := make(map[string]*models.Channel) // "WBBM" -> channel
-	channelByName := make(map[string]*models.Channel)    // "CBS" -> channel
+	channelByNumber := make(map[string]*models.Channel)     // "2" -> channel
+	channelByCallSign := make(map[string]*models.Channel)   // "WBBM" -> channel
+	channelByName := make(map[string]*models.Channel)       // "CBS" -> channel
+	channelByEPGCallSign := make(map[string]*models.Channel) // EPGCallSign -> channel (explicit mappings only)
+	channelByChannelID := make(map[string]*models.Channel)  // channel_id -> channel
 
 	for i := range existingChannels {
 		ch := &existingChannels[i]
+		if ch.ChannelID != "" {
+			channelByChannelID[ch.ChannelID] = ch
+		}
 		if ch.Number > 0 {
+			// Index by major number ("10") for integer guide numbers
 			channelByNumber[strconv.Itoa(ch.Number)] = ch
+			// Also index by full dotted number ("10.3") for sub-channels
+			if ch.SubChannel > 0 {
+				channelByNumber[fmt.Sprintf("%d.%d", ch.Number, ch.SubChannel)] = ch
+			}
 		}
 		// Extract callsign from channel name (e.g., "WBBM-DT" from "WBBM-DT CBS 2")
 		nameParts := strings.Fields(strings.ToUpper(ch.Name))
@@ -3506,22 +3524,112 @@ func (s *Server) refreshTVGuideEPG(source *models.EPGSource) error {
 			channelByCallSign[base] = ch
 		}
 		channelByName[strings.ToUpper(ch.Name)] = ch
+
+		// Index by stored EPG metadata — survives TVGuide station ID rotations
+		if ch.EPGCallSign != "" {
+			epgCS := strings.ToUpper(ch.EPGCallSign)
+			channelByEPGCallSign[epgCS] = ch
+			channelByCallSign[epgCS] = ch
+			epgBase := strings.TrimSuffix(strings.TrimSuffix(epgCS, "-DT"), "-HD")
+			channelByCallSign[epgBase] = ch
+		}
+		if ch.EPGChannelNo != "" {
+			channelByNumber[ch.EPGChannelNo] = ch
+		}
+	}
+
+	// Fix channels where the station ID has rotated: the incoming program's call sign no
+	// longer matches the channel that currently owns that station ID. Find the channel
+	// whose EPGCallSign matches and update its channel_id to track the new station.
+	// Also clear the old owner so it stops showing wrong content.
+	{
+		// Build per-station representative call sign from incoming programs
+		type stationMeta struct{ callSign, channelNo string }
+		stationMap := make(map[string]stationMeta)
+		for _, p := range programs {
+			if _, ok := stationMap[p.ChannelID]; !ok && p.CallSign != "" {
+				stationMap[p.ChannelID] = stationMeta{callSign: p.CallSign, channelNo: p.ChannelNo}
+			}
+		}
+
+		rotated := 0
+		for stationID, meta := range stationMap {
+			cs := strings.ToUpper(meta.callSign)
+			owner := channelByChannelID[stationID]
+
+			// If current owner's EPGCallSign already matches, no rotation occurred
+			if owner != nil && strings.ToUpper(owner.EPGCallSign) == cs {
+				continue
+			}
+
+			// Find the channel that should own this station by EPGCallSign
+			betterMatch, ok := channelByEPGCallSign[cs]
+			if !ok || betterMatch == nil {
+				continue
+			}
+			// Don't reassign if betterMatch already owns this station
+			if betterMatch.ChannelID == stationID {
+				continue
+			}
+
+			// Update betterMatch to point to the new station ID
+			if err := s.db.Model(betterMatch).Updates(map[string]interface{}{
+				"channel_id":    stationID,
+				"epg_channel_no": meta.channelNo,
+			}).Error; err != nil {
+				log.Printf("📺 TVGuide: Warning: failed to update channel %d channel_id: %v", betterMatch.ID, err)
+				continue
+			}
+			oldID := betterMatch.ChannelID
+			betterMatch.ChannelID = stationID
+			// Update lookup maps
+			channelByChannelID[stationID] = betterMatch
+			if oldID != "" {
+				delete(channelByChannelID, oldID)
+			}
+
+			// Clear the old owner if it was incorrectly holding this station
+			if owner != nil && strings.ToUpper(owner.EPGCallSign) != cs {
+				s.db.Model(owner).Update("channel_id", "")
+				owner.ChannelID = ""
+				delete(channelByChannelID, stationID)
+				channelByChannelID[stationID] = betterMatch
+			}
+
+			log.Printf("📺 TVGuide: Station rotation fix: %s (%s) reassigned from channel %d to channel %d (%s)",
+				stationID, meta.callSign,
+				func() uint { if owner != nil { return owner.ID }; return 0 }(),
+				betterMatch.ID, betterMatch.Name)
+			rotated++
+		}
+		if rotated > 0 {
+			log.Printf("📺 TVGuide: Fixed %d station ID rotations", rotated)
+		}
 	}
 
 	// Remap TVGuide channel IDs to existing channels where possible
+	// (handles HDHR/M3U channels that get TVGuide EPG data by number/callsign)
 	remapped := 0
 	for i := range programs {
 		p := &programs[i]
 		var matched *models.Channel
 
-		// Try matching by channel number first (most reliable)
-		if p.ChannelNo != "" {
+		// 1. EPGCallSign match — explicit mapping, survives station ID rotations
+		if p.CallSign != "" {
+			cs := strings.ToUpper(p.CallSign)
+			if ch, ok := channelByEPGCallSign[cs]; ok {
+				matched = ch
+			}
+		}
+
+		// 2. Try matching by channel number
+		if matched == nil && p.ChannelNo != "" {
 			if ch, ok := channelByNumber[p.ChannelNo]; ok {
 				matched = ch
 			}
 		}
 
-		// Try by callsign
+		// 3. Try by name-derived callsign
 		if matched == nil && p.CallSign != "" {
 			callSign := strings.ToUpper(p.CallSign)
 			base := strings.TrimSuffix(strings.TrimSuffix(callSign, "-DT"), "-HD")
@@ -3609,6 +3717,24 @@ func (s *Server) refreshTVGuideEPG(source *models.EPGSource) error {
 	updated := upsertResult.Updated
 
 	log.Printf("📺 TVGuide: Imported %d new, updated %d existing programs", imported, updated)
+
+	// Clean up programs stored under stale TVGuide channel IDs — i.e., channel_ids from this
+	// provider that have no matching channel row (either never mapped, or remapped away from in
+	// a previous import). Only delete already-aired programs to avoid dropping upcoming listings
+	// for channels the user hasn't mapped yet.
+	tvgPrefix := fmt.Sprintf("tvguide-%s-%%", source.TVGuideProviderID)
+	staleResult := s.db.Exec(
+		`DELETE FROM programs
+		 WHERE channel_id LIKE ?
+		   AND "end" < datetime('now')
+		   AND channel_id NOT IN (SELECT channel_id FROM channels WHERE channel_id LIKE ?)`,
+		tvgPrefix, tvgPrefix,
+	)
+	if staleResult.Error != nil {
+		log.Printf("📺 TVGuide: Warning: stale program cleanup failed: %v", staleResult.Error)
+	} else if staleResult.RowsAffected > 0 {
+		log.Printf("📺 TVGuide: Cleaned up %d stale programs from unmapped channel IDs", staleResult.RowsAffected)
+	}
 
 	// Update source metadata
 	nowTime := time.Now()
@@ -3768,6 +3894,11 @@ func (s *Server) getEPGChannels(c *gin.Context) {
 					log.Printf("📋 Sample channel_ids in DB: %v", sampleIDs)
 
 					query = query.Where("channel_id LIKE ?", prefix)
+				} else if epgSource.ProviderType == "tvguide" {
+					// TVGuide.com: filter by tvguide-{providerID}-% prefix
+					tvgPrefix := fmt.Sprintf("tvguide-%s-%%", epgSource.TVGuideProviderID)
+					log.Printf("📺 TVGuide EPG channels query: source=%s, prefix=%s", epgSource.Name, tvgPrefix)
+					query = query.Where("channel_id LIKE ?", tvgPrefix)
 				} else if epgSource.ProviderType == "xmltv" {
 					// Handle XMLTV sources (filter by epg_source_id)
 
@@ -3804,19 +3935,42 @@ func (s *Server) getEPGChannels(c *gin.Context) {
 		SampleTitle   string `json:"sampleTitle"`
 	}
 
+	// Batch-fetch one representative program per channel_id in a single query.
+	// We use the most recent program that has a call_sign set; fall back to
+	// any program for that channel if none has a call sign.
+	type programRow struct {
+		ChannelID     string
+		CallSign      string
+		ChannelNo     string
+		AffiliateName string
+		Title         string
+	}
+
+	programByChannel := make(map[string]programRow, len(channelIDs))
+	if len(channelIDs) > 0 {
+		// Fetch the most recent program per channel_id (single query).
+		var rows []programRow
+		s.db.Model(&models.Program{}).
+			Select("channel_id, call_sign, channel_no, affiliate_name, title").
+			Where("channel_id IN ?", channelIDs).
+			Order("channel_id, call_sign DESC, start DESC").
+			Find(&rows)
+
+		// Keep best row per channel: prefer one with a call_sign.
+		for _, r := range rows {
+			existing, ok := programByChannel[r.ChannelID]
+			if !ok || (existing.CallSign == "" && r.CallSign != "") {
+				programByChannel[r.ChannelID] = r
+			}
+		}
+	}
+
 	channels := make([]EPGChannel, 0, len(channelIDs))
 	for _, channelID := range channelIDs {
-		var program models.Program
-		// First try to get a program with call_sign populated
-		if err := s.db.Where("channel_id = ? AND call_sign != ''", channelID).Order("start DESC").First(&program).Error; err != nil {
-			// Fallback to any program for this channel
-			s.db.Where("channel_id = ?", channelID).Order("start DESC").First(&program)
-		}
+		row := programByChannel[channelID]
 
-		// Get call sign from program or fallback to Fubo channel names
-		callSign := program.CallSign
+		callSign := row.CallSign
 		if callSign == "" {
-			// Try Fubo channel names lookup
 			if name, ok := livetv.FuboChannelNames[channelID]; ok {
 				callSign = name
 			}
@@ -3825,9 +3979,9 @@ func (s *Server) getEPGChannels(c *gin.Context) {
 		channels = append(channels, EPGChannel{
 			ChannelID:     channelID,
 			CallSign:      callSign,
-			ChannelNo:     program.ChannelNo,
-			AffiliateName: program.AffiliateName,
-			SampleTitle:   program.Title,
+			ChannelNo:     row.ChannelNo,
+			AffiliateName: row.AffiliateName,
+			SampleTitle:   row.Title,
 		})
 	}
 
