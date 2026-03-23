@@ -201,7 +201,7 @@ func FullImageURL(bucketPath string) string {
 type ProviderConfig struct {
 	ProviderID string
 	ZipCode    string
-	Hours      int // Hours of data to fetch (max ~312 = 13 days)
+	Hours      int // Hours of data to fetch (max ~336 = 14 days)
 	FetchDetails bool // Whether to fetch full program details (slower)
 }
 

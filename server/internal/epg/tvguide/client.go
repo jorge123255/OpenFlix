@@ -5,15 +5,17 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 )
 
 const (
-	baseURL       = "https://backend.tvguide.com/tvschedules/tvguide"
-	defaultUA     = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-	maxDuration   = 312 * 60 // 13 days in minutes (API cap)
+	baseURL        = "https://backend.tvguide.com/tvschedules/tvguide"
+	defaultUA      = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+	maxDuration    = 336 * 60 // 14 days in minutes
 	defaultWorkers = 10
 )
 
@@ -74,8 +76,10 @@ func (c *Client) GetProvidersByZip(ctx context.Context, zipCode string) ([]Provi
 	return resp.Data.Items, nil
 }
 
-// GetSchedule fetches the channel schedule/listings for a provider
-// durationMinutes is capped at maxDuration (~13 days)
+// GetSchedule fetches the channel schedule/listings for a provider.
+// durationMinutes is capped at maxDuration (14 days). If the provider
+// returns 502 for the full window, it splits into 7-day chunks and merges
+// the results so the full duration is always returned.
 func (c *Client) GetSchedule(ctx context.Context, providerID string, durationMinutes int) (*FetchResult, error) {
 	startTime := time.Now()
 
@@ -83,27 +87,67 @@ func (c *Client) GetSchedule(ctx context.Context, providerID string, durationMin
 		durationMinutes = maxDuration
 	}
 	if durationMinutes <= 0 {
-		durationMinutes = 120 // default 2 hours
+		durationMinutes = 120
 	}
 
 	now := time.Now().Unix()
-	url := fmt.Sprintf("%s/%s/web?start=%d&duration=%d", baseURL, providerID, now, durationMinutes)
-
-	data, err := c.doRequest(ctx, url)
+	result, err := c.fetchChunk(ctx, providerID, now, durationMinutes)
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch schedule: %w", err)
+		if !strings.Contains(err.Error(), "unexpected status 502") {
+			return nil, fmt.Errorf("failed to fetch schedule: %w", err)
+		}
+
+		// Provider can't handle the full window — fetch in 7-day chunks and merge.
+		const chunkMinutes = 10080 // 7 days
+		log.Printf("TVGuide: provider %s returned 502 for %d min window, switching to %d min chunks", providerID, durationMinutes, chunkMinutes)
+
+		var merged []ChannelSchedule
+		index := make(map[int64]int) // SourceID -> index in merged
+
+		remaining := durationMinutes
+		offsetMin := int64(0)
+		for remaining > 0 {
+			chunk := remaining
+			if chunk > chunkMinutes {
+				chunk = chunkMinutes
+			}
+			chunkResult, chunkErr := c.fetchChunk(ctx, providerID, now+offsetMin*60, chunk)
+			if chunkErr != nil {
+				return nil, fmt.Errorf("failed to fetch schedule chunk (offset %d min): %w", offsetMin, chunkErr)
+			}
+			for _, ch := range chunkResult {
+				if idx, ok := index[ch.Channel.SourceID]; ok {
+					merged[idx].ProgramSchedules = append(merged[idx].ProgramSchedules, ch.ProgramSchedules...)
+				} else {
+					index[ch.Channel.SourceID] = len(merged)
+					merged = append(merged, ch)
+				}
+			}
+			offsetMin += int64(chunk)
+			remaining -= chunk
+		}
+		result = merged
 	}
 
+	return &FetchResult{
+		Channels:  result,
+		FetchedAt: time.Now(),
+		Duration:  time.Since(startTime),
+	}, nil
+}
+
+// fetchChunk performs a single schedule request for the given start time and duration.
+func (c *Client) fetchChunk(ctx context.Context, providerID string, startUnix int64, durationMinutes int) ([]ChannelSchedule, error) {
+	url := fmt.Sprintf("%s/%s/web?start=%d&duration=%d", baseURL, providerID, startUnix, durationMinutes)
+	data, err := c.doRequest(ctx, url)
+	if err != nil {
+		return nil, err
+	}
 	var resp ScheduleResponse
 	if err := json.Unmarshal(data, &resp); err != nil {
 		return nil, fmt.Errorf("failed to decode schedule: %w", err)
 	}
-
-	return &FetchResult{
-		Channels:  resp.Data.Items,
-		FetchedAt: time.Now(),
-		Duration:  time.Since(startTime),
-	}, nil
+	return resp.Data.Items, nil
 }
 
 // GetProgramDetail fetches detailed info for a single program
