@@ -18,6 +18,7 @@ struct LiveTVView: View {
     @State private var showOnLater = false
     @State private var showTeamPass = false
     @State private var showChannelGroups = false
+    @State private var showFullGuide = false
 
     var body: some View {
         NavigationStack {
@@ -37,17 +38,36 @@ struct LiveTVView: View {
                         message: "Add M3U or Xtream sources in Settings to get started."
                     )
                 } else {
+                    #if os(tvOS)
+                    TVOSLiveBrowserView(
+                        viewModel: viewModel,
+                        onPlayChannel: playChannel,
+                        onOpenGuide: { showFullGuide = true },
+                        onOpenCatchup: { showCatchup = true },
+                        onOpenOnLater: { showOnLater = true },
+                        onOpenTeamPass: { showTeamPass = true },
+                        onOpenChannelGroups: { showChannelGroups = true }
+                    )
+                    #else
+                    if viewModel.isGuideLoading && !viewModel.didLoadGuide {
+                        LoadingView(message: "Loading guide data...")
+                    } else {
                     EPGGuideView(
                         viewModel: viewModel,
                         onChannelSelect: { channel in
                             playChannel(channel)
                         }
                     )
+                    }
+                    #endif
                 }
             }
+            #if !os(tvOS)
             .navigationTitle("Live TV")
             .navigationBarTitleDisplayMode(.inline)
+            #endif
             .toolbar {
+                #if !os(tvOS)
                 ToolbarItem(placement: .topBarTrailing) {
                     Menu {
                         Button { showCatchup = true } label: {
@@ -67,6 +87,7 @@ struct LiveTVView: View {
                             .foregroundColor(.white)
                     }
                 }
+                #endif
             }
             .navigationDestination(isPresented: $showCatchup) {
                 CatchupView()
@@ -79,6 +100,14 @@ struct LiveTVView: View {
             }
             .navigationDestination(isPresented: $showChannelGroups) {
                 ChannelGroupsView()
+            }
+            .navigationDestination(isPresented: $showFullGuide) {
+                EPGGuideView(
+                    viewModel: viewModel,
+                    onChannelSelect: { channel in
+                        playChannel(channel)
+                    }
+                )
             }
         }
         .task {
@@ -122,6 +151,1338 @@ struct LiveTVView: View {
         }
     }
 }
+
+#if os(tvOS)
+private struct TVOSLiveBrowserView: View {
+    private enum HeroControl: Hashable {
+        case earlier
+        case later
+        case watch
+    }
+
+    @ObservedObject var viewModel: LiveTVViewModel
+    let onPlayChannel: (Channel) -> Void
+    let onOpenGuide: () -> Void
+    let onOpenCatchup: () -> Void
+    let onOpenOnLater: () -> Void
+    let onOpenTeamPass: () -> Void
+    let onOpenChannelGroups: () -> Void
+
+    @State private var selectedChannelId: String?
+    @State private var selectedProgramIdByChannel: [String: String] = [:]
+    @State private var guideWindowStartDate: Date?
+    @FocusState private var focusedHeroControl: HeroControl?
+    @Namespace private var heroFocusNamespace
+
+    private let shellBackground = Color(red: 13/255, green: 15/255, blue: 28/255)
+    private let panelBackground = Color(red: 22/255, green: 24/255, blue: 42/255)
+    private let panelBackgroundSoft = Color(red: 18/255, green: 20/255, blue: 36/255)
+    private let accent = Color(red: 123/255, green: 82/255, blue: 1.0)
+    private let accentSoft = Color(red: 87/255, green: 62/255, blue: 158/255)
+    private let progressColor = Color(red: 0.96, green: 0.12, blue: 0.50) // Pluto-style hot pink
+    private let nowLineColor = Color(red: 0.96, green: 0.12, blue: 0.50)
+    private let channelColumnWidth: CGFloat = 150
+    private let rowHeight: CGFloat = 76
+    private let timeHeaderHeight: CGFloat = 24
+    private let guideWindowMinutes: CGFloat = 120
+    private let guidePageStepMinutes: CGFloat = 60
+
+    private var guideRows: [ChannelWithPrograms] {
+        if !viewModel.guide.isEmpty {
+            return viewModel.guide
+        }
+        if !viewModel.didLoadGuide {
+            return []
+        }
+        return viewModel.displayedChannels.map { ChannelWithPrograms(channel: $0, programs: []) }
+    }
+
+    private var selectedRow: ChannelWithPrograms? {
+        if let selectedChannelId,
+           let row = guideRows.first(where: { $0.channel.id == selectedChannelId }) {
+            return row
+        }
+        if let selected = viewModel.selectedChannel,
+           let row = guideRows.first(where: { $0.channel.id == selected.id }) {
+            return row
+        }
+        return guideRows.first
+    }
+
+    private var selectedProgram: Program? {
+        guard let row = selectedRow else { return nil }
+        if let selectedProgramId = selectedProgramIdByChannel[row.channel.id],
+           let program = row.programs.first(where: { $0.id == selectedProgramId }) {
+            return program
+        }
+        return row.currentProgram ?? row.channel.nowPlaying ?? row.programs.first
+    }
+
+    private var liveHighlights: [(channel: Channel, program: Program)] {
+        guideRows.compactMap { row in
+            guard let program = row.currentProgram ?? row.channel.nowPlaying else { return nil }
+            return (row.channel, program)
+        }
+        .sorted { lhs, rhs in
+            if lhs.program.isSports != rhs.program.isSports {
+                return lhs.program.isSports && !rhs.program.isSports
+            }
+            return lhs.program.startTime < rhs.program.startTime
+        }
+        .prefix(8)
+        .map { $0 }
+    }
+
+    private var defaultRoundedWindowStart: Date {
+        let now = Date()
+        let calendar = Calendar.current
+        let components = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: now)
+        let minute = components.minute ?? 0
+        let roundedMinute = minute < 30 ? 0 : 30
+        let roundedNow = calendar.date(
+            from: DateComponents(
+                year: components.year,
+                month: components.month,
+                day: components.day,
+                hour: components.hour,
+                minute: roundedMinute
+            )
+        ) ?? now
+        return calendar.date(byAdding: .minute, value: -30, to: roundedNow) ?? roundedNow
+    }
+
+    private var roundedWindowStart: Date {
+        guideWindowStartDate ?? defaultRoundedWindowStart
+    }
+
+    private var windowEnd: Date {
+        roundedWindowStart.addingTimeInterval(TimeInterval(guideWindowMinutes * 60))
+    }
+
+    private var latestGuideEnd: Date {
+        guideRows
+            .flatMap(\.programs)
+            .map(\.endTime)
+            .max() ?? windowEnd
+    }
+
+    private var canPageBackward: Bool {
+        roundedWindowStart > defaultRoundedWindowStart
+    }
+
+    private var canPageForward: Bool {
+        windowEnd < latestGuideEnd
+    }
+
+    private var visibleTimeRangeLabel: String {
+        "\(Self.heroWindowDateFormatter.string(from: roundedWindowStart)) - \(Self.heroWindowTimeFormatter.string(from: windowEnd))"
+    }
+
+    private var visibleRows: [ChannelWithPrograms] {
+        let active = guideRows.filter { row in
+            row.programs.contains {
+                $0.endTime > $0.startTime &&
+                $0.endTime > roundedWindowStart &&
+                $0.startTime < windowEnd
+            }
+        }
+        return active.ifEmpty(guideRows)
+    }
+
+    var body: some View {
+        Group {
+            if guideRows.isEmpty && viewModel.isGuideLoading {
+                VStack(alignment: .leading, spacing: 1) {
+                    guideHero
+                    guideControls
+                        .disabled(true)
+                        .opacity(0.6)
+                    timeHeader
+                    guideLoadingMatrix
+                }
+            } else {
+                VStack(alignment: .leading, spacing: 1) {
+                    guideHero
+                    guideControls
+                    timeHeader
+                    guideMatrix
+                }
+                .onAppear {
+                    if guideWindowStartDate == nil {
+                        guideWindowStartDate = defaultRoundedWindowStart
+                    }
+                    if selectedChannelId == nil {
+                        let initialId = viewModel.selectedChannel?.id ?? visibleRows.first?.channel.id
+                        selectedChannelId = initialId
+                    }
+                }
+                .onChange(of: visibleRows.map(\.channel.id).joined(separator: "|")) { _, _ in
+                    let rows = visibleRows
+                    if selectedChannelId == nil || !rows.contains(where: { $0.channel.id == selectedChannelId }) {
+                        let initialId = viewModel.selectedChannel?.id ?? rows.first?.channel.id
+                        selectedChannelId = initialId
+                    }
+                }
+                .onChange(of: viewModel.guide.count) { _, _ in
+                    if guideWindowStartDate == nil {
+                        guideWindowStartDate = defaultRoundedWindowStart
+                    }
+                }
+            }
+        }
+        .padding(.horizontal, 34)
+        .padding(.top, 0)
+        .padding(.bottom, 4)
+        .background(shellBackground)
+    }
+
+    private var guideHero: some View {
+        let channel = selectedRow?.channel
+        let program = selectedProgram ?? selectedRow?.currentProgram ?? channel?.nowPlaying
+
+        return HStack(alignment: .center, spacing: 14) {
+                TVGuideLivePreviewCard(
+                    viewModel: viewModel,
+                    channel: channel,
+                    program: program,
+                    accent: accent,
+                    compact: true
+                )
+                    .frame(width: 276, height: 154)
+
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack(alignment: .firstTextBaseline, spacing: 12) {
+                        Text("Guide")
+                            .font(.system(size: 22, weight: .black, design: .rounded))
+                            .foregroundStyle(.white)
+
+                        Text("Today")
+                            .font(.system(size: 16, weight: .bold, design: .rounded))
+                            .foregroundStyle(.white.opacity(0.92))
+
+                        Image(systemName: "bolt.fill")
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundStyle(accent)
+
+                        Text(Self.heroTimeFormatter.string(from: Date()))
+                            .font(.system(size: 16, weight: .bold, design: .rounded))
+                            .foregroundStyle(.white.opacity(0.9))
+
+                        Text("\(visibleRows.count) live")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(.white.opacity(0.55))
+                    }
+
+                    HStack(spacing: 8) {
+                        if let channel {
+                            Text(channel.number.map { "\($0) \(channel.name)" } ?? channel.name)
+                                .font(.system(size: 11, weight: .black, design: .rounded))
+                                .foregroundStyle(accent)
+                                .lineLimit(1)
+                        }
+
+                        if let program {
+                            Text(program.timeRangeFormatted)
+                                .font(.system(size: 11, weight: .bold))
+                                .foregroundStyle(.white.opacity(0.66))
+                                .lineLimit(1)
+                        }
+                    }
+
+                    Text(program?.title ?? "Select a channel to browse what’s live now.")
+                        .font(.system(size: 18, weight: .black, design: .rounded))
+                        .foregroundStyle(.white)
+                        .lineLimit(1)
+
+                    Text(program?.subtitle.orEmpty.isEmpty == false ? program?.subtitle ?? "" : "Browse channels and move right into the grid.")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(.white.opacity(0.62))
+                        .lineLimit(1)
+
+                    HStack(spacing: 10) {
+                        Text(visibleTimeRangeLabel)
+                            .font(.system(size: 15, weight: .bold, design: .rounded))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 7)
+                            .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 16))
+
+                        HStack(spacing: 10) {
+                            TVGuideActionButton(title: "Earlier", icon: "chevron.left", accent: accent, style: .secondary) {
+                                shiftGuideWindow(by: -guidePageStepMinutes)
+                            }
+                            .disabled(!canPageBackward)
+                            .focused($focusedHeroControl, equals: .earlier)
+                            .prefersDefaultFocus(true, in: heroFocusNamespace)
+
+                            TVGuideActionButton(title: "Later", icon: "chevron.right", accent: accent, style: .secondary) {
+                                shiftGuideWindow(by: guidePageStepMinutes)
+                            }
+                            .disabled(!canPageForward)
+                            .focused($focusedHeroControl, equals: .later)
+
+                            TVGuideActionButton(title: "Watch", icon: "play.fill", accent: accent, style: .primary) {
+                                if let channel { onPlayChannel(channel) }
+                            }
+                            .focused($focusedHeroControl, equals: .watch)
+                        }
+                    }
+                    .focusSection()
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(
+            RoundedRectangle(cornerRadius: 14)
+                .fill(
+                    LinearGradient(
+                        colors: [panelBackground, accentSoft.opacity(0.52)],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14)
+                        .stroke(Color.white.opacity(0.08), lineWidth: 1)
+                )
+        )
+    }
+
+    private var guideLoadingMatrix: some View {
+        RoundedRectangle(cornerRadius: 16)
+            .fill(panelBackground.opacity(0.94))
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(Color.white.opacity(0.04), lineWidth: 1)
+            )
+            .overlay {
+                VStack(spacing: 0) {
+                    ForEach(0..<8, id: \.self) { _ in
+                        HStack(spacing: 0) {
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(Color.white.opacity(0.055))
+                                .frame(width: channelColumnWidth, height: rowHeight)
+
+                            Rectangle()
+                                .fill(panelBackgroundSoft.opacity(0.35))
+                                .frame(height: rowHeight)
+                                .overlay(alignment: .leading) {
+                                    HStack(spacing: 0) {
+                                        ForEach(0..<4, id: \.self) { index in
+                                            Rectangle()
+                                                .fill(Color.white.opacity(index == 0 ? 0 : 0.04))
+                                                .frame(width: 1)
+                                                .frame(maxHeight: .infinity)
+                                            Spacer(minLength: 0)
+                                        }
+                                    }
+                                }
+                        }
+                        .overlay(alignment: .top) {
+                            Rectangle()
+                                .fill(Color.white.opacity(0.035))
+                                .frame(height: 1)
+                        }
+                    }
+                }
+                .overlay {
+                    VStack(spacing: 10) {
+                        ProgressView()
+                            .tint(.white)
+                            .scaleEffect(1.15)
+                        Text("Loading guide data...")
+                            .font(.system(size: 13, weight: .semibold, design: .rounded))
+                            .foregroundStyle(.white.opacity(0.74))
+                    }
+                    .padding(.horizontal, 18)
+                    .padding(.vertical, 14)
+                    .background(Color.black.opacity(0.38), in: RoundedRectangle(cornerRadius: 14))
+                }
+            }
+    }
+
+    private var guideControls: some View {
+        HStack(spacing: 6) {
+            TVGuideFeatureChip(title: "Catch Up", icon: "clock.arrow.circlepath", accent: accent, action: onOpenCatchup)
+            TVGuideFeatureChip(title: "On Later", icon: "calendar.badge.clock", accent: accent, action: onOpenOnLater)
+            TVGuideFeatureChip(title: "Team Pass", icon: "sportscourt.fill", accent: accent, action: onOpenTeamPass)
+            TVGuideFeatureChip(title: "Groups", icon: "square.grid.2x2.fill", accent: accent, action: onOpenChannelGroups)
+        }
+        .opacity(0.9)
+        .focusSection()
+    }
+
+    private var timeHeader: some View {
+        HStack(spacing: 3) {
+            Color.clear
+                .frame(width: channelColumnWidth, height: timeHeaderHeight)
+
+            GeometryReader { proxy in
+                let width = proxy.size.width
+                let slotWidth = width / 4
+
+                ZStack(alignment: .leading) {
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(panelBackgroundSoft.opacity(0.82))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(Color.white.opacity(0.03), lineWidth: 1)
+                        )
+
+                    HStack(spacing: 0) {
+                        ForEach(0..<4, id: \.self) { index in
+                            let slotDate = roundedWindowStart.addingTimeInterval(TimeInterval(index * 30 * 60))
+                            VStack(spacing: 2) {
+                                Text(Self.timeSlotFormatter.string(from: slotDate))
+                                    .font(.system(size: 10, weight: index.isMultiple(of: 2) ? .bold : .medium, design: .rounded))
+                                    .foregroundStyle(index.isMultiple(of: 2) ? .white : .white.opacity(0.65))
+                            }
+                            .frame(width: slotWidth, height: timeHeaderHeight)
+                            .overlay(alignment: .leading) {
+                                Rectangle()
+                                    .fill(Color.white.opacity(index == 0 ? 0 : 0.035))
+                                    .frame(width: 1)
+                            }
+                        }
+                    }
+
+                    if let nowOffset = nowIndicatorOffset(totalWidth: width) {
+                        Rectangle()
+                            .fill(nowLineColor)
+                            .frame(width: 2, height: timeHeaderHeight - 4)
+                            .offset(x: nowOffset, y: 2)
+                    }
+                }
+            }
+            .frame(height: timeHeaderHeight)
+        }
+    }
+    private var guideMatrix: some View {
+        TVGuideMatrix(
+            rows: visibleRows,
+            selectedChannelId: selectedChannelId,
+            selectedProgramIdByChannel: selectedProgramIdByChannel,
+            accent: accent,
+            nowLineColor: nowLineColor,
+            panelBackground: panelBackground,
+            panelBackgroundSoft: panelBackgroundSoft,
+            channelColumnWidth: channelColumnWidth,
+            rowHeight: rowHeight,
+            windowStart: roundedWindowStart,
+            windowEnd: windowEnd,
+            guideWindowMinutes: guideWindowMinutes,
+            onSelectChannel: { channel in
+                selectChannel(channel)
+            },
+            onSelectProgram: { channel, program in
+                selectedProgramIdByChannel[channel.id] = program.id
+                selectChannel(channel)
+                onPlayChannel(channel)
+            },
+            onFocusProgram: { channel, program in
+                selectedProgramIdByChannel[channel.id] = program.id
+                selectChannel(channel)
+            },
+            nowIndicatorOffset: { width in
+                nowIndicatorOffset(totalWidth: width)
+            }
+        )
+        .frame(maxHeight: .infinity)
+        .focusSection()
+        .onMoveCommand { direction in
+            switch direction {
+            case .right:
+                guard let selectedProgram else { return }
+                if selectedProgram.endTime >= windowEnd.addingTimeInterval(-15 * 60) {
+                    shiftGuideWindow(by: guidePageStepMinutes)
+                }
+            case .left:
+                guard let selectedProgram else { return }
+                if selectedProgram.startTime <= roundedWindowStart.addingTimeInterval(15 * 60) {
+                    shiftGuideWindow(by: -guidePageStepMinutes)
+                }
+            default:
+                break
+            }
+        }
+    }
+
+    private func shiftGuideWindow(by minutes: CGFloat) {
+        guard minutes != 0 else { return }
+        let baseStart = defaultRoundedWindowStart
+        let minStart = baseStart
+        let maxStart = max(
+            baseStart,
+            latestGuideEnd.addingTimeInterval(-TimeInterval(guideWindowMinutes * 60))
+        )
+
+        let candidate = roundedWindowStart.addingTimeInterval(TimeInterval(minutes * 60))
+        let clamped = min(max(candidate, minStart), maxStart)
+        guard clamped != roundedWindowStart else { return }
+
+        guideWindowStartDate = clamped
+
+        if let row = selectedRow {
+            let nextVisible = row.programs.first {
+                $0.endTime > clamped && $0.startTime < clamped.addingTimeInterval(TimeInterval(guideWindowMinutes * 60))
+            }
+            if let nextVisible {
+                selectedProgramIdByChannel[row.channel.id] = nextVisible.id
+            }
+        }
+
+        // Auto-extend guide data if paging near the end of loaded data
+        let newWindowEnd = clamped.addingTimeInterval(TimeInterval(guideWindowMinutes * 60))
+        if newWindowEnd > latestGuideEnd.addingTimeInterval(-3600) {
+            Task {
+                await viewModel.extendGuideIfNeeded(pastDate: newWindowEnd.addingTimeInterval(7200))
+            }
+        }
+    }
+
+    private func selectChannel(_ channel: Channel) {
+        selectedChannelId = channel.id
+        viewModel.selectChannel(channel)
+        if selectedProgramIdByChannel[channel.id] == nil {
+            let preferred = guideRows
+                .first(where: { $0.channel.id == channel.id })?
+                .currentProgram?.id
+            ?? channel.nowPlaying?.id
+            ?? guideRows.first(where: { $0.channel.id == channel.id })?.programs.first?.id
+            selectedProgramIdByChannel[channel.id] = preferred
+        }
+    }
+
+    private func nowIndicatorOffset(totalWidth: CGFloat) -> CGFloat? {
+        let now = Date()
+        guard now >= roundedWindowStart && now <= windowEnd else { return nil }
+        let elapsedMinutes = CGFloat(now.timeIntervalSince(roundedWindowStart) / 60)
+        return min(max(elapsedMinutes / guideWindowMinutes * totalWidth, 0), totalWidth)
+    }
+
+    private static let heroTimeFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "h:mm a"
+        return formatter
+    }()
+
+    private static let heroWindowDateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "EEE h:mm a"
+        return formatter
+    }()
+
+    private static let heroWindowTimeFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "h:mm a"
+        return formatter
+    }()
+
+    private static let timeSlotFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "h:mm"
+        return formatter
+    }()
+}
+
+private struct TVGuideMatrix: View {
+    let rows: [ChannelWithPrograms]
+    let selectedChannelId: String?
+    let selectedProgramIdByChannel: [String: String]
+    let accent: Color
+    let nowLineColor: Color
+    let panelBackground: Color
+    let panelBackgroundSoft: Color
+    let channelColumnWidth: CGFloat
+    let rowHeight: CGFloat
+    let windowStart: Date
+    let windowEnd: Date
+    let guideWindowMinutes: CGFloat
+    let onSelectChannel: (Channel) -> Void
+    let onSelectProgram: (Channel, Program) -> Void
+    let onFocusProgram: (Channel, Program) -> Void
+    let nowIndicatorOffset: (CGFloat) -> CGFloat?
+
+    private var displayRows: [ChannelWithPrograms] {
+        let filtered = rows.filter { row in
+            let validPrograms = row.programs
+                .filter { $0.endTime > $0.startTime }
+                .filter { $0.endTime > windowStart && $0.startTime < windowEnd }
+            var seen = Set<String>()
+            let unique = validPrograms.filter { p in
+                let key = "\(Int(p.startTime.timeIntervalSince1970))-\(Int(p.endTime.timeIntervalSince1970))"
+                return seen.insert(key).inserted
+            }
+            return !unique.isEmpty
+        }
+
+        return filtered
+    }
+
+    var body: some View {
+        ScrollViewReader { proxy in
+            ScrollView(.vertical, showsIndicators: false) {
+                VStack(spacing: 0) {
+                    ForEach(displayRows) { row in
+                        TVGuideMatrixRow(
+                            row: row,
+                            selectedChannelId: selectedChannelId,
+                            selectedProgramId: selectedProgramIdByChannel[row.channel.id],
+                            accent: accent,
+                            nowLineColor: nowLineColor,
+                            panelBackgroundSoft: panelBackgroundSoft,
+                            channelColumnWidth: channelColumnWidth,
+                            rowHeight: rowHeight,
+                            windowStart: windowStart,
+                            windowEnd: windowEnd,
+                            guideWindowMinutes: guideWindowMinutes,
+                            onSelectChannel: onSelectChannel,
+                            onSelectProgram: onSelectProgram,
+                            onFocusProgram: onFocusProgram,
+                            nowIndicatorOffset: nowIndicatorOffset
+                        )
+                        .id(row.channel.id)
+                    }
+                }
+            }
+            .background(matrixBackground)
+            .onChange(of: selectedChannelId) { _, newValue in
+                guard let newValue else { return }
+                withAnimation(.easeInOut(duration: 0.22)) {
+                    proxy.scrollTo(newValue, anchor: .top)
+                }
+            }
+        }
+    }
+
+    private var matrixBackground: some View {
+        RoundedRectangle(cornerRadius: 16)
+            .fill(panelBackground.opacity(0.94))
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(Color.white.opacity(0.04), lineWidth: 1)
+            )
+    }
+}
+
+private struct TVGuideMatrixRow: View {
+    let row: ChannelWithPrograms
+    let selectedChannelId: String?
+    let selectedProgramId: String?
+    let accent: Color
+    let nowLineColor: Color
+    let panelBackgroundSoft: Color
+    let channelColumnWidth: CGFloat
+    let rowHeight: CGFloat
+    let windowStart: Date
+    let windowEnd: Date
+    let guideWindowMinutes: CGFloat
+    let onSelectChannel: (Channel) -> Void
+    let onSelectProgram: (Channel, Program) -> Void
+    let onFocusProgram: (Channel, Program) -> Void
+    let nowIndicatorOffset: (CGFloat) -> CGFloat?
+    
+    private var isSelectedRow: Bool {
+        selectedChannelId == row.channel.id
+    }
+
+    private var timelinePrograms: [Program] {
+        deduplicatedPrograms(row.programs)
+            .filter { $0.endTime > windowStart && $0.startTime < windowEnd }
+            .sorted { $0.startTime < $1.startTime }
+    }
+
+    @ViewBuilder
+    var body: some View {
+        if !timelinePrograms.isEmpty {
+        HStack(spacing: 0) {
+            channelCell
+            GeometryReader { proxy in
+                TVGuideProgramTrack(
+                    row: row,
+                    programs: timelinePrograms,
+                    selectedProgramId: selectedProgramId,
+                    accent: accent,
+                    nowLineColor: nowLineColor,
+                    panelBackgroundSoft: panelBackgroundSoft,
+                    rowHeight: rowHeight,
+                    width: proxy.size.width,
+                    isSelectedRow: isSelectedRow,
+                    windowStart: windowStart,
+                    windowEnd: windowEnd,
+                    guideWindowMinutes: guideWindowMinutes,
+                    onSelectChannel: onSelectChannel,
+                    onSelectProgram: onSelectProgram,
+                    onFocusProgram: onFocusProgram,
+                    nowIndicatorOffset: nowIndicatorOffset
+                )
+            }
+            .frame(height: rowHeight)
+        }
+        .frame(height: rowHeight)
+        .background(rowBackground)
+        .overlay(alignment: .top) {
+            Rectangle()
+                .fill(isSelectedRow ? accent.opacity(0.32) : Color.white.opacity(0.035))
+                .frame(height: isSelectedRow ? 2 : 1)
+        }
+        .overlay(alignment: .leading) {
+            Rectangle()
+                .fill(isSelectedRow ? accent : Color.clear)
+                .frame(width: isSelectedRow ? 4 : 2)
+        }
+        .overlay {
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(isSelectedRow ? accent.opacity(0.35) : Color.clear, lineWidth: 1.5)
+        }
+        } // end if !timelinePrograms.isEmpty
+    }
+
+    private var channelCell: some View {
+        TVGuideChannelCell(
+            channel: row.channel,
+            currentProgram: row.currentProgram ?? row.channel.nowPlaying,
+            accent: accent,
+            isSelected: selectedChannelId == row.channel.id,
+            onFocus: {
+                onSelectChannel(row.channel)
+            },
+            action: {
+                onSelectChannel(row.channel)
+            }
+        )
+        .frame(width: channelColumnWidth, height: rowHeight)
+    }
+
+    private var rowBackground: some View {
+        RoundedRectangle(cornerRadius: 8)
+            .fill(isSelectedRow ? accent.opacity(0.10) : Color.white.opacity(0.01))
+            .overlay {
+                if isSelectedRow {
+                    LinearGradient(
+                        colors: [accent.opacity(0.12), Color.clear, accent.opacity(0.05)],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                }
+            }
+    }
+
+    private func deduplicatedPrograms(_ programs: [Program]) -> [Program] {
+        let sorted = programs
+            .filter { $0.endTime > $0.startTime }
+            .sorted {
+                if $0.startTime != $1.startTime { return $0.startTime < $1.startTime }
+                if $0.endTime != $1.endTime { return $0.endTime < $1.endTime }
+                return $0.title < $1.title
+            }
+
+        var result: [Program] = []
+        var seenKeys = Set<String>()
+
+        for program in sorted {
+            let slotKey = "\(Int(program.startTime.timeIntervalSince1970))-\(Int(program.endTime.timeIntervalSince1970))-\(normalizedProgramTitle(program.title))"
+            if seenKeys.contains(slotKey) {
+                continue
+            }
+
+            if let last = result.last, programsConflict(last, program) {
+                if preferredProgram(program, over: last) {
+                    result[result.count - 1] = program
+                    seenKeys.insert(slotKey)
+                }
+                continue
+            }
+
+            result.append(program)
+            seenKeys.insert(slotKey)
+        }
+
+        return result
+    }
+
+    private func programsConflict(_ lhs: Program, _ rhs: Program) -> Bool {
+        let startDelta = abs(lhs.startTime.timeIntervalSince(rhs.startTime))
+        let endDelta = abs(lhs.endTime.timeIntervalSince(rhs.endTime))
+        let overlapping = lhs.startTime < rhs.endTime && rhs.startTime < lhs.endTime
+        return overlapping && (startDelta < 60 || endDelta < 60)
+    }
+
+    private func preferredProgram(_ candidate: Program, over current: Program) -> Bool {
+        let candidateScore =
+            (candidate.isCurrentlyAiring ? 4 : 0) +
+            (!candidate.subtitle.orEmpty.isEmpty ? 2 : 0) +
+            (!candidate.description.orEmpty.isEmpty ? 1 : 0) +
+            min(candidate.title.count, 40)
+
+        let currentScore =
+            (current.isCurrentlyAiring ? 4 : 0) +
+            (!current.subtitle.orEmpty.isEmpty ? 2 : 0) +
+            (!current.description.orEmpty.isEmpty ? 1 : 0) +
+            min(current.title.count, 40)
+
+        return candidateScore > currentScore
+    }
+
+    private func normalizedProgramTitle(_ title: String) -> String {
+        title
+            .lowercased()
+            .replacingOccurrences(of: "[^a-z0-9]+", with: "", options: .regularExpression)
+    }
+}
+
+private struct TVGuideProgramTrack: View {
+    let row: ChannelWithPrograms
+    let programs: [Program]
+    let selectedProgramId: String?
+    let accent: Color
+    let nowLineColor: Color
+    let panelBackgroundSoft: Color
+    let rowHeight: CGFloat
+    let width: CGFloat
+    let isSelectedRow: Bool
+    let windowStart: Date
+    let windowEnd: Date
+    let guideWindowMinutes: CGFloat
+    let onSelectChannel: (Channel) -> Void
+    let onSelectProgram: (Channel, Program) -> Void
+    let onFocusProgram: (Channel, Program) -> Void
+    let nowIndicatorOffset: (CGFloat) -> CGFloat?
+
+    private var minuteWidth: CGFloat {
+        width / guideWindowMinutes
+    }
+
+    var body: some View {
+        ZStack(alignment: .leading) {
+            Rectangle()
+                .fill(isSelectedRow ? accent.opacity(0.055) : panelBackgroundSoft.opacity(0.24))
+
+            slotDividers
+
+            if let offset = nowIndicatorOffset(width) {
+                Rectangle()
+                    .fill(nowLineColor)
+                    .frame(width: 2, height: rowHeight - 2)
+                    .offset(x: offset, y: 0)
+            }
+
+            if programs.isEmpty {
+                Text("No guide data")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.5))
+                    .padding(.horizontal, 12)
+            } else {
+                programCells
+            }
+        }
+    }
+
+    private var slotDividers: some View {
+        let slotCount = max(Int(guideWindowMinutes / 30), 1)
+
+        return ForEach(0..<slotCount, id: \.self) { index in
+            Rectangle()
+                .fill(Color.white.opacity(index == 0 ? 0 : 0.04))
+                .frame(width: 1)
+                .offset(x: CGFloat(index) * (width / CGFloat(slotCount)))
+        }
+    }
+
+    private var programCells: some View {
+        ForEach(Array(programs.enumerated()), id: \.element.id) { _, program in
+            let clampedStart = max(program.startTime, windowStart)
+            let clampedEnd = min(program.endTime, windowEnd)
+            let xPos = CGFloat(clampedStart.timeIntervalSince(windowStart) / 60) * minuteWidth
+            let durationWidth = CGFloat(clampedEnd.timeIntervalSince(clampedStart) / 60) * minuteWidth
+            let cellWidth = max(durationWidth - 1, 28)
+
+            TVGuideProgramCell(
+                program: program,
+                accent: accent,
+                progressColor: accent,
+                width: cellWidth,
+                isSelected: selectedProgramId == program.id,
+                onFocus: {
+                    onFocusProgram(row.channel, program)
+                },
+                action: {
+                    onSelectProgram(row.channel, program)
+                }
+            )
+            .offset(x: xPos + 0.5, y: 0)
+        }
+    }
+}
+
+private struct TVGuideLivePreviewCard: View {
+    @ObservedObject var viewModel: LiveTVViewModel
+    let channel: Channel?
+    let program: Program?
+    let accent: Color
+    var compact: Bool = false
+
+    @State private var player: AVPlayer?
+    @State private var previewError = false
+
+    var body: some View {
+        ZStack {
+            if let player {
+                VideoPlayer(player: player)
+                .allowsHitTesting(false)
+            } else {
+                TVGuidePreviewCard(channel: channel, program: program, accent: accent, compact: compact)
+            }
+
+            if previewError {
+                TVGuidePreviewCard(channel: channel, program: program, accent: accent, compact: compact)
+                    .overlay {
+                        LinearGradient(
+                            colors: [Color.black.opacity(0.15), Color.black.opacity(0.6)],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    }
+            }
+        }
+        .clipShape(RoundedRectangle(cornerRadius: compact ? 14 : 22))
+        .task(id: channel?.id) {
+            await loadPreview()
+        }
+        .onDisappear {
+            stopPreview()
+        }
+    }
+
+    private func loadPreview() async {
+        stopPreview()
+        previewError = false
+
+        guard let channel else { return }
+
+        try? await Task.sleep(nanoseconds: 250_000_000)
+        guard !Task.isCancelled else { return }
+
+        let url: URL?
+        if let streamUrl = channel.streamUrl, let directURL = URL(string: streamUrl) {
+            url = directURL
+        } else {
+            url = try? await viewModel.getChannelStream(channel)
+        }
+
+        guard !Task.isCancelled, let url else {
+            previewError = true
+            return
+        }
+
+        let item = AVPlayerItem(url: url)
+        let newPlayer = AVPlayer(playerItem: item)
+        newPlayer.isMuted = true
+        newPlayer.preventsDisplaySleepDuringVideoPlayback = false
+        newPlayer.play()
+
+        player = newPlayer
+
+        // If preview never becomes playable, keep the artwork fallback visible.
+        try? await Task.sleep(nanoseconds: 1_200_000_000)
+        guard !Task.isCancelled else { return }
+        if item.status == .failed {
+            previewError = true
+            stopPreview()
+        }
+    }
+
+    private func stopPreview() {
+        player?.pause()
+        player = nil
+    }
+}
+
+private struct TVGuidePreviewCard: View {
+    let channel: Channel?
+    let program: Program?
+    let accent: Color
+    var compact: Bool = false
+
+    var body: some View {
+        ZStack(alignment: .bottomLeading) {
+            if let imagePath = program?.icon ?? program?.art ?? channel?.logo {
+                AuthenticatedImage(paths: [imagePath], systemPlaceholder: "tv")
+                    .aspectRatio(contentMode: .fill)
+            } else {
+                LinearGradient(
+                    colors: [accent.opacity(0.46), Color.black.opacity(0.3)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            }
+
+            LinearGradient(
+                colors: [Color.clear, Color.black.opacity(0.84)],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+
+            VStack(alignment: .leading, spacing: compact ? 4 : 8) {
+                Text(compact ? "Preview" : "Live Preview")
+                    .font(.system(size: compact ? 9 : 11, weight: .black))
+                    .foregroundStyle(.white.opacity(0.72))
+                    .padding(.horizontal, compact ? 6 : 8)
+                    .padding(.vertical, compact ? 3 : 5)
+                    .background(Color.black.opacity(0.4), in: Capsule())
+
+                Spacer()
+
+                if !compact {
+                    Text(program?.title ?? channel?.name ?? "Live TV")
+                        .font(.system(size: 20, weight: .black, design: .rounded))
+                        .foregroundStyle(.white)
+                        .lineLimit(2)
+                }
+            }
+            .padding(compact ? 8 : 16)
+        }
+        .clipShape(RoundedRectangle(cornerRadius: compact ? 14 : 22))
+        .overlay(
+            RoundedRectangle(cornerRadius: compact ? 14 : 22)
+                .stroke(Color.white.opacity(0.08), lineWidth: 1)
+        )
+    }
+}
+
+private struct TVGuideChannelCell: View {
+    let channel: Channel
+    let currentProgram: Program?
+    let accent: Color
+    let isSelected: Bool
+    let onFocus: () -> Void
+    let action: () -> Void
+    @Environment(\.isFocused) private var isFocused
+
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 5) {
+                AuthenticatedImage(paths: [channel.logo], systemPlaceholder: "tv")
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 68, height: 42)
+
+                if let number = channel.number {
+                    Text("\(number)")
+                        .font(.system(size: 11, weight: .bold, design: .rounded))
+                        .foregroundStyle(.white.opacity(0.5))
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(
+                (isFocused || isSelected) ? Color(red: 50/255, green: 45/255, blue: 85/255) : Color.white.opacity(0.03)
+            )
+            .overlay(alignment: .leading) {
+                Rectangle()
+                    .fill((isFocused || isSelected) ? accent : Color.clear)
+                    .frame(width: 4)
+            }
+            .overlay {
+                Rectangle()
+                    .stroke((isFocused || isSelected) ? Color.white.opacity(0.9) : Color.clear, lineWidth: 3)
+            }
+            .overlay(alignment: .bottom) {
+                Rectangle()
+                    .fill(Color.white.opacity(0.05))
+                    .frame(height: 1)
+            }
+            .scaleEffect(isFocused ? 1.01 : 1)
+            .shadow(color: isFocused ? Color.white.opacity(0.16) : .clear, radius: 12, y: 6)
+            .animation(.easeOut(duration: 0.15), value: isFocused)
+        }
+        .buttonStyle(TVNoGlowButtonStyle())
+        .onChange(of: isFocused) { _, focused in
+            guard focused else { return }
+            onFocus()
+        }
+    }
+}
+
+private struct TVGuideProgramCell: View {
+    let program: Program
+    let accent: Color
+    let progressColor: Color
+    let width: CGFloat
+    let isSelected: Bool
+    let onFocus: () -> Void
+    let action: () -> Void
+    @Environment(\.isFocused) private var isFocused
+
+    private var isUltraCompact: Bool { width < 56 }
+    private var isCompact: Bool { width < 150 }
+    private var cellHeight: CGFloat { 72 }
+
+    var body: some View {
+        Button(action: action) {
+            ZStack(alignment: .bottomLeading) {
+                if (isFocused || isSelected) && width >= 170, let imagePath = program.art ?? program.icon {
+                    AuthenticatedImage(paths: [imagePath], systemPlaceholder: "play.rectangle")
+                        .aspectRatio(contentMode: .fill)
+                        .overlay {
+                            LinearGradient(
+                                colors: [Color.black.opacity(0.06), Color.black.opacity(0.50)],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                        }
+                }
+
+                // Left accent bar for currently-airing
+                if program.isCurrentlyAiring && !isUltraCompact {
+                    HStack(spacing: 0) {
+                        RoundedRectangle(cornerRadius: 2)
+                            .fill(progressColor)
+                            .frame(width: 3)
+                        Spacer()
+                    }
+                }
+
+                // Content
+                VStack(alignment: .leading, spacing: 2) {
+                    if isUltraCompact {
+                        Circle()
+                            .fill(program.isCurrentlyAiring ? progressColor : Color.white.opacity(0.36))
+                            .frame(width: 5, height: 5)
+                    } else {
+                        Text(program.title)
+                            .font(.system(size: titleSize, weight: .bold, design: .rounded))
+                            .foregroundStyle(program.hasEnded ? .white.opacity(0.45) : .white)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+
+                        if !isCompact {
+                            Text(timeDurationLabel)
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundStyle((isFocused || isSelected) ? .white.opacity(0.85) : .white.opacity(0.40))
+                                .lineLimit(1)
+                        }
+                    }
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+                .padding(.leading, (program.isCurrentlyAiring && !isUltraCompact) ? 12 : 10)
+                .padding(.trailing, 8)
+                .padding(.top, 8)
+                .padding(.bottom, (program.isCurrentlyAiring || program.hasEnded) ? 14 : 8)
+
+                // Progress bar at bottom — hot pink Pluto style
+                if (program.isCurrentlyAiring || program.hasEnded) && !isUltraCompact {
+                    EPGProgressBar(progress: program.progress, height: 4,
+                                   foregroundColor: progressColor)
+                        .padding(.horizontal, 8)
+                        .padding(.bottom, 4)
+                }
+            }
+            .frame(width: width, height: cellHeight, alignment: .leading)
+            .background(backgroundFill)
+            .overlay(
+                RoundedRectangle(cornerRadius: 6)
+                    .stroke(borderColor, lineWidth: borderWidth)
+            )
+            .scaleEffect(isHighlighted ? 1.04 : 1)
+            .shadow(color: isHighlighted ? Color.white.opacity(0.18) : .clear, radius: 14, y: 4)
+            .zIndex(isHighlighted ? 10 : 0)
+            .animation(.easeOut(duration: 0.15), value: isFocused)
+        }
+        .buttonStyle(TVNoGlowButtonStyle())
+        .onChange(of: isFocused) { _, focused in
+            guard focused else { return }
+            onFocus()
+        }
+    }
+
+    private var titleSize: CGFloat {
+        if width > 300 { return 17 }
+        if width > 200 { return 15 }
+        if width > 120 { return 13 }
+        return 10
+    }
+
+    private var timeDurationLabel: String {
+        let startStr = Self.startTimeFmt.string(from: program.startTime)
+        let mins = Int(program.endTime.timeIntervalSince(program.startTime) / 60)
+        let durationStr: String
+        if mins >= 60 && mins % 60 == 0 {
+            durationStr = "\(mins / 60)h"
+        } else if mins >= 60 {
+            durationStr = "\(mins / 60)h \(mins % 60)m"
+        } else {
+            durationStr = "\(mins)m"
+        }
+        return "\(startStr) · \(durationStr)"
+    }
+
+    private static let startTimeFmt: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "h:mma"
+        return f
+    }()
+
+    private var isHighlighted: Bool { isFocused || isSelected }
+
+    private var backgroundFill: Color {
+        if isHighlighted {
+            return Color(red: 50/255, green: 45/255, blue: 85/255) // bright purple — unmistakable
+        }
+        if program.isCurrentlyAiring { return Color(red: 24/255, green: 26/255, blue: 48/255) }
+        return Color(red: 20/255, green: 22/255, blue: 40/255)
+    }
+
+    private var borderColor: Color {
+        if isHighlighted { return Color.white.opacity(0.92) }
+        return Color.white.opacity(0.06)
+    }
+
+    private var borderWidth: CGFloat {
+        isHighlighted ? 3 : 0.5
+    }
+}
+
+private struct TVGuideHighlightCard: View {
+    let channel: Channel
+    let program: Program
+    let accent: Color
+    let action: () -> Void
+    @Environment(\.isFocused) private var isFocused
+
+    var body: some View {
+        Button(action: action) {
+            VStack(alignment: .leading, spacing: 10) {
+                Text(channel.number.map { "\($0) \(channel.name)" } ?? channel.name)
+                    .font(.system(size: 12, weight: .black))
+                    .foregroundStyle(accent)
+
+                Text(program.title)
+                    .font(.system(size: 18, weight: .bold, design: .rounded))
+                    .foregroundStyle(.white)
+                    .lineLimit(2)
+
+                Text(program.timeRangeFormatted)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.6))
+            }
+            .padding(16)
+            .frame(width: 196, alignment: .leading)
+            .background(
+                RoundedRectangle(cornerRadius: 20)
+                    .fill(isFocused ? accent.opacity(0.22) : panelBackgroundFill)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 20)
+                    .stroke(isFocused ? Color.white.opacity(0.88) : Color.white.opacity(0.08), lineWidth: isFocused ? 2.5 : 1.5)
+            )
+            .scaleEffect(isFocused ? 1.03 : 1)
+            .shadow(color: isFocused ? Color.white.opacity(0.15) : .clear, radius: 14, y: 8)
+            .animation(.easeOut(duration: 0.18), value: isFocused)
+        }
+        .buttonStyle(TVNoGlowButtonStyle())
+    }
+
+    private var panelBackgroundFill: Color {
+        Color.white.opacity(0.05)
+    }
+}
+
+private struct TVGuideFeatureChip: View {
+    let title: String
+    let icon: String
+    let accent: Color
+    let action: () -> Void
+    @Environment(\.isFocused) private var isFocused
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 6) {
+                Image(systemName: icon)
+                    .font(.system(size: 10, weight: .bold))
+                Text(title)
+                    .font(.system(size: 10, weight: .black, design: .rounded))
+            }
+            .foregroundStyle(.white)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(
+                Capsule()
+                    .fill(isFocused ? accent.opacity(0.22) : Color.white.opacity(0.05))
+            )
+            .overlay(
+                Capsule()
+                    .stroke(isFocused ? Color.white.opacity(0.85) : Color.white.opacity(0.08), lineWidth: isFocused ? 2.25 : 1.5)
+            )
+            .scaleEffect(isFocused ? 1.02 : 1)
+            .shadow(color: isFocused ? Color.white.opacity(0.12) : .clear, radius: 9, y: 4)
+            .animation(.easeOut(duration: 0.18), value: isFocused)
+        }
+        .buttonStyle(TVNoGlowButtonStyle())
+    }
+}
+
+private struct TVGuideActionButton: View {
+    enum Style {
+        case primary
+        case secondary
+    }
+
+    let title: String
+    let icon: String
+    let accent: Color
+    let style: Style
+    let action: () -> Void
+    @Environment(\.isFocused) private var isFocused
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 7) {
+                Image(systemName: icon)
+                    .font(.system(size: 11, weight: .bold))
+                Text(title)
+                    .font(.system(size: 12, weight: .bold, design: .rounded))
+            }
+            .foregroundStyle(style == .primary && !isFocused ? .black : .white)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 8)
+            .background(
+                Capsule()
+                    .fill(backgroundFill)
+            )
+            .overlay(
+                Capsule()
+                    .stroke(
+                        isFocused ? Color.white.opacity(0.88) : (style == .primary ? Color.clear : accent.opacity(0.75)),
+                        lineWidth: isFocused ? 2.25 : 1.5
+                    )
+            )
+            .scaleEffect(isFocused ? 1.02 : 1)
+            .shadow(color: isFocused ? Color.white.opacity(0.12) : .clear, radius: 9, y: 4)
+            .animation(.easeOut(duration: 0.18), value: isFocused)
+        }
+        .buttonStyle(TVNoGlowButtonStyle())
+    }
+
+    private var backgroundFill: Color {
+        switch style {
+        case .primary:
+            return isFocused ? accent : .white
+        case .secondary:
+            return isFocused ? accent.opacity(0.26) : Color.white.opacity(0.06)
+        }
+    }
+}
+
+private extension Array {
+    func ifEmpty(_ fallback: @autoclosure () -> [Element]) -> [Element] {
+        isEmpty ? fallback() : self
+    }
+}
+
+private extension Optional where Wrapped == String {
+    var orEmpty: String { self ?? "" }
+}
+#endif
 
 // MARK: - Live TV Player View
 
@@ -657,7 +2018,8 @@ struct LiveTVPlayerView: View {
             // Toggle mini EPG on menu press when overlay is showing
             showMiniEPG = true
         } else {
-            dismiss()
+            // Nothing to dismiss — open the sidecar drawer instead
+            NotificationCenter.default.post(name: .sidecarToggle, object: nil)
         }
     }
 
@@ -1926,7 +3288,7 @@ struct FeatureButton: View {
     let title: String
     let color: Color
     let action: () -> Void
-    @State private var isFocused = false
+    @Environment(\.isFocused) private var isFocused
     
     var body: some View {
         Button(action: action) {
@@ -1948,12 +3310,17 @@ struct FeatureButton: View {
                     .stroke(color, lineWidth: isFocused ? 0 : 1)
             )
         }
-        .buttonStyle(.plain)
+        .buttonStyle(TVNoGlowButtonStyle())
         .scaleEffect(isFocused ? 1.05 : 1.0)
         .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isFocused)
-        .onFocusChange { focused in
-            isFocused = focused
-        }
+    }
+}
+
+/// Strips tvOS system focus chrome (white glow) — views handle their own focus styling
+struct TVNoGlowButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .opacity(configuration.isPressed ? 0.75 : 1.0)
     }
 }
 
