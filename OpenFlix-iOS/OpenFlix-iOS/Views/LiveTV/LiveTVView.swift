@@ -1556,6 +1556,7 @@ private struct TVOSLiveBrowserView: View {
                 TVGuideLivePreviewCard(
                     channel: channel,
                     program: previewProgram,
+                    viewModel: viewModel,
                     accent: accent,
                     compact: true
                 )
@@ -2304,11 +2305,94 @@ private struct TVGuideProgramTrack: View {
 private struct TVGuideLivePreviewCard: View {
     let channel: Channel?
     let program: Program?
+    @ObservedObject var viewModel: LiveTVViewModel
     let accent: Color
     var compact: Bool = false
 
+    @StateObject private var vlcPlayer = VLCPlayerViewModel()
+    @State private var loadedChannelId: String?
+    @State private var loadTask: Task<Void, Never>?
+    @State private var hasVideo = false
+
     var body: some View {
-        TVGuidePreviewCard(channel: channel, program: program, accent: accent, compact: compact)
+        ZStack(alignment: .bottomLeading) {
+            // Fallback artwork — shown until video starts, and as backdrop behind the player
+            TVGuidePreviewCard(channel: channel, program: program, accent: accent, compact: compact)
+
+            if hasVideo {
+                VLCPlayerView(viewModel: vlcPlayer)
+                    .clipShape(RoundedRectangle(cornerRadius: compact ? 14 : 22))
+                    .allowsHitTesting(false)
+
+                // Re-apply the bottom gradient + badges on top of the video so text stays legible
+                LinearGradient(
+                    colors: [Color.clear, Color.black.opacity(0.84)],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .clipShape(RoundedRectangle(cornerRadius: compact ? 14 : 22))
+                .allowsHitTesting(false)
+
+                VStack(alignment: .leading, spacing: compact ? 4 : 8) {
+                    Text(compact ? "Preview" : "Live Preview")
+                        .font(.system(size: compact ? 9 : 11, weight: .black))
+                        .foregroundStyle(.white.opacity(0.72))
+                        .padding(.horizontal, compact ? 6 : 8)
+                        .padding(.vertical, compact ? 3 : 5)
+                        .background(Color.black.opacity(0.4), in: Capsule())
+                    Spacer()
+                    if !compact {
+                        Text(program?.title ?? channel?.name ?? "Live TV")
+                            .font(.system(size: 20, weight: .black, design: .rounded))
+                            .foregroundStyle(.white)
+                            .lineLimit(2)
+                    }
+                }
+                .padding(compact ? 8 : 16)
+            }
+        }
+        .onChange(of: channel?.id) { _, _ in debouncedReload() }
+        .onAppear { debouncedReload() }
+        .onDisappear {
+            loadTask?.cancel()
+            vlcPlayer.stop()
+            hasVideo = false
+        }
+    }
+
+    private func debouncedReload() {
+        guard let channel else {
+            loadTask?.cancel()
+            vlcPlayer.stop()
+            hasVideo = false
+            loadedChannelId = nil
+            return
+        }
+        if channel.id == loadedChannelId { return }
+        loadTask?.cancel()
+        loadTask = Task { @MainActor in
+            // Debounce — focus moves in a SwiftUI grid can fire rapidly while the user scrolls.
+            try? await Task.sleep(nanoseconds: 350_000_000)
+            if Task.isCancelled { return }
+            if channel.id == loadedChannelId { return }
+
+            vlcPlayer.stop()
+            hasVideo = false
+
+            let url: URL?
+            if let streamUrl = channel.streamUrl, let direct = URL(string: streamUrl) {
+                url = direct
+            } else {
+                url = try? await viewModel.getChannelStream(channel)
+            }
+
+            if Task.isCancelled { return }
+            guard let url else { return }
+            loadedChannelId = channel.id
+            vlcPlayer.play(url: url)
+            vlcPlayer.setVolume(0)
+            hasVideo = true
+        }
     }
 }
 
