@@ -4,6 +4,12 @@ import AVKit
 import MobileVLCKit
 #endif
 
+#if !os(tvOS)
+extension Notification.Name {
+    static let sidecarToggle = Notification.Name("sidecarToggle")
+}
+#endif
+
 // MARK: - Live TV View (Main Entry Point)
 
 struct LiveTVView: View {
@@ -41,6 +47,7 @@ struct LiveTVView: View {
                     #if os(tvOS)
                     TVOSLiveBrowserView(
                         viewModel: viewModel,
+                        dvrViewModel: dvrViewModel,
                         onPlayChannel: playChannel,
                         onOpenGuide: { showFullGuide = true },
                         onOpenCatchup: { showCatchup = true },
@@ -115,13 +122,24 @@ struct LiveTVView: View {
             await viewModel.loadGuide()
         }
         .fullScreenCover(isPresented: $showPlayer) {
-            if let url = streamURL, let channel = selectedChannelForPlayback {
-                LiveTVPlayerView(
-                    channel: channel,
-                    streamURL: url,
+            if let channel = selectedChannelForPlayback {
+                #if os(tvOS)
+                TVLiveChannelPlayerView(
+                    initialChannel: channel,
+                    initialStreamURL: streamURL,
                     viewModel: viewModel
                 )
                 .environmentObject(dvrViewModel)
+                #else
+                if let url = streamURL {
+                    LiveTVPlayerView(
+                        channel: channel,
+                        streamURL: url,
+                        viewModel: viewModel
+                    )
+                    .environmentObject(dvrViewModel)
+                }
+                #endif
             }
         }
     }
@@ -153,14 +171,1075 @@ struct LiveTVView: View {
 }
 
 #if os(tvOS)
+struct TVLiveChannelPlayerView: View {
+    @State private var channel: Channel
+    let initialStreamURL: URL?
+    @ObservedObject var viewModel: LiveTVViewModel
+
+    @StateObject private var vlcPlayer = VLCPlayerViewModel()
+    @StateObject private var dvrRepository = DVRRepository()
+    @StateObject private var liveTVRepository = LiveTVRepository()
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var showControls = true
+    @State private var controlsHideTask: Task<Void, Never>?
+    @State private var showSleepPicker = false
+    @State private var showRecordOptions = false
+    @State private var toastMessage: String?
+    @State private var toastIcon: String?
+    @State private var userPaused = false
+    @State private var behindLive = false
+    @State private var nowPlaying: Program?
+    @State private var upNext: Program?
+    @State private var epgRefreshTask: Task<Void, Never>?
+    @State private var previousChannel: Channel?
+    @State private var showChannelBanner = false
+    @State private var channelBannerTask: Task<Void, Never>?
+    @State private var showMultiview = false
+    @State private var multiviewPickedChannel: Channel?
+
+    init(initialChannel: Channel, initialStreamURL: URL?, viewModel: LiveTVViewModel) {
+        self._channel = State(initialValue: initialChannel)
+        self.initialStreamURL = initialStreamURL
+        self.viewModel = viewModel
+    }
+
+    var body: some View {
+        ZStack {
+            Color.black.ignoresSafeArea()
+
+            VLCPlayerView(viewModel: vlcPlayer)
+                .ignoresSafeArea()
+
+            if vlcPlayer.isLoading && !showControls {
+                VStack(spacing: 12) {
+                    ProgressView()
+                        .scaleEffect(1.6)
+                        .tint(.white)
+                    Text("Loading \(channel.name)...")
+                        .foregroundColor(.white)
+                }
+            }
+
+            if let error = vlcPlayer.error {
+                VStack(spacing: 12) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.system(size: 40))
+                        .foregroundColor(.orange)
+                    Text("Playback Error")
+                        .font(.headline)
+                        .foregroundColor(.white)
+                    Text(error)
+                        .font(.caption)
+                        .foregroundColor(.gray)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal)
+                }
+            }
+
+            if showControls {
+                TVLiveChannelControlsOverlay(
+                    channel: channel,
+                    vlcPlayer: vlcPlayer,
+                    userPaused: userPaused,
+                    behindLive: behindLive,
+                    nowPlaying: nowPlaying,
+                    upNext: upNext,
+                    dvrRepository: dvrRepository,
+                    onDismiss: {
+                        vlcPlayer.stop()
+                        dismiss()
+                    },
+                    onTogglePlayPause: {
+                        if userPaused {
+                            vlcPlayer.mediaPlayer.play()
+                            userPaused = false
+                        } else {
+                            vlcPlayer.pause()
+                            userPaused = true
+                            behindLive = true
+                        }
+                        scheduleAutoHide()
+                    },
+                    onSeekForward: {
+                        seekLive(seconds: 10)
+                        behindLive = true
+                        scheduleAutoHide()
+                    },
+                    onSeekBackward: {
+                        seekLive(seconds: -10)
+                        behindLive = true
+                        scheduleAutoHide()
+                    },
+                    onGoLive: {
+                        Task { await reloadCurrentChannel() }
+                    },
+                    onChannelUp: { switchChannel(direction: .up) },
+                    onChannelDown: { switchChannel(direction: .down) },
+                    onPreviousChannel: previousChannel != nil ? { switchToPreviousChannel() } : nil,
+                    onRecord: {
+                        if nowPlaying != nil {
+                            showRecordOptions = true
+                        } else {
+                            showToast(message: "No program info available", icon: "exclamationmark.circle")
+                        }
+                    },
+                    onShowSleepPicker: { showSleepPicker = true },
+                    onMultiview: {
+                        vlcPlayer.stop()
+                        showMultiview = true
+                    },
+                    onShowToast: { message, icon in
+                        showToast(message: message, icon: icon)
+                    },
+                    onInteraction: {
+                        scheduleAutoHide()
+                    }
+                )
+                .transition(.opacity)
+            }
+
+            if showChannelBanner {
+                VStack {
+                    Spacer()
+                    channelBannerView
+                        .padding(.horizontal, 20)
+                        .padding(.bottom, 40)
+                }
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+                .zIndex(9)
+            }
+
+            if let message = toastMessage {
+                VStack {
+                    HStack(spacing: 8) {
+                        if let icon = toastIcon {
+                            Image(systemName: icon)
+                                .font(.system(size: 14, weight: .semibold))
+                        }
+                        Text(message)
+                            .font(.system(size: 14, weight: .medium))
+                    }
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                    .background(Color.black.opacity(0.75))
+                    .cornerRadius(20)
+                    .padding(.top, 60)
+
+                    Spacer()
+                }
+                .transition(.move(edge: .top).combined(with: .opacity))
+                .zIndex(10)
+            }
+        }
+        .onAppear {
+            playCurrentChannel(with: initialStreamURL)
+            viewModel.selectChannel(channel)
+            scheduleAutoHide()
+            loadEPGInfo()
+            startEPGRefresh()
+            notifyInstantSwitch(channelId: channel.id)
+        }
+        .onDisappear {
+            vlcPlayer.stop()
+            controlsHideTask?.cancel()
+            epgRefreshTask?.cancel()
+            channelBannerTask?.cancel()
+        }
+        .fullScreenCover(isPresented: $showMultiview, onDismiss: {
+            if let picked = multiviewPickedChannel {
+                multiviewPickedChannel = nil
+                switchToChannel(picked)
+            } else {
+                Task { await reloadCurrentChannel() }
+            }
+        }) {
+            MultiviewPlayerV2(
+                initialChannel: channel,
+                viewModel: viewModel,
+                onDismiss: { showMultiview = false },
+                onFullScreen: { picked in
+                    multiviewPickedChannel = picked
+                    showMultiview = false
+                }
+            )
+        }
+        .sheet(isPresented: $showSleepPicker) {
+            TVSleepTimerPickerSheet(vlcPlayer: vlcPlayer) { option in
+                showToast(message: option == .off ? "Sleep Timer Off" : "Sleep Timer: \(option.label)", icon: "moon.fill")
+            }
+        }
+        .sheet(isPresented: $showRecordOptions) {
+            if let program = nowPlaying {
+                TVRecordOptionsSheet(
+                    program: program,
+                    channel: channel,
+                    dvrRepository: dvrRepository,
+                    onDone: { message in
+                        showRecordOptions = false
+                        showToast(message: message, icon: "record.circle.fill")
+                    }
+                )
+            }
+        }
+        .focusable()
+        .onPlayPauseCommand {
+            if !showControls {
+                withAnimation(.easeInOut(duration: 0.25)) {
+                    showControls = true
+                }
+                scheduleAutoHide()
+            } else {
+                if userPaused {
+                    vlcPlayer.mediaPlayer.play()
+                    userPaused = false
+                } else {
+                    vlcPlayer.pause()
+                    userPaused = true
+                    behindLive = true
+                }
+                scheduleAutoHide()
+            }
+        }
+        .onMoveCommand { direction in
+            if showControls { return }
+            switch direction {
+            case .up:
+                switchChannel(direction: .up)
+            case .down:
+                switchChannel(direction: .down)
+            case .left:
+                switchToPreviousChannel()
+            case .right:
+                showControls = true
+                scheduleAutoHide()
+            @unknown default:
+                break
+            }
+        }
+        .onExitCommand {
+            if showSleepPicker {
+                showSleepPicker = false
+            } else if showControls {
+                vlcPlayer.stop()
+                dismiss()
+            } else {
+                withAnimation(.easeInOut(duration: 0.25)) {
+                    showControls = true
+                }
+                scheduleAutoHide()
+            }
+        }
+        .onTapGesture {
+            withAnimation(.easeInOut(duration: 0.25)) {
+                showControls.toggle()
+            }
+            if showControls {
+                scheduleAutoHide()
+            }
+        }
+    }
+
+    private enum ChannelDirection { case up, down }
+
+    private var channels: [Channel] { viewModel.displayedChannels }
+
+    private func playCurrentChannel(with preferredURL: URL? = nil) {
+        if let preferredURL {
+            vlcPlayer.play(url: preferredURL)
+            return
+        }
+        if let url = liveTVRepository.getStreamURL(for: channel) {
+            vlcPlayer.play(url: url)
+            return
+        }
+        Task {
+            if let url = try? await viewModel.getChannelStream(channel) {
+                vlcPlayer.play(url: url)
+            }
+        }
+    }
+
+    private func reloadCurrentChannel() async {
+        userPaused = false
+        behindLive = false
+        if let url = liveTVRepository.getStreamURL(for: channel) {
+            vlcPlayer.play(url: url)
+        } else if let url = try? await viewModel.getChannelStream(channel) {
+            vlcPlayer.play(url: url)
+        }
+        scheduleAutoHide()
+    }
+
+    private func seekLive(seconds: Int32) {
+        if vlcPlayer.duration > 0 {
+            if seconds > 0 { vlcPlayer.skipForward() } else { vlcPlayer.skipBackward() }
+        } else if userPaused {
+            vlcPlayer.mediaPlayer.play()
+            vlcPlayer.mediaPlayer.jumpForward(seconds)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                vlcPlayer.pause()
+            }
+        } else {
+            vlcPlayer.mediaPlayer.jumpForward(seconds)
+        }
+    }
+
+    private func switchChannel(direction: ChannelDirection) {
+        guard channels.count > 1 else { return }
+        guard let currentIndex = channels.firstIndex(where: { $0.id == channel.id }) else { return }
+        let newIndex: Int
+        switch direction {
+        case .up:
+            newIndex = (currentIndex + 1) % channels.count
+        case .down:
+            newIndex = (currentIndex - 1 + channels.count) % channels.count
+        }
+        switchToChannel(channels[newIndex])
+    }
+
+    private func switchToPreviousChannel() {
+        guard let previousChannel else { return }
+        switchToChannel(previousChannel)
+    }
+
+    private func switchToChannel(_ newChannel: Channel) {
+        let oldChannel = channel
+        vlcPlayer.stop()
+        previousChannel = oldChannel
+        channel = newChannel
+        viewModel.selectChannel(newChannel)
+        userPaused = false
+        behindLive = false
+        playCurrentChannel()
+        loadEPGInfo()
+        showChannelBannerOverlay()
+        notifyInstantSwitch(channelId: newChannel.id)
+        scheduleAutoHide()
+    }
+
+    private func notifyInstantSwitch(channelId: String) {
+        Task {
+            _ = try? await OpenFlixAPI.shared.instantSwitchChannel(channelId: channelId)
+        }
+    }
+
+    private var channelBannerView: some View {
+        HStack(spacing: 14) {
+            if let logo = channel.logo {
+                AuthenticatedImage(path: logo, systemPlaceholder: "tv")
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 48, height: 36)
+                    .clipShape(RoundedRectangle(cornerRadius: 6))
+            }
+
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 8) {
+                    if let number = channel.number {
+                        Text("\(number)")
+                            .font(.system(size: 28, weight: .bold, design: .rounded))
+                            .foregroundColor(.white)
+                    }
+                    Text(channel.name)
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundColor(.white)
+                        .lineLimit(1)
+                }
+
+                if let program = nowPlaying {
+                    HStack(spacing: 6) {
+                        Text(program.title)
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundColor(.white.opacity(0.9))
+                            .lineLimit(1)
+
+                        if !program.timeRangeFormatted.isEmpty {
+                            Text("·")
+                                .foregroundColor(.white.opacity(0.5))
+                            Text(program.timeRangeFormatted)
+                                .font(.system(size: 12))
+                                .foregroundColor(.white.opacity(0.6))
+                        }
+                    }
+
+                    GeometryReader { geo in
+                        ZStack(alignment: .leading) {
+                            Rectangle()
+                                .fill(Color.white.opacity(0.2))
+                                .frame(height: 3)
+                            Rectangle()
+                                .fill(Color.purple)
+                                .frame(width: geo.size.width * program.progress, height: 3)
+                        }
+                        .cornerRadius(1.5)
+                    }
+                    .frame(height: 3)
+                }
+
+                if let next = upNext {
+                    Text("Up Next: \(next.title)")
+                        .font(.system(size: 11))
+                        .foregroundColor(.white.opacity(0.5))
+                        .lineLimit(1)
+                }
+            }
+
+            Spacer()
+        }
+        .padding(16)
+        .background(
+            LinearGradient(
+                colors: [Color.black.opacity(0.85), Color.black.opacity(0.7)],
+                startPoint: .bottom,
+                endPoint: .top
+            )
+        )
+        .cornerRadius(12)
+    }
+
+    private func showChannelBannerOverlay() {
+        channelBannerTask?.cancel()
+        withAnimation(.easeInOut(duration: 0.2)) {
+            showChannelBanner = true
+        }
+        channelBannerTask = Task {
+            try? await Task.sleep(nanoseconds: 4_000_000_000)
+            if !Task.isCancelled {
+                withAnimation(.easeInOut(duration: 0.3)) {
+                    showChannelBanner = false
+                }
+            }
+        }
+    }
+
+    private func loadEPGInfo() {
+        if let cwp = viewModel.guide.first(where: { $0.channel.id == channel.id }) {
+            nowPlaying = cwp.currentProgram
+            upNext = cwp.upcomingPrograms.first
+        } else {
+            nowPlaying = channel.nowPlaying
+            upNext = channel.nextProgram
+        }
+    }
+
+    private func startEPGRefresh() {
+        epgRefreshTask?.cancel()
+        epgRefreshTask = Task {
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 60_000_000_000)
+                if !Task.isCancelled {
+                    loadEPGInfo()
+                }
+            }
+        }
+    }
+
+    private func scheduleAutoHide() {
+        controlsHideTask?.cancel()
+        controlsHideTask = Task {
+            try? await Task.sleep(nanoseconds: 5_000_000_000)
+            if !Task.isCancelled {
+                withAnimation(.easeInOut(duration: 0.25)) {
+                    showControls = false
+                }
+            }
+        }
+    }
+
+    private func showToast(message: String, icon: String?) {
+        withAnimation(.easeInOut(duration: 0.2)) {
+            toastMessage = message
+            toastIcon = icon
+        }
+        Task {
+            try? await Task.sleep(nanoseconds: 2_000_000_000)
+            withAnimation(.easeInOut(duration: 0.2)) {
+                toastMessage = nil
+                toastIcon = nil
+            }
+        }
+    }
+}
+
+private struct TVLiveChannelControlsOverlay: View {
+    let channel: Channel
+    @ObservedObject var vlcPlayer: VLCPlayerViewModel
+    let userPaused: Bool
+    let behindLive: Bool
+    let nowPlaying: Program?
+    let upNext: Program?
+    @ObservedObject var dvrRepository: DVRRepository
+    let onDismiss: () -> Void
+    let onTogglePlayPause: () -> Void
+    let onSeekForward: () -> Void
+    let onSeekBackward: () -> Void
+    let onGoLive: () -> Void
+    let onChannelUp: () -> Void
+    let onChannelDown: () -> Void
+    let onPreviousChannel: (() -> Void)?
+    let onRecord: () -> Void
+    let onShowSleepPicker: () -> Void
+    let onMultiview: () -> Void
+    let onShowToast: (String, String?) -> Void
+    let onInteraction: () -> Void
+
+    var body: some View {
+        ZStack {
+            Color.black.opacity(0.48)
+                .ignoresSafeArea()
+                .allowsHitTesting(false)
+
+            VStack(spacing: 0) {
+                topBar
+                    .padding(.horizontal, 20)
+                    .padding(.top, 24)
+
+                Spacer()
+
+                centerTransportControls
+
+                Spacer()
+
+                channelsInfoBar
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 10)
+
+                seekBarOrLiveIndicator
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 14)
+
+                bottomToolbar
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 34)
+            }
+        }
+    }
+
+    private var topBar: some View {
+        HStack(spacing: 12) {
+            Button(action: {
+                onInteraction()
+                onDismiss()
+            }) {
+                TVPlayerCircleChrome(
+                    icon: "xmark",
+                    iconColor: .white,
+                    size: 42
+                )
+            }
+            .buttonStyle(.plain)
+            .focusEffectDisabled()
+
+            Spacer()
+
+            HStack(spacing: 8) {
+                AuthenticatedImage(path: channel.logo, systemPlaceholder: "tv")
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 28, height: 28)
+                    .clipShape(RoundedRectangle(cornerRadius: 6))
+
+                VStack(spacing: 1) {
+                    Text(channel.name)
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundColor(.white)
+                        .lineLimit(1)
+                    if let number = channel.number {
+                        Text("CH \(number)")
+                            .font(.system(size: 12))
+                            .foregroundColor(.white.opacity(0.7))
+                    }
+                }
+            }
+
+            if let label = vlcPlayer.streamInfo?.resolutionLabel {
+                Text(label)
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 3)
+                    .background(Color.white.opacity(0.25))
+                    .cornerRadius(4)
+            }
+
+            Spacer()
+
+            Button(action: {
+                onInteraction()
+                vlcPlayer.toggleMute()
+                onShowToast(vlcPlayer.isMuted ? "Muted" : "Unmuted", vlcPlayer.isMuted ? "speaker.slash.fill" : "speaker.wave.2.fill")
+            }) {
+                TVPlayerCircleChrome(
+                    icon: vlcPlayer.isMuted ? "speaker.slash.fill" : "speaker.wave.2.fill",
+                    iconColor: .white,
+                    size: 42
+                )
+            }
+            .buttonStyle(.plain)
+            .focusEffectDisabled()
+        }
+    }
+
+    private var channelsInfoBar: some View {
+        HStack(spacing: 0) {
+            VStack(spacing: 6) {
+                AuthenticatedImage(path: channel.logo, systemPlaceholder: "tv")
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 44, height: 44)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                if let number = channel.number {
+                    Text("CH \(number)")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundColor(.white.opacity(0.8))
+                }
+            }
+            .frame(width: 70)
+
+            Divider()
+                .background(Color.white.opacity(0.2))
+                .frame(height: 60)
+
+            HStack(spacing: 10) {
+                if let art = nowPlaying?.art ?? nowPlaying?.icon {
+                    AuthenticatedImage(path: art, systemPlaceholder: "photo")
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: 64, height: 64)
+                        .clipShape(RoundedRectangle(cornerRadius: 6))
+                        .clipped()
+                }
+
+                VStack(alignment: .leading, spacing: 3) {
+                    if let program = nowPlaying {
+                        Text(program.fullTitle)
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundColor(.white)
+                            .lineLimit(1)
+                        if let desc = program.description, !desc.isEmpty {
+                            Text(desc)
+                                .font(.system(size: 11))
+                                .foregroundColor(.white.opacity(0.6))
+                                .lineLimit(2)
+                        }
+                        Text(program.timeRangeFormatted)
+                            .font(.system(size: 11))
+                            .foregroundColor(.white.opacity(0.5))
+                        GeometryReader { geo in
+                            ZStack(alignment: .leading) {
+                                Capsule().fill(Color.white.opacity(0.2)).frame(height: 3)
+                                Capsule().fill(Color.purple).frame(width: geo.size.width * program.progress, height: 3)
+                            }
+                        }
+                        .frame(height: 3)
+                    } else {
+                        Text(channel.name)
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundColor(.white)
+                        Text("No program info")
+                            .font(.system(size: 11))
+                            .foregroundColor(.white.opacity(0.5))
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 10)
+
+            if let next = upNext {
+                Divider()
+                    .background(Color.white.opacity(0.2))
+                    .frame(height: 60)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("UP NEXT")
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundColor(.purple)
+                    if let art = next.art ?? next.icon {
+                        AuthenticatedImage(path: art, systemPlaceholder: "photo")
+                            .aspectRatio(contentMode: .fill)
+                            .frame(width: 48, height: 36)
+                            .clipShape(RoundedRectangle(cornerRadius: 4))
+                            .clipped()
+                    }
+                    Text(next.title)
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundColor(.white)
+                        .lineLimit(2)
+                }
+                .frame(width: 80)
+                .padding(.leading, 8)
+            }
+        }
+        .padding(10)
+        .background(Color.black.opacity(0.5))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+    }
+
+    private var centerTransportControls: some View {
+        Group {
+            if (vlcPlayer.isLoading || vlcPlayer.isBuffering) && !vlcPlayer.isPlaying && vlcPlayer.currentTime == 0 {
+                ProgressView()
+                    .scaleEffect(2.0)
+                    .tint(.white)
+                    .frame(width: 70, height: 70)
+            } else {
+                HStack(spacing: 40) {
+                    overlayIconButton("gobackward.10") {
+                        onInteraction()
+                        onSeekBackward()
+                    }
+
+                    Button {
+                        onInteraction()
+                        onTogglePlayPause()
+                    } label: {
+                        TVPlayerPrimaryTransportButton(
+                            icon: (vlcPlayer.isPlaying && !userPaused) ? "pause.fill" : "play.fill"
+                        )
+                    }
+                    .buttonStyle(.plain)
+                    .focusEffectDisabled()
+
+                    overlayIconButton("goforward.10") {
+                        onInteraction()
+                        onSeekForward()
+                    }
+                }
+            }
+        }
+    }
+
+    private var seekBarOrLiveIndicator: some View {
+        HStack(spacing: 6) {
+            if behindLive {
+                Button {
+                    onInteraction()
+                    onGoLive()
+                } label: {
+                    TVPlayerPillChrome(
+                        icon: "arrow.counterclockwise",
+                        label: "GO LIVE",
+                        foregroundColor: .white,
+                        backgroundColor: Color.red
+                    )
+                }
+                .buttonStyle(.plain)
+                .focusEffectDisabled()
+            } else {
+                Circle()
+                    .fill(Color.red)
+                    .frame(width: 8, height: 8)
+                Text("LIVE")
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundColor(.red)
+            }
+
+            Spacer()
+
+            Text(formatTime(vlcPlayer.currentTime))
+                .font(.system(size: 11, design: .monospaced))
+                .foregroundColor(.white.opacity(0.7))
+        }
+    }
+
+    private var bottomToolbar: some View {
+        HStack(spacing: 20) {
+            overlayToolbarButton(icon: "chevron.down", label: "CH-") {
+                onInteraction()
+                onChannelDown()
+            }
+            overlayToolbarButton(icon: "chevron.up", label: "CH+") {
+                onInteraction()
+                onChannelUp()
+            }
+
+            if let onPreviousChannel {
+                overlayToolbarButton(icon: "arrow.uturn.left", label: "Prev") {
+                    onInteraction()
+                    onPreviousChannel()
+                }
+            }
+
+            overlayToolbarButton(icon: nowPlaying?.hasRecording == true ? "record.circle.fill" : "record.circle", label: "Record", tint: nowPlaying?.hasRecording == true ? .red : .white) {
+                onInteraction()
+                onRecord()
+            }
+
+            overlayToolbarButton(icon: vlcPlayer.aspectRatioMode.icon, label: "Aspect") {
+                onInteraction()
+                let mode = vlcPlayer.cycleAspectRatio()
+                onShowToast(mode.rawValue, mode.icon)
+            }
+
+            overlayToolbarButton(icon: "waveform", label: "Audio") {
+                onInteraction()
+                if let name = vlcPlayer.cycleAudioTrack() {
+                    onShowToast("Audio: \(name)", "waveform")
+                } else {
+                    onShowToast("No audio tracks", "waveform")
+                }
+            }
+
+            overlayToolbarButton(icon: "captions.bubble", label: "Subs") {
+                onInteraction()
+                if let name = vlcPlayer.cycleSubtitleTrack() {
+                    onShowToast("Subtitles: \(name)", "captions.bubble")
+                } else {
+                    onShowToast("Subtitles Off", "captions.bubble")
+                }
+            }
+
+            overlayToolbarButton(icon: "rectangle.split.2x2", label: "Multi") {
+                onInteraction()
+                onMultiview()
+            }
+
+            overlayToolbarButton(icon: vlcPlayer.sleepTimerOption != .off ? "moon.fill" : "moon", label: vlcPlayer.sleepTimerOption != .off ? vlcPlayer.sleepTimerLabel : "Sleep", tint: vlcPlayer.sleepTimerOption != .off ? .cyan : .white) {
+                onInteraction()
+                onShowSleepPicker()
+            }
+        }
+    }
+
+    private func overlayIconButton(_ icon: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            TVPlayerCircleChrome(
+                icon: icon,
+                iconColor: .white,
+                size: 50,
+                iconSize: 28
+            )
+        }
+        .buttonStyle(.plain)
+        .focusEffectDisabled()
+    }
+
+    private func overlayToolbarButton(icon: String, label: String, tint: Color = .white, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            TVPlayerToolbarChrome(
+                icon: icon,
+                label: label,
+                tint: tint
+            )
+        }
+        .buttonStyle(.plain)
+        .focusEffectDisabled()
+    }
+
+    private func formatTime(_ seconds: Double) -> String {
+        let total = Int(max(0, seconds))
+        let h = total / 3600
+        let m = (total % 3600) / 60
+        let s = total % 60
+        if h > 0 {
+            return String(format: "%d:%02d:%02d", h, m, s)
+        }
+        return String(format: "%d:%02d", m, s)
+    }
+}
+
+private struct TVPlayerCircleChrome: View {
+    let icon: String
+    let iconColor: Color
+    let size: CGFloat
+    var iconSize: CGFloat = 18
+    @Environment(\.isFocused) private var isFocused
+
+    var body: some View {
+        Image(systemName: icon)
+            .font(.system(size: iconSize, weight: .semibold))
+            .foregroundColor(iconColor)
+            .frame(width: size, height: size)
+            .background(
+                Circle()
+                    .fill(isFocused ? Color.white.opacity(0.20) : Color.white.opacity(0.12))
+            )
+            .overlay(
+                Circle()
+                    .stroke(isFocused ? Color.white.opacity(0.55) : Color.white.opacity(0.12), lineWidth: isFocused ? 2 : 1)
+            )
+            .scaleEffect(isFocused ? 1.03 : 1.0)
+            .shadow(color: isFocused ? Color.white.opacity(0.08) : .clear, radius: 8, y: 2)
+    }
+}
+
+private struct TVPlayerPrimaryTransportButton: View {
+    let icon: String
+    @Environment(\.isFocused) private var isFocused
+
+    var body: some View {
+        Image(systemName: icon)
+            .font(.system(size: 30, weight: .semibold))
+            .foregroundColor(.white)
+            .frame(width: 78, height: 78)
+            .background(
+                Circle()
+                    .fill(
+                        LinearGradient(
+                            colors: isFocused
+                                ? [Color.white.opacity(0.24), Color.white.opacity(0.18)]
+                                : [Color.white.opacity(0.16), Color.white.opacity(0.12)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+            )
+            .overlay(
+                Circle()
+                    .stroke(isFocused ? Color.white.opacity(0.62) : Color.white.opacity(0.14), lineWidth: isFocused ? 2 : 1)
+            )
+            .scaleEffect(isFocused ? 1.035 : 1.0)
+            .shadow(color: isFocused ? Color.white.opacity(0.10) : .clear, radius: 10, y: 3)
+    }
+}
+
+private struct TVPlayerPillChrome: View {
+    let icon: String
+    let label: String
+    let foregroundColor: Color
+    let backgroundColor: Color
+    @Environment(\.isFocused) private var isFocused
+
+    var body: some View {
+        HStack(spacing: 5) {
+            Image(systemName: icon)
+                .font(.system(size: 12, weight: .bold))
+            Text(label)
+                .font(.system(size: 12, weight: .bold))
+        }
+        .foregroundColor(foregroundColor)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .background(backgroundColor.opacity(isFocused ? 1.0 : 0.92))
+        .clipShape(Capsule())
+        .overlay(
+            Capsule()
+                .stroke(isFocused ? Color.white.opacity(0.45) : .clear, lineWidth: 1.5)
+        )
+        .scaleEffect(isFocused ? 1.02 : 1.0)
+    }
+}
+
+private struct TVPlayerToolbarChrome: View {
+    let icon: String
+    let label: String
+    let tint: Color
+    @Environment(\.isFocused) private var isFocused
+
+    var body: some View {
+        VStack(spacing: 4) {
+            Image(systemName: icon)
+                .font(.system(size: 20, weight: .medium))
+            Text(label)
+                .font(.system(size: 10, weight: .semibold))
+        }
+        .foregroundColor(tint)
+        .frame(minWidth: 64)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 10)
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(isFocused ? Color.white.opacity(0.16) : Color.white.opacity(0.08))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(isFocused ? Color.white.opacity(0.45) : Color.white.opacity(0.08), lineWidth: isFocused ? 1.5 : 1)
+        )
+        .scaleEffect(isFocused ? 1.02 : 1.0)
+        .shadow(color: isFocused ? Color.white.opacity(0.08) : .clear, radius: 8, y: 2)
+    }
+}
+
+private struct TVSleepTimerPickerSheet: View {
+    @ObservedObject var vlcPlayer: VLCPlayerViewModel
+    let onSelect: (SleepTimerOption) -> Void
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            List {
+                ForEach(SleepTimerOption.allCases, id: \.rawValue) { option in
+                    Button {
+                        vlcPlayer.setSleepTimer(option)
+                        onSelect(option)
+                        dismiss()
+                    } label: {
+                        HStack {
+                            Text(option.label)
+                                .foregroundColor(.primary)
+                            Spacer()
+                            if vlcPlayer.sleepTimerOption == option {
+                                Image(systemName: "checkmark")
+                                    .foregroundColor(.blue)
+                            }
+                        }
+                    }
+                }
+            }
+            .navigationTitle("Sleep Timer")
+        }
+    }
+}
+
+private struct TVRecordOptionsSheet: View {
+    let program: Program
+    let channel: Channel
+    let dvrRepository: DVRRepository
+    let onDone: (String) -> Void
+
+    @State private var isWorking = false
+
+    var body: some View {
+        VStack(spacing: 20) {
+            VStack(spacing: 4) {
+                Text(program.title)
+                    .font(.headline)
+                if let subtitle = program.subtitle {
+                    Text(subtitle)
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                }
+            }
+
+            Button("Record This Episode") {
+                guard !isWorking else { return }
+                isWorking = true
+                Task {
+                    do {
+                        try await dvrRepository.recordProgram(channel: channel, program: program)
+                        onDone("Recording: \(program.title)")
+                    } catch {
+                        onDone("Record failed")
+                    }
+                }
+            }
+            .buttonStyle(.borderedProminent)
+
+            Button("Create Series Pass") {
+                guard !isWorking else { return }
+                isWorking = true
+                Task {
+                    do {
+                        try await dvrRepository.createSeriesPass(channel: channel, program: program)
+                        onDone("Series Pass Created")
+                    } catch {
+                        onDone("Series Pass Failed")
+                    }
+                }
+            }
+            .buttonStyle(.bordered)
+        }
+        .padding(32)
+        .frame(width: 560)
+    }
+}
+
 private struct TVOSLiveBrowserView: View {
-    private enum HeroControl: Hashable {
-        case earlier
-        case later
-        case watch
+    private enum GuideFocusTarget {
+        case channels
+        case programs
     }
 
     @ObservedObject var viewModel: LiveTVViewModel
+    @ObservedObject var dvrViewModel: DVRViewModel
     let onPlayChannel: (Channel) -> Void
     let onOpenGuide: () -> Void
     let onOpenCatchup: () -> Void
@@ -171,8 +1250,11 @@ private struct TVOSLiveBrowserView: View {
     @State private var selectedChannelId: String?
     @State private var selectedProgramIdByChannel: [String: String] = [:]
     @State private var guideWindowStartDate: Date?
-    @FocusState private var focusedHeroControl: HeroControl?
-    @Namespace private var heroFocusNamespace
+    @State private var presentedProgram: Program?
+    @State private var presentedProgramChannel: Channel?
+    @State private var presentedProgramActionState: ProgramDVRActionState = .fallback()
+    @State private var previewChannelId: String?
+    @State private var guideFocusTarget: GuideFocusTarget = .channels
 
     private let shellBackground = Color(red: 13/255, green: 15/255, blue: 28/255)
     private let panelBackground = Color(red: 22/255, green: 24/255, blue: 42/255)
@@ -216,6 +1298,14 @@ private struct TVOSLiveBrowserView: View {
             return program
         }
         return row.currentProgram ?? row.channel.nowPlaying ?? row.programs.first
+    }
+
+    private var previewRow: ChannelWithPrograms? {
+        if let previewChannelId,
+           let row = guideRows.first(where: { $0.channel.id == previewChannelId }) {
+            return row
+        }
+        return selectedRow
     }
 
     private var liveHighlights: [(channel: Channel, program: Program)] {
@@ -278,15 +1368,48 @@ private struct TVOSLiveBrowserView: View {
         "\(Self.heroWindowDateFormatter.string(from: roundedWindowStart)) - \(Self.heroWindowTimeFormatter.string(from: windowEnd))"
     }
 
-    private var visibleRows: [ChannelWithPrograms] {
-        let active = guideRows.filter { row in
-            row.programs.contains {
-                $0.endTime > $0.startTime &&
-                $0.endTime > roundedWindowStart &&
-                $0.startTime < windowEnd
-            }
+    private func sourceSummary(for channel: Channel?) -> String? {
+        guard let channel else { return nil }
+        var parts: [String] = []
+
+        if let providerName = channel.providerName, !providerName.isEmpty {
+            parts.append(providerName)
+        } else if let sourceName = channel.sourceName, !sourceName.isEmpty {
+            parts.append(sourceName)
         }
-        return active.ifEmpty(guideRows)
+
+        if let accountName = channel.accountName, !accountName.isEmpty {
+            parts.append(accountName)
+        } else if let accountIndex = channel.accountIndex {
+            parts.append("Account \(accountIndex)")
+        }
+
+        if let sourceType = channel.sourceType, !sourceType.isEmpty {
+            parts.append(sourceType.capitalized)
+        }
+
+        return parts.isEmpty ? nil : parts.joined(separator: " • ")
+    }
+
+    private func recordingRouteLabel(for channel: Channel, program: Program) -> String {
+        let account = viewModel.providerAccount(for: channel)
+        switch RecordingStrategyResolver.resolve(channel: channel, program: program, account: account) {
+        case .directvCloud:
+            return "Cloud DVR"
+        case .sling:
+            return "Sling DVR"
+        case .unavailable:
+            return "No DVR"
+        case .local:
+            if account?.serviceType == "satellite" || account?.recordingMode == "receiver" {
+                return "Receiver DVR"
+            }
+            return "OpenFlix Local DVR"
+        }
+    }
+
+    private var visibleRows: [ChannelWithPrograms] {
+        guideRows
     }
 
     var body: some View {
@@ -294,16 +1417,14 @@ private struct TVOSLiveBrowserView: View {
             if guideRows.isEmpty && viewModel.isGuideLoading {
                 VStack(alignment: .leading, spacing: 1) {
                     guideHero
-                    guideControls
-                        .disabled(true)
-                        .opacity(0.6)
+                    guideFeatureChips
                     timeHeader
                     guideLoadingMatrix
                 }
             } else {
                 VStack(alignment: .leading, spacing: 1) {
                     guideHero
-                    guideControls
+                    guideFeatureChips
                     timeHeader
                     guideMatrix
                 }
@@ -315,6 +1436,15 @@ private struct TVOSLiveBrowserView: View {
                         let initialId = viewModel.selectedChannel?.id ?? visibleRows.first?.channel.id
                         selectedChannelId = initialId
                     }
+                    if previewChannelId == nil {
+                        previewChannelId = selectedChannelId
+                    }
+                    ensureSelectionState()
+                    guideFocusTarget = .channels
+                }
+                .onReceive(NotificationCenter.default.publisher(for: .tvContentRequestFocus)) { _ in
+                    ensureSelectionState()
+                    guideFocusTarget = .channels
                 }
                 .onChange(of: visibleRows.map(\.channel.id).joined(separator: "|")) { _, _ in
                     let rows = visibleRows
@@ -322,11 +1452,16 @@ private struct TVOSLiveBrowserView: View {
                         let initialId = viewModel.selectedChannel?.id ?? rows.first?.channel.id
                         selectedChannelId = initialId
                     }
+                    if previewChannelId == nil || !rows.contains(where: { $0.channel.id == previewChannelId }) {
+                        previewChannelId = selectedChannelId
+                    }
+                    ensureSelectionState()
                 }
                 .onChange(of: viewModel.guide.count) { _, _ in
                     if guideWindowStartDate == nil {
                         guideWindowStartDate = defaultRoundedWindowStart
                     }
+                    ensureSelectionState()
                 }
             }
         }
@@ -334,30 +1469,106 @@ private struct TVOSLiveBrowserView: View {
         .padding(.top, 0)
         .padding(.bottom, 4)
         .background(shellBackground)
-    }
-
-    private var guideHero: some View {
-        let channel = selectedRow?.channel
-        let program = selectedProgram ?? selectedRow?.currentProgram ?? channel?.nowPlaying
-
-        return HStack(alignment: .center, spacing: 14) {
-                TVGuideLivePreviewCard(
-                    viewModel: viewModel,
+        .focusable()
+        .focusEffectDisabled()
+        .onMoveCommand { direction in
+            handleDirectionalNavigation(direction)
+        }
+        .onKeyPress(.return) {
+            handlePrimarySelect()
+            return .handled
+        }
+        .sheet(isPresented: Binding(
+            get: { presentedProgram != nil && presentedProgramChannel != nil },
+            set: { isPresented in
+                if !isPresented {
+                    presentedProgram = nil
+                    presentedProgramChannel = nil
+                }
+            }
+        )) {
+            if let program = presentedProgram, let channel = presentedProgramChannel {
+                TVGuideProgramSheet(
+                    dvrViewModel: dvrViewModel,
                     channel: channel,
                     program: program,
                     accent: accent,
+                    sourceSummary: sourceSummary(for: channel),
+                    initialActionState: presentedProgramActionState,
+                    onWatch: {
+                        presentedProgram = nil
+                        presentedProgramChannel = nil
+                        onPlayChannel(channel)
+                    },
+                    onClose: {
+                        presentedProgram = nil
+                        presentedProgramChannel = nil
+                    }
+                )
+                .presentationDetents([.medium])
+            }
+        }
+    }
+
+    private var guideFeatureChips: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 4) {
+                TVGuideFeatureChip(
+                    title: "Catch Up",
+                    icon: "clock.arrow.circlepath",
+                    accent: accent,
+                    action: onOpenCatchup
+                )
+
+                TVGuideFeatureChip(
+                    title: "On Later",
+                    icon: "clock.badge.checkmark",
+                    accent: accent,
+                    action: onOpenOnLater
+                )
+
+                TVGuideFeatureChip(
+                    title: "Team Pass",
+                    icon: "sportscourt",
+                    accent: accent,
+                    action: onOpenTeamPass
+                )
+
+                TVGuideFeatureChip(
+                    title: "Groups",
+                    icon: "square.grid.2x2.fill",
+                    accent: accent,
+                    action: onOpenChannelGroups
+                )
+            }
+            .padding(.vertical, 2)
+            .padding(.trailing, 8)
+        }
+        .frame(height: 34)
+    }
+
+    private var guideHero: some View {
+        let channel = previewRow?.channel
+        let previewProgram = previewRow?.currentProgram ?? channel?.nowPlaying
+        let heroProgram = selectedProgram ?? previewProgram
+
+        return HStack(alignment: .center, spacing: 14) {
+                TVGuideLivePreviewCard(
+                    channel: channel,
+                    program: previewProgram,
+                    accent: accent,
                     compact: true
                 )
-                    .frame(width: 276, height: 154)
+                    .frame(width: 252, height: 142)
 
                 VStack(alignment: .leading, spacing: 6) {
                     HStack(alignment: .firstTextBaseline, spacing: 12) {
                         Text("Guide")
-                            .font(.system(size: 22, weight: .black, design: .rounded))
+                            .font(.system(size: 20, weight: .black, design: .rounded))
                             .foregroundStyle(.white)
 
                         Text("Today")
-                            .font(.system(size: 16, weight: .bold, design: .rounded))
+                            .font(.system(size: 15, weight: .bold, design: .rounded))
                             .foregroundStyle(.white.opacity(0.92))
 
                         Image(systemName: "bolt.fill")
@@ -365,76 +1576,60 @@ private struct TVOSLiveBrowserView: View {
                             .foregroundStyle(accent)
 
                         Text(Self.heroTimeFormatter.string(from: Date()))
-                            .font(.system(size: 16, weight: .bold, design: .rounded))
+                            .font(.system(size: 15, weight: .bold, design: .rounded))
                             .foregroundStyle(.white.opacity(0.9))
 
                         Text("\(visibleRows.count) live")
-                            .font(.system(size: 12, weight: .medium))
+                            .font(.system(size: 11, weight: .medium))
                             .foregroundStyle(.white.opacity(0.55))
                     }
 
                     HStack(spacing: 8) {
                         if let channel {
                             Text(channel.number.map { "\($0) \(channel.name)" } ?? channel.name)
-                                .font(.system(size: 11, weight: .black, design: .rounded))
+                                .font(.system(size: 10, weight: .black, design: .rounded))
                                 .foregroundStyle(accent)
                                 .lineLimit(1)
                         }
 
-                        if let program {
-                            Text(program.timeRangeFormatted)
-                                .font(.system(size: 11, weight: .bold))
+                        if let heroProgram {
+                            Text(heroProgram.timeRangeFormatted)
+                                .font(.system(size: 10, weight: .bold))
                                 .foregroundStyle(.white.opacity(0.66))
                                 .lineLimit(1)
                         }
                     }
 
-                    Text(program?.title ?? "Select a channel to browse what’s live now.")
-                        .font(.system(size: 18, weight: .black, design: .rounded))
+                    if let sourceSummary = sourceSummary(for: channel) {
+                        Text(sourceSummary)
+                            .font(.system(size: 10, weight: .semibold, design: .rounded))
+                            .foregroundStyle(.white.opacity(0.58))
+                            .lineLimit(1)
+                    }
+
+                    Text(heroProgram?.title ?? "Select a channel to browse what’s live now.")
+                        .font(.system(size: 17, weight: .black, design: .rounded))
                         .foregroundStyle(.white)
                         .lineLimit(1)
 
-                    Text(program?.subtitle.orEmpty.isEmpty == false ? program?.subtitle ?? "" : "Browse channels and move right into the grid.")
-                        .font(.system(size: 11, weight: .medium))
+                    Text(heroProgram?.subtitle.orEmpty.isEmpty == false ? heroProgram?.subtitle ?? "" : "Browse channels and move right into the grid.")
+                        .font(.system(size: 10, weight: .medium))
                         .foregroundStyle(.white.opacity(0.62))
                         .lineLimit(1)
 
-                    HStack(spacing: 10) {
-                        Text(visibleTimeRangeLabel)
-                            .font(.system(size: 15, weight: .bold, design: .rounded))
-                            .foregroundStyle(.white)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 7)
-                            .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 16))
-
-                        HStack(spacing: 10) {
-                            TVGuideActionButton(title: "Earlier", icon: "chevron.left", accent: accent, style: .secondary) {
-                                shiftGuideWindow(by: -guidePageStepMinutes)
-                            }
-                            .disabled(!canPageBackward)
-                            .focused($focusedHeroControl, equals: .earlier)
-                            .prefersDefaultFocus(true, in: heroFocusNamespace)
-
-                            TVGuideActionButton(title: "Later", icon: "chevron.right", accent: accent, style: .secondary) {
-                                shiftGuideWindow(by: guidePageStepMinutes)
-                            }
-                            .disabled(!canPageForward)
-                            .focused($focusedHeroControl, equals: .later)
-
-                            TVGuideActionButton(title: "Watch", icon: "play.fill", accent: accent, style: .primary) {
-                                if let channel { onPlayChannel(channel) }
-                            }
-                            .focused($focusedHeroControl, equals: .watch)
-                        }
-                    }
-                    .focusSection()
+                    Text(visibleTimeRangeLabel)
+                        .font(.system(size: 14, weight: .bold, design: .rounded))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 11)
+                        .padding(.vertical, 6)
+                        .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 16))
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 7)
         .background(
-            RoundedRectangle(cornerRadius: 14)
+            RoundedRectangle(cornerRadius: 13)
                 .fill(
                     LinearGradient(
                         colors: [panelBackground, accentSoft.opacity(0.52)],
@@ -502,17 +1697,6 @@ private struct TVOSLiveBrowserView: View {
             }
     }
 
-    private var guideControls: some View {
-        HStack(spacing: 6) {
-            TVGuideFeatureChip(title: "Catch Up", icon: "clock.arrow.circlepath", accent: accent, action: onOpenCatchup)
-            TVGuideFeatureChip(title: "On Later", icon: "calendar.badge.clock", accent: accent, action: onOpenOnLater)
-            TVGuideFeatureChip(title: "Team Pass", icon: "sportscourt.fill", accent: accent, action: onOpenTeamPass)
-            TVGuideFeatureChip(title: "Groups", icon: "square.grid.2x2.fill", accent: accent, action: onOpenChannelGroups)
-        }
-        .opacity(0.9)
-        .focusSection()
-    }
-
     private var timeHeader: some View {
         HStack(spacing: 3) {
             Color.clear
@@ -578,7 +1762,7 @@ private struct TVOSLiveBrowserView: View {
             onSelectProgram: { channel, program in
                 selectedProgramIdByChannel[channel.id] = program.id
                 selectChannel(channel)
-                onPlayChannel(channel)
+                presentProgram(program, channel: channel)
             },
             onFocusProgram: { channel, program in
                 selectedProgramIdByChannel[channel.id] = program.id
@@ -639,6 +1823,8 @@ private struct TVOSLiveBrowserView: View {
                 await viewModel.extendGuideIfNeeded(pastDate: newWindowEnd.addingTimeInterval(7200))
             }
         }
+
+        ensureSelectionState()
     }
 
     private func selectChannel(_ channel: Channel) {
@@ -651,6 +1837,121 @@ private struct TVOSLiveBrowserView: View {
             ?? channel.nowPlaying?.id
             ?? guideRows.first(where: { $0.channel.id == channel.id })?.programs.first?.id
             selectedProgramIdByChannel[channel.id] = preferred
+        }
+    }
+
+    private func ensureSelectionState() {
+        guard let channel = selectedRow?.channel ?? guideRows.first?.channel else { return }
+        if selectedChannelId != channel.id {
+            selectedChannelId = channel.id
+        }
+        if previewChannelId == nil {
+            previewChannelId = channel.id
+        }
+        if selectedProgramIdByChannel[channel.id] == nil {
+            let preferredProgramId =
+                selectedRow?.currentProgram?.id
+                ?? channel.nowPlaying?.id
+                ?? guideRows.first(where: { $0.channel.id == channel.id })?.programs.first?.id
+            selectedProgramIdByChannel[channel.id] = preferredProgramId
+        }
+    }
+
+    private func handleDirectionalNavigation(_ direction: MoveCommandDirection) {
+        ensureSelectionState()
+
+        switch direction {
+        case .up:
+            guideFocusTarget = .channels
+            moveChannelSelection(by: -1)
+        case .down:
+            guideFocusTarget = .channels
+            moveChannelSelection(by: 1)
+        case .left:
+            if guideFocusTarget == .programs {
+                moveProgramSelection(by: -1)
+            } else {
+                guideFocusTarget = .channels
+            }
+        case .right:
+            guideFocusTarget = .programs
+            moveProgramSelection(by: 1)
+        default:
+            break
+        }
+    }
+
+    private func handlePrimarySelect() {
+        ensureSelectionState()
+
+        if guideFocusTarget == .channels, let channel = selectedRow?.channel {
+            previewChannelId = channel.id
+            return
+        }
+
+        if let channel = selectedRow?.channel, let program = selectedProgram {
+            selectedProgramIdByChannel[channel.id] = program.id
+            presentProgram(program, channel: channel)
+        } else if let channel = selectedRow?.channel {
+            onPlayChannel(channel)
+        }
+    }
+
+    private func moveChannelSelection(by offset: Int) {
+        let rows = guideRows
+        guard !rows.isEmpty else { return }
+        let currentIndex = rows.firstIndex(where: { $0.channel.id == selectedChannelId }) ?? 0
+        let nextIndex = min(max(currentIndex + offset, 0), rows.count - 1)
+        let nextChannel = rows[nextIndex].channel
+        selectChannel(nextChannel)
+    }
+
+    private func moveProgramSelection(by offset: Int) {
+        guard let row = selectedRow else { return }
+        let programs = row.programs
+            .filter { $0.endTime > $0.startTime && $0.endTime > roundedWindowStart && $0.startTime < windowEnd }
+            .sorted { $0.startTime < $1.startTime }
+
+        guard !programs.isEmpty else {
+            if offset < 0, canPageBackward {
+                shiftGuideWindow(by: -guidePageStepMinutes)
+            } else if offset > 0, canPageForward {
+                shiftGuideWindow(by: guidePageStepMinutes)
+            }
+            return
+        }
+
+        let currentIndex = programs.firstIndex(where: { $0.id == selectedProgramIdByChannel[row.channel.id] }) ?? 0
+        let proposedIndex = currentIndex + offset
+
+        if proposedIndex < 0 {
+            selectedProgramIdByChannel[row.channel.id] = programs[0].id
+            guideFocusTarget = .channels
+            return
+        }
+
+        if proposedIndex >= programs.count {
+            if canPageForward {
+                shiftGuideWindow(by: guidePageStepMinutes)
+            } else {
+                selectedProgramIdByChannel[row.channel.id] = programs[programs.count - 1].id
+            }
+            return
+        }
+
+        selectedProgramIdByChannel[row.channel.id] = programs[proposedIndex].id
+    }
+
+    private func presentProgram(_ program: Program, channel: Channel) {
+        presentedProgram = program
+        presentedProgramChannel = channel
+        presentedProgramActionState = .fallback(routeLabel: recordingRouteLabel(for: channel, program: program))
+        Task {
+            let actionState = await dvrViewModel.programActionState(channel: channel, program: program)
+            await MainActor.run {
+                guard presentedProgram?.id == program.id, presentedProgramChannel?.id == channel.id else { return }
+                presentedProgramActionState = actionState
+            }
         }
     }
 
@@ -705,32 +2006,19 @@ private struct TVGuideMatrix: View {
     let nowIndicatorOffset: (CGFloat) -> CGFloat?
 
     private var displayRows: [ChannelWithPrograms] {
-        let filtered = rows.filter { row in
-            let validPrograms = row.programs
-                .filter { $0.endTime > $0.startTime }
-                .filter { $0.endTime > windowStart && $0.startTime < windowEnd }
-            var seen = Set<String>()
-            let unique = validPrograms.filter { p in
-                let key = "\(Int(p.startTime.timeIntervalSince1970))-\(Int(p.endTime.timeIntervalSince1970))"
-                return seen.insert(key).inserted
-            }
-            return !unique.isEmpty
-        }
-
-        return filtered
+        rows
     }
 
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView(.vertical, showsIndicators: false) {
-                VStack(spacing: 0) {
+                LazyVStack(spacing: 0) {
                     ForEach(displayRows) { row in
                         TVGuideMatrixRow(
                             row: row,
                             selectedChannelId: selectedChannelId,
-                            selectedProgramId: selectedProgramIdByChannel[row.channel.id],
+                            selectedProgramId: selectedChannelId == row.channel.id ? selectedProgramIdByChannel[row.channel.id] : nil,
                             accent: accent,
-                            nowLineColor: nowLineColor,
                             panelBackgroundSoft: panelBackgroundSoft,
                             channelColumnWidth: channelColumnWidth,
                             rowHeight: rowHeight,
@@ -739,14 +2027,26 @@ private struct TVGuideMatrix: View {
                             guideWindowMinutes: guideWindowMinutes,
                             onSelectChannel: onSelectChannel,
                             onSelectProgram: onSelectProgram,
-                            onFocusProgram: onFocusProgram,
-                            nowIndicatorOffset: nowIndicatorOffset
+                            onFocusProgram: onFocusProgram
                         )
                         .id(row.channel.id)
                     }
                 }
             }
             .background(matrixBackground)
+            .overlay {
+                GeometryReader { geo in
+                    let programAreaWidth = max(geo.size.width - channelColumnWidth, 0)
+
+                    if let offset = nowIndicatorOffset(programAreaWidth) {
+                        Rectangle()
+                            .fill(nowLineColor)
+                            .frame(width: 2, height: geo.size.height)
+                            .offset(x: channelColumnWidth + offset, y: 0)
+                            .allowsHitTesting(false)
+                    }
+                }
+            }
             .onChange(of: selectedChannelId) { _, newValue in
                 guard let newValue else { return }
                 withAnimation(.easeInOut(duration: 0.22)) {
@@ -771,7 +2071,6 @@ private struct TVGuideMatrixRow: View {
     let selectedChannelId: String?
     let selectedProgramId: String?
     let accent: Color
-    let nowLineColor: Color
     let panelBackgroundSoft: Color
     let channelColumnWidth: CGFloat
     let rowHeight: CGFloat
@@ -781,21 +2080,25 @@ private struct TVGuideMatrixRow: View {
     let onSelectChannel: (Channel) -> Void
     let onSelectProgram: (Channel, Program) -> Void
     let onFocusProgram: (Channel, Program) -> Void
-    let nowIndicatorOffset: (CGFloat) -> CGFloat?
     
     private var isSelectedRow: Bool {
         selectedChannelId == row.channel.id
     }
 
     private var timelinePrograms: [Program] {
-        deduplicatedPrograms(row.programs)
+        let basePrograms = deduplicatedPrograms(row.programs)
+        let overlappingCurrentProgram = [row.currentProgram ?? row.channel.nowPlaying]
+            .compactMap { $0 }
+            .filter { $0.endTime > $0.startTime }
+            .filter { $0.endTime > windowStart && $0.startTime < windowEnd }
+
+        return deduplicatedPrograms(basePrograms + overlappingCurrentProgram)
             .filter { $0.endTime > windowStart && $0.startTime < windowEnd }
             .sorted { $0.startTime < $1.startTime }
     }
 
     @ViewBuilder
     var body: some View {
-        if !timelinePrograms.isEmpty {
         HStack(spacing: 0) {
             channelCell
             GeometryReader { proxy in
@@ -804,7 +2107,6 @@ private struct TVGuideMatrixRow: View {
                     programs: timelinePrograms,
                     selectedProgramId: selectedProgramId,
                     accent: accent,
-                    nowLineColor: nowLineColor,
                     panelBackgroundSoft: panelBackgroundSoft,
                     rowHeight: rowHeight,
                     width: proxy.size.width,
@@ -814,14 +2116,14 @@ private struct TVGuideMatrixRow: View {
                     guideWindowMinutes: guideWindowMinutes,
                     onSelectChannel: onSelectChannel,
                     onSelectProgram: onSelectProgram,
-                    onFocusProgram: onFocusProgram,
-                    nowIndicatorOffset: nowIndicatorOffset
+                    onFocusProgram: onFocusProgram
                 )
             }
             .frame(height: rowHeight)
         }
         .frame(height: rowHeight)
         .background(rowBackground)
+        .focusSection()
         .overlay(alignment: .top) {
             Rectangle()
                 .fill(isSelectedRow ? accent.opacity(0.32) : Color.white.opacity(0.035))
@@ -836,7 +2138,6 @@ private struct TVGuideMatrixRow: View {
             RoundedRectangle(cornerRadius: 8)
                 .stroke(isSelectedRow ? accent.opacity(0.35) : Color.clear, lineWidth: 1.5)
         }
-        } // end if !timelinePrograms.isEmpty
     }
 
     private var channelCell: some View {
@@ -845,9 +2146,6 @@ private struct TVGuideMatrixRow: View {
             currentProgram: row.currentProgram ?? row.channel.nowPlaying,
             accent: accent,
             isSelected: selectedChannelId == row.channel.id,
-            onFocus: {
-                onSelectChannel(row.channel)
-            },
             action: {
                 onSelectChannel(row.channel)
             }
@@ -937,7 +2235,6 @@ private struct TVGuideProgramTrack: View {
     let programs: [Program]
     let selectedProgramId: String?
     let accent: Color
-    let nowLineColor: Color
     let panelBackgroundSoft: Color
     let rowHeight: CGFloat
     let width: CGFloat
@@ -948,8 +2245,6 @@ private struct TVGuideProgramTrack: View {
     let onSelectChannel: (Channel) -> Void
     let onSelectProgram: (Channel, Program) -> Void
     let onFocusProgram: (Channel, Program) -> Void
-    let nowIndicatorOffset: (CGFloat) -> CGFloat?
-
     private var minuteWidth: CGFloat {
         width / guideWindowMinutes
     }
@@ -960,13 +2255,6 @@ private struct TVGuideProgramTrack: View {
                 .fill(isSelectedRow ? accent.opacity(0.055) : panelBackgroundSoft.opacity(0.24))
 
             slotDividers
-
-            if let offset = nowIndicatorOffset(width) {
-                Rectangle()
-                    .fill(nowLineColor)
-                    .frame(width: 2, height: rowHeight - 2)
-                    .offset(x: offset, y: 0)
-            }
 
             if programs.isEmpty {
                 Text("No guide data")
@@ -1004,9 +2292,6 @@ private struct TVGuideProgramTrack: View {
                 progressColor: accent,
                 width: cellWidth,
                 isSelected: selectedProgramId == program.id,
-                onFocus: {
-                    onFocusProgram(row.channel, program)
-                },
                 action: {
                     onSelectProgram(row.channel, program)
                 }
@@ -1017,85 +2302,13 @@ private struct TVGuideProgramTrack: View {
 }
 
 private struct TVGuideLivePreviewCard: View {
-    @ObservedObject var viewModel: LiveTVViewModel
     let channel: Channel?
     let program: Program?
     let accent: Color
     var compact: Bool = false
 
-    @State private var player: AVPlayer?
-    @State private var previewError = false
-
     var body: some View {
-        ZStack {
-            if let player {
-                VideoPlayer(player: player)
-                .allowsHitTesting(false)
-            } else {
-                TVGuidePreviewCard(channel: channel, program: program, accent: accent, compact: compact)
-            }
-
-            if previewError {
-                TVGuidePreviewCard(channel: channel, program: program, accent: accent, compact: compact)
-                    .overlay {
-                        LinearGradient(
-                            colors: [Color.black.opacity(0.15), Color.black.opacity(0.6)],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        )
-                    }
-            }
-        }
-        .clipShape(RoundedRectangle(cornerRadius: compact ? 14 : 22))
-        .task(id: channel?.id) {
-            await loadPreview()
-        }
-        .onDisappear {
-            stopPreview()
-        }
-    }
-
-    private func loadPreview() async {
-        stopPreview()
-        previewError = false
-
-        guard let channel else { return }
-
-        try? await Task.sleep(nanoseconds: 250_000_000)
-        guard !Task.isCancelled else { return }
-
-        let url: URL?
-        if let streamUrl = channel.streamUrl, let directURL = URL(string: streamUrl) {
-            url = directURL
-        } else {
-            url = try? await viewModel.getChannelStream(channel)
-        }
-
-        guard !Task.isCancelled, let url else {
-            previewError = true
-            return
-        }
-
-        let item = AVPlayerItem(url: url)
-        let newPlayer = AVPlayer(playerItem: item)
-        newPlayer.isMuted = true
-        newPlayer.preventsDisplaySleepDuringVideoPlayback = false
-        newPlayer.play()
-
-        player = newPlayer
-
-        // If preview never becomes playable, keep the artwork fallback visible.
-        try? await Task.sleep(nanoseconds: 1_200_000_000)
-        guard !Task.isCancelled else { return }
-        if item.status == .failed {
-            previewError = true
-            stopPreview()
-        }
-    }
-
-    private func stopPreview() {
-        player?.pause()
-        player = nil
+        TVGuidePreviewCard(channel: channel, program: program, accent: accent, compact: compact)
     }
 }
 
@@ -1151,14 +2364,412 @@ private struct TVGuidePreviewCard: View {
     }
 }
 
+private struct TVGuideProgramSheet: View {
+    @ObservedObject var dvrViewModel: DVRViewModel
+    let channel: Channel
+    let program: Program
+    let accent: Color
+    let sourceSummary: String?
+    let initialActionState: ProgramDVRActionState
+    let onWatch: () -> Void
+    let onClose: () -> Void
+
+    @FocusState private var focusedAction: Action?
+    @State private var actionState: ProgramDVRActionState
+    @State private var isActionLoading = false
+    @State private var downloadStatusText: String?
+
+    private enum Action: Hashable {
+        case watch
+        case record
+        case pass
+        case download
+        case close
+    }
+
+    init(
+        dvrViewModel: DVRViewModel,
+        channel: Channel,
+        program: Program,
+        accent: Color,
+        sourceSummary: String?,
+        initialActionState: ProgramDVRActionState,
+        onWatch: @escaping () -> Void,
+        onClose: @escaping () -> Void
+    ) {
+        _dvrViewModel = ObservedObject(wrappedValue: dvrViewModel)
+        self.channel = channel
+        self.program = program
+        self.accent = accent
+        self.sourceSummary = sourceSummary
+        self.initialActionState = initialActionState
+        self.onWatch = onWatch
+        self.onClose = onClose
+        _actionState = State(initialValue: initialActionState)
+    }
+
+    var body: some View {
+        ZStack {
+            LinearGradient(
+                colors: [
+                    Color(red: 16/255, green: 12/255, blue: 28/255),
+                    Color(red: 27/255, green: 20/255, blue: 46/255)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .ignoresSafeArea()
+
+            VStack(spacing: 0) {
+                HStack {
+                    Capsule()
+                        .fill(Color.white.opacity(0.24))
+                        .frame(width: 62, height: 7)
+                    Spacer()
+                    Button(action: onClose) {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 18, weight: .black))
+                            .foregroundStyle(.white.opacity(0.72))
+                            .frame(width: 46, height: 46)
+                            .background(Color.white.opacity(0.14), in: Circle())
+                    }
+                    .buttonStyle(.plain)
+                    .focused($focusedAction, equals: .close)
+                    .overlay {
+                        Circle()
+                            .stroke(focusedAction == .close ? Color.white.opacity(0.7) : Color.clear, lineWidth: 2)
+                            .padding(-2)
+                    }
+                    .shadow(color: focusedAction == .close ? Color.white.opacity(0.08) : .clear, radius: 8, y: 3)
+                }
+                .padding(.horizontal, 24)
+                .padding(.top, 20)
+                .padding(.bottom, 12)
+
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack(alignment: .top, spacing: 18) {
+                        programArtwork
+
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text(program.title)
+                                .font(.system(size: 28, weight: .black, design: .rounded))
+                                .foregroundStyle(.white)
+                                .lineLimit(2)
+
+                            if let subtitle = program.subtitle, !subtitle.isEmpty {
+                                Text(subtitle)
+                                    .font(.system(size: 17, weight: .semibold, design: .rounded))
+                                    .foregroundStyle(.white.opacity(0.72))
+                                    .lineLimit(1)
+                            }
+
+                            Text(shortDate(program.startTime))
+                                .font(.system(size: 15, weight: .medium))
+                                .foregroundStyle(.white.opacity(0.5))
+                        }
+
+                        Spacer(minLength: 0)
+                    }
+
+                    HStack(spacing: 8) {
+                        Text("\(program.duration) min")
+                            .font(.system(size: 15, weight: .black, design: .rounded))
+                            .foregroundStyle(.white)
+
+                        Text(program.startTimeFormatted)
+                            .font(.system(size: 15, weight: .medium))
+                            .foregroundStyle(.white.opacity(0.66))
+
+                        Text(displayChannelBrand)
+                            .font(.system(size: 15, weight: .black, design: .rounded))
+                            .foregroundStyle(accent)
+                            .lineLimit(1)
+                    }
+
+                    if let sourceSummary, !sourceSummary.isEmpty {
+                        Text("\(sourceSummary) • \(actionState.routeLabel)")
+                            .font(.system(size: 13, weight: .semibold, design: .rounded))
+                            .foregroundStyle(.white.opacity(0.55))
+                            .lineLimit(1)
+                    } else {
+                        Text(actionState.routeLabel)
+                            .font(.system(size: 13, weight: .semibold, design: .rounded))
+                            .foregroundStyle(.white.opacity(0.55))
+                            .lineLimit(1)
+                    }
+
+                    badgeRow
+
+                    if let description = program.description, !description.isEmpty {
+                        Text(description)
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundStyle(.white.opacity(0.82))
+                            .lineLimit(3)
+                    }
+
+                    if program.isCurrentlyAiring {
+                        VStack(alignment: .leading, spacing: 8) {
+                            GeometryReader { geo in
+                                ZStack(alignment: .leading) {
+                                    Capsule()
+                                        .fill(Color.white.opacity(0.1))
+                                        .frame(height: 6)
+                                    Capsule()
+                                        .fill(
+                                            LinearGradient(
+                                                colors: [accent.opacity(0.92), accent],
+                                                startPoint: .leading,
+                                                endPoint: .trailing
+                                            )
+                                        )
+                                        .frame(width: max(geo.size.width * CGFloat(program.progress), 8), height: 6)
+                                }
+                            }
+                            .frame(height: 6)
+
+                            HStack {
+                                Text("\(Int(program.progress * 100))% complete")
+                                Spacer()
+                                Text("\(program.remainingMinutes) min remaining")
+                            }
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundStyle(.white.opacity(0.48))
+                        }
+                    }
+                }
+                .padding(.horizontal, 28)
+                .padding(.bottom, 20)
+
+                HStack(spacing: 16) {
+                    actionButton(title: "Watch", systemImage: "tv", action: onWatch, focused: .watch)
+                    actionButton(
+                        title: actionState.recordTitle,
+                        systemImage: "record.circle",
+                        action: runRecordAction,
+                        focused: .record,
+                        isEnabled: actionState.canRecord && !isActionLoading
+                    )
+                    if actionState.canDownload || downloadStatusText != nil {
+                        actionButton(
+                            title: downloadStatusText ?? actionState.downloadTitle,
+                            systemImage: "arrow.down.circle",
+                            action: runDownloadAction,
+                            focused: .download,
+                            isEnabled: actionState.canDownload && !isActionLoading
+                        )
+                    }
+                    actionButton(
+                        title: actionState.seriesTitle,
+                        systemImage: "rectangle.portrait.and.arrow.right",
+                        action: runSeriesAction,
+                        focused: .pass,
+                        isEnabled: actionState.canRecordSeries && !isActionLoading
+                    )
+                }
+                .padding(.horizontal, 28)
+                .padding(.bottom, 22)
+                .focusSection()
+            }
+            .frame(maxWidth: 820, alignment: .leading)
+        }
+        .onAppear {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                focusedAction = .watch
+            }
+        }
+        .task(id: program.id) {
+            actionState = await dvrViewModel.programActionState(channel: channel, program: program)
+        }
+    }
+
+    private var programArtwork: some View {
+        ZStack {
+            if let imagePath = preferredProgramArtworkPath {
+                AuthenticatedImage(paths: [imagePath], systemPlaceholder: program.isSports ? "sportscourt" : "tv")
+                    .aspectRatio(contentMode: .fill)
+            } else if let logoPath = channel.logo {
+                ZStack(alignment: .bottomLeading) {
+                    LinearGradient(
+                        colors: [accent.opacity(0.78), Color.black.opacity(0.72)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                    Circle()
+                        .fill(Color.white.opacity(0.08))
+                        .frame(width: 180, height: 180)
+                        .offset(x: 54, y: 32)
+                    VStack(alignment: .leading, spacing: 14) {
+                        AuthenticatedImage(paths: [logoPath], systemPlaceholder: program.isSports ? "sportscourt" : "tv")
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width: 124, height: 56, alignment: .leading)
+                        Text(displayChannelBrand)
+                            .font(.system(size: 14, weight: .black, design: .rounded))
+                            .foregroundStyle(.white.opacity(0.9))
+                            .lineLimit(1)
+                    }
+                    .padding(20)
+                }
+            } else {
+                LinearGradient(
+                    colors: [accent.opacity(0.85), Color.black.opacity(0.65)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                .overlay {
+                    Image(systemName: program.isSports ? "sportscourt" : "tv")
+                        .font(.system(size: 54, weight: .regular))
+                        .foregroundStyle(.white.opacity(0.34))
+                }
+            }
+        }
+        .frame(width: 270, height: 152)
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(Color.white.opacity(0.06), lineWidth: 1)
+        )
+    }
+
+    private var preferredProgramArtworkPath: String? {
+        let candidates = [program.art, program.icon].compactMap { $0 }
+        return candidates.first { path in
+            guard !path.isEmpty else { return false }
+            let lowered = path.lowercased()
+            return !lowered.contains("logo")
+        }
+    }
+
+    @ViewBuilder
+    private var badgeRow: some View {
+        HStack(spacing: 8) {
+            ForEach(program.badges, id: \.self) { badge in
+                badgePill(badge, color: accent)
+            }
+            if let rating = program.rating, !rating.isEmpty {
+                badgePill(rating, color: Color.white.opacity(0.14))
+            }
+            if let category = program.category, !category.isEmpty {
+                badgePill(category, color: Color.white.opacity(0.14))
+            }
+        }
+    }
+
+    private func badgePill(_ title: String, color: Color) -> some View {
+        Text(title)
+            .font(.system(size: 12, weight: .bold, design: .rounded))
+            .foregroundStyle(.white)
+            .padding(.horizontal, 9)
+            .padding(.vertical, 5)
+            .background(color, in: RoundedRectangle(cornerRadius: 7))
+    }
+
+    @ViewBuilder
+    private func actionButton(title: String, systemImage: String, action: @escaping () -> Void, focused: Action, isEnabled: Bool = true) -> some View {
+        let button = Label(title, systemImage: systemImage)
+            .font(.system(size: 20, weight: .bold, design: .rounded))
+            .foregroundStyle(
+                isEnabled
+                ? (focusedAction == focused ? .white : .white.opacity(0.94))
+                : .white.opacity(0.34)
+            )
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 16)
+            .background(
+                (
+                    isEnabled && focusedAction == focused
+                    ? accent.opacity(0.20)
+                    : Color.white.opacity(0.07)
+                ),
+                in: RoundedRectangle(cornerRadius: 16)
+            )
+            .overlay {
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(
+                        isEnabled && focusedAction == focused ? accent.opacity(0.62) : Color.white.opacity(0.08),
+                        lineWidth: 1
+                    )
+            }
+            .contentShape(RoundedRectangle(cornerRadius: 16))
+            .focusable()
+            .focusEffectDisabled()
+            .focused($focusedAction, equals: focused)
+            .onTapGesture {
+                guard isEnabled else { return }
+                action()
+            }
+            .shadow(color: isEnabled && focusedAction == focused ? accent.opacity(0.08) : .clear, radius: 4, y: 2)
+            .scaleEffect(isEnabled && focusedAction == focused ? 1.003 : 1)
+            .animation(.easeOut(duration: 0.15), value: focusedAction == focused)
+
+        if focused == .watch {
+            button.defaultFocus($focusedAction, .watch)
+        } else {
+            button
+        }
+    }
+
+    private func runRecordAction() {
+        guard actionState.canRecord, !isActionLoading else { return }
+        isActionLoading = true
+        Task {
+            defer { isActionLoading = false }
+            try? await dvrViewModel.recordProgram(channel: channel, program: program)
+            actionState = await dvrViewModel.programActionState(channel: channel, program: program)
+        }
+    }
+
+    private func runSeriesAction() {
+        guard actionState.canRecordSeries, !isActionLoading else { return }
+        isActionLoading = true
+        Task {
+            defer { isActionLoading = false }
+            try? await dvrViewModel.createSeriesPass(channel: channel, program: program)
+            actionState = await dvrViewModel.programActionState(channel: channel, program: program)
+        }
+    }
+
+    private func runDownloadAction() {
+        guard actionState.canDownload, !isActionLoading else { return }
+        isActionLoading = true
+        downloadStatusText = "Starting…"
+        Task {
+            defer { isActionLoading = false }
+            if let job = try? await dvrViewModel.startDownload(channel: channel, program: program) {
+                if let progress = job.progress {
+                    downloadStatusText = "\(Int(progress * 100))%"
+                } else {
+                    downloadStatusText = job.status ?? "Queued"
+                }
+            } else {
+                downloadStatusText = nil
+            }
+            actionState = await dvrViewModel.programActionState(channel: channel, program: program)
+        }
+    }
+
+    private func shortDate(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMMM d, yyyy"
+        return formatter.string(from: date)
+    }
+
+    private var displayChannelBrand: String {
+        let base = channel.name
+            .replacingOccurrences(of: #"^\s*A\d+\s+"#, with: "", options: .regularExpression)
+            .replacingOccurrences(of: #"\s+\d{2,}\s+[A-Z]{3,}.*$"#, with: "", options: .regularExpression)
+            .replacingOccurrences(of: #"(?i)\s+HD$"#, with: "", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+
+        return base.isEmpty ? channel.name : base
+    }
+}
+
 private struct TVGuideChannelCell: View {
     let channel: Channel
     let currentProgram: Program?
     let accent: Color
     let isSelected: Bool
-    let onFocus: () -> Void
     let action: () -> Void
-    @Environment(\.isFocused) private var isFocused
 
     var body: some View {
         Button(action: action) {
@@ -1175,31 +2786,30 @@ private struct TVGuideChannelCell: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(
-                (isFocused || isSelected) ? Color(red: 50/255, green: 45/255, blue: 85/255) : Color.white.opacity(0.03)
+                isSelected
+                    ? Color(red: 44/255, green: 39/255, blue: 78/255)
+                    : Color.white.opacity(0.012)
             )
             .overlay(alignment: .leading) {
                 Rectangle()
-                    .fill((isFocused || isSelected) ? accent : Color.clear)
-                    .frame(width: 4)
+                    .fill(isSelected ? accent : Color.clear)
+                    .frame(width: isSelected ? 6 : 0)
             }
             .overlay {
                 Rectangle()
-                    .stroke((isFocused || isSelected) ? Color.white.opacity(0.9) : Color.clear, lineWidth: 3)
+                    .stroke(isSelected ? Color.white.opacity(0.74) : Color.white.opacity(0.035), lineWidth: isSelected ? 2 : 0.8)
             }
             .overlay(alignment: .bottom) {
                 Rectangle()
                     .fill(Color.white.opacity(0.05))
                     .frame(height: 1)
             }
-            .scaleEffect(isFocused ? 1.01 : 1)
-            .shadow(color: isFocused ? Color.white.opacity(0.16) : .clear, radius: 12, y: 6)
-            .animation(.easeOut(duration: 0.15), value: isFocused)
+            .scaleEffect(isSelected ? 1.012 : 1)
+            .shadow(color: isSelected ? Color.white.opacity(0.05) : .clear, radius: 8, y: 4)
+            .animation(.easeOut(duration: 0.15), value: isSelected)
         }
         .buttonStyle(TVNoGlowButtonStyle())
-        .onChange(of: isFocused) { _, focused in
-            guard focused else { return }
-            onFocus()
-        }
+        .focusEffectDisabled()
     }
 }
 
@@ -1209,9 +2819,7 @@ private struct TVGuideProgramCell: View {
     let progressColor: Color
     let width: CGFloat
     let isSelected: Bool
-    let onFocus: () -> Void
     let action: () -> Void
-    @Environment(\.isFocused) private var isFocused
 
     private var isUltraCompact: Bool { width < 56 }
     private var isCompact: Bool { width < 150 }
@@ -1220,7 +2828,7 @@ private struct TVGuideProgramCell: View {
     var body: some View {
         Button(action: action) {
             ZStack(alignment: .bottomLeading) {
-                if (isFocused || isSelected) && width >= 170, let imagePath = program.art ?? program.icon {
+                if isSelected && width >= 170, let imagePath = program.art ?? program.icon {
                     AuthenticatedImage(paths: [imagePath], systemPlaceholder: "play.rectangle")
                         .aspectRatio(contentMode: .fill)
                         .overlay {
@@ -1258,7 +2866,7 @@ private struct TVGuideProgramCell: View {
                         if !isCompact {
                             Text(timeDurationLabel)
                                 .font(.system(size: 12, weight: .medium))
-                                .foregroundStyle((isFocused || isSelected) ? .white.opacity(0.85) : .white.opacity(0.40))
+                                .foregroundStyle(isSelected ? .white.opacity(0.85) : .white.opacity(0.40))
                                 .lineLimit(1)
                         }
                     }
@@ -1283,16 +2891,13 @@ private struct TVGuideProgramCell: View {
                 RoundedRectangle(cornerRadius: 6)
                     .stroke(borderColor, lineWidth: borderWidth)
             )
-            .scaleEffect(isHighlighted ? 1.04 : 1)
-            .shadow(color: isHighlighted ? Color.white.opacity(0.18) : .clear, radius: 14, y: 4)
+            .scaleEffect(isHighlighted ? 1.012 : 1)
+            .shadow(color: isHighlighted ? Color.white.opacity(0.04) : .clear, radius: 7, y: 3)
             .zIndex(isHighlighted ? 10 : 0)
-            .animation(.easeOut(duration: 0.15), value: isFocused)
+            .animation(.easeOut(duration: 0.15), value: isSelected)
         }
         .buttonStyle(TVNoGlowButtonStyle())
-        .onChange(of: isFocused) { _, focused in
-            guard focused else { return }
-            onFocus()
-        }
+        .focusEffectDisabled()
     }
 
     private var titleSize: CGFloat {
@@ -1322,23 +2927,23 @@ private struct TVGuideProgramCell: View {
         return f
     }()
 
-    private var isHighlighted: Bool { isFocused || isSelected }
+    private var isHighlighted: Bool { isSelected }
 
     private var backgroundFill: Color {
         if isHighlighted {
-            return Color(red: 50/255, green: 45/255, blue: 85/255) // bright purple — unmistakable
+            return Color(red: 45/255, green: 40/255, blue: 79/255)
         }
         if program.isCurrentlyAiring { return Color(red: 24/255, green: 26/255, blue: 48/255) }
         return Color(red: 20/255, green: 22/255, blue: 40/255)
     }
 
     private var borderColor: Color {
-        if isHighlighted { return Color.white.opacity(0.92) }
-        return Color.white.opacity(0.06)
+        if isHighlighted { return Color.white.opacity(0.72) }
+        return Color.white.opacity(0.03)
     }
 
     private var borderWidth: CGFloat {
-        isHighlighted ? 3 : 0.5
+        isHighlighted ? 2 : 0.8
     }
 }
 
@@ -1510,6 +3115,8 @@ struct LiveTVPlayerView: View {
     @State private var channelNumberEntry: String = ""
     @State private var showChannelNumberEntry = false
     @State private var channelEntryTask: Task<Void, Never>?
+    @State private var showMultiview = false
+    @State private var multiviewPickedChannel: Channel?
 
     // Toast notification
     @State private var toastMessage: String?
@@ -1633,6 +3240,12 @@ struct LiveTVPlayerView: View {
                     onPreviousChannel: {
                         handlePreviousChannel()
                     },
+                    onChannelUp: {
+                        handleNextChannel()
+                    },
+                    onChannelDown: {
+                        handlePreviousChannel()
+                    },
                     onToggleFavorite: {
                         handleToggleFavorite()
                     },
@@ -1641,7 +3254,7 @@ struct LiveTVPlayerView: View {
                             return
                         }
                         Task {
-                            try? await dvrViewModel.recordProgram(channelId: channel.id, program: program)
+                            try? await dvrViewModel.recordProgram(channel: channel, program: program)
                             await MainActor.run {
                                 showPlayerToast("Recording Scheduled", icon: "record.circle")
                             }
@@ -1652,6 +3265,9 @@ struct LiveTVPlayerView: View {
                     },
                     onPiP: {
                         showPlayerToast("PiP", icon: "pip")
+                    },
+                    onMultiview: {
+                        showMultiview = true
                     },
                     onDismiss: {
                         showControls = false
@@ -1677,6 +3293,25 @@ struct LiveTVPlayerView: View {
             overlayHideTask?.cancel()
             surfingTask?.cancel()
             channelEntryTask?.cancel()
+        }
+        .fullScreenCover(isPresented: $showMultiview, onDismiss: {
+            if let picked = multiviewPickedChannel {
+                multiviewPickedChannel = nil
+                changeChannel(to: picked)
+            } else {
+                let current = viewModel.selectedChannel ?? channel
+                changeChannel(to: current)
+            }
+        }) {
+            MultiviewPlayerV2(
+                initialChannel: viewModel.selectedChannel ?? channel,
+                viewModel: viewModel,
+                onDismiss: { showMultiview = false },
+                onFullScreen: { picked in
+                    multiviewPickedChannel = picked
+                    showMultiview = false
+                }
+            )
         }
         #if os(tvOS)
         .onPlayPauseCommand {
@@ -2107,6 +3742,12 @@ struct LiveTVPlayerView: View {
         changeChannel(to: prevChannel)
     }
 
+    private func handleNextChannel() {
+        guard let nextChannel = viewModel.nextChannel() else { return }
+        showControls = false
+        changeChannel(to: nextChannel)
+    }
+
     // MARK: - Toggle Favorite
 
     private func handleToggleFavorite() {
@@ -2296,10 +3937,13 @@ struct LiveTVControlsOverlay: View {
     var onGuide: () -> Void
     var onChannels: () -> Void
     var onPreviousChannel: () -> Void
+    var onChannelUp: () -> Void
+    var onChannelDown: () -> Void
     var onToggleFavorite: () -> Void
     var onRecord: () -> Void
     var onInfo: () -> Void
     var onPiP: () -> Void
+    var onMultiview: () -> Void
     var onDismiss: () -> Void
 
     @FocusState private var focusedControl: LiveTVControl?
@@ -2311,6 +3955,7 @@ struct LiveTVControlsOverlay: View {
         case close, streamInfo, mute
         case skipBack, playPause, skipForward
         case favorite, previousChannel, aspectRatio, sleepTimer, audio, subtitles
+        case channelUp, channelDown, multiview
         case record, info, pip
         case quickGuide
         case guide, channels
@@ -2660,6 +4305,26 @@ struct LiveTVControlsOverlay: View {
                 }
             )
 
+            // Channel Up
+            actionButton(
+                icon: "chevron.up",
+                label: "Up",
+                control: .channelUp,
+                action: {
+                    onChannelUp()
+                }
+            )
+
+            // Channel Down
+            actionButton(
+                icon: "chevron.down",
+                label: "Down",
+                control: .channelDown,
+                action: {
+                    onChannelDown()
+                }
+            )
+
             // Guide
             actionButton(
                 icon: "list.bullet",
@@ -2688,6 +4353,16 @@ struct LiveTVControlsOverlay: View {
                 control: .pip,
                 action: {
                     onPiP()
+                }
+            )
+
+            // Multiview
+            actionButton(
+                icon: "rectangle.split.2x2",
+                label: "Multiview",
+                control: .multiview,
+                action: {
+                    onMultiview()
                 }
             )
         }
