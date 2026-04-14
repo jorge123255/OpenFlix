@@ -385,7 +385,7 @@ struct TVLiveChannelPlayerView: View {
                 )
             }
         }
-        .focusable()
+        .focusable(!showControls)
         .onPlayPauseCommand {
             if !showControls {
                 withAnimation(.easeInOut(duration: 0.25)) {
@@ -404,8 +404,7 @@ struct TVLiveChannelPlayerView: View {
                 scheduleAutoHide()
             }
         }
-        .onMoveCommand { direction in
-            if showControls { return }
+        .modifier(PlayerInputModifier(isEnabled: !showControls) { direction in
             switch direction {
             case .up:
                 switchChannel(direction: .up)
@@ -419,7 +418,7 @@ struct TVLiveChannelPlayerView: View {
             @unknown default:
                 break
             }
-        }
+        })
         .onExitCommand {
             if showSleepPicker {
                 showSleepPicker = false
@@ -511,6 +510,10 @@ struct TVLiveChannelPlayerView: View {
         vlcPlayer.stop()
         previousChannel = oldChannel
         channel = newChannel
+        // Wipe stale EPG immediately so the overlay shows nothing instead of
+        // the previous channel's program info while loadEPGInfo() resolves.
+        nowPlaying = nil
+        upNext = nil
         viewModel.selectChannel(newChannel)
         userPaused = false
         behindLive = false
@@ -665,6 +668,13 @@ struct TVLiveChannelPlayerView: View {
 }
 
 private struct TVLiveChannelControlsOverlay: View {
+    private enum PlayerControl: Hashable {
+        case dismiss, playPause, seekBack, seekForward, goLive,
+             channelUp, channelDown, previousChannel, record,
+             sleep, multiview
+    }
+
+    @FocusState private var focusedControl: PlayerControl?
     let channel: Channel
     @ObservedObject var vlcPlayer: VLCPlayerViewModel
     let userPaused: Bool
@@ -732,6 +742,7 @@ private struct TVLiveChannelControlsOverlay: View {
             }
             .buttonStyle(.plain)
             .focusEffectDisabled()
+            .focused($focusedControl, equals: .dismiss)
 
             Spacer()
 
@@ -888,6 +899,7 @@ private struct TVLiveChannelControlsOverlay: View {
                         onInteraction()
                         onSeekBackward()
                     }
+                    .focused($focusedControl, equals: .seekBack)
 
                     Button {
                         onInteraction()
@@ -899,11 +911,14 @@ private struct TVLiveChannelControlsOverlay: View {
                     }
                     .buttonStyle(.plain)
                     .focusEffectDisabled()
+                    .focused($focusedControl, equals: .playPause)
+                    .defaultFocus($focusedControl, .playPause)
 
                     overlayIconButton("goforward.10") {
                         onInteraction()
                         onSeekForward()
                     }
+                    .focused($focusedControl, equals: .seekForward)
                 }
             }
         }
@@ -1237,6 +1252,19 @@ private struct TVRecordOptionsSheet: View {
 /// Gates arrow/select events so they only reach the guide when no overlay is presented.
 /// Attaching `.onMoveCommand` unconditionally steals focus events from child views, which is
 /// why the detail card's Watch/Record/Pass buttons couldn't receive arrow keys.
+private struct PlayerInputModifier: ViewModifier {
+    let isEnabled: Bool
+    let action: (MoveCommandDirection) -> Void
+
+    func body(content: Content) -> some View {
+        if isEnabled {
+            content.onMoveCommand(perform: action)
+        } else {
+            content
+        }
+    }
+}
+
 private struct GuideInputModifier: ViewModifier {
     let isActive: Bool
     let onMove: (MoveCommandDirection) -> Void
