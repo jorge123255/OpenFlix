@@ -1,7 +1,9 @@
 import SwiftUI
 import AVKit
-#if !targetEnvironment(simulator)
+#if !targetEnvironment(simulator) && os(iOS)
 import MobileVLCKit
+#elseif !targetEnvironment(simulator) && os(tvOS)
+import TVVLCKit
 #endif
 
 #if !os(tvOS)
