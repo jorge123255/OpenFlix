@@ -1,6 +1,8 @@
 import SwiftUI
-#if !targetEnvironment(simulator)
+#if !targetEnvironment(simulator) && os(iOS)
 import MobileVLCKit
+#elseif !targetEnvironment(simulator) && os(tvOS)
+import TVVLCKit
 #endif
 
 #if targetEnvironment(simulator)
@@ -39,9 +41,24 @@ class VLCPlayerViewModel: NSObject, ObservableObject {
     @Published var selectedAudioTrack: Int32 = -1
     @Published var selectedSubtitleTrack: Int32 = -1
     var sleepTimerLabel: String { "Off" }
-    func play(url: URL) {}
+    // Simulator stub: TVVLCKit can't render video in the tvOS simulator, but
+    // we still flip isLoading so the player overlay shows its loading state
+    // and surfaces an error after a few seconds — that way the UI is
+    // testable in the sim even though playback itself requires hardware.
+    func play(url: URL) {
+        isLoading = true
+        isBuffering = true
+        error = nil
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 3_000_000_000)
+            guard isLoading else { return }
+            isLoading = false
+            isBuffering = false
+            error = "VLC video playback is not available in the iOS/tvOS simulator. Install on a real device to play streams."
+        }
+    }
     func pause() {}
-    func stop() {}
+    func stop() { isLoading = false; isBuffering = false; isPlaying = false; error = nil }
     func toggleMute() {}
     func togglePlayPause() {}
     func seek(to seconds: Double) {}
@@ -63,8 +80,15 @@ class VLCPlayerViewModel: NSObject, ObservableObject {
 }
 struct VLCPlayerView: UIViewRepresentable {
     @ObservedObject var viewModel: VLCPlayerViewModel
-    func makeUIView(context: Context) -> UIView { UIView() }
-    func updateUIView(_ uiView: UIView, context: Context) {}
+    func makeUIView(context: Context) -> UIView {
+        let view = UIView()
+        view.backgroundColor = .black
+        view.clipsToBounds = true
+        return view
+    }
+    func updateUIView(_ uiView: UIView, context: Context) {
+        uiView.clipsToBounds = true
+    }
 }
 #else
 // MARK: - VLC Player UIView (renders video)

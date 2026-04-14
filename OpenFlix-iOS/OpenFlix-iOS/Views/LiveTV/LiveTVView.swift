@@ -213,7 +213,10 @@ struct TVLiveChannelPlayerView: View {
             VLCPlayerView(viewModel: vlcPlayer)
                 .ignoresSafeArea()
 
-            if vlcPlayer.isLoading && !showControls {
+            // Show loading regardless of overlay visibility — the overlay sits on
+            // top of a translucent backdrop, so the spinner is still readable, and
+            // we want feedback even during the first 5s when controls are up.
+            if vlcPlayer.isLoading {
                 VStack(spacing: 12) {
                     ProgressView()
                         .scaleEffect(1.6)
@@ -221,6 +224,7 @@ struct TVLiveChannelPlayerView: View {
                     Text("Loading \(channel.name)...")
                         .foregroundColor(.white)
                 }
+                .zIndex(20)
             }
 
             if let error = vlcPlayer.error {
