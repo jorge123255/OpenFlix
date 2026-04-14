@@ -453,17 +453,37 @@ struct TVLiveChannelPlayerView: View {
     private var channels: [Channel] { viewModel.displayedChannels }
 
     private func playCurrentChannel(with preferredURL: URL? = nil) {
+        NSLog("PLAYER URL: begin playCurrentChannel channel=\(channel.id) preferred=\(preferredURL?.absoluteString ?? "nil") preferredPlayback=\(channel.preferredPlaybackURL?.absoluteString ?? "nil")")
+
         if let preferredURL {
+            NSLog("PLAYER URL: source=preferred channel=\(channel.id) url=\(preferredURL.absoluteString)")
             vlcPlayer.play(url: preferredURL)
             return
         }
+        // Try the browser-preview URL first — this is the same URL the working
+        // AVPlayer preview card uses, so VLC has the best shot at playing it.
+        if let url = liveTVRepository.getBrowserPreviewURL(for: channel) {
+            NSLog("PLAYER URL: source=browserPreview channel=\(channel.id) url=\(url.absoluteString)")
+            vlcPlayer.play(url: url)
+            return
+        }
+        if let url = liveTVRepository.getPreviewURL(for: channel) {
+            NSLog("PLAYER URL: source=preview channel=\(channel.id) url=\(url.absoluteString)")
+            vlcPlayer.play(url: url)
+            return
+        }
         if let url = liveTVRepository.getStreamURL(for: channel) {
+            NSLog("PLAYER URL: source=repo channel=\(channel.id) url=\(url.absoluteString)")
             vlcPlayer.play(url: url)
             return
         }
         Task {
-            if let url = try? await viewModel.getChannelStream(channel) {
+            do {
+                let url = try await viewModel.getChannelStream(channel)
+                NSLog("PLAYER URL: source=api channel=\(channel.id) url=\(url.absoluteString)")
                 vlcPlayer.play(url: url)
+            } catch {
+                NSLog("PLAYER URL: source=api FAILED channel=\(channel.id) error=\(error)")
             }
         }
     }
@@ -471,9 +491,14 @@ struct TVLiveChannelPlayerView: View {
     private func reloadCurrentChannel() async {
         userPaused = false
         behindLive = false
-        if let url = liveTVRepository.getStreamURL(for: channel) {
+        if let url = liveTVRepository.getBrowserPreviewURL(for: channel) {
+            NSLog("PLAYER URL: reload source=browserPreview channel=\(channel.id) url=\(url.absoluteString)")
+            vlcPlayer.play(url: url)
+        } else if let url = liveTVRepository.getStreamURL(for: channel) {
+            NSLog("PLAYER URL: reload source=repo channel=\(channel.id) url=\(url.absoluteString)")
             vlcPlayer.play(url: url)
         } else if let url = try? await viewModel.getChannelStream(channel) {
+            NSLog("PLAYER URL: reload source=api channel=\(channel.id) url=\(url.absoluteString)")
             vlcPlayer.play(url: url)
         }
         scheduleAutoHide()
@@ -507,6 +532,8 @@ struct TVLiveChannelPlayerView: View {
     }
 
     private func switchToPreviousChannel() {
+        nowPlaying = nil
+        upNext = nil
         guard let previousChannel else { return }
         switchToChannel(previousChannel)
     }

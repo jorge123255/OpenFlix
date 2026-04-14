@@ -23,6 +23,10 @@ class VLCMediaPlayer: NSObject {
 }
 @MainActor
 class VLCPlayerViewModel: NSObject, ObservableObject {
+    private func print(_ items: Any...) {
+        let message = items.map { String(describing: $0) }.joined(separator: " ")
+        NSLog("%@", message)
+    }
     let mediaPlayer = VLCMediaPlayer()
     @Published var isPlaying = false
     @Published var isBuffering = false
@@ -45,7 +49,15 @@ class VLCPlayerViewModel: NSObject, ObservableObject {
     // we still flip isLoading so the player overlay shows its loading state
     // and surfaces an error after a few seconds — that way the UI is
     // testable in the sim even though playback itself requires hardware.
-    func play(url: URL) {
+        func play(url: URL) {
+            NSLog("VLCPlayerViewModel: play called with URL: %@", url.absoluteString)
+            NSLog(
+                "VLCPlayerViewModel: URL details scheme=%@ host=%@ port=%@ isFile=%@",
+                url.scheme ?? "nil",
+                url.host ?? "nil",
+                url.port.map { String($0) } ?? "nil",
+                url.isFileURL ? "true" : "false"
+            )
         isLoading = true
         isBuffering = true
         error = nil
@@ -176,15 +188,13 @@ class VLCPlayerViewModel: NSObject, ObservableObject {
     // MARK: - Playback
 
     func play(url: URL) {
-        print("🎬 VLCPlayer.play() - URL: \(url.absoluteString)")
-        print("🎬 VLCPlayer.play() - URL scheme: \(url.scheme ?? "nil"), host: \(url.host ?? "nil")")
+        NSLog("VLC PLAY: url=\(url.absoluteString) scheme=\(url.scheme ?? "nil") host=\(url.host ?? "nil") port=\(url.port.map { String($0) } ?? "nil")")
         currentURL = url
         isLoading = true
         isBuffering = true
         error = nil
 
         let media = VLCMedia(url: url)
-        print("🎬 VLCPlayer.play() - VLCMedia created")
 
         // Configure media options for live streaming
         media.addOptions([
@@ -195,10 +205,8 @@ class VLCPlayerViewModel: NSObject, ObservableObject {
         ])
 
         mediaPlayer.media = media
-        let started = mediaPlayer.play()
-        print("🎬 VLCPlayer.play() - mediaPlayer.play() returned: \(started)")
-        print("🎬 VLCPlayer.play() - mediaPlayer.state: \(mediaPlayer.state.rawValue)")
-        print("🎬 VLCPlayer.play() - drawable: \(String(describing: mediaPlayer.drawable))")
+        mediaPlayer.play()
+        NSLog("VLC PLAY: mediaPlayer.play() invoked state=\(mediaPlayer.state.rawValue) drawable=\(mediaPlayer.drawable == nil ? "nil" : "set")")
         startTimeUpdates()
     }
 
@@ -219,6 +227,7 @@ class VLCPlayerViewModel: NSObject, ObservableObject {
             mediaPlayer.pause()
         } else {
             mediaPlayer.play()
+            NSLog("VLC togglePlayPause: mediaPlayer.play() invoked state=\(mediaPlayer.state.rawValue)")
         }
     }
 
@@ -473,52 +482,51 @@ extension VLCPlayerViewModel: VLCMediaPlayerDelegate {
     nonisolated func mediaPlayerStateChanged(_ aNotification: Notification) {
         Task { @MainActor in
             let state = mediaPlayer.state
-            print("🎬 VLCPlayer STATE: \(state.rawValue) - isPlaying:\(mediaPlayer.isPlaying) url:\(currentURL?.absoluteString ?? "nil")")
+            NSLog("VLC STATE: \(state.rawValue) isPlaying=\(mediaPlayer.isPlaying) url=\(currentURL?.absoluteString ?? "nil")")
             switch state {
             case .playing:
-                print("🎬 VLCPlayer: ✅ PLAYING - videoSize: \(mediaPlayer.videoSize)")
+                NSLog("VLC STATE: PLAYING videoSize=\(mediaPlayer.videoSize)")
                 isPlaying = true
                 isBuffering = false
                 isLoading = false
                 isMuted = (mediaPlayer.audio?.volume ?? 100) == 0
-                // Load tracks once playback starts
                 loadTracks()
                 extractStreamInfo()
 
             case .paused:
-                print("🎬 VLCPlayer: ⏸ PAUSED")
+                NSLog("VLC STATE: PAUSED")
                 isPlaying = false
                 isBuffering = false
 
             case .buffering:
-                print("🎬 VLCPlayer: ⏳ BUFFERING")
+                NSLog("VLC STATE: BUFFERING")
                 isBuffering = true
-                isLoading = false  // Hide loading spinner once buffering starts (frames may already be rendering)
+                isLoading = false
 
             case .ended:
-                print("🎬 VLCPlayer: ⏹ ENDED")
+                NSLog("VLC STATE: ENDED")
                 isPlaying = false
                 isBuffering = false
 
             case .error:
-                print("🎬 VLCPlayer: ❌ ERROR - url: \(currentURL?.absoluteString ?? "nil")")
+                NSLog("VLC STATE: ERROR url=\(currentURL?.absoluteString ?? "nil")")
                 isPlaying = false
                 isBuffering = false
                 isLoading = false
-                error = "Playback failed. Check the stream URL."
+                error = "VLC playback failed (state \(state.rawValue)). Stream URL may not be VLC-compatible."
 
             case .stopped:
-                print("🎬 VLCPlayer: ⏹ STOPPED")
+                NSLog("VLC STATE: STOPPED")
                 isPlaying = false
                 isBuffering = false
 
             case .opening:
-                print("🎬 VLCPlayer: 📂 OPENING")
+                NSLog("VLC STATE: OPENING")
                 isLoading = true
                 isBuffering = true
 
             @unknown default:
-                print("🎬 VLCPlayer: ❓ UNKNOWN state: \(state.rawValue)")
+                NSLog("VLC STATE: UNKNOWN raw=\(state.rawValue)")
                 break
             }
         }
