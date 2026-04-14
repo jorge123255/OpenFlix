@@ -117,6 +117,20 @@ class LiveTVViewModel: ObservableObject {
         try await liveTVRepository.getChannelStream(id: channel.id)
     }
 
+    func getChannelPreviewStream(_ channel: Channel) async throws -> URL {
+        if let url = liveTVRepository.getPreviewURL(for: channel) {
+            return url
+        }
+        return try await getChannelStream(channel)
+    }
+
+    func getChannelBrowserPreviewStream(_ channel: Channel) async throws -> URL {
+        if let url = liveTVRepository.getBrowserPreviewURL(for: channel) {
+            return url
+        }
+        return try await getChannelPreviewStream(channel)
+    }
+
     // MARK: - Favorites
 
     func toggleFavorite(_ channel: Channel) async {
@@ -294,7 +308,7 @@ class LiveTVViewModel: ObservableObject {
         }
     }
 
-    private func stopLiveRefreshTimer() {
+    func stopLiveRefreshTimer() {
         liveRefreshTimer?.invalidate()
         liveRefreshTimer = nil
     }

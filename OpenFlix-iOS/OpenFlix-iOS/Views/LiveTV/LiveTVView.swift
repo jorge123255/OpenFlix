@@ -121,6 +121,9 @@ struct LiveTVView: View {
             await viewModel.loadChannels()
             await viewModel.loadGuide()
         }
+        .onDisappear {
+            viewModel.stopLiveRefreshTimer()
+        }
         .fullScreenCover(isPresented: $showPlayer) {
             if let channel = selectedChannelForPlayback {
                 #if os(tvOS)
@@ -1268,6 +1271,7 @@ private struct TVOSLiveBrowserView: View {
     @State private var selectedChannelId: String?
     @State private var selectedProgramIdByChannel: [String: String] = [:]
     @State private var guideWindowStartDate: Date?
+    @State private var actionStateLoadTask: Task<Void, Never>?
     @State private var presentedProgram: Program?
     @State private var presentedProgramChannel: Channel?
     @State private var presentedProgramActionState: ProgramDVRActionState = .fallback()
@@ -1449,9 +1453,9 @@ private struct TVOSLiveBrowserView: View {
                     guideMatrix
                 }
                 .onAppear {
-                    if guideWindowStartDate == nil {
-                        guideWindowStartDate = defaultRoundedWindowStart
-                    }
+                    // Always reset to "now" on appear so re-entering Live TV after paging
+                    // forward doesn't strand the user on a future window.
+                    guideWindowStartDate = defaultRoundedWindowStart
                     if selectedChannelId == nil {
                         let initialId = viewModel.selectedChannel?.id ?? visibleRows.first?.channel.id
                         selectedChannelId = initialId
@@ -1493,6 +1497,8 @@ private struct TVOSLiveBrowserView: View {
             get: { presentedProgram != nil && presentedProgramChannel != nil },
             set: { newValue in
                 if !newValue {
+                    actionStateLoadTask?.cancel()
+                    actionStateLoadTask = nil
                     presentedProgram = nil
                     presentedProgramChannel = nil
                 }
@@ -1511,11 +1517,15 @@ private struct TVOSLiveBrowserView: View {
                         sourceSummary: sourceSummary(for: channel),
                         initialActionState: presentedProgramActionState,
                         onWatch: {
+                            actionStateLoadTask?.cancel()
+                            actionStateLoadTask = nil
                             presentedProgram = nil
                             presentedProgramChannel = nil
                             onPlayChannel(channel)
                         },
                         onClose: {
+                            actionStateLoadTask?.cancel()
+                            actionStateLoadTask = nil
                             presentedProgram = nil
                             presentedProgramChannel = nil
                         }
@@ -1527,6 +1537,8 @@ private struct TVOSLiveBrowserView: View {
                 }
                 .background(.clear)
                 .onExitCommand {
+                    actionStateLoadTask?.cancel()
+                    actionStateLoadTask = nil
                     presentedProgram = nil
                     presentedProgramChannel = nil
                 }
@@ -1840,11 +1852,20 @@ private struct TVOSLiveBrowserView: View {
         guideWindowStartDate = clamped
 
         if let row = selectedRow {
-            let nextVisible = row.programs.first {
-                $0.endTime > clamped && $0.startTime < clamped.addingTimeInterval(TimeInterval(guideWindowMinutes * 60))
+            let newWindowEnd = clamped.addingTimeInterval(TimeInterval(guideWindowMinutes * 60))
+            let visibleInNewWindow = row.programs
+                .filter { $0.endTime > clamped && $0.startTime < newWindowEnd }
+                .sorted { $0.startTime < $1.startTime }
+
+            // If the previously-selected program is still visible, leave it alone.
+            // Otherwise reselect to the first program in the new window so Enter
+            // doesn't fire on a stale id that's scrolled out of view.
+            let currentId = selectedProgramIdByChannel[row.channel.id]
+            let stillVisible = currentId.flatMap { id in
+                visibleInNewWindow.first(where: { $0.id == id })
             }
-            if let nextVisible {
-                selectedProgramIdByChannel[row.channel.id] = nextVisible.id
+            if stillVisible == nil {
+                selectedProgramIdByChannel[row.channel.id] = visibleInNewWindow.first?.id
             }
         }
 
@@ -1905,8 +1926,15 @@ private struct TVOSLiveBrowserView: View {
                 guideFocusTarget = .channels
             }
         case .right:
-            guideFocusTarget = .programs
-            moveProgramSelection(by: 1)
+            // First Right out of the channel column should land on whatever program
+            // is already selected for this row (i.e. the now-airing program), not
+            // skip past it — that was forcing users to press Right→Left to back
+            // up before Enter would open the right card.
+            if guideFocusTarget == .channels {
+                guideFocusTarget = .programs
+            } else {
+                moveProgramSelection(by: 1)
+            }
         default:
             break
         }
@@ -1915,11 +1943,15 @@ private struct TVOSLiveBrowserView: View {
     private func handlePrimarySelect() {
         ensureSelectionState()
 
+        // Enter on a channel row: lock the preview to that channel. Scrolling
+        // through other channels won't replace the preview until the user
+        // explicitly hits Enter on a different channel.
         if guideFocusTarget == .channels, let channel = selectedRow?.channel {
             previewChannelId = channel.id
             return
         }
 
+        // Enter inside the program grid: open the detail card.
         if let channel = selectedRow?.channel, let program = selectedProgram {
             selectedProgramIdByChannel[channel.id] = program.id
             presentProgram(program, channel: channel)
@@ -1956,14 +1988,35 @@ private struct TVOSLiveBrowserView: View {
         let proposedIndex = currentIndex + offset
 
         if proposedIndex < 0 {
-            selectedProgramIdByChannel[row.channel.id] = programs[0].id
-            guideFocusTarget = .channels
+            // Page backward in time and land on the LAST program of the new window
+            // (adjacent to where the user was) so they can keep scrolling left.
+            if canPageBackward {
+                shiftGuideWindow(by: -guidePageStepMinutes)
+                if let row = selectedRow {
+                    let pagedPrograms = row.programs
+                        .filter { $0.endTime > $0.startTime && $0.endTime > roundedWindowStart && $0.startTime < windowEnd }
+                        .sorted { $0.startTime < $1.startTime }
+                    if let last = pagedPrograms.last {
+                        selectedProgramIdByChannel[row.channel.id] = last.id
+                    }
+                }
+            } else {
+                selectedProgramIdByChannel[row.channel.id] = programs[0].id
+            }
             return
         }
 
         if proposedIndex >= programs.count {
             if canPageForward {
                 shiftGuideWindow(by: guidePageStepMinutes)
+                if let row = selectedRow {
+                    let pagedPrograms = row.programs
+                        .filter { $0.endTime > $0.startTime && $0.endTime > roundedWindowStart && $0.startTime < windowEnd }
+                        .sorted { $0.startTime < $1.startTime }
+                    if let first = pagedPrograms.first {
+                        selectedProgramIdByChannel[row.channel.id] = first.id
+                    }
+                }
             } else {
                 selectedProgramIdByChannel[row.channel.id] = programs[programs.count - 1].id
             }
@@ -1974,11 +2027,13 @@ private struct TVOSLiveBrowserView: View {
     }
 
     private func presentProgram(_ program: Program, channel: Channel) {
+        actionStateLoadTask?.cancel()
         presentedProgram = program
         presentedProgramChannel = channel
         presentedProgramActionState = .fallback(routeLabel: recordingRouteLabel(for: channel, program: program))
-        Task {
+        actionStateLoadTask = Task {
             let actionState = await dvrViewModel.programActionState(channel: channel, program: program)
+            if Task.isCancelled { return }
             await MainActor.run {
                 guard presentedProgram?.id == program.id, presentedProgramChannel?.id == channel.id else { return }
                 presentedProgramActionState = actionState
