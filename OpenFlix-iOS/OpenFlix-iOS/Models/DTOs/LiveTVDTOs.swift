@@ -1,5 +1,33 @@
 import Foundation
 
+private enum LiveTVDateParsers {
+    static let iso8601Fractional: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter
+    }()
+
+    static let iso8601: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime]
+        return formatter
+    }()
+
+    static func parse(_ value: String?) -> Date? {
+        guard let value, !value.isEmpty else { return nil }
+        return iso8601Fractional.date(from: value) ?? iso8601.date(from: value)
+    }
+
+    static func parseDateOnly(_ value: String?) -> Date? {
+        guard let value, !value.isEmpty else { return nil }
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter.date(from: value)
+    }
+}
+
 // MARK: - Channels
 
 struct ChannelsResponse: Codable {
@@ -23,7 +51,18 @@ struct ChannelDTO: Codable {
     let art: String?
     let sourceId: StringOrInt?
     let sourceName: String?
+    let sourceType: String?
+    let providerId: String?
+    let providerName: String?
+    let accountId: StringOrInt?
+    let accountName: String?
+    let accountIndex: Int?
     let streamUrl: String?
+    let playUrl: String?
+    let hlsUrl: String?
+    let browserHlsUrl: String?
+    let playable: Bool?
+    let drm: Bool?
     let enabled: Bool?
     let hd: Bool?
     let isFavorite: Bool?
@@ -38,7 +77,9 @@ struct ChannelDTO: Codable {
         case idValue = "id"
         case channelId, tvgId
         case number, name, title, callsign, logo, thumb, art
-        case sourceId, sourceName, streamUrl, enabled, hd, isFavorite
+        case sourceId, sourceName, sourceType, providerId, providerName
+        case accountId, accountName, accountIndex
+        case streamUrl, playUrl, hlsUrl, browserHlsUrl, playable, drm, enabled, hd, isFavorite
         case group, category, archiveEnabled, archiveDays
         case nowPlaying, nextProgram
     }
@@ -60,6 +101,26 @@ struct ChannelDTO: Codable {
     var epgId: String { channelIdOrNil ?? tvgIdOrNil ?? idValue?.stringValue ?? "" }
 }
 
+// MARK: - Program Deduplication Key
+
+struct ProgramDedupeKey: Hashable {
+    let id: String
+    let start: String
+    let end: String
+    let startTime: Int
+    let endTime: Int
+    let title: String
+
+    init(_ program: ProgramDTO) {
+        self.id = program.safeId
+        self.start = program.start ?? ""
+        self.end = program.end ?? ""
+        self.startTime = program.startTime ?? 0
+        self.endTime = program.endTime ?? 0
+        self.title = program.safeTitle
+    }
+}
+
 // MARK: - Programs
 
 struct ProgramDTO: Codable {
@@ -75,24 +136,49 @@ struct ProgramDTO: Codable {
     let icon: String?
     let art: String?
     let rating: String?
+    let parentalRating: String?
     let category: String?
     let isNew: Bool?
     let isLive: Bool?
     let isPremiere: Bool?
     let isFinale: Bool?
+    let isRepeat: Bool?
+    let repeatFlag: Bool?
     let isSports: Bool?
+    let isMovie: Bool?
+    let isNews: Bool?
     let isKids: Bool?
+    let hasCC: Bool?
+    let genres: [String]?
+    let seasonNumber: Int?
+    let episodeNumber: Int?
     let teams: String?
     let league: String?
+    let originalAirDate: String?
+    let releaseYear: Int?
+    let network: String?
+    let callSign: String?
+    let resourceId: StringOrInt?
+    let canonicalId: StringOrInt?
+    let seriesId: StringOrInt?
+    let providerChannelId: String?
+    let slingChannelId: String?
+    let slingItemId: String?
+    let slingFranchiseId: String?
     let hasRecording: Bool?
     let recordingId: StringOrInt?
 
     enum CodingKeys: String, CodingKey {
         case idValue = "id"
         case title, subtitle, description, start, end
-        case startTime, endTime, duration, icon, art, rating, category
-        case isNew, isLive, isPremiere, isFinale, isSports, isKids
-        case teams, league, hasRecording, recordingId
+        case startTime, endTime, duration, icon, art, rating, parentalRating, category
+        case isNew, isLive, isPremiere, isFinale, isRepeat, isSports, isMovie, isNews, isKids
+        case repeatFlag = "repeat"
+        case hasCC, genres, seasonNumber, episodeNumber
+        case originalAirDate, releaseYear, network, callSign
+        case teams, league, resourceId, canonicalId, seriesId
+        case providerChannelId, slingChannelId, slingItemId, slingFranchiseId
+        case hasRecording, recordingId
     }
 
     var safeId: String { idValue?.stringValue ?? "" }
@@ -100,7 +186,7 @@ struct ProgramDTO: Codable {
 
     var startDate: Date? {
         if let start = start {
-            return ISO8601DateFormatter().date(from: start)
+            return LiveTVDateParsers.parse(start)
         }
         if let startTime = startTime {
             return Date(timeIntervalSince1970: TimeInterval(startTime))
@@ -110,12 +196,20 @@ struct ProgramDTO: Codable {
 
     var endDate: Date? {
         if let end = end {
-            return ISO8601DateFormatter().date(from: end)
+            return LiveTVDateParsers.parse(end)
         }
         if let endTime = endTime {
             return Date(timeIntervalSince1970: TimeInterval(endTime))
         }
         return nil
+    }
+
+    var resolvedIsRepeat: Bool {
+        if let isRepeat { return isRepeat }
+        if let repeatFlag { return repeatFlag }
+        guard let originalAirDate = LiveTVDateParsers.parseDateOnly(originalAirDate),
+              let startDate else { return false }
+        return !Calendar.current.isDate(originalAirDate, inSameDayAs: startDate)
     }
 }
 
@@ -143,39 +237,40 @@ struct GuideResponse: Decodable {
         start = try? container.decode(String.self, forKey: .start)
         end = try? container.decode(String.self, forKey: .end)
 
-        var programsValue = try? container.decode([String: [ProgramDTO]].self, forKey: .programs)
-        if programsValue == nil || programsValue?.isEmpty == true {
-            programsValue = (try? container.decode([String: [ProgramDTO]].self, forKey: .programsByChannel)) ?? programsValue
+        var mergedPrograms: [String: [ProgramDTO]] = [:]
+
+        if let directPrograms = try? container.decode([String: [ProgramDTO]].self, forKey: .programs) {
+            Self.mergeProgramsMap(into: &mergedPrograms, from: directPrograms)
         }
-        if programsValue == nil || programsValue?.isEmpty == true {
-            programsValue = (try? container.decode([String: [ProgramDTO]].self, forKey: .programsByChannelSnake)) ?? programsValue
+        if let directPrograms = try? container.decode([String: [ProgramDTO]].self, forKey: .programsByChannel) {
+            Self.mergeProgramsMap(into: &mergedPrograms, from: directPrograms)
         }
-        if programsValue == nil || programsValue?.isEmpty == true {
-            programsValue = (try? container.decode([String: [ProgramDTO]].self, forKey: .programsMap)) ?? programsValue
+        if let directPrograms = try? container.decode([String: [ProgramDTO]].self, forKey: .programsByChannelSnake) {
+            Self.mergeProgramsMap(into: &mergedPrograms, from: directPrograms)
+        }
+        if let directPrograms = try? container.decode([String: [ProgramDTO]].self, forKey: .programsMap) {
+            Self.mergeProgramsMap(into: &mergedPrograms, from: directPrograms)
         }
 
-        if programsValue == nil || programsValue?.isEmpty == true,
-           let channelsWithPrograms = try? container.decode([ChannelWithProgramsDTO].self, forKey: .channels) {
-            var map: [String: [ProgramDTO]] = [:]
-            for channel in channelsWithPrograms {
-                let key: String
+        if let channelsWithPrograms = try? container.decode([ChannelWithProgramsDTO].self, forKey: .channels) {
+            for channel in channelsWithPrograms where !channel.allPrograms.isEmpty {
                 if !channel.safeId.isEmpty {
-                    key = channel.safeId
-                } else if let number = channel.number {
-                    key = String(number)
-                } else {
-                    continue
+                    mergedPrograms[channel.safeId] = Self.mergeProgramLists(
+                        mergedPrograms[channel.safeId] ?? [],
+                        channel.allPrograms
+                    )
                 }
-                if !channel.allPrograms.isEmpty {
-                    map[key] = channel.allPrograms
+                if let number = channel.number {
+                    let numberKey = String(number)
+                    mergedPrograms[numberKey] = Self.mergeProgramLists(
+                        mergedPrograms[numberKey] ?? [],
+                        channel.allPrograms
+                    )
                 }
-            }
-            if !map.isEmpty {
-                programsValue = map
             }
         }
 
-        programs = programsValue
+        programs = mergedPrograms.isEmpty ? nil : mergedPrograms
     }
 
     var allChannels: [ChannelDTO] {
@@ -185,6 +280,31 @@ struct GuideResponse: Decodable {
     /// Get programs for a specific channel
     func programsForChannel(id: String) -> [ProgramDTO] {
         programs?[id] ?? []
+    }
+
+    private static func mergeProgramsMap(into base: inout [String: [ProgramDTO]], from newMap: [String: [ProgramDTO]]) {
+        for (key, values) in newMap {
+            base[key] = mergeProgramLists(base[key] ?? [], values)
+        }
+    }
+
+    private static func mergeProgramLists(_ lhs: [ProgramDTO], _ rhs: [ProgramDTO]) -> [ProgramDTO] {
+        var result: [ProgramDTO] = []
+        var seen = Set<ProgramDedupeKey>()
+
+        for program in (lhs + rhs) {
+            let key = ProgramDedupeKey(program)
+            guard !seen.contains(key) else { continue }
+            seen.insert(key)
+            result.append(program)
+        }
+
+        return result.sorted {
+            let lhsDate = $0.startDate ?? Date.distantPast
+            let rhsDate = $1.startDate ?? Date.distantPast
+            if lhsDate != rhsDate { return lhsDate < rhsDate }
+            return $0.safeTitle < $1.safeTitle
+        }
     }
 }
 
@@ -296,6 +416,12 @@ struct EPGSourceDTO: Codable {
     var resolvedType: String {
         providerType ?? type ?? "xmltv"
     }
+}
+
+// MARK: - Live TV On Now
+
+struct LiveTVOnNowResponse: Decodable {
+    let channels: [ChannelDTO]?
 }
 
 // MARK: - TVGuide Provider Discovery
