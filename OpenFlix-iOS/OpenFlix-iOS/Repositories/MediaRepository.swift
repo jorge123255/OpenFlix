@@ -86,6 +86,46 @@ class MediaRepository: ObservableObject {
         return response.MediaContainer?.Hub?.map { $0.toDomain() } ?? []
     }
 
+    // MARK: - Home rails (On Later / Live Now)
+
+    func getOnLaterTonight() async throws -> [OnLaterProgram] {
+        let response = try await api.getOnLaterTonight()
+        return response.allItems.map { $0.toDomain() }
+    }
+
+    func getOnLaterSports() async throws -> [OnLaterProgram] {
+        let response = try await api.getOnLaterSports()
+        return response.allItems.map { $0.toDomain() }
+    }
+
+    func getOnLaterTVShows() async throws -> [OnLaterProgram] {
+        let response = try await api.getOnLater(endpoint: "/api/onlater/tvshows")
+        return response.allItems.map { $0.toDomain() }
+    }
+
+    func getOnLaterMovies() async throws -> [OnLaterProgram] {
+        let response = try await api.getOnLaterMovies()
+        return response.allItems.map { $0.toDomain() }
+    }
+
+    func getOnLaterKids() async throws -> [OnLaterProgram] {
+        let response = try await api.getOnLaterKids()
+        return response.allItems.map { $0.toDomain() }
+    }
+
+    func getOnLaterNews() async throws -> [OnLaterProgram] {
+        let response = try await api.getOnLaterNews()
+        return response.allItems.map { $0.toDomain() }
+    }
+
+    func getLiveTVOnNow() async throws -> [(channel: Channel, program: Program?)] {
+        let response = try await api.getLiveTVOnNow()
+        return (response.channels ?? []).map { dto in
+            let channel = dto.toDomain()
+            return (channel: channel, program: channel.nowPlaying)
+        }
+    }
+
     func getStreamingServices(sectionId: Int? = nil) async throws -> [StreamingServiceDTO] {
         let response = try await api.getStreamingServices(sectionId: sectionId.map { String($0) })
         return response.MediaContainer?.Directory ?? []
