@@ -210,6 +210,24 @@ struct XfinityHomeView: View {
             LazyVStack(alignment: .leading, spacing: 0) {
                 tvCompactHeroSection
 
+                if allTVRailsEmpty {
+                    VStack(spacing: 18) {
+                        Image(systemName: "tray")
+                            .font(.system(size: 48, weight: .light))
+                            .foregroundStyle(.white.opacity(0.38))
+                        Text("Nothing to show yet")
+                            .font(.system(size: 26, weight: .semibold, design: .rounded))
+                            .foregroundStyle(.white.opacity(0.7))
+                        Text("Your server returned no content. Pull down to refresh or check your server.")
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundStyle(.white.opacity(0.46))
+                            .multilineTextAlignment(.center)
+                            .frame(maxWidth: 520)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.vertical, 80)
+                }
+
                 VStack(alignment: .leading, spacing: 36) {
                     // 1. Continue Watching
                     if !tvContinueWatchingItems.isEmpty {
@@ -644,47 +662,101 @@ struct XfinityHomeView: View {
             if aHas != bHas { return aHas }
             return (a.number ?? Int.max) < (b.number ?? Int.max)
         }
-        return Array(sorted.prefix(12))
+        return Array(sorted.prefix(20))
     }
 
     /// Channels filtered by the selected category chip
+    /// When a filter is active, searches ALL channels (not just the capped 20)
     private var tvFilteredLiveChannels: [Channel] {
         guard let filter = liveFilterCategory else { return tvLiveNowChannels }
-        return tvLiveNowChannels.filter { channel in
-            guard let program = channel.nowPlaying else { return false }
-            let title = program.title.lowercased()
-            let cat = program.category?.lowercased() ?? ""
-            switch filter {
-            case "Sports":
-                return program.isSports
-                    || cat.contains("sport")
-                    || title.contains("football") || title.contains("basketball")
-                    || title.contains("baseball") || title.contains("hockey")
-                    || title.contains("soccer") || title.contains("tennis")
-                    || title.contains("golf") || title.contains("nfl") || title.contains("nba")
-                    || title.contains("mlb") || title.contains("nhl") || title.contains("mls")
-            case "News":
-                return program.isNews
-                    || cat.contains("news")
-                    || title.contains("news") || title.contains("tonight")
-                    || title.contains("evening") || title.contains("report")
-                    || title.contains("daily") || title.contains("update")
-            case "Movies":
-                return program.isMovie
-                    || cat.contains("movie") || cat.contains("film")
-                    || title.contains("movie") || title.contains("film")
-            case "Entertainment":
-                return cat.contains("entertain") || cat.contains("comedy") || cat.contains("series")
-                    || title.contains("show") || title.contains("comedy")
-                    || title.contains("episode") || title.contains("season")
-            case "Kids":
-                return program.isKids
-                    || cat.contains("kid") || cat.contains("child") || cat.contains("cartoon")
-                    || title.contains("cartoon") || title.contains("kids") || title.contains("disney")
-                    || title.contains("nick") || title.contains("pbs kids")
-            default: return true
+        // Search the full channel list when filtering by category
+        let pool = liveTVViewModel.channels.sorted { a, b in
+            (a.number ?? Int.max) < (b.number ?? Int.max)
+        }
+        let filtered = pool.filter { channel in
+            let chName = channel.name.lowercased()
+            if let program = channel.nowPlaying {
+                let title = program.title.lowercased()
+                let cat = program.category?.lowercased() ?? ""
+                switch filter {
+                case "Sports":
+                    return program.isSports
+                        || cat.contains("sport")
+                        || title.contains("football") || title.contains("basketball")
+                        || title.contains("baseball") || title.contains("hockey")
+                        || title.contains("soccer") || title.contains("tennis")
+                        || title.contains("golf") || title.contains("nfl") || title.contains("nba")
+                        || title.contains("mlb") || title.contains("nhl") || title.contains("mls")
+                        || chName.contains("espn") || chName.contains("sport")
+                        || chName.contains("nfl") || chName.contains("nba") || chName.contains("mlb")
+                        || chName.contains("fs1") || chName.contains("nhl")
+                case "News":
+                    return program.isNews
+                        || cat.contains("news")
+                        || title.contains("news") || title.contains("tonight")
+                        || title.contains("evening") || title.contains("report")
+                        || title.contains("daily") || title.contains("update")
+                        || chName.contains("news") || chName.contains("cnn")
+                        || chName.contains("msnbc") || chName.contains("cnbc")
+                        || chName.contains("bbc") || chName.contains("cheddar")
+                case "Movies":
+                    return program.isMovie
+                        || cat.contains("movie") || cat.contains("film")
+                        || title.contains("movie") || title.contains("film")
+                        || chName.contains("movie") || chName.contains("cinema")
+                        || chName.contains("hbo") || chName.contains("showtime")
+                        || chName.contains("starz") || chName.contains("cinemax")
+                case "Entertainment":
+                    return cat.contains("entertain") || cat.contains("comedy") || cat.contains("series")
+                        || title.contains("show") || title.contains("comedy")
+                        || title.contains("episode") || title.contains("season")
+                        || chName.contains("amc") || chName.contains("bravo")
+                        || chName.contains("fx") || chName.contains("tbs")
+                        || chName.contains("tnt") || chName.contains("usa")
+                        || chName.contains("comedy") || chName.contains("e!")
+                case "Kids":
+                    return program.isKids
+                        || cat.contains("kid") || cat.contains("child") || cat.contains("cartoon")
+                        || title.contains("cartoon") || title.contains("kids") || title.contains("disney")
+                        || title.contains("nick") || title.contains("pbs kids")
+                        || chName.contains("disney") || chName.contains("nick")
+                        || chName.contains("cartoon") || chName.contains("pbs kids")
+                        || chName.contains("baby") || chName.contains("junior")
+                default: return true
+                }
+            } else {
+                // No now-playing data — filter by channel name only
+                switch filter {
+                case "Sports":
+                    return chName.contains("espn") || chName.contains("sport")
+                        || chName.contains("nfl") || chName.contains("nba") || chName.contains("mlb")
+                        || chName.contains("fs1") || chName.contains("nhl") || chName.contains("mls")
+                        || chName.contains("golf") || chName.contains("tennis")
+                case "News":
+                    return chName.contains("news") || chName.contains("cnn")
+                        || chName.contains("msnbc") || chName.contains("cnbc")
+                        || chName.contains("bbc") || chName.contains("cheddar")
+                        || chName.contains("nhk")
+                case "Movies":
+                    return chName.contains("movie") || chName.contains("cinema")
+                        || chName.contains("hbo") || chName.contains("showtime")
+                        || chName.contains("starz") || chName.contains("cinemax")
+                        || chName.contains("film")
+                case "Entertainment":
+                    return chName.contains("amc") || chName.contains("bravo")
+                        || chName.contains("fx") || chName.contains("tbs")
+                        || chName.contains("tnt") || chName.contains("usa")
+                        || chName.contains("comedy") || chName.contains("e!")
+                        || chName.contains("a&e") || chName.contains("lifetime")
+                case "Kids":
+                    return chName.contains("disney") || chName.contains("nick")
+                        || chName.contains("cartoon") || chName.contains("pbs kids")
+                        || chName.contains("baby") || chName.contains("junior")
+                default: return true
+                }
             }
         }
+        return Array(filtered.prefix(20))
     }
 
     /// Category filter chips for the On Now rail
@@ -879,6 +951,18 @@ struct XfinityHomeView: View {
             + viewModel.hubs.flatMap(\.items).filter { $0.type == .show || $0.type == .episode },
             limit: 12
         )
+    }
+
+    private var allTVRailsEmpty: Bool {
+        tvContinueWatchingItems.isEmpty
+            && tvLiveNowChannels.isEmpty
+            && tvRecentlyRecorded.isEmpty
+            && tvRecentlyAddedItems.isEmpty
+            && tvTopPicksItems.isEmpty
+            && tvRecommendedItems.isEmpty
+            && tvMovieItems.isEmpty
+            && tvShowItems.isEmpty
+            && tvCuratedHubs.isEmpty
     }
 
     private func curatedDiscoveryItems(_ items: [MediaItem], limit: Int) -> [MediaItem] {
@@ -2153,20 +2237,43 @@ private struct TVLiveNowCard: View {
     private var progress: Double { nowPlaying?.progress ?? 0 }
 
     private var catColor: Color {
-        // Use the app's purple accent palette — variations of the brand color
+        let teal = Color(red: 56/255, green: 189/255, blue: 148/255)
+        let violet = Color(red: 168/255, green: 85/255, blue: 247/255)
+        let blue = Color(red: 96/255, green: 165/255, blue: 250/255)
+        let amber = Color(red: 251/255, green: 191/255, blue: 36/255)
+        let brandPurple = Color(red: 97/255, green: 56/255, blue: 245/255)
+
+        // Check program data first
         if let program = nowPlaying {
-            if program.isSports { return Color(red: 56/255, green: 189/255, blue: 148/255) }    // teal
-            if program.isMovie { return Color(red: 168/255, green: 85/255, blue: 247/255) }      // violet
-            if program.isNews { return Color(red: 96/255, green: 165/255, blue: 250/255) }         // blue
-            if program.isKids { return Color(red: 251/255, green: 191/255, blue: 36/255) }         // amber
+            if program.isSports { return teal }
+            if program.isMovie { return violet }
+            if program.isNews { return blue }
+            if program.isKids { return amber }
             if let cat = program.category?.lowercased() {
-                if cat.contains("sport") { return Color(red: 56/255, green: 189/255, blue: 148/255) }
-                if cat.contains("movie") || cat.contains("film") { return Color(red: 168/255, green: 85/255, blue: 247/255) }
-                if cat.contains("news") { return Color(red: 96/255, green: 165/255, blue: 250/255) }
-                if cat.contains("kid") || cat.contains("child") { return Color(red: 251/255, green: 191/255, blue: 36/255) }
+                if cat.contains("sport") { return teal }
+                if cat.contains("movie") || cat.contains("film") { return violet }
+                if cat.contains("news") { return blue }
+                if cat.contains("kid") || cat.contains("child") { return amber }
             }
         }
-        return Color(red: 97/255, green: 56/255, blue: 245/255) // default: brand purple
+
+        // Fallback: infer category from channel name
+        let name = channel.name.lowercased()
+        if name.contains("espn") || name.contains("sport") || name.contains("nfl")
+            || name.contains("nba") || name.contains("mlb") || name.contains("nhl")
+            || name.contains("fs1") || name.contains("golf") || name.contains("tennis")
+            || name.contains("mls") || name.contains("redzone") { return teal }
+        if name.contains("movie") || name.contains("cinema") || name.contains("hbo")
+            || name.contains("showtime") || name.contains("starz") || name.contains("cinemax")
+            || name.contains("film") || name.contains("flix") { return violet }
+        if name.contains("news") || name.contains("cnn") || name.contains("msnbc")
+            || name.contains("cnbc") || name.contains("bbc") || name.contains("cheddar")
+            || name.contains("nhk") || name.contains("newsy") { return blue }
+        if name.contains("disney") || name.contains("nick") || name.contains("cartoon")
+            || name.contains("pbs kids") || name.contains("baby") || name.contains("junior")
+            || name.contains("sprout") { return amber }
+
+        return brandPurple
     }
 
     var body: some View {
