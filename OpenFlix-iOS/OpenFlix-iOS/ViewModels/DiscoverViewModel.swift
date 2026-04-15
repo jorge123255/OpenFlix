@@ -14,6 +14,9 @@ class DiscoverViewModel: ObservableObject {
     @Published var hubs: [Hub] = []
     @Published var streamingServices: [StreamingService] = []
     @Published var recommended: [MediaItem] = []
+    /// Server-authoritative "On Now" from /livetv/on-now. Replaces the
+    /// previous client-side filtering of LiveTVViewModel.channels.
+    @Published var liveNow: [(channel: Channel, program: Program?)] = []
     @Published var isLoading = false
     @Published var isRefreshing = false
     @Published var error: String?
@@ -131,6 +134,15 @@ class DiscoverViewModel: ObservableObject {
                 // Fall back to first hub
                 featured = Array(firstHub.items.prefix(5))
             }
+        }
+
+        // Load On Now (live-now) in parallel with everything else. Silent failure —
+        // the rail falls back to locally-derived data in the view if this is empty.
+        do {
+            liveNow = try await mediaRepository.getLiveTVOnNow()
+            print("Loaded \(liveNow.count) live-now channels")
+        } catch {
+            print("Failed to load live-now: \(error)")
         }
 
         // Only show error if nothing loaded
