@@ -276,6 +276,97 @@ actor OpenFlixAPI {
         try await request(.getChannelGuide(channelId: channelId, start: start, end: end))
     }
     func getNowPlaying() async throws -> NowPlayingResponse { try await request(.getNowPlaying) }
+    func getActiveTunerBackend() async throws -> TunerBackend { try await request(.getActiveTunerBackend) }
+    func getDirectvLibrary(accountId: String) async throws -> DirectvLibraryResponse {
+        try await request(.getDirectvLibrary(accountId: accountId))
+    }
+    func createDirectvRecording(accountId: String, request payload: DirectvRecordRequest) async throws -> DirectvBookingResponse {
+        try await request(.createDirectvRecording(accountId: accountId, request: payload))
+    }
+    func createDirectvSeriesRecording(accountId: String, request payload: DirectvRecordRequest) async throws -> DirectvBookingResponse {
+        try await request(.createDirectvSeriesRecording(accountId: accountId, request: payload))
+    }
+    func getDirectvRecordStatus(accountId: String, query: DirectvRecordStatusQuery) async throws -> DirectvRecordStatus {
+        try await request(.getDirectvRecordStatus(accountId: accountId, query: query))
+    }
+    func startDirectvDownload(accountId: String, recordId: String) async throws -> DirectvDownloadStartResponse {
+        try await request(.startDirectvDownload(accountId: accountId, recordId: recordId))
+    }
+    func getDirectvDownloads() async throws -> [ExternalDownloadJob] {
+        try await request(.getDirectvDownloads)
+    }
+    func getDirectvDownloadJob(jobId: String) async throws -> ExternalDownloadJob {
+        try await request(.getDirectvDownloadJob(jobId: jobId))
+    }
+    func directvDownloadFileURL(jobId: String) -> URL? {
+        buildURL(for: .getDirectvDownloadFile(jobId: jobId))
+    }
+    func getDirectvSeriesRules(accountId: String) async throws -> [DirectvSeriesRule] {
+        try await request(.getDirectvSeriesRules(accountId: accountId))
+    }
+    func updateDirectvSeriesRule(accountId: String, ruleId: String, enabled: Bool) async throws {
+        try await requestVoid(.updateDirectvSeriesRule(accountId: accountId, ruleId: ruleId, enabled: enabled))
+    }
+    func deleteDirectvSeriesRule(accountId: String, ruleId: String) async throws {
+        try await requestVoid(.deleteDirectvSeriesRule(accountId: accountId, ruleId: ruleId))
+    }
+    func cancelDirectvRecording(accountId: String, recordId: String) async throws {
+        try await requestVoid(.cancelDirectvRecording(accountId: accountId, recordId: recordId))
+    }
+    func deleteDirectvRecording(accountId: String, recordId: String) async throws {
+        try await requestVoid(.deleteDirectvRecording(accountId: accountId, recordId: recordId))
+    }
+    func getSlingLibrary(accountId: String) async throws -> SlingLibraryResponse {
+        try await request(.getSlingLibrary(accountId: accountId))
+    }
+    func getSlingRecordings(accountId: String) async throws -> SlingRecordingListResponse {
+        try await request(.getSlingRecordings(accountId: accountId))
+    }
+    func createSlingRecording(accountId: String, request payload: SlingRecordRequest) async throws -> SlingBookingResponse {
+        try await request(.createSlingRecording(accountId: accountId, request: payload))
+    }
+    func deleteSlingRecording(accountId: String, recordId: String) async throws {
+        try await requestVoid(.deleteSlingRecording(accountId: accountId, recordId: recordId))
+    }
+    func getSlingSeriesRules(accountId: String) async throws -> SlingSeriesRuleListResponse {
+        try await request(.getSlingSeriesRules(accountId: accountId))
+    }
+    func createSlingSeriesRule(accountId: String, request payload: SlingSeriesRuleRequest) async throws -> SlingBookingResponse {
+        try await request(.createSlingSeriesRule(accountId: accountId, request: payload))
+    }
+    func getFrndlyLibrary() async throws -> FrndlyLibraryResponse {
+        try await request(.getFrndlyLibrary)
+    }
+    func getFrndlyRecordings() async throws -> FrndlyRecordingListResponse {
+        try await request(.getFrndlyRecordings)
+    }
+    func createFrndlyRecording(request payload: FrndlyPathRequest) async throws -> FrndlyBookingResponse {
+        try await request(.createFrndlyRecording(request: payload))
+    }
+    func deleteFrndlyRecording(recordId: String) async throws {
+        try await requestVoid(.deleteFrndlyRecording(recordId: recordId))
+    }
+    func startFrndlyDownload(recordId: String) async throws -> FrndlyDownloadResponse {
+        try await request(.startFrndlyDownload(recordId: recordId))
+    }
+    func getFrndlyDownloadJob(jobId: String) async throws -> FrndlyDownloadJob {
+        try await request(.getFrndlyDownloadJob(jobId: jobId))
+    }
+    func frndlyDownloadFileURL(jobId: String) -> URL? {
+        buildURL(for: .getFrndlyDownloadFile(jobId: jobId))
+    }
+    func getFrndlySeriesRules() async throws -> FrndlySeriesRuleListResponse {
+        try await request(.getFrndlySeriesRules)
+    }
+    func createFrndlySeriesRule(request payload: FrndlyPathRequest) async throws -> FrndlyBookingResponse {
+        try await request(.createFrndlySeriesRule(request: payload))
+    }
+    func getFrndlyUpcomingRecordings() async throws -> [ProviderRecordingItem] {
+        try await request(.getFrndlyUpcomingRecordings)
+    }
+    func getFrndlyRecordingPlaybackAuth(recordId: String) async throws -> FrndlyPlaybackAuthResponse {
+        try await request(.getFrndlyRecordingPlaybackAuth(recordId: recordId))
+    }
 
     // MARK: - Sources
     func getM3USources() async throws -> M3USourcesResponse { try await request(.getM3USources) }
@@ -379,7 +470,12 @@ actor OpenFlixAPI {
     func createSeriesRule(title: String, channelId: String? = nil, prePadding: Int? = nil, postPadding: Int? = nil, keepCount: Int? = nil) async throws -> SeriesRuleDTO {
         try await request(.createSeriesRule(title: title, channelId: channelId, prePadding: prePadding, postPadding: postPadding, keepCount: keepCount))
     }
+    func updateSeriesRule(id: String, enabled: Bool? = nil, prePadding: Int? = nil, postPadding: Int? = nil, keepCount: Int? = nil) async throws {
+        try await requestVoid(.updateSeriesRule(id: id, enabled: enabled, prePadding: prePadding, postPadding: postPadding, keepCount: keepCount))
+    }
     func deleteSeriesRule(id: String) async throws { try await requestVoid(.deleteSeriesRule(id: id)) }
+    func pauseDVRPass(id: String) async throws { try await requestVoid(.pauseDVRPass(id: id)) }
+    func resumeDVRPass(id: String) async throws { try await requestVoid(.resumeDVRPass(id: id)) }
 
     // MARK: - DVR Conflicts
     func getConflicts() async throws -> ConflictsResponse { try await request(.getConflicts) }
@@ -585,6 +681,9 @@ actor OpenFlixAPI {
     }
     func instantSwitchCached() async throws -> InstantSwitchCachedResponse { try await request(.instantSwitchCached) }
     func instantSwitchStreamURL(channelId: String) -> URL? { buildURL(for: .instantSwitchStream(channelId: channelId)) }
+
+    // MARK: - Live Now
+    func getLiveTVOnNow() async throws -> LiveTVOnNowResponse { try await request(.getLiveTVOnNow) }
 
     // MARK: - Stream URL Builders
     func mediaFileStreamURL(partId: String) -> URL? { buildURL(for: .streamMediaFile(partId: partId)) }

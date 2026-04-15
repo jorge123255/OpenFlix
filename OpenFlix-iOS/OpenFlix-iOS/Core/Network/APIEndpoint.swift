@@ -181,6 +181,38 @@ enum APIEndpoint {
     case getGuide(start: String?, end: String?)
     case getChannelGuide(channelId: String, start: String?, end: String?)
     case getNowPlaying
+    case getLiveTVOnNow
+    case getActiveTunerBackend
+    case getDirectvLibrary(accountId: String)
+    case createDirectvRecording(accountId: String, request: DirectvRecordRequest)
+    case createDirectvSeriesRecording(accountId: String, request: DirectvRecordRequest)
+    case getDirectvRecordStatus(accountId: String, query: DirectvRecordStatusQuery)
+    case startDirectvDownload(accountId: String, recordId: String)
+    case getDirectvDownloads
+    case getDirectvDownloadJob(jobId: String)
+    case getDirectvDownloadFile(jobId: String)
+    case getDirectvSeriesRules(accountId: String)
+    case updateDirectvSeriesRule(accountId: String, ruleId: String, enabled: Bool?)
+    case deleteDirectvSeriesRule(accountId: String, ruleId: String)
+    case cancelDirectvRecording(accountId: String, recordId: String)
+    case deleteDirectvRecording(accountId: String, recordId: String)
+    case getSlingLibrary(accountId: String)
+    case getSlingRecordings(accountId: String)
+    case createSlingRecording(accountId: String, request: SlingRecordRequest)
+    case deleteSlingRecording(accountId: String, recordId: String)
+    case getSlingSeriesRules(accountId: String)
+    case createSlingSeriesRule(accountId: String, request: SlingSeriesRuleRequest)
+    case getFrndlyLibrary
+    case getFrndlyRecordings
+    case createFrndlyRecording(request: FrndlyPathRequest)
+    case deleteFrndlyRecording(recordId: String)
+    case startFrndlyDownload(recordId: String)
+    case getFrndlyDownloadJob(jobId: String)
+    case getFrndlyDownloadFile(jobId: String)
+    case getFrndlySeriesRules
+    case createFrndlySeriesRule(request: FrndlyPathRequest)
+    case getFrndlyUpcomingRecordings
+    case getFrndlyRecordingPlaybackAuth(recordId: String)
 
     // MARK: - M3U Sources
     case getM3USources
@@ -825,6 +857,68 @@ enum APIEndpoint {
         case .getGuide: return "/livetv/guide"
         case .getChannelGuide(let id, _, _): return "/livetv/guide/\(id)"
         case .getNowPlaying: return "/livetv/now"
+        case .getLiveTVOnNow: return "/livetv/on-now"
+        case .getActiveTunerBackend: return "/api/tuner-backends/active"
+        case .getDirectvLibrary(let accountId):
+            return "/api/tuner-backends/active/directv/accounts/\(accountId)/library"
+        case .createDirectvRecording(let accountId, _):
+            return "/api/tuner-backends/active/directv/accounts/\(accountId)/record"
+        case .createDirectvSeriesRecording(let accountId, _):
+            return "/api/tuner-backends/active/directv/accounts/\(accountId)/record-series"
+        case .getDirectvRecordStatus(let accountId, _):
+            return "/api/tuner-backends/active/directv/accounts/\(accountId)/record-status"
+        case .startDirectvDownload(let accountId, let recordId):
+            return "/api/tuner-backends/active/directv/accounts/\(accountId)/recordings/\(recordId)/download"
+        case .getDirectvDownloads:
+            return "/api/tuner-backends/active/directv/downloads"
+        case .getDirectvDownloadJob(let jobId):
+            return "/api/tuner-backends/active/directv/downloads/\(jobId)"
+        case .getDirectvDownloadFile(let jobId):
+            return "/api/tuner-backends/active/directv/downloads/\(jobId)/file"
+        case .getDirectvSeriesRules(let accountId):
+            return "/api/tuner-backends/active/directv/accounts/\(accountId)/series-rules"
+        case .updateDirectvSeriesRule(let accountId, let ruleId, _):
+            return "/api/tuner-backends/active/directv/accounts/\(accountId)/series-rules/\(ruleId)"
+        case .deleteDirectvSeriesRule(let accountId, let ruleId):
+            return "/api/tuner-backends/active/directv/accounts/\(accountId)/series-rules/\(ruleId)"
+        case .cancelDirectvRecording(let accountId, let recordId):
+            return "/api/tuner-backends/active/directv/accounts/\(accountId)/recordings/\(recordId)/cancel"
+        case .deleteDirectvRecording(let accountId, let recordId):
+            return "/api/tuner-backends/active/directv/accounts/\(accountId)/recordings/\(recordId)"
+        case .getSlingLibrary(let accountId):
+            return "/api/tuner-backends/active/sling/accounts/\(accountId)/library"
+        case .getSlingRecordings(let accountId):
+            return "/api/tuner-backends/active/sling/accounts/\(accountId)/recordings"
+        case .createSlingRecording(let accountId, _):
+            return "/api/tuner-backends/active/sling/accounts/\(accountId)/recordings"
+        case .deleteSlingRecording(let accountId, let recordId):
+            return "/api/tuner-backends/active/sling/accounts/\(accountId)/recordings/\(recordId)"
+        case .getSlingSeriesRules(let accountId):
+            return "/api/tuner-backends/active/sling/accounts/\(accountId)/series-rules"
+        case .createSlingSeriesRule(let accountId, _):
+            return "/api/tuner-backends/active/sling/accounts/\(accountId)/series-rules"
+        case .getFrndlyLibrary:
+            return "/api/tuner-backends/active/frndlytv/library"
+        case .getFrndlyRecordings:
+            return "/api/tuner-backends/active/frndlytv/recordings"
+        case .createFrndlyRecording:
+            return "/api/tuner-backends/active/frndlytv/recordings"
+        case .deleteFrndlyRecording(let recordId):
+            return "/api/tuner-backends/active/frndlytv/recordings/\(recordId)"
+        case .startFrndlyDownload(let recordId):
+            return "/api/tuner-backends/active/frndlytv/recordings/\(recordId)/download"
+        case .getFrndlyDownloadJob(let jobId):
+            return "/api/tuner-backends/active/frndlytv/downloads/\(jobId)"
+        case .getFrndlyDownloadFile(let jobId):
+            return "/api/tuner-backends/active/frndlytv/downloads/\(jobId)/file"
+        case .getFrndlySeriesRules:
+            return "/api/tuner-backends/active/frndlytv/series-rules"
+        case .createFrndlySeriesRule:
+            return "/api/tuner-backends/active/frndlytv/series-rules"
+        case .getFrndlyUpcomingRecordings:
+            return "/api/tuner-backends/active/frndlytv/upcoming-recordings"
+        case .getFrndlyRecordingPlaybackAuth:
+            return "/api/tuner-backends/active/frndlytv/recording-playback-auth"
         // M3U Sources
         case .getM3USources: return "/livetv/sources"
         case .addM3USource: return "/livetv/sources"
@@ -1287,6 +1381,9 @@ enum APIEndpoint {
              .enableArchive, .disableArchive,
              .enrichEPG,
              .createTeamPass, .toggleTeamPass, .processTeamPasses,
+             .createDirectvRecording, .createDirectvSeriesRecording, .startDirectvDownload, .cancelDirectvRecording,
+             .createSlingRecording, .createSlingSeriesRule,
+             .createFrndlyRecording, .createFrndlySeriesRule, .startFrndlyDownload,
              .scheduleRecording, .recordFromProgram, .bulkRecordingAction, .matchRecording,
              .detectCommercials, .reprocessRecording,
              .checkConflict, .resolveConflict,
@@ -1371,6 +1468,9 @@ enum APIEndpoint {
              .updateDevice:
             return .PUT
 
+        case .updateDirectvSeriesRule:
+            return .PATCH
+
         case .deleteProfile,
              .deleteGlobalClientSetting,
              .clearServerLogs, .clearClientLogs,
@@ -1383,6 +1483,7 @@ enum APIEndpoint {
              .deleteChannelGroup, .removeChannelFromGroup,
              .deleteM3USource, .deleteXtreamSource, .deleteEPGSource,
              .deleteTeamPass,
+             .deleteSlingRecording, .deleteDirectvSeriesRule, .deleteDirectvRecording, .deleteFrndlyRecording,
              .deleteRecording, .trashRecording,
              .deleteSeriesRule,
              .deleteV2Job, .deleteV2File, .unlockV2File,
@@ -1443,6 +1544,17 @@ enum APIEndpoint {
             if let s = start { items.append(URLQueryItem(name: "start", value: s)) }
             if let e = end { items.append(URLQueryItem(name: "end", value: e)) }
             return items.isEmpty ? nil : items
+        case .getDirectvRecordStatus(_, let query):
+            var items: [URLQueryItem] = []
+            if let resourceId = query.resourceId { items.append(URLQueryItem(name: "resourceId", value: resourceId)) }
+            if let recordId = query.recordId { items.append(URLQueryItem(name: "recordId", value: recordId)) }
+            if let seriesId = query.seriesId { items.append(URLQueryItem(name: "seriesId", value: seriesId)) }
+            if let canonicalId = query.canonicalId { items.append(URLQueryItem(name: "canonicalId", value: canonicalId)) }
+            if let title = query.title { items.append(URLQueryItem(name: "title", value: title)) }
+            if let startTime = query.startTime { items.append(URLQueryItem(name: "startTime", value: startTime)) }
+            return items.isEmpty ? nil : items
+        case .getFrndlyRecordingPlaybackAuth(let recordId):
+            return [URLQueryItem(name: "recordId", value: recordId)]
         case .getRecordings(let status):
             if let s = status { return [URLQueryItem(name: "status", value: s)] }
             return nil
@@ -1679,6 +1791,19 @@ enum APIEndpoint {
             return d.isEmpty ? nil : jsonBody(d)
         case .scheduleRecording(let channelId, let startTime, let endTime, let title):
             return jsonBody(["channelId": channelId, "startTime": startTime, "endTime": endTime, "title": title])
+        case .createDirectvRecording(_, let request), .createDirectvSeriesRecording(_, let request):
+            var payload: [String: Any] = [:]
+            if let resourceId = request.resourceId { payload["resourceId"] = resourceId }
+            if let canonicalId = request.canonicalId { payload["canonicalId"] = canonicalId }
+            if let seriesId = request.seriesId { payload["seriesId"] = seriesId }
+            if let channelKey = request.channelKey { payload["channelKey"] = channelKey }
+            return jsonBody(payload)
+        case .createSlingRecording(_, let request):
+            return jsonBody(["channelId": request.channelId, "itemId": request.itemId])
+        case .createSlingSeriesRule(_, let request):
+            return jsonBody(["channelId": request.channelId, "itemId": request.itemId, "mode": request.mode])
+        case .createFrndlyRecording(let request), .createFrndlySeriesRule(let request):
+            return jsonBody(["path": request.path])
         case .recordFromProgram(let channelId, let programId):
             return jsonBody(["channelId": channelId, "programId": programId])
         case .bulkRecordingAction(let action, let ids):
@@ -1829,6 +1954,10 @@ enum APIEndpoint {
             if let p = prePadding { d["PaddingStart"] = p * 60 }
             if let p = postPadding { d["PaddingEnd"] = p * 60 }
             if let k = keepCount { d["KeepNum"] = k }
+            return d.isEmpty ? nil : jsonBody(d)
+        case .updateDirectvSeriesRule(_, _, let enabled):
+            var d: [String: Any] = [:]
+            if let enabled { d["enabled"] = enabled }
             return d.isEmpty ? nil : jsonBody(d)
         case .importVOD(_, let libraryId), .importSeries(_, let libraryId):
             return jsonBody(["libraryId": libraryId])
