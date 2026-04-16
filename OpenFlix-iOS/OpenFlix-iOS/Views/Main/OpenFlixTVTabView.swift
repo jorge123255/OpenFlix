@@ -4,6 +4,7 @@ import os
 
 extension Notification.Name {
     static let tvHomeRequestFocus = Notification.Name("tvHomeRequestFocus")
+    static let tvContentRequestFocus = Notification.Name("tvContentRequestFocus")
     static let tvBackPressed = Notification.Name("tvBackPressed")
     static let sidecarToggle = Notification.Name("sidecarToggle")
     static let sidecarArrowKey = Notification.Name("sidecarArrowKey")
@@ -15,18 +16,34 @@ extension Notification.Name {
 enum SidecarMenuItem: String, CaseIterable, Hashable {
     case home = "Home"
     case liveTV = "Live TV"
+    case catchUp = "Catch Up"
+    case onLater = "On Later"
     case teamPass = "Team Pass"
+    case groups = "Groups"
     case library = "Library"
     case search = "Search"
+    case sports = "Sports"
+    case stats = "Stats"
     case settings = "Settings"
+
+    enum Section: String, CaseIterable {
+        case main = "Browse"
+        case liveTV = "Live TV"
+        case library = "Library"
+    }
 
     var icon: String {
         switch self {
         case .home: return "house.fill"
         case .liveTV: return "tv.fill"
+        case .catchUp: return "clock.arrow.circlepath"
+        case .onLater: return "calendar.badge.clock"
         case .teamPass: return "sportscourt.fill"
+        case .groups: return "square.grid.2x2.fill"
         case .library: return "books.vertical.fill"
         case .search: return "magnifyingglass"
+        case .sports: return "sportscourt.fill"
+        case .stats: return "chart.bar.fill"
         case .settings: return "gearshape"
         }
     }
@@ -35,9 +52,14 @@ enum SidecarMenuItem: String, CaseIterable, Hashable {
         switch self {
         case .home: return "Navigate to the Home screen"
         case .liveTV: return "Navigate to Live TV guide"
+        case .catchUp: return "Navigate to Catch Up"
+        case .onLater: return "Navigate to On Later"
         case .teamPass: return "Navigate to Team Pass manager"
+        case .groups: return "Navigate to Channel Groups"
         case .library: return "Navigate to your Library"
         case .search: return "Navigate to Search"
+        case .sports: return "Browse live and upcoming sports"
+        case .stats: return "View watch and recording stats"
         case .settings: return "Open Settings"
         }
     }
@@ -46,30 +68,49 @@ enum SidecarMenuItem: String, CaseIterable, Hashable {
         self != .settings
     }
 
+    var section: Section? {
+        switch self {
+        case .home:
+            return .main
+        case .liveTV, .catchUp, .onLater, .teamPass, .groups, .sports:
+            return .liveTV
+        case .library, .search, .stats:
+            return .library
+        case .settings:
+            return nil
+        }
+    }
+
     var correspondingTab: OpenFlixTVTabView.Tab? {
         switch self {
         case .home: return .home
         case .liveTV: return .liveTV
+        case .catchUp: return .catchUp
+        case .onLater: return .onLater
         case .teamPass: return .teamPass
+        case .groups: return .groups
         case .library: return .library
         case .search: return .search
+        case .sports: return .sports
+        case .stats: return .stats
         case .settings: return nil
         }
     }
 
-    private static let tabItems: [SidecarMenuItem] = [.home, .liveTV, .teamPass, .library, .search]
+    private static let tabItems: [SidecarMenuItem] = [.home, .liveTV, .catchUp, .onLater, .teamPass, .groups, .library, .search, .sports, .stats]
+    private static let fullMenuItems: [SidecarMenuItem] = [.home, .liveTV, .catchUp, .onLater, .teamPass, .groups, .library, .search, .sports, .stats]
 
     func nextUp() -> SidecarMenuItem? {
-        guard let idx = Self.tabItems.firstIndex(of: self), idx > 0 else { return nil }
-        return Self.tabItems[idx - 1]
+        guard let idx = Self.fullMenuItems.firstIndex(of: self), idx > 0 else { return nil }
+        return Self.fullMenuItems[idx - 1]
     }
 
     func nextDown() -> SidecarMenuItem? {
         if self == .settings {
             return nil
         }
-        guard let idx = Self.tabItems.firstIndex(of: self), idx < Self.tabItems.count - 1 else { return nil }
-        return Self.tabItems[idx + 1]
+        guard let idx = Self.fullMenuItems.firstIndex(of: self), idx < Self.fullMenuItems.count - 1 else { return nil }
+        return Self.fullMenuItems[idx + 1]
     }
 }
 
@@ -216,28 +257,16 @@ struct SidecarMenuView: View {
         .onChange(of: focusedMenuItem) { _, newItem in
             if let newItem {
                 state.focusedItem = newItem
+            } else {
+                // Focus left the sidecar (e.g. user pressed right) — close it
+                if state.isOpen {
+                    state.close()
+                }
             }
         }
         .onChange(of: state.focusedItem) { _, newItem in
             if focusedMenuItem != newItem {
                 focusedMenuItem = newItem
-            }
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .sidecarArrowKey)) { notification in
-            if let raw = notification.userInfo?["direction"] as? Int {
-                state.handleArrowKey(direction: raw)
-            }
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .sidecarSelect)) { _ in
-            if state.isOpen {
-                if let item = state.focusedItem ?? focusedMenuItem {
-                    if item == .settings {
-                        state.close()
-                        onSettings()
-                    } else {
-                        state.selectItem(item)
-                    }
-                }
             }
         }
     }
@@ -260,13 +289,29 @@ struct SidecarMenuView: View {
     }
 
     private var menuItems: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            ForEach(SidecarMenuItem.allCases.filter(\.isTabItem), id: \.self) { item in
-                sidecarButton(
-                    item: item,
-                    isSelected: item.correspondingTab == state.selectedTab
-                ) {
-                    state.selectItem(item)
+        VStack(alignment: .leading, spacing: 18) {
+            ForEach(SidecarMenuItem.Section.allCases, id: \.self) { section in
+                let sectionItems = SidecarMenuItem.allCases.filter { $0.section == section }
+                if !sectionItems.isEmpty {
+                    VStack(alignment: .leading, spacing: section == .liveTV ? 8 : 10) {
+                        Text(section.rawValue)
+                            .font(.system(size: 12, weight: .black, design: .rounded))
+                            .foregroundStyle(.white.opacity(0.38))
+                            .tracking(1.2)
+                            .padding(.horizontal, 20)
+
+                        VStack(alignment: .leading, spacing: section == .liveTV ? 6 : 10) {
+                            ForEach(sectionItems, id: \.self) { item in
+                                sidecarButton(
+                                    item: item,
+                                    isSelected: item.correspondingTab == state.selectedTab,
+                                    compact: section == .liveTV
+                                ) {
+                                    state.selectItem(item)
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -277,7 +322,8 @@ struct SidecarMenuView: View {
     private var settingsItem: some View {
         sidecarButton(
             item: .settings,
-            isSelected: false
+            isSelected: false,
+            compact: false
         ) {
             state.close()
             onSettings()
@@ -294,20 +340,20 @@ struct SidecarMenuView: View {
             .padding(.bottom, 10)
     }
 
-    private func sidecarButton(item: SidecarMenuItem, isSelected: Bool, action: @escaping () -> Void) -> some View {
+    private func sidecarButton(item: SidecarMenuItem, isSelected: Bool, compact: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            HStack(spacing: 14) {
+            HStack(spacing: compact ? 12 : 14) {
                 Image(systemName: item.icon)
-                    .font(.system(size: 18, weight: .semibold))
-                    .frame(width: 28)
+                    .font(.system(size: compact ? 16 : 18, weight: .semibold))
+                    .frame(width: compact ? 24 : 28)
 
                 Text(item.rawValue)
-                    .font(.system(size: 20, weight: isSelected ? .semibold : .regular))
+                    .font(.system(size: compact ? 18 : 20, weight: isSelected ? .semibold : .regular))
 
                 Spacer()
             }
             .padding(.horizontal, 20)
-            .padding(.vertical, 14)
+            .padding(.vertical, compact ? 11 : 14)
             .background(
                 RoundedRectangle(cornerRadius: 14)
                     .fill(isSelected ? accentColor.opacity(0.24) : Color.clear)
@@ -369,17 +415,27 @@ struct OpenFlixTVTabView: View {
     enum Tab: String, CaseIterable, Hashable {
         case home = "Home"
         case liveTV = "Live TV"
+        case catchUp = "Catch Up"
+        case onLater = "On Later"
         case teamPass = "Team Pass"
+        case groups = "Groups"
         case library = "Library"
         case search = "Search"
+        case sports = "Sports"
+        case stats = "Stats"
 
         var icon: String {
             switch self {
             case .home: return "house.fill"
             case .liveTV: return "tv.fill"
+            case .catchUp: return "clock.arrow.circlepath"
+            case .onLater: return "calendar.badge.clock"
             case .teamPass: return "sportscourt.fill"
+            case .groups: return "square.grid.2x2.fill"
             case .library: return "books.vertical.fill"
             case .search: return "magnifyingglass"
+            case .sports: return "sportscourt.fill"
+            case .stats: return "chart.bar.fill"
             }
         }
 
@@ -387,9 +443,14 @@ struct OpenFlixTVTabView: View {
             switch self {
             case .home: return "Navigate to the Home screen"
             case .liveTV: return "Navigate to Live TV guide"
+            case .catchUp: return "Navigate to Catch Up"
+            case .onLater: return "Navigate to On Later"
             case .teamPass: return "Navigate to Team Pass manager"
+            case .groups: return "Navigate to Channel Groups"
             case .library: return "Navigate to your Library"
             case .search: return "Navigate to Search"
+            case .sports: return "Browse live and upcoming sports"
+            case .stats: return "View watch and recording stats"
             }
         }
     }
@@ -412,7 +473,6 @@ struct OpenFlixTVTabView: View {
                     .environmentObject(authViewModel)
                     .environmentObject(settingsViewModel)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .disabled(sidecarState.isOpen)
                     .overlay {
                         if sidecarState.isOpen {
                             Color.black.opacity(0.42)
@@ -443,15 +503,16 @@ struct OpenFlixTVTabView: View {
             .onAppear {
                 sidecarState.restoreState()
             }
-            .onReceive(NotificationCenter.default.publisher(for: .tvBackPressed)) { _ in
-                sidecarState.toggle()
+            .onExitCommand {
+                if sidecarState.isOpen {
+                    sidecarState.close()
+                } else {
+                    sidecarState.open()
+                }
             }
             .onReceive(NotificationCenter.default.publisher(for: .sidecarToggle)) { _ in
                 sidecarState.toggle()
             }
-            // NOTE: root-level onMoveCommand was blocking focus navigation in
-            // child content views. Drawer is now opened via Menu/Escape button
-            // or the .sidecarToggle notification only.
             .onChange(of: sidecarState.selectedTab) { _, newTab in
                 selectedTab = newTab
             }
@@ -483,31 +544,50 @@ struct OpenFlixTVTabView: View {
             .environmentObject(authViewModel)
             .environmentObject(settingsViewModel)
         }
-        .onExitCommand {
-            sidecarState.toggle()
-        }
     }
 
     @ViewBuilder
     private var currentScreen: some View {
         switch selectedTab {
         case .home:
-            XfinityHomeView()
+            NavigationStack {
+                XfinityHomeView()
+            }
         case .liveTV:
             LiveTVView()
+        case .catchUp:
+            CatchupView()
+        case .onLater:
+            OnLaterView()
         case .teamPass:
             TeamPassView()
+        case .groups:
+            ChannelGroupsView()
         case .library:
             WatchlistView()
         case .search:
             SearchView()
+        case .sports:
+            NavigationStack {
+                SportsView()
+            }
+        case .stats:
+            NavigationStack {
+                WatchStatsView()
+            }
         }
     }
 
     private func restoreContentFocus() {
-        if selectedTab == .home {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
-                NotificationCenter.default.post(name: .tvHomeRequestFocus, object: nil)
+        // Retry a few times to give the focus system a chance
+        let delays: [Double] = [0.08, 0.25, 0.5]
+        for delay in delays {
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+                // Post both a tab-specific and a generic notification
+                NotificationCenter.default.post(name: .tvContentRequestFocus, object: nil)
+                if selectedTab == .home {
+                    NotificationCenter.default.post(name: .tvHomeRequestFocus, object: nil)
+                }
             }
         }
     }
