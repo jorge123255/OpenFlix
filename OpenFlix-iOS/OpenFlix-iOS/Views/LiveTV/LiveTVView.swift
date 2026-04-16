@@ -1624,18 +1624,13 @@ private struct TVOSLiveBrowserView: View {
         .padding(.top, 0)
         .padding(.bottom, 4)
         .background(shellBackground)
-        .fullScreenCover(isPresented: Binding(
-            get: { presentedProgram != nil && presentedProgramChannel != nil },
-            set: { newValue in
-                if !newValue {
-                    actionStateLoadTask?.cancel()
-                    actionStateLoadTask = nil
-                    presentedProgram = nil
-                    presentedProgramChannel = nil
-                }
-            }
-        )) {
-            if let program = presentedProgram, let channel = presentedProgramChannel {
+        // Drive the cover off `presentedProgram` directly (Identifiable item).
+        // The earlier custom Binding<Bool> form fired the action on hardware
+        // but never actually presented the cover — the item form keys off
+        // the program id and presents reliably (same fix that unblocked the
+        // Sports player).
+        .fullScreenCover(item: $presentedProgram) { program in
+            if let channel = presentedProgramChannel {
                 ZStack {
                     Color.black.opacity(0.55)
                         .ignoresSafeArea()
