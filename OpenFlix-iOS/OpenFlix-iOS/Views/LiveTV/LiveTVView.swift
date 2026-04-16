@@ -505,27 +505,27 @@ struct TVLiveChannelPlayerView: View {
     /// up, with no useful error. Probing first lets us surface the actual
     /// server message immediately.
     private func playWithPreflight(_ url: URL) {
-        // For non-server (CDN, etc.) URLs, skip the probe — they've already
-        // been resolved by the repo and probing may be cached/expensive.
+        // Hand off to VLC immediately so playback starts as fast as iOS.
+        // The preflight runs in parallel just to surface a server error
+        // overlay if the URL fails (e.g. provider not activated). Use a
+        // Range-GET for the first byte instead of HEAD — many proxies
+        // don't implement HEAD on streaming routes and return a false 404.
+        vlcPlayer.play(url: url)
+
         guard let host = url.host, host.contains("192.168") || url.path.hasPrefix("/livetv/") else {
-            vlcPlayer.play(url: url)
             return
         }
 
         Task {
             var request = URLRequest(url: url)
-            request.httpMethod = "HEAD"
-            request.timeoutInterval = 4
+            request.httpMethod = "GET"
+            request.setValue("bytes=0-0", forHTTPHeaderField: "Range")
+            request.timeoutInterval = 6
             do {
                 let (_, response) = try await URLSession.shared.data(for: request)
-                guard let http = response as? HTTPURLResponse else {
-                    await MainActor.run { vlcPlayer.play(url: url) }
-                    return
-                }
-                if (200...299).contains(http.statusCode) {
-                    await MainActor.run { vlcPlayer.play(url: url) }
-                    return
-                }
+                guard let http = response as? HTTPURLResponse else { return }
+                // 2xx (incl. 206 Partial Content) means the stream is live.
+                if (200...299).contains(http.statusCode) { return }
                 // Non-2xx — pull the body for the server's actual message.
                 var get = URLRequest(url: url)
                 get.timeoutInterval = 4
@@ -536,9 +536,8 @@ struct TVLiveChannelPlayerView: View {
                     vlcPlayer.error = "Can't play \(channel.name): \(serverMessage)"
                 }
             } catch {
-                // Probe itself failed — let VLC try anyway in case it can handle the URL differently.
-                NSLog("PLAYER URL: preflight error \(error) — handing off to VLC")
-                await MainActor.run { vlcPlayer.play(url: url) }
+                // Probe failure is not actionable — VLC was already started.
+                NSLog("PLAYER URL: preflight probe error (ignored) \(error)")
             }
         }
     }
@@ -3202,7 +3201,6 @@ private struct TVGuideChannelCell: View {
             .animation(.easeOut(duration: 0.15), value: isSelected)
         }
         .buttonStyle(TVNoGlowButtonStyle())
-        .focusEffectDisabled()
     }
 }
 
@@ -3290,7 +3288,6 @@ private struct TVGuideProgramCell: View {
             .animation(.easeOut(duration: 0.15), value: isSelected)
         }
         .buttonStyle(TVNoGlowButtonStyle())
-        .focusEffectDisabled()
     }
 
     private var titleSize: CGFloat {
