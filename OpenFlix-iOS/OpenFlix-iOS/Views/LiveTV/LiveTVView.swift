@@ -462,40 +462,94 @@ struct TVLiveChannelPlayerView: View {
 
         if let preferredURL {
             NSLog("PLAYER URL: source=preferred channel=\(channel.id) url=\(preferredURL.absoluteString)")
-            vlcPlayer.play(url: preferredURL)
+            playWithPreflight(preferredURL)
             return
         }
         // Try the browser-preview URL first — this is the same URL the working
         // AVPlayer preview card uses, so VLC has the best shot at playing it.
         if let url = liveTVRepository.getBrowserPreviewURL(for: channel) {
             NSLog("PLAYER URL: source=browserPreview channel=\(channel.id) url=\(url.absoluteString)")
-            vlcPlayer.play(url: url)
+            playWithPreflight(url)
             return
         }
         if let url = liveTVRepository.getPreviewURL(for: channel) {
             NSLog("PLAYER URL: source=preview channel=\(channel.id) url=\(url.absoluteString)")
-            vlcPlayer.play(url: url)
+            playWithPreflight(url)
             return
         }
         if let url = liveTVRepository.getStreamURL(for: channel) {
             NSLog("PLAYER URL: source=repo channel=\(channel.id) url=\(url.absoluteString)")
-            vlcPlayer.play(url: url)
+            playWithPreflight(url)
             return
         }
         Task {
             do {
                 if let url = try? await viewModel.getChannelBrowserPreviewStream(channel) {
                     NSLog("PLAYER URL: source=apiBrowserPreview channel=\(channel.id) url=\(url.absoluteString)")
-                    vlcPlayer.play(url: url)
+                    playWithPreflight(url)
                     return
                 }
                 let url = try await viewModel.getChannelStream(channel)
                 NSLog("PLAYER URL: source=api channel=\(channel.id) url=\(url.absoluteString)")
-                vlcPlayer.play(url: url)
+                playWithPreflight(url)
             } catch {
                 NSLog("PLAYER URL: source=api FAILED channel=\(channel.id) error=\(error)")
             }
         }
+    }
+
+    /// Pre-flight HEAD probe before handing the URL to VLC. The server can
+    /// return 4xx/5xx with a JSON `{"error","message"}` body when a channel
+    /// has no current EPG entry / fallback / etc. — VLC reads that as a
+    /// stream and bounces between BUFFERING/STOPPED for ~10s before giving
+    /// up, with no useful error. Probing first lets us surface the actual
+    /// server message immediately.
+    private func playWithPreflight(_ url: URL) {
+        // For non-server (CDN, etc.) URLs, skip the probe — they've already
+        // been resolved by the repo and probing may be cached/expensive.
+        guard let host = url.host, host.contains("192.168") || url.path.hasPrefix("/livetv/") else {
+            vlcPlayer.play(url: url)
+            return
+        }
+
+        Task {
+            var request = URLRequest(url: url)
+            request.httpMethod = "HEAD"
+            request.timeoutInterval = 4
+            do {
+                let (_, response) = try await URLSession.shared.data(for: request)
+                guard let http = response as? HTTPURLResponse else {
+                    await MainActor.run { vlcPlayer.play(url: url) }
+                    return
+                }
+                if (200...299).contains(http.statusCode) {
+                    await MainActor.run { vlcPlayer.play(url: url) }
+                    return
+                }
+                // Non-2xx — pull the body for the server's actual message.
+                var get = URLRequest(url: url)
+                get.timeoutInterval = 4
+                let (data, _) = (try? await URLSession.shared.data(for: get)) ?? (Data(), URLResponse())
+                let serverMessage = decodeServerError(data) ?? "HTTP \(http.statusCode)"
+                NSLog("PLAYER URL: preflight failed http=\(http.statusCode) message=\(serverMessage)")
+                await MainActor.run {
+                    vlcPlayer.error = "Can't play \(channel.name): \(serverMessage)"
+                }
+            } catch {
+                // Probe itself failed — let VLC try anyway in case it can handle the URL differently.
+                NSLog("PLAYER URL: preflight error \(error) — handing off to VLC")
+                await MainActor.run { vlcPlayer.play(url: url) }
+            }
+        }
+    }
+
+    private func decodeServerError(_ data: Data) -> String? {
+        guard !data.isEmpty,
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+        else { return nil }
+        if let message = json["message"] as? String { return message }
+        if let error = json["error"] as? String { return error }
+        return nil
     }
 
     private func reloadCurrentChannel() async {
