@@ -362,13 +362,70 @@ struct SportEventCard: View {
                         .font(.system(size: 10, weight: .semibold))
                         .foregroundStyle(.white.opacity(0.55))
                 }
+                Spacer(minLength: 0)
+                teamLogoStrip
             }
-            Text(channel.name)
+            Text(channel.nowPlaying?.title ?? channel.name)
                 .font(.system(size: 15, weight: .black, design: .rounded))
                 .foregroundStyle(.white)
                 .lineLimit(2)
+            if let teamsLine = teamMatchupLine {
+                Text(teamsLine)
+                    .font(.system(size: 11, weight: .semibold, design: .rounded))
+                    .foregroundStyle(.white.opacity(0.66))
+                    .lineLimit(1)
+            }
         }
         .padding(14)
+    }
+
+    @ViewBuilder
+    private var teamLogoStrip: some View {
+        let urls = teamLogoURLs
+        if !urls.isEmpty {
+            HStack(spacing: -4) {
+                ForEach(urls, id: \.absoluteString) { url in
+                    AsyncImage(url: url) { phase in
+                        switch phase {
+                        case .success(let image):
+                            image
+                                .resizable()
+                                .aspectRatio(contentMode: .fit)
+                        default:
+                            Circle().fill(Color.white.opacity(0.12))
+                        }
+                    }
+                    .frame(width: 22, height: 22)
+                    .background(Color.black.opacity(0.6), in: Circle())
+                }
+            }
+        }
+    }
+
+    /// Pulls the program's `teams` field (typically a comma-separated list of
+    /// abbreviations like "NYY,BOS" or full names like "Yankees,Red Sox") and
+    /// builds ESPN-CDN logo URLs scoped to the program's league when present.
+    private var teamLogoURLs: [URL] {
+        guard let program = channel.nowPlaying,
+              let raw = program.teams,
+              !raw.isEmpty,
+              let league = program.league?.lowercased(),
+              ["mlb", "nfl", "nba", "nhl", "mls"].contains(league)
+        else { return [] }
+        return raw.split(separator: ",")
+            .prefix(2)
+            .compactMap { token -> URL? in
+                let abbrev = token.trimmingCharacters(in: .whitespaces).lowercased()
+                guard !abbrev.isEmpty else { return nil }
+                return URL(string: "https://a.espncdn.com/i/teamlogos/\(league)/500/\(abbrev).png")
+            }
+    }
+
+    private var teamMatchupLine: String? {
+        guard let raw = channel.nowPlaying?.teams, !raw.isEmpty else { return nil }
+        let parts = raw.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }
+        guard parts.count >= 2 else { return nil }
+        return "\(parts[0]) vs \(parts[1])"
     }
 }
 
