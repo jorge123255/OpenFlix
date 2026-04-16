@@ -215,15 +215,7 @@ struct XfinityHomeView: View {
 
     #if os(tvOS)
     private var tvContentView: some View {
-        ZStack {
-            // Ambient backdrop: the focused hero item's artwork blurred and
-            // tinted, behind everything. Updates as the hero auto-rotates.
-            tvAmbientBackdrop
-                .ignoresSafeArea()
-                .transition(.opacity)
-                .animation(.easeInOut(duration: 0.8), value: tvHeroIndex)
-
-            ScrollView(.vertical, showsIndicators: false) {
+        ScrollView(.vertical, showsIndicators: false) {
             LazyVStack(alignment: .leading, spacing: 0) {
                 tvCompactHeroSection
                 tvHeroPageIndicator
@@ -517,7 +509,6 @@ struct XfinityHomeView: View {
             }
             .padding(.top, 60)
             .padding(.bottom, 80)
-        }
         }
     }
 
