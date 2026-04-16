@@ -251,7 +251,7 @@ struct XfinityHomeView: View {
                 VStack(alignment: .leading, spacing: 36) {
                     // 1. Continue Watching
                     if !tvContinueWatchingItems.isEmpty {
-                        tvHomeRow(title: "Continue Watching", showViewAll: false) {
+                        tvHomeRow(title: "Continue Watching", subtitle: "Where you left off", showViewAll: false) {
                             ScrollView(.horizontal, showsIndicators: false) {
                                 HStack(spacing: 16) {
                                     ForEach(tvContinueWatchingItems) { item in
@@ -272,6 +272,7 @@ struct XfinityHomeView: View {
                     if !tvLiveNowChannels.isEmpty {
                         tvHomeRow(
                             title: liveFilterCategory == nil ? "On Now" : "On Now — \(liveFilterCategory!)",
+                            subtitle: "Live channels right now",
                             showViewAll: true, onViewAll: {
                             SidecarMenuState.shared.selectedTab = OpenFlixTVTabView.Tab.liveTV
                         }) {
@@ -306,7 +307,7 @@ struct XfinityHomeView: View {
 
                     // 3. Recently Recorded (DVR) — grouped by series
                     if !tvRecentlyRecorded.isEmpty {
-                        tvHomeRow(title: "Recently Recorded", showViewAll: false) {
+                        tvHomeRow(title: "Recently Recorded", subtitle: "From your DVR", showViewAll: false) {
                             ScrollView(.horizontal, showsIndicators: false) {
                                 HStack(spacing: 16) {
                                     ForEach(tvRecentlyRecorded, id: \.title) { series in
@@ -328,7 +329,7 @@ struct XfinityHomeView: View {
 
                     // 4. Recently Added
                     if !tvRecentlyAddedItems.isEmpty {
-                        tvHomeRow(title: "Recently Added") {
+                        tvHomeRow(title: "Recently Added", subtitle: "New in your library") {
                             ScrollView(.horizontal, showsIndicators: false) {
                                 HStack(spacing: 18) {
                                     ForEach(tvRecentlyAddedItems) { item in
@@ -347,7 +348,7 @@ struct XfinityHomeView: View {
 
                     // Tonight
                     if !viewModel.onLaterTonight.isEmpty {
-                        tvHomeRow(title: "Tonight", showViewAll: false) {
+                        tvHomeRow(title: "Tonight", subtitle: "Coming up this evening", showViewAll: false) {
                             ScrollView(.horizontal, showsIndicators: false) {
                                 HStack(spacing: 16) {
                                     ForEach(viewModel.onLaterTonight.prefix(15)) { entry in
@@ -365,7 +366,7 @@ struct XfinityHomeView: View {
 
                     // Live Sports
                     if !viewModel.onLaterSports.isEmpty {
-                        tvHomeRow(title: "Live Sports", showViewAll: false) {
+                        tvHomeRow(title: "Live Sports", subtitle: "Live games + upcoming events", showViewAll: false) {
                             ScrollView(.horizontal, showsIndicators: false) {
                                 HStack(spacing: 16) {
                                     ForEach(viewModel.onLaterSports.prefix(15)) { entry in
@@ -383,7 +384,7 @@ struct XfinityHomeView: View {
 
                     // News
                     if !viewModel.onLaterNews.isEmpty {
-                        tvHomeRow(title: "News", showViewAll: false) {
+                        tvHomeRow(title: "News", subtitle: "Latest from the news desk", showViewAll: false) {
                             ScrollView(.horizontal, showsIndicators: false) {
                                 HStack(spacing: 16) {
                                     ForEach(viewModel.onLaterNews.prefix(15)) { entry in
@@ -401,7 +402,7 @@ struct XfinityHomeView: View {
 
                     // Kids
                     if !viewModel.onLaterKids.isEmpty {
-                        tvHomeRow(title: "Kids", showViewAll: false) {
+                        tvHomeRow(title: "Kids", subtitle: "Family-safe picks", showViewAll: false) {
                             ScrollView(.horizontal, showsIndicators: false) {
                                 HStack(spacing: 16) {
                                     ForEach(viewModel.onLaterKids.prefix(15)) { entry in
@@ -419,7 +420,7 @@ struct XfinityHomeView: View {
 
                     // 5. Top Picks
                     if !tvTopPicksItems.isEmpty {
-                        tvHomeRow(title: "Top Picks") {
+                        tvHomeRow(title: "Top Picks", subtitle: "Curated for you") {
                             ScrollView(.horizontal, showsIndicators: false) {
                                 HStack(spacing: 12) {
                                     ForEach(Array(tvTopPicksItems.enumerated()), id: \.element.id) { idx, item in
@@ -438,7 +439,7 @@ struct XfinityHomeView: View {
 
                     // 6. Recommended
                     if !tvRecommendedItems.isEmpty {
-                        tvHomeRow(title: "Recommended For You") {
+                        tvHomeRow(title: "Recommended For You", subtitle: "Based on your viewing") {
                             ScrollView(.horizontal, showsIndicators: false) {
                                 HStack(spacing: 18) {
                                     ForEach(tvRecommendedItems) { item in
@@ -514,7 +515,7 @@ struct XfinityHomeView: View {
                 }
                 .padding(.top, 28)
             }
-            .padding(.top, 18)
+            .padding(.top, 60)
             .padding(.bottom, 80)
         }
         }
@@ -1743,15 +1744,23 @@ private extension XfinityHomeView {
     @ViewBuilder
     func tvHomeRow<Content: View>(
         title: String,
+        subtitle: String? = nil,
         showViewAll: Bool = false,
         onViewAll: (() -> Void)? = nil,
         @ViewBuilder content: () -> Content
     ) -> some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack {
-                Text(title)
-                    .font(.system(size: 30, weight: .bold, design: .rounded))
-                    .foregroundStyle(.white)
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .lastTextBaseline) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(.system(size: 30, weight: .black, design: .rounded))
+                        .foregroundStyle(.white)
+                    if let subtitle {
+                        Text(subtitle)
+                            .font(.system(size: 14, weight: .semibold, design: .rounded))
+                            .foregroundStyle(.white.opacity(0.55))
+                    }
+                }
                 Spacer()
                 if showViewAll {
                     if let onViewAll {
