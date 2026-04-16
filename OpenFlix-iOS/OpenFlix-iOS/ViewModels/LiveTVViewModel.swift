@@ -22,7 +22,7 @@ class LiveTVViewModel: ObservableObject {
     // EPG
     @Published var guide: [ChannelWithPrograms] = []
     @Published var guideStartDate = Calendar.current.startOfDay(for: Date())
-    @Published var guideDays = 14
+    @Published var guideDays = 7
     @Published var debugInfo: String = ""
     @Published var isGuideLoading = false
     @Published var didLoadGuide = false
@@ -216,7 +216,7 @@ class LiveTVViewModel: ObservableObject {
 
     func loadGuideForDate(_ date: Date) async {
         guideStartDate = Calendar.current.startOfDay(for: date)
-        guideDays = 14
+        guideDays = 7
         await loadGuide(force: true)
     }
 

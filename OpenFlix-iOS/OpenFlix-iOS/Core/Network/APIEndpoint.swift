@@ -701,6 +701,21 @@ enum APIEndpoint {
     case getAppDownloads
     case downloadApp(filename: String)
 
+    // MARK: - Request timeout
+    /// Per-endpoint URL request timeout. Default URLSession is 60s, which
+    /// is too short for the multi-day guide and big DVR exports — those
+    /// can take 60-120s on slower servers. Override here.
+    var requestTimeout: TimeInterval {
+        switch self {
+        case .getGuide, .getChannelGuide:
+            return 180
+        case .getRecordingsManager:
+            return 120
+        default:
+            return 60
+        }
+    }
+
     // MARK: - Path
     var path: String {
         switch self {

@@ -50,6 +50,7 @@ actor OpenFlixAPI {
         guard let url = components?.url else { throw NetworkError.invalidURL }
         var request = URLRequest(url: url)
         request.httpMethod = endpoint.method.rawValue
+        request.timeoutInterval = endpoint.requestTimeout
         NSLog("API REQUEST: %@ %@ token=%@", endpoint.method.rawValue, url.absoluteString, token != nil ? "YES(\(token!.prefix(8))...)" : "NIL")
         if let token = token { request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization") }
         request.setValue(deviceId, forHTTPHeaderField: "X-Device-ID")
