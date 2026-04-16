@@ -6,7 +6,6 @@ import SwiftUI
 struct SportsView: View {
     @StateObject private var viewModel = LiveTVViewModel()
     @StateObject private var dvrViewModel = DVRViewModel()
-    @State private var showPlayer = false
     @State private var selectedChannel: Channel?
     @State private var streamURL: URL?
     
@@ -63,33 +62,35 @@ struct SportsView: View {
             .navigationBarTitleDisplayMode(.large)
             #endif
         }
-        .fullScreenCover(isPresented: $showPlayer) {
-            if let channel = selectedChannel {
-                #if os(tvOS)
-                TVLiveChannelPlayerView(
-                    initialChannel: channel,
-                    initialStreamURL: streamURL,
-                    viewModel: viewModel
+        // Drive the cover off `selectedChannel` directly (Identifiable item).
+        // The earlier isPresented-based binding was firing the action but the
+        // cover never actually presented on tvOS — using the item form makes
+        // the cover key off the channel id and presents reliably.
+        .fullScreenCover(item: $selectedChannel) { channel in
+            #if os(tvOS)
+            TVLiveChannelPlayerView(
+                initialChannel: channel,
+                initialStreamURL: streamURL ?? channel.preferredPlaybackURL,
+                viewModel: viewModel
+            )
+            .id(channel.id)
+            .environmentObject(dvrViewModel)
+            #else
+            if let url = streamURL ?? channel.preferredPlaybackURL {
+                AdaptiveLivePlayerView(
+                    channel: channel,
+                    program: channel.nowPlaying,
+                    streamURL: url,
+                    channels: sportsChannels,
+                    onChannelChange: { newChannel in
+                        playChannel(newChannel)
+                    },
+                    onClose: {
+                        selectedChannel = nil
+                    }
                 )
-                .id(channel.id)  // stable identity prevents SwiftUI recreating VLC
-                .environmentObject(dvrViewModel)
-                #else
-                if let url = streamURL {
-                    AdaptiveLivePlayerView(
-                        channel: channel,
-                        program: channel.nowPlaying,
-                        streamURL: url,
-                        channels: sportsChannels,
-                        onChannelChange: { newChannel in
-                            playChannel(newChannel)
-                        },
-                        onClose: {
-                            showPlayer = false
-                        }
-                    )
-                }
-                #endif
             }
+            #endif
         }
         .task {
             await viewModel.loadChannels()
@@ -219,28 +220,23 @@ struct SportsView: View {
     
     private func playChannel(_ channel: Channel) {
         NSLog("SPORTS PLAY: channel=\(channel.id) name=\(channel.name) preferredPlayback=\(channel.preferredPlaybackURL?.absoluteString ?? "nil")")
+        // Set the URL FIRST so the cover content has it on first render.
+        streamURL = channel.preferredPlaybackURL
+        // Setting selectedChannel triggers the .fullScreenCover(item:) binding.
         selectedChannel = channel
 
-        if let url = channel.preferredPlaybackURL {
-            streamURL = url
-            showPlayer = true
-            return
-        }
-
-        // No preferred URL — present immediately and let the player resolve via API.
-        // This matches the LiveTV/Home flow and ensures clicks always open
-        // SOMETHING instead of silently failing.
-        streamURL = nil
-        showPlayer = true
-
-        Task {
-            do {
-                let url = try await viewModel.getChannelStream(channel)
-                streamURL = url
-                NSLog("SPORTS PLAY: api returned url=\(url.absoluteString)")
-            } catch {
-                NSLog("SPORTS PLAY: api failed \(error)")
-                viewModel.error = error.localizedDescription
+        // Resolve a fresh URL in the background if needed; the player view
+        // can be re-rendered if the URL arrives later via .id(channel.id).
+        if streamURL == nil {
+            Task {
+                do {
+                    let url = try await viewModel.getChannelStream(channel)
+                    streamURL = url
+                    NSLog("SPORTS PLAY: api returned url=\(url.absoluteString)")
+                } catch {
+                    NSLog("SPORTS PLAY: api failed \(error)")
+                    viewModel.error = error.localizedDescription
+                }
             }
         }
     }
