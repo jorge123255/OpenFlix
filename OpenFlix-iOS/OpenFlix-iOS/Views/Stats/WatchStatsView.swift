@@ -35,7 +35,9 @@ struct WatchStatsView: View {
             }
         }
         .navigationTitle("Watch Stats")
+        #if !os(tvOS)
         .navigationBarTitleDisplayMode(.large)
+        #endif
         .onAppear { viewModel.loadStats(for: selectedPeriod) }
         .onChange(of: selectedPeriod) { viewModel.loadStats(for: $0) }
     }

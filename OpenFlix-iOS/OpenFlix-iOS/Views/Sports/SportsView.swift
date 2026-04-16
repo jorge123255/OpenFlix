@@ -5,6 +5,7 @@ import SwiftUI
 
 struct SportsView: View {
     @StateObject private var viewModel = LiveTVViewModel()
+    @StateObject private var dvrViewModel = DVRViewModel()
     @State private var showPlayer = false
     @State private var selectedChannel: Channel?
     @State private var streamURL: URL?
@@ -56,22 +57,36 @@ struct SportsView: View {
                 }
             }
             .navigationTitle("Sports")
+            #if !os(tvOS)
             .navigationBarTitleDisplayMode(.large)
+            #endif
         }
         .fullScreenCover(isPresented: $showPlayer) {
-            if let channel = selectedChannel, let url = streamURL {
-                AdaptiveLivePlayerView(
-                    channel: channel,
-                    program: channel.nowPlaying,
-                    streamURL: url,
-                    channels: sportsChannels,
-                    onChannelChange: { newChannel in
-                        playChannel(newChannel)
-                    },
-                    onClose: {
-                        showPlayer = false
-                    }
+            if let channel = selectedChannel {
+                #if os(tvOS)
+                TVLiveChannelPlayerView(
+                    initialChannel: channel,
+                    initialStreamURL: streamURL,
+                    viewModel: viewModel
                 )
+                .id(channel.id)  // stable identity prevents SwiftUI recreating VLC
+                .environmentObject(dvrViewModel)
+                #else
+                if let url = streamURL {
+                    AdaptiveLivePlayerView(
+                        channel: channel,
+                        program: channel.nowPlaying,
+                        streamURL: url,
+                        channels: sportsChannels,
+                        onChannelChange: { newChannel in
+                            playChannel(newChannel)
+                        },
+                        onClose: {
+                            showPlayer = false
+                        }
+                    )
+                }
+                #endif
             }
         }
         .task {
@@ -163,7 +178,7 @@ struct SportsView: View {
     private func playChannel(_ channel: Channel) {
         selectedChannel = channel
         
-        if let streamUrl = channel.streamUrl, let url = URL(string: streamUrl) {
+        if let url = channel.preferredPlaybackURL {
             streamURL = url
             showPlayer = true
             return
