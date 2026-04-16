@@ -2085,21 +2085,20 @@ private struct TVOSLiveBrowserView: View {
 
     private func handlePrimarySelect() {
         ensureSelectionState()
+        NSLog("GUIDE PRIMARY SELECT: row=\(selectedRow?.channel.name ?? "nil") program=\(selectedProgram?.title ?? "nil") presentedNow=\(presentedProgram?.id ?? "nil")")
 
-        // Single-press Enter does both things the user expects:
-        //   1. lock the preview to the focused row (so scrolling through
-        //      other channels doesn't steal the preview)
-        //   2. open the detail card for whatever program is focused
-        // Previously Enter on a channel logo only locked preview — which
-        // looked like "nothing happened" when the preview was already on
-        // that channel.
-        guard let channel = selectedRow?.channel else { return }
+        guard let channel = selectedRow?.channel else {
+            NSLog("GUIDE PRIMARY SELECT: no selected row, bailing")
+            return
+        }
         previewChannelId = channel.id
 
         if let program = selectedProgram {
             selectedProgramIdByChannel[channel.id] = program.id
+            NSLog("GUIDE PRIMARY SELECT: presenting program=\(program.title) channel=\(channel.name)")
             presentProgram(program, channel: channel)
         } else {
+            NSLog("GUIDE PRIMARY SELECT: no program → onPlayChannel")
             onPlayChannel(channel)
         }
     }
@@ -2172,9 +2171,11 @@ private struct TVOSLiveBrowserView: View {
 
     private func presentProgram(_ program: Program, channel: Channel) {
         actionStateLoadTask?.cancel()
+        NSLog("PRESENT PROGRAM: program=\(program.title) channel=\(channel.name) wasPresented=\(presentedProgram?.id ?? "nil")")
         presentedProgram = program
         presentedProgramChannel = channel
         presentedProgramActionState = .fallback(routeLabel: recordingRouteLabel(for: channel, program: program))
+        NSLog("PRESENT PROGRAM: state set, presentedProgram now \(presentedProgram?.id ?? "nil")")
         actionStateLoadTask = Task {
             let actionState = await dvrViewModel.programActionState(channel: channel, program: program)
             if Task.isCancelled { return }
