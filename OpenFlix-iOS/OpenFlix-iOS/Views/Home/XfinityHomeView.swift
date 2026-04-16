@@ -87,6 +87,7 @@ struct XfinityHomeView: View {
             if let item = selectedItem {
                 #if os(tvOS)
                 VideoPlayerView(mediaItem: item, startPosition: item.viewOffset)
+                    .id(item.id)  // stable identity prevents SwiftUI recreating VLC
                 #else
                 VideoPlayerView(mediaItem: item, startPosition: item.viewOffset)
                 #endif
@@ -104,6 +105,7 @@ struct XfinityHomeView: View {
                     recordingDurationMs: recording.duration,
                     recording: recording
                 )
+                .id(recording.id)  // stable identity prevents SwiftUI recreating VLC
                 #else
                 DVRPlayerView(recording: recording)
                 #endif
@@ -117,6 +119,7 @@ struct XfinityHomeView: View {
                     initialStreamURL: channel.preferredPlaybackURL,
                     viewModel: liveTVViewModel
                 )
+                .id(channel.id)  // stable identity prevents SwiftUI recreating VLC on re-render
                 .environmentObject(dvrViewModel)
                 #else
                 if let streamURL = channel.preferredPlaybackURL {
@@ -212,9 +215,20 @@ struct XfinityHomeView: View {
 
     #if os(tvOS)
     private var tvContentView: some View {
-        ScrollView(.vertical, showsIndicators: false) {
+        ZStack {
+            // Ambient backdrop: the focused hero item's artwork blurred and
+            // tinted, behind everything. Updates as the hero auto-rotates.
+            tvAmbientBackdrop
+                .ignoresSafeArea()
+                .transition(.opacity)
+                .animation(.easeInOut(duration: 0.8), value: tvHeroIndex)
+
+            ScrollView(.vertical, showsIndicators: false) {
             LazyVStack(alignment: .leading, spacing: 0) {
                 tvCompactHeroSection
+                tvHeroPageIndicator
+                    .padding(.top, 8)
+                    .padding(.bottom, 12)
 
                 if allTVRailsEmpty {
                     VStack(spacing: 18) {
@@ -503,6 +517,53 @@ struct XfinityHomeView: View {
             .padding(.top, 18)
             .padding(.bottom, 80)
         }
+        }
+    }
+
+    // MARK: - Hero Polish
+
+    private var tvHeroPageIndicator: some View {
+        let count = tvHeroItems.count
+        return HStack(spacing: 8) {
+            ForEach(0..<count, id: \.self) { idx in
+                Capsule()
+                    .fill(idx == tvHeroIndex ? Color.white : Color.white.opacity(0.32))
+                    .frame(width: idx == tvHeroIndex ? 24 : 8, height: 5)
+                    .animation(.easeInOut(duration: 0.25), value: tvHeroIndex)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .opacity(count > 1 ? 1 : 0)
+    }
+
+    private var tvAmbientBackdrop: some View {
+        let items = tvHeroItems
+        let safeIndex = min(tvHeroIndex, max(items.count - 1, 0))
+        let item = items.isEmpty ? nil : items[safeIndex]
+        return ZStack {
+            XfinityColors.background
+            if let item {
+                AuthenticatedImage(
+                    paths: heroArtworkCandidates(for: item),
+                    systemPlaceholder: "sparkles.tv"
+                )
+                .aspectRatio(contentMode: .fill)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .blur(radius: 60)
+                .opacity(0.42)
+                .id(item.id) // force the AuthenticatedImage to reload when hero changes
+            }
+            // Heavy bottom-to-top scrim so backdrop never overpowers content.
+            LinearGradient(
+                colors: [
+                    Color.black.opacity(0.55),
+                    Color.black.opacity(0.92)
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+        }
+        .clipped()
     }
 
     private var tvCompactHeroSection: some View {
