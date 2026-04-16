@@ -554,9 +554,9 @@ struct OpenFlixTVTabView: View {
         case .search:
             SearchView()
         case .sports:
-            NavigationStack {
-                SportsView()
-            }
+            // SportsView provides its own NavigationStack; nesting one here
+            // breaks its fullScreenCover (taps fired but no player).
+            SportsView()
         case .stats:
             NavigationStack {
                 WatchStatsView()
