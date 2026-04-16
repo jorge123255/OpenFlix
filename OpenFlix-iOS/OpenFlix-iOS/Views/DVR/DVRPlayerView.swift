@@ -80,6 +80,7 @@ struct DVRPlayerView: View {
                 withAnimation { showOverlay = false }
             } else {
                 dismiss()
+                NotificationCenter.default.post(name: .sidecarToggle, object: nil)
             }
         }
         #endif
@@ -348,6 +349,13 @@ extension Recording {
         channelId: "123",
         channelName: "ESPN",
         channelLogo: nil,
+        sourceType: nil,
+        sourceName: nil,
+        providerId: nil,
+        providerName: nil,
+        accountId: nil,
+        accountName: nil,
+        accountIndex: nil,
         startTime: Date().addingTimeInterval(-3600),
         endTime: Date(),
         duration: 3600000,
@@ -368,7 +376,12 @@ extension Recording {
         priority: 50,
         isWatched: false,
         isFavorite: false,
-        isProtected: false
+        isProtected: false,
+        resourceId: nil,
+        canonicalId: nil,
+        seriesId: nil,
+        externalRecordId: nil,
+        externalDownloadJobId: nil
     )
 
     return DVRPlayerView(recording: recording)

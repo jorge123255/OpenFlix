@@ -431,6 +431,7 @@ struct TVLiveChannelPlayerView: View {
             } else if showControls {
                 vlcPlayer.stop()
                 dismiss()
+                NotificationCenter.default.post(name: .sidecarToggle, object: nil)
             } else {
                 withAnimation(.easeInOut(duration: 0.25)) {
                     showControls = true
@@ -479,6 +480,11 @@ struct TVLiveChannelPlayerView: View {
         }
         Task {
             do {
+                if let url = try? await viewModel.getChannelBrowserPreviewStream(channel) {
+                    NSLog("PLAYER URL: source=apiBrowserPreview channel=\(channel.id) url=\(url.absoluteString)")
+                    vlcPlayer.play(url: url)
+                    return
+                }
                 let url = try await viewModel.getChannelStream(channel)
                 NSLog("PLAYER URL: source=api channel=\(channel.id) url=\(url.absoluteString)")
                 vlcPlayer.play(url: url)
@@ -494,8 +500,14 @@ struct TVLiveChannelPlayerView: View {
         if let url = liveTVRepository.getBrowserPreviewURL(for: channel) {
             NSLog("PLAYER URL: reload source=browserPreview channel=\(channel.id) url=\(url.absoluteString)")
             vlcPlayer.play(url: url)
+        } else if let url = liveTVRepository.getPreviewURL(for: channel) {
+            NSLog("PLAYER URL: reload source=preview channel=\(channel.id) url=\(url.absoluteString)")
+            vlcPlayer.play(url: url)
         } else if let url = liveTVRepository.getStreamURL(for: channel) {
             NSLog("PLAYER URL: reload source=repo channel=\(channel.id) url=\(url.absoluteString)")
+            vlcPlayer.play(url: url)
+        } else if let url = try? await viewModel.getChannelBrowserPreviewStream(channel) {
+            NSLog("PLAYER URL: reload source=apiBrowserPreview channel=\(channel.id) url=\(url.absoluteString)")
             vlcPlayer.play(url: url)
         } else if let url = try? await viewModel.getChannelStream(channel) {
             NSLog("PLAYER URL: reload source=api channel=\(channel.id) url=\(url.absoluteString)")
@@ -2004,19 +2016,20 @@ private struct TVOSLiveBrowserView: View {
     private func handlePrimarySelect() {
         ensureSelectionState()
 
-        // Enter on a channel row: lock the preview to that channel. Scrolling
-        // through other channels won't replace the preview until the user
-        // explicitly hits Enter on a different channel.
-        if guideFocusTarget == .channels, let channel = selectedRow?.channel {
-            previewChannelId = channel.id
-            return
-        }
+        // Single-press Enter does both things the user expects:
+        //   1. lock the preview to the focused row (so scrolling through
+        //      other channels doesn't steal the preview)
+        //   2. open the detail card for whatever program is focused
+        // Previously Enter on a channel logo only locked preview — which
+        // looked like "nothing happened" when the preview was already on
+        // that channel.
+        guard let channel = selectedRow?.channel else { return }
+        previewChannelId = channel.id
 
-        // Enter inside the program grid: open the detail card.
-        if let channel = selectedRow?.channel, let program = selectedProgram {
+        if let program = selectedProgram {
             selectedProgramIdByChannel[channel.id] = program.id
             presentProgram(program, channel: channel)
-        } else if let channel = selectedRow?.channel {
+        } else {
             onPlayChannel(channel)
         }
     }
@@ -2461,48 +2474,49 @@ private struct TVGuideLivePreviewCard: View {
     private var cornerRadius: CGFloat { compact ? 14 : 22 }
 
     var body: some View {
-        ZStack(alignment: .bottomLeading) {
-            TVGuidePreviewCard(
-                channel: channel,
-                program: program,
-                accent: accent,
-                compact: compact
-            )
-
+        TVGuidePreviewCard(
+            channel: channel,
+            program: program,
+            accent: accent,
+            compact: compact
+        )
+        .overlay {
             TVGuidePreviewPlayerSurface(player: previewPlayer.player)
                 .opacity(previewPlayer.isReady ? 1 : 0)
                 .allowsHitTesting(false)
-
+        }
+        .overlay(alignment: .bottomLeading) {
             if previewPlayer.isReady {
-                LinearGradient(
-                    colors: [Color.clear, Color.black.opacity(0.84)],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-                .allowsHitTesting(false)
+                ZStack(alignment: .bottomLeading) {
+                    LinearGradient(
+                        colors: [Color.clear, Color.black.opacity(0.84)],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                    .allowsHitTesting(false)
 
-                VStack(alignment: .leading, spacing: compact ? 4 : 8) {
-                    Text(compact ? "Preview" : "Live Preview")
-                        .font(.system(size: compact ? 9 : 11, weight: .black))
-                        .foregroundStyle(.white.opacity(0.72))
-                        .padding(.horizontal, compact ? 6 : 8)
-                        .padding(.vertical, compact ? 3 : 5)
-                        .background(Color.black.opacity(0.4), in: Capsule())
+                    VStack(alignment: .leading, spacing: compact ? 4 : 8) {
+                        Text(compact ? "Preview" : "Live Preview")
+                            .font(.system(size: compact ? 9 : 11, weight: .black))
+                            .foregroundStyle(.white.opacity(0.72))
+                            .padding(.horizontal, compact ? 6 : 8)
+                            .padding(.vertical, compact ? 3 : 5)
+                            .background(Color.black.opacity(0.4), in: Capsule())
 
-                    Spacer()
+                        Spacer()
 
-                    if !compact {
-                        Text(program?.title ?? channel?.name ?? "Live TV")
-                            .font(.system(size: 20, weight: .black, design: .rounded))
-                            .foregroundStyle(.white)
-                            .lineLimit(2)
+                        if !compact {
+                            Text(program?.title ?? channel?.name ?? "Live TV")
+                                .font(.system(size: 20, weight: .black, design: .rounded))
+                                .foregroundStyle(.white)
+                                .lineLimit(2)
+                        }
                     }
+                    .padding(compact ? 8 : 16)
+                    .allowsHitTesting(false)
                 }
-                .padding(compact ? 8 : 16)
-                .allowsHitTesting(false)
             }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
         .contentShape(RoundedRectangle(cornerRadius: cornerRadius))
         .onChange(of: channel?.id) { _, _ in debouncedReload() }
@@ -2969,6 +2983,8 @@ private struct TVGuideProgramSheet: View {
     @ViewBuilder
     private func actionButton(title: String, systemImage: String, action: @escaping () -> Void, focused: Action, isEnabled: Bool = true) -> some View {
         let button = Button(action: {
+            print("TVCARD BUTTON PRESS: \(title) enabled=\(isEnabled)")
+            NSLog("TVCARD BUTTON PRESS: \(title) enabled=\(isEnabled)")
             guard isEnabled else { return }
             action()
         }) {
@@ -5302,6 +5318,10 @@ struct TVNoGlowButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .opacity(configuration.isPressed ? 0.75 : 1.0)
+            // Without an explicit content shape the tvOS focus engine has no
+            // hit-test region for the bare label, so center-button presses
+            // sometimes fail to fire the Button's action.
+            .contentShape(Rectangle())
     }
 }
 

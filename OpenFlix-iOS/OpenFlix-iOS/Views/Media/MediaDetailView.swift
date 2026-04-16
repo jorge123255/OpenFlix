@@ -12,6 +12,9 @@ struct MediaDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.horizontalSizeClass) private var hSizeClass
     @Environment(\.verticalSizeClass) private var vSizeClass
+    #if os(tvOS)
+    @Namespace private var detailFocusNamespace
+    #endif
 
     private var isCompact: Bool { hSizeClass == .compact }
     private var isLandscape: Bool { vSizeClass == .compact }
@@ -40,6 +43,24 @@ struct MediaDetailView: View {
             pendingPlayerItem = nil
             presentPlayerViaUIKit(item: item)
         }
+        #if os(tvOS)
+        .sheet(isPresented: $showMoreOptions) {
+            TVMoreOptionsSheet(
+                onWatched: {
+                    showMoreOptions = false
+                    Task { await viewModel.markAsWatched() }
+                },
+                onUnwatched: {
+                    showMoreOptions = false
+                    Task { await viewModel.markAsUnwatched() }
+                },
+                onCancel: {
+                    showMoreOptions = false
+                }
+            )
+            .presentationDetents([.medium])
+        }
+        #else
         .confirmationDialog("Options", isPresented: $showMoreOptions) {
             Button("Mark as Watched") {
                 Task { await viewModel.markAsWatched() }
@@ -49,8 +70,12 @@ struct MediaDetailView: View {
             }
             Button("Cancel", role: .cancel) {}
         }
+        #endif
         .onExitCommand {
             dismiss()
+            // Surface the global sidecar so a single Menu press both backs out
+            // of the detail view AND opens the navigation drawer.
+            NotificationCenter.default.post(name: .sidecarToggle, object: nil)
         }
     }
 
@@ -71,6 +96,7 @@ struct MediaDetailView: View {
             VStack(spacing: 0) {
                 // Hero Section (70% height artwork)
                 heroSection(item)
+                    #if os(iOS)
                     .overlay(alignment: .topLeading) {
                         // Close button — needed when presented modally on iOS
                         Button(action: { dismiss() }) {
@@ -85,6 +111,7 @@ struct MediaDetailView: View {
                         .padding(.top, 58)
                         .padding(.leading, 16)
                     }
+                    #endif
 
                 // Content sections
                 VStack(alignment: .leading, spacing: 40) {
@@ -290,6 +317,10 @@ struct MediaDetailView: View {
                 showMoreOptions = true
             }
         )
+        #if os(tvOS)
+        .prefersDefaultFocus(true, in: detailFocusNamespace)
+        .focusSection()
+        #endif
     }
 
     // MARK: - Crew Section (Directors & Writers)
@@ -576,6 +607,136 @@ final class PlayerContainerViewController: UIViewController {
         }
     }
 }
+
+#if os(tvOS)
+private struct TVMoreOptionsSheet: View {
+    let onWatched: () -> Void
+    let onUnwatched: () -> Void
+    let onCancel: () -> Void
+
+    @FocusState private var focusedOption: Option?
+
+    private enum Option: Hashable {
+        case watched
+        case unwatched
+        case cancel
+    }
+
+    var body: some View {
+        ZStack {
+            LinearGradient(
+                colors: [
+                    Color(red: 16/255, green: 12/255, blue: 28/255),
+                    Color(red: 27/255, green: 20/255, blue: 46/255)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .ignoresSafeArea()
+
+            VStack(alignment: .leading, spacing: 22) {
+                Text("More Options")
+                    .font(.system(size: 34, weight: .black, design: .rounded))
+                    .foregroundStyle(.white)
+
+                Text("Choose an action for this title.")
+                    .font(.system(size: 20, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.7))
+
+                VStack(spacing: 16) {
+                    optionButton(
+                        title: "Mark as Watched",
+                        systemImage: "checkmark.circle.fill",
+                        focus: .watched,
+                        action: onWatched
+                    )
+
+                    optionButton(
+                        title: "Mark as Unwatched",
+                        systemImage: "arrow.uturn.backward.circle.fill",
+                        focus: .unwatched,
+                        action: onUnwatched
+                    )
+
+                    optionButton(
+                        title: "Cancel",
+                        systemImage: "xmark.circle.fill",
+                        focus: .cancel,
+                        action: onCancel
+                    )
+                }
+                .focusSection()
+            }
+            .padding(40)
+            .frame(maxWidth: 760, alignment: .leading)
+        }
+        .onAppear {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                focusedOption = .watched
+            }
+        }
+    }
+
+    private func optionButton(title: String, systemImage: String, focus: Option, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 16) {
+                Image(systemName: systemImage)
+                    .font(.system(size: 22, weight: .bold))
+                Text(title)
+                    .font(.system(size: 24, weight: .bold))
+                Spacer()
+            }
+            .padding(.horizontal, 24)
+            .padding(.vertical, 20)
+            .background(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .fill(
+                        focusedOption == focus
+                            ? LinearGradient(
+                                colors: [Color.white, Color(red: 230/255, green: 224/255, blue: 255/255)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                            : LinearGradient(
+                                colors: [Color.white.opacity(0.12), Color.white.opacity(0.06)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                    )
+            )
+            .foregroundStyle(focusedOption == focus ? Color.black : Color.white)
+            .overlay(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .stroke(focusedOption == focus ? Color.white : Color.white.opacity(0.14), lineWidth: focusedOption == focus ? 4 : 1.5)
+            )
+            .overlay(alignment: .leading) {
+                RoundedRectangle(cornerRadius: 3, style: .continuous)
+                    .fill(focusedOption == focus ? Color.black.opacity(0.88) : .clear)
+                    .frame(width: 8)
+                    .padding(.vertical, 6)
+                    .padding(.leading, 6)
+            }
+            .overlay(alignment: .trailing) {
+                if focusedOption == focus {
+                    Text("Selected")
+                        .font(.system(size: 14, weight: .black))
+                        .foregroundStyle(.black)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
+                        .background(Color.white.opacity(0.88), in: Capsule())
+                        .padding(.trailing, 12)
+                }
+            }
+            .shadow(color: focusedOption == focus ? Color.white.opacity(0.3) : .clear, radius: 20, y: 8)
+            .scaleEffect(focusedOption == focus ? 1.05 : 1.0)
+            .opacity(focusedOption == focus ? 1.0 : 0.86)
+            .animation(.easeInOut(duration: 0.18), value: focusedOption)
+        }
+        .buttonStyle(.plain)
+        .focused($focusedOption, equals: focus)
+    }
+}
+#endif
 
 // MARK: - Preview
 

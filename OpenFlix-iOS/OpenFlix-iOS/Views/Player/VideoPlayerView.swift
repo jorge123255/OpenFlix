@@ -152,6 +152,7 @@ struct VideoPlayerView: View {
                 viewModel.showControls = false
             } else {
                 dismiss()
+                NotificationCenter.default.post(name: .sidecarToggle, object: nil)
             }
         }
         #endif
