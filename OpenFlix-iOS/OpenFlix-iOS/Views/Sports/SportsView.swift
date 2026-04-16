@@ -25,12 +25,14 @@ struct SportsView: View {
                     )
                 } else {
                     ScrollView {
-                        LazyVStack(alignment: .leading, spacing: 24) {
-                            // Live Now header
+                        LazyVStack(alignment: .leading, spacing: 36) {
+                            #if os(tvOS)
+                            sportsHeroBanner
+                                .padding(.horizontal, 28)
+                                .padding(.top, 16)
+                            #else
                             HStack {
-                                Circle()
-                                    .fill(Color.red)
-                                    .frame(width: 8, height: 8)
+                                Circle().fill(Color.red).frame(width: 8, height: 8)
                                 Text("LIVE NOW")
                                     .font(.system(size: 13, weight: .bold))
                                     .foregroundColor(.red)
@@ -41,8 +43,8 @@ struct SportsView: View {
                             }
                             .padding(.horizontal, 16)
                             .padding(.top, 8)
-                            
-                            // Group by sport/category
+                            #endif
+
                             ForEach(sportGroups, id: \.name) { group in
                                 SportGroupSection(
                                     group: group,
@@ -52,7 +54,7 @@ struct SportsView: View {
                                 )
                             }
                         }
-                        .padding(.bottom, 20)
+                        .padding(.bottom, 40)
                     }
                 }
             }
@@ -94,8 +96,48 @@ struct SportsView: View {
         }
     }
     
+    // MARK: - tvOS Hero Banner
+
+    #if os(tvOS)
+    private var sportsHeroBanner: some View {
+        ZStack(alignment: .bottomLeading) {
+            LinearGradient(
+                colors: [
+                    Color(red: 0.62, green: 0.04, blue: 0.04),
+                    Color(red: 0.18, green: 0.04, blue: 0.10)
+                ],
+                startPoint: .leading,
+                endPoint: .trailing
+            )
+            Image(systemName: "sportscourt.fill")
+                .font(.system(size: 200, weight: .light))
+                .foregroundStyle(.white.opacity(0.07))
+                .offset(x: 380, y: -10)
+
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 8) {
+                    Circle().fill(Color.white).frame(width: 8, height: 8)
+                    Text("LIVE NOW")
+                        .font(.system(size: 12, weight: .black, design: .rounded))
+                        .foregroundStyle(.white)
+                        .tracking(2)
+                }
+                Text("Sports")
+                    .font(.system(size: 38, weight: .black, design: .rounded))
+                    .foregroundStyle(.white)
+                Text("\(sportsChannels.count) live event\(sportsChannels.count == 1 ? "" : "s") across \(sportGroups.count) league\(sportGroups.count == 1 ? "" : "s")")
+                    .font(.system(size: 16, weight: .semibold, design: .rounded))
+                    .foregroundStyle(.white.opacity(0.78))
+            }
+            .padding(28)
+        }
+        .frame(height: 160)
+        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+    }
+    #endif
+
     // MARK: - Sports Channels
-    
+
     private var sportsChannels: [Channel] {
         viewModel.channels.filter { channel in
             let name = channel.name.lowercased()
@@ -233,10 +275,7 @@ struct SportGroupSection: View {
                     }
                 }
                 .padding(.horizontal, 28)
-                .padding(.vertical, 6)
-                #if os(tvOS)
-                .focusSection()
-                #endif
+                .padding(.vertical, 18)
             }
         }
     }
@@ -248,10 +287,6 @@ struct SportEventCard: View {
     let channel: Channel
     let onTap: () -> Void
 
-    #if os(tvOS)
-    @Environment(\.isFocused) private var isFocused
-    #endif
-
     var body: some View {
         Button(action: onTap) {
             ZStack(alignment: .bottomLeading) {
@@ -261,18 +296,9 @@ struct SportEventCard: View {
             }
             .frame(width: 280, height: 170)
             .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-            #if os(tvOS)
-            .overlay(
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .stroke(isFocused ? Color.red.opacity(0.85) : Color.clear, lineWidth: 4)
-            )
-            .scaleEffect(isFocused ? 1.06 : 1)
-            .shadow(color: isFocused ? Color.red.opacity(0.25) : .clear, radius: 22, y: 10)
-            .animation(.easeInOut(duration: 0.18), value: isFocused)
-            #endif
         }
         #if os(tvOS)
-        .buttonStyle(SportEventButtonStyle())
+        .buttonStyle(SportEventCardStyle())
         #else
         .buttonStyle(.plain)
         #endif
@@ -347,12 +373,30 @@ struct SportEventCard: View {
 }
 
 #if os(tvOS)
-private struct SportEventButtonStyle: ButtonStyle {
+/// tvOS card style. The inner View is necessary so that `\.isFocused`
+/// resolves against the Button's actual focus state — reading the
+/// environment directly inside `makeBody` returns a stale value.
+private struct SportEventCardStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .scaleEffect(configuration.isPressed ? 0.97 : 1.0)
-            .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
-            .contentShape(Rectangle())
+        Inner(configuration: configuration)
+    }
+
+    private struct Inner: View {
+        let configuration: ButtonStyle.Configuration
+        @Environment(\.isFocused) private var isFocused
+
+        var body: some View {
+            configuration.label
+                .overlay(
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .stroke(isFocused ? Color.red.opacity(0.92) : Color.clear, lineWidth: 4)
+                )
+                .scaleEffect(configuration.isPressed ? 0.97 : (isFocused ? 1.07 : 1.0))
+                .shadow(color: isFocused ? Color.red.opacity(0.32) : .clear, radius: 22, y: 12)
+                .animation(.easeInOut(duration: 0.18), value: isFocused)
+                .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
+                .contentShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        }
     }
 }
 #endif
