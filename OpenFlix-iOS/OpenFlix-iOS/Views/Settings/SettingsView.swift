@@ -26,6 +26,11 @@ struct SettingsView: View {
             settingsBg.ignoresSafeArea()
             ScrollView {
                 VStack(spacing: 20) {
+                    #if os(tvOS)
+                    settingsHeroBanner
+                        .padding(.horizontal, 28)
+                        .padding(.top, 16)
+                    #endif
                     serverSection
                     inviteSection
                     remoteAccessSection
@@ -454,6 +459,40 @@ struct SettingsView: View {
             .buttonStyle(.plain)
         }
     }
+
+    // MARK: - tvOS Hero Banner
+
+    #if os(tvOS)
+    private var settingsHeroBanner: some View {
+        let serverName = settingsViewModel.serverInfo?.name ?? "OpenFlix server"
+        return ZStack(alignment: .bottomLeading) {
+            LinearGradient(
+                colors: [
+                    Color(red: 0.22, green: 0.24, blue: 0.28),
+                    Color(red: 0.10, green: 0.11, blue: 0.14)
+                ],
+                startPoint: .leading,
+                endPoint: .trailing
+            )
+            Image(systemName: "gearshape.fill")
+                .font(.system(size: 200, weight: .light))
+                .foregroundStyle(.white.opacity(0.07))
+                .offset(x: 380, y: -10)
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Settings")
+                    .font(.system(size: 38, weight: .black, design: .rounded))
+                    .foregroundStyle(.white)
+                Text(serverName)
+                    .font(.system(size: 16, weight: .semibold, design: .rounded))
+                    .foregroundStyle(.white.opacity(0.78))
+            }
+            .padding(28)
+        }
+        .frame(height: 160)
+        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+    }
+    #endif
 
     // MARK: - Invite Modal
 
@@ -1641,8 +1680,16 @@ struct AddM3USourceView: View {
             Form {
                 Section("Source") {
                     TextField("Name", text: $name)
-                    TextField("M3U URL", text: $url).keyboardType(.URL).autocapitalization(.none)
-                    TextField("EPG URL (optional)", text: $epgUrl).keyboardType(.URL).autocapitalization(.none)
+                    TextField("M3U URL", text: $url)
+                        #if !os(tvOS)
+                        .keyboardType(.URL)
+                        .autocapitalization(.none)
+                        #endif
+                    TextField("EPG URL (optional)", text: $epgUrl)
+                        #if !os(tvOS)
+                        .keyboardType(.URL)
+                        .autocapitalization(.none)
+                        #endif
                 }
                 Section("Import Options") {
                     Toggle("Import VOD", isOn: $importVod)
