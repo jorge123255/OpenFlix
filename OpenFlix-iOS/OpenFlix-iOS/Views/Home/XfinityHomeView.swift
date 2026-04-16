@@ -1382,8 +1382,6 @@ private struct TVCompactWideCard: View {
     let item: MediaItem
     let action: () -> Void
 
-    @Environment(\.isFocused) private var isFocused
-
     private var progress: Double {
         guard let duration = item.duration, duration > 0,
               let offset = item.viewOffset else { return 0 }
@@ -1427,10 +1425,6 @@ private struct TVCompactWideCard: View {
                     }
                 }
                 .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .stroke(isFocused ? Color.white.opacity(0.78) : Color.white.opacity(0.06), lineWidth: isFocused ? 3 : 1)
-                )
 
                 Text(item.title)
                     .font(.system(size: 18, weight: .semibold))
@@ -1438,13 +1432,42 @@ private struct TVCompactWideCard: View {
                     .lineLimit(1)
                     .frame(width: 340, alignment: .leading)
             }
-            .scaleEffect(isFocused ? 1.03 : 1.0)
-            .shadow(color: isFocused ? Color.white.opacity(0.10) : .clear, radius: 8, y: 4)
-            .animation(.easeInOut(duration: 0.18), value: isFocused)
         }
+        #if os(tvOS)
+        .buttonStyle(TVCompactWideCardStyle())
+        #else
         .buttonStyle(.plain)
+        #endif
     }
 }
+
+#if os(tvOS)
+/// Focus-aware ButtonStyle for TVCompactWideCard on tvOS.
+/// Inner View pattern ensures @Environment(\.isFocused) resolves against
+/// the Button's real focus state and not a stale value.
+private struct TVCompactWideCardStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        Inner(configuration: configuration)
+    }
+
+    private struct Inner: View {
+        let configuration: ButtonStyle.Configuration
+        @Environment(\.isFocused) private var isFocused
+
+        var body: some View {
+            configuration.label
+                .overlay(
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .stroke(isFocused ? Color.white.opacity(0.78) : Color.white.opacity(0.06), lineWidth: isFocused ? 3 : 1)
+                )
+                .scaleEffect(configuration.isPressed ? 0.97 : (isFocused ? 1.03 : 1.0))
+                .shadow(color: isFocused ? Color.white.opacity(0.10) : .clear, radius: 8, y: 4)
+                .animation(.easeInOut(duration: 0.18), value: isFocused)
+                .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
+        }
+    }
+}
+#endif
 
 private struct TVCompactPosterCard: View {
     let item: MediaItem
@@ -1619,8 +1642,6 @@ private struct TVCompactRankedCard: View {
     let rank: Int
     let action: () -> Void
 
-    @Environment(\.isFocused) private var isFocused
-
     var body: some View {
         Button(action: action) {
             ZStack(alignment: .bottomLeading) {
@@ -1638,20 +1659,46 @@ private struct TVCompactRankedCard: View {
                 .frame(width: 180, height: 270)
                 .clipped()
                 .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .stroke(isFocused ? Color.white.opacity(0.78) : Color.white.opacity(0.05), lineWidth: isFocused ? 3 : 1)
-                )
                 .offset(x: 58)
             }
             .frame(width: 250, height: 270)
-            .scaleEffect(isFocused ? 1.03 : 1.0)
-            .shadow(color: isFocused ? Color.white.opacity(0.10) : .clear, radius: 8, y: 4)
-            .animation(.easeInOut(duration: 0.18), value: isFocused)
         }
+        #if os(tvOS)
+        .buttonStyle(TVCompactRankedCardStyle())
+        #else
         .buttonStyle(.plain)
+        #endif
     }
 }
+
+#if os(tvOS)
+/// Focus-aware ButtonStyle for TVCompactRankedCard on tvOS.
+/// Inner View pattern ensures @Environment(\.isFocused) resolves against
+/// the Button's real focus state and not a stale value.
+private struct TVCompactRankedCardStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        Inner(configuration: configuration)
+    }
+
+    private struct Inner: View {
+        let configuration: ButtonStyle.Configuration
+        @Environment(\.isFocused) private var isFocused
+
+        var body: some View {
+            configuration.label
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .stroke(isFocused ? Color.white.opacity(0.78) : Color.white.opacity(0.05), lineWidth: isFocused ? 3 : 1)
+                        .offset(x: 58)
+                )
+                .scaleEffect(configuration.isPressed ? 0.97 : (isFocused ? 1.03 : 1.0))
+                .shadow(color: isFocused ? Color.white.opacity(0.10) : .clear, radius: 8, y: 4)
+                .animation(.easeInOut(duration: 0.18), value: isFocused)
+                .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
+        }
+    }
+}
+#endif
 
 private struct TVRecentChannelCard: View {
     let channel: Channel
