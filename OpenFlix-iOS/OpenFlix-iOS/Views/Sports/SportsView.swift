@@ -218,20 +218,28 @@ struct SportsView: View {
     // MARK: - Play Channel
     
     private func playChannel(_ channel: Channel) {
+        NSLog("SPORTS PLAY: channel=\(channel.id) name=\(channel.name) preferredPlayback=\(channel.preferredPlaybackURL?.absoluteString ?? "nil")")
         selectedChannel = channel
-        
+
         if let url = channel.preferredPlaybackURL {
             streamURL = url
             showPlayer = true
             return
         }
-        
+
+        // No preferred URL — present immediately and let the player resolve via API.
+        // This matches the LiveTV/Home flow and ensures clicks always open
+        // SOMETHING instead of silently failing.
+        streamURL = nil
+        showPlayer = true
+
         Task {
             do {
                 let url = try await viewModel.getChannelStream(channel)
                 streamURL = url
-                showPlayer = true
+                NSLog("SPORTS PLAY: api returned url=\(url.absoluteString)")
             } catch {
+                NSLog("SPORTS PLAY: api failed \(error)")
                 viewModel.error = error.localizedDescription
             }
         }

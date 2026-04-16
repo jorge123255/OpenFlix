@@ -34,6 +34,13 @@ struct WatchlistView: View {
         .task {
             await viewModel.loadWatchlist()
         }
+        #if os(tvOS)
+        // The Library tab content is rendered without a player/sheet to absorb
+        // Esc, so ensure the global sidecar handler still fires.
+        .onExitCommand {
+            NotificationCenter.default.post(name: .sidecarToggle, object: nil)
+        }
+        #endif
     }
 
     private var contentView: some View {

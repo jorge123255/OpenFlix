@@ -1933,6 +1933,7 @@ private struct TVOSLiveBrowserView: View {
             windowEnd: windowEnd,
             guideWindowMinutes: guideWindowMinutes,
             onSelectChannel: { channel in
+                NSLog("GUIDE TAP: channel=\(channel.id) name=\(channel.name)")
                 selectChannel(channel)
                 previewChannelId = channel.id
                 // Pressing Enter on the channel logo column should also open
@@ -1941,13 +1942,16 @@ private struct TVOSLiveBrowserView: View {
                 // logo. Falls through to play-channel if there's no program.
                 if let row = guideRowsById[channel.id],
                    let program = row.currentProgram ?? channel.nowPlaying ?? row.programs.first {
+                    NSLog("GUIDE TAP: presenting program=\(program.title)")
                     selectedProgramIdByChannel[channel.id] = program.id
                     presentProgram(program, channel: channel)
                 } else {
+                    NSLog("GUIDE TAP: no program → onPlayChannel")
                     onPlayChannel(channel)
                 }
             },
             onSelectProgram: { channel, program in
+                NSLog("GUIDE TAP: program=\(program.title) channel=\(channel.name)")
                 selectedProgramIdByChannel[channel.id] = program.id
                 selectChannel(channel)
                 presentProgram(program, channel: channel)
