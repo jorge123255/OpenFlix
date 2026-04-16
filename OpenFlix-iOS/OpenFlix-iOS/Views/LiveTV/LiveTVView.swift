@@ -134,6 +134,7 @@ struct LiveTVView: View {
                     initialStreamURL: streamURL,
                     viewModel: viewModel
                 )
+                .id(channel.id)  // stable identity prevents SwiftUI recreating VLC on re-render
                 .environmentObject(dvrViewModel)
                 #else
                 if let url = streamURL {
@@ -201,6 +202,7 @@ struct TVLiveChannelPlayerView: View {
     @State private var channelBannerTask: Task<Void, Never>?
     @State private var showMultiview = false
     @State private var multiviewPickedChannel: Channel?
+    @State private var hasStartedPlayback = false
 
     init(initialChannel: Channel, initialStreamURL: URL?, viewModel: LiveTVViewModel) {
         self._channel = State(initialValue: initialChannel)
@@ -342,6 +344,8 @@ struct TVLiveChannelPlayerView: View {
             }
         }
         .onAppear {
+            guard !hasStartedPlayback else { return }
+            hasStartedPlayback = true
             playCurrentChannel(with: initialStreamURL)
             viewModel.selectChannel(channel)
             scheduleAutoHide()
@@ -1876,6 +1880,18 @@ private struct TVOSLiveBrowserView: View {
             guideWindowMinutes: guideWindowMinutes,
             onSelectChannel: { channel in
                 selectChannel(channel)
+                previewChannelId = channel.id
+                // Pressing Enter on the channel logo column should also open
+                // the detail card for the channel's currently-airing program
+                // — otherwise Enter looked like a no-op when focus was on the
+                // logo. Falls through to play-channel if there's no program.
+                if let row = guideRowsById[channel.id],
+                   let program = row.currentProgram ?? channel.nowPlaying ?? row.programs.first {
+                    selectedProgramIdByChannel[channel.id] = program.id
+                    presentProgram(program, channel: channel)
+                } else {
+                    onPlayChannel(channel)
+                }
             },
             onSelectProgram: { channel, program in
                 selectedProgramIdByChannel[channel.id] = program.id
