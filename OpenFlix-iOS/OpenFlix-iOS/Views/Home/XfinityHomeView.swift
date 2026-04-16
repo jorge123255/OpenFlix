@@ -12,6 +12,7 @@ struct XfinityHomeView: View {
     @State private var showPlayer = false
     @State private var selectedRecordingId: Int?
     @State private var showRecordingPlayer = false
+    @State private var resolvedRecordingURL: URL?
     @State private var showChannelPlayer = false
     @State private var selectedSeriesTitle: String?
     @State private var showSeriesEpisodes = false
@@ -97,6 +98,8 @@ struct XfinityHomeView: View {
                 #if os(tvOS)
                 VideoPlayerView(
                     mediaItem: nil,
+                    recordingURL: resolvedRecordingURL,
+                    startPosition: recording.viewOffset,
                     commercials: recording.commercials,
                     recordingDurationMs: recording.duration,
                     recording: recording
@@ -107,21 +110,24 @@ struct XfinityHomeView: View {
             }
         }
         .fullScreenCover(isPresented: $showChannelPlayer) {
-            if let channel = selectedChannel,
-               let streamURL = channel.preferredPlaybackURL {
+            if let channel = selectedChannel {
                 #if os(tvOS)
-                VideoPlayerView(
-                    mediaItem: nil,
-                    liveChannelURL: streamURL
+                TVLiveChannelPlayerView(
+                    initialChannel: channel,
+                    initialStreamURL: channel.preferredPlaybackURL,
+                    viewModel: liveTVViewModel
                 )
+                .environmentObject(dvrViewModel)
                 #else
-                FullScreenPlayerView(
-                    channel: channel,
-                    program: channel.nowPlaying,
-                    streamURL: streamURL,
-                    onMinimize: { showChannelPlayer = false },
-                    onClose: { showChannelPlayer = false }
-                )
+                if let streamURL = channel.preferredPlaybackURL {
+                    FullScreenPlayerView(
+                        channel: channel,
+                        program: channel.nowPlaying,
+                        streamURL: streamURL,
+                        onMinimize: { showChannelPlayer = false },
+                        onClose: { showChannelPlayer = false }
+                    )
+                }
                 #endif
             }
         }
@@ -133,8 +139,8 @@ struct XfinityHomeView: View {
                     recordings: series.recordings,
                     onPlayRecording: { recording in
                         selectedRecordingId = recording.id
-                        showRecordingPlayer = true
                         showSeriesEpisodes = false
+                        resolveAndPlayRecording(recording)
                     },
                     onDismiss: { showSeriesEpisodes = false }
                 )
@@ -315,6 +321,78 @@ struct XfinityHomeView: View {
                                         TVCompactPosterCard(item: item) {
                                             selectedItem = item
                                             showMediaDetail = true
+                                        }
+                                    }
+                                }
+                                .padding(.horizontal, 28)
+                                .padding(.vertical, 8)
+                                .focusSection()
+                            }
+                        }
+                    }
+
+                    // Tonight
+                    if !viewModel.onLaterTonight.isEmpty {
+                        tvHomeRow(title: "Tonight", showViewAll: false) {
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack(spacing: 16) {
+                                    ForEach(viewModel.onLaterTonight.prefix(15)) { entry in
+                                        TVOnLaterProgramCard(entry: entry) {
+                                            tuneToOnLaterChannel(entry)
+                                        }
+                                    }
+                                }
+                                .padding(.horizontal, 28)
+                                .padding(.vertical, 8)
+                                .focusSection()
+                            }
+                        }
+                    }
+
+                    // Live Sports
+                    if !viewModel.onLaterSports.isEmpty {
+                        tvHomeRow(title: "Live Sports", showViewAll: false) {
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack(spacing: 16) {
+                                    ForEach(viewModel.onLaterSports.prefix(15)) { entry in
+                                        TVOnLaterProgramCard(entry: entry) {
+                                            tuneToOnLaterChannel(entry)
+                                        }
+                                    }
+                                }
+                                .padding(.horizontal, 28)
+                                .padding(.vertical, 8)
+                                .focusSection()
+                            }
+                        }
+                    }
+
+                    // News
+                    if !viewModel.onLaterNews.isEmpty {
+                        tvHomeRow(title: "News", showViewAll: false) {
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack(spacing: 16) {
+                                    ForEach(viewModel.onLaterNews.prefix(15)) { entry in
+                                        TVOnLaterProgramCard(entry: entry) {
+                                            tuneToOnLaterChannel(entry)
+                                        }
+                                    }
+                                }
+                                .padding(.horizontal, 28)
+                                .padding(.vertical, 8)
+                                .focusSection()
+                            }
+                        }
+                    }
+
+                    // Kids
+                    if !viewModel.onLaterKids.isEmpty {
+                        tvHomeRow(title: "Kids", showViewAll: false) {
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack(spacing: 16) {
+                                    ForEach(viewModel.onLaterKids.prefix(15)) { entry in
+                                        TVOnLaterProgramCard(entry: entry) {
+                                            tuneToOnLaterChannel(entry)
                                         }
                                     }
                                 }
@@ -808,6 +886,18 @@ struct XfinityHomeView: View {
         .focusSection()
     }
 
+    private func resolveAndPlayRecording(_ recording: Recording) {
+        Task {
+            do {
+                resolvedRecordingURL = try await dvrViewModel.getRecordingStream(recording)
+                showRecordingPlayer = true
+            } catch {
+                resolvedRecordingURL = nil
+                showRecordingPlayer = true
+            }
+        }
+    }
+
     /// Recently completed recordings for the home rail
     private var tvRecentlyRecorded: [(title: String, recordings: [Recording])] {
         Array(dvrViewModel.recordingsBySeries.prefix(10))
@@ -963,6 +1053,10 @@ struct XfinityHomeView: View {
             && tvMovieItems.isEmpty
             && tvShowItems.isEmpty
             && tvCuratedHubs.isEmpty
+            && viewModel.onLaterTonight.isEmpty
+            && viewModel.onLaterSports.isEmpty
+            && viewModel.onLaterKids.isEmpty
+            && viewModel.onLaterNews.isEmpty
     }
 
     private func curatedDiscoveryItems(_ items: [MediaItem], limit: Int) -> [MediaItem] {
@@ -1086,6 +1180,19 @@ struct XfinityHomeView: View {
             return tokens.prefix(2).joined(separator: " ")
         }
         return tokens.joined(separator: " ")
+    }
+
+    private func tuneToOnLaterChannel(_ entry: OnLaterProgram) {
+        // Try to resolve the OnLater entry's channel against the loaded
+        // LiveTV channel list. If we find it, tune in via the existing
+        // channel-player presenter.
+        if let channel = liveTVViewModel.channels.first(where: { $0.id == entry.channelId }) {
+            selectedChannel = channel
+            showChannelPlayer = true
+        }
+        // If not found, silently do nothing — the program may be on a channel
+        // we don't have. A future iteration could surface a "Set Reminder"
+        // sheet here.
     }
 
     private func requestHomeFocus() {
@@ -1332,6 +1439,138 @@ private struct TVCompactPosterCard: View {
             .animation(.easeInOut(duration: 0.18), value: isFocused)
         }
         .buttonStyle(.plain)
+    }
+}
+
+private struct TVOnLaterProgramCard: View {
+    let entry: OnLaterProgram
+    let onTap: () -> Void
+
+    @Environment(\.isFocused) private var isFocused
+
+    private static let timeFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "EEE h:mm a"
+        return f
+    }()
+
+    var body: some View {
+        TVFocusableCard(
+            content: { card },
+            action: onTap
+        )
+        .frame(width: 240, height: 200)
+    }
+
+    @ViewBuilder
+    private var card: some View {
+        ZStack(alignment: .bottomLeading) {
+            artworkLayer
+            scrim
+            content
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+    }
+
+    @ViewBuilder
+    private var artworkLayer: some View {
+        if let path = entry.program.art ?? entry.program.icon {
+            AuthenticatedImage(path: path, systemPlaceholder: placeholderIcon)
+                .aspectRatio(contentMode: .fill)
+        } else if let logo = entry.channelLogo {
+            ZStack {
+                LinearGradient(
+                    colors: [Color(red: 0.16, green: 0.13, blue: 0.30),
+                             Color(red: 0.09, green: 0.08, blue: 0.18)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                AuthenticatedImage(path: logo, systemPlaceholder: placeholderIcon)
+                    .aspectRatio(contentMode: .fit)
+                    .padding(36)
+            }
+        } else {
+            LinearGradient(
+                colors: [Color(red: 0.16, green: 0.13, blue: 0.30),
+                         Color(red: 0.09, green: 0.08, blue: 0.18)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .overlay {
+                Image(systemName: placeholderIcon)
+                    .font(.system(size: 40, weight: .light))
+                    .foregroundStyle(.white.opacity(0.32))
+            }
+        }
+    }
+
+    private var scrim: some View {
+        LinearGradient(
+            colors: [Color.clear, Color.black.opacity(0.86)],
+            startPoint: .top,
+            endPoint: .bottom
+        )
+    }
+
+    private var content: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            badgeRow
+            Text(entry.program.title)
+                .font(.system(size: 15, weight: .black, design: .rounded))
+                .foregroundStyle(.white)
+                .lineLimit(2)
+            HStack(spacing: 6) {
+                Text(channelLabel)
+                    .font(.system(size: 11, weight: .black, design: .rounded))
+                    .foregroundStyle(.white.opacity(0.78))
+                    .lineLimit(1)
+                Text("·")
+                    .foregroundStyle(.white.opacity(0.4))
+                Text(Self.timeFormatter.string(from: entry.program.startTime))
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.7))
+                    .lineLimit(1)
+            }
+        }
+        .padding(12)
+    }
+
+    @ViewBuilder
+    private var badgeRow: some View {
+        HStack(spacing: 4) {
+            if entry.program.isLive {
+                badge("LIVE", tint: .red)
+            }
+            if entry.program.isNew {
+                badge("NEW", tint: .blue)
+            }
+            if entry.program.isPremiere {
+                badge("PREMIERE", tint: .purple)
+            }
+        }
+    }
+
+    private func badge(_ text: String, tint: Color) -> some View {
+        Text(text)
+            .font(.system(size: 9, weight: .black, design: .rounded))
+            .foregroundStyle(.white)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(tint.opacity(0.85), in: Capsule())
+    }
+
+    private var channelLabel: String {
+        if let n = entry.channelNumber {
+            return "\(n) · \(entry.channelName)"
+        }
+        return entry.channelName
+    }
+
+    private var placeholderIcon: String {
+        if entry.program.isSports { return "sportscourt" }
+        if entry.program.isKids { return "balloon.2" }
+        if entry.program.isNews { return "newspaper" }
+        return "tv"
     }
 }
 

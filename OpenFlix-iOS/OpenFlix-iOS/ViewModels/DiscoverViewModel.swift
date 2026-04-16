@@ -17,6 +17,10 @@ class DiscoverViewModel: ObservableObject {
     /// Server-authoritative "On Now" from /livetv/on-now. Replaces the
     /// previous client-side filtering of LiveTVViewModel.channels.
     @Published var liveNow: [(channel: Channel, program: Program?)] = []
+    @Published var onLaterTonight: [OnLaterProgram] = []
+    @Published var onLaterSports: [OnLaterProgram] = []
+    @Published var onLaterKids: [OnLaterProgram] = []
+    @Published var onLaterNews: [OnLaterProgram] = []
     @Published var isLoading = false
     @Published var isRefreshing = false
     @Published var error: String?
@@ -143,6 +147,36 @@ class DiscoverViewModel: ObservableObject {
             print("Loaded \(liveNow.count) live-now channels")
         } catch {
             print("Failed to load live-now: \(error)")
+        }
+
+        // Server-curated On Later rails — fan out in parallel since each
+        // endpoint is independent. Failures are silent so a slow rail
+        // doesn't block the rest.
+        await withTaskGroup(of: Void.self) { group in
+            group.addTask { [weak self] in
+                guard let self else { return }
+                if let v = try? await self.mediaRepository.getOnLaterTonight() {
+                    await MainActor.run { self.onLaterTonight = v }
+                }
+            }
+            group.addTask { [weak self] in
+                guard let self else { return }
+                if let v = try? await self.mediaRepository.getOnLaterSports() {
+                    await MainActor.run { self.onLaterSports = v }
+                }
+            }
+            group.addTask { [weak self] in
+                guard let self else { return }
+                if let v = try? await self.mediaRepository.getOnLaterKids() {
+                    await MainActor.run { self.onLaterKids = v }
+                }
+            }
+            group.addTask { [weak self] in
+                guard let self else { return }
+                if let v = try? await self.mediaRepository.getOnLaterNews() {
+                    await MainActor.run { self.onLaterNews = v }
+                }
+            }
         }
 
         // Only show error if nothing loaded
