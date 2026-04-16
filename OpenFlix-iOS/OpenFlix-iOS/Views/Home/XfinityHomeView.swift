@@ -218,9 +218,6 @@ struct XfinityHomeView: View {
         ScrollView(.vertical, showsIndicators: false) {
             LazyVStack(alignment: .leading, spacing: 0) {
                 tvCompactHeroSection
-                tvHeroPageIndicator
-                    .padding(.top, 8)
-                    .padding(.bottom, 12)
 
                 if allTVRailsEmpty {
                     VStack(spacing: 18) {
