@@ -65,7 +65,7 @@ enum SidecarMenuItem: String, CaseIterable, Hashable {
     }
 
     var isTabItem: Bool {
-        self != .settings
+        true
     }
 
     var section: Section? {
@@ -93,7 +93,7 @@ enum SidecarMenuItem: String, CaseIterable, Hashable {
         case .search: return .search
         case .sports: return .sports
         case .stats: return .stats
-        case .settings: return nil
+        case .settings: return .settings
         }
     }
 
@@ -203,11 +203,7 @@ final class SidecarMenuState: ObservableObject {
 
     func handleSelect() {
         guard isOpen, let item = focusedItem else { return }
-        if item == .settings {
-            close()
-        } else {
-            selectItem(item)
-        }
+        selectItem(item)
     }
 
     func restoreState() {
@@ -223,7 +219,6 @@ final class SidecarMenuState: ObservableObject {
 struct SidecarMenuView: View {
     @ObservedObject var state: SidecarMenuState
     let profileName: String?
-    let onSettings: () -> Void
 
     @FocusState private var focusedMenuItem: SidecarMenuItem?
 
@@ -322,11 +317,10 @@ struct SidecarMenuView: View {
     private var settingsItem: some View {
         sidecarButton(
             item: .settings,
-            isSelected: false,
+            isSelected: state.selectedTab == .settings,
             compact: false
         ) {
-            state.close()
-            onSettings()
+            state.selectItem(.settings)
         }
         .padding(.horizontal, 8)
         .padding(.bottom, 26)
@@ -423,6 +417,7 @@ struct OpenFlixTVTabView: View {
         case search = "Search"
         case sports = "Sports"
         case stats = "Stats"
+        case settings = "Settings"
 
         var icon: String {
             switch self {
@@ -436,6 +431,7 @@ struct OpenFlixTVTabView: View {
             case .search: return "magnifyingglass"
             case .sports: return "sportscourt.fill"
             case .stats: return "chart.bar.fill"
+            case .settings: return "gearshape"
             }
         }
 
@@ -451,6 +447,7 @@ struct OpenFlixTVTabView: View {
             case .search: return "Navigate to Search"
             case .sports: return "Browse live and upcoming sports"
             case .stats: return "View watch and recording stats"
+            case .settings: return "Open Settings"
             }
         }
     }
@@ -460,7 +457,6 @@ struct OpenFlixTVTabView: View {
     @Environment(\.scenePhase) private var scenePhase
     @StateObject private var sidecarState = SidecarMenuState.shared
     @State private var selectedTab: Tab = .home
-    @State private var showSettings = false
 
     private let backgroundColor = Color(red: 8 / 255, green: 10 / 255, blue: 20 / 255)
 
@@ -489,10 +485,7 @@ struct OpenFlixTVTabView: View {
                 if sidecarState.isOpen {
                     SidecarMenuView(
                         state: sidecarState,
-                        profileName: authViewModel.currentProfile?.name,
-                        onSettings: {
-                            showSettings = true
-                        }
+                        profileName: authViewModel.currentProfile?.name
                     )
                     .frame(width: 320)
                     .zIndex(2)
@@ -537,13 +530,6 @@ struct OpenFlixTVTabView: View {
             }
             .animation(.easeInOut(duration: 0.22), value: selectedTab)
         }
-        .sheet(isPresented: $showSettings) {
-            NavigationStack {
-                SettingsView()
-            }
-            .environmentObject(authViewModel)
-            .environmentObject(settingsViewModel)
-        }
     }
 
     @ViewBuilder
@@ -574,6 +560,10 @@ struct OpenFlixTVTabView: View {
         case .stats:
             NavigationStack {
                 WatchStatsView()
+            }
+        case .settings:
+            NavigationStack {
+                SettingsView()
             }
         }
     }

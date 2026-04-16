@@ -208,20 +208,35 @@ struct SportGroup {
 struct SportGroupSection: View {
     let group: SportGroup
     let onChannelTap: (Channel) -> Void
-    
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            // Section header
-            Text(group.name)
-                .font(.system(size: 20, weight: .bold))
-                .foregroundColor(.white)
-                .padding(.horizontal, 16)
-            
-            // Events
-            ForEach(group.channels) { channel in
-                SportEventCard(channel: channel) {
-                    onChannelTap(channel)
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(spacing: 12) {
+                Text(group.name)
+                    .font(.system(size: 26, weight: .heavy, design: .rounded))
+                    .foregroundColor(.white)
+                Text("\(group.channels.count)")
+                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                    .foregroundColor(.white.opacity(0.55))
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(Color.white.opacity(0.08), in: Capsule())
+            }
+            .padding(.horizontal, 28)
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 18) {
+                    ForEach(group.channels) { channel in
+                        SportEventCard(channel: channel) {
+                            onChannelTap(channel)
+                        }
+                    }
                 }
+                .padding(.horizontal, 28)
+                .padding(.vertical, 6)
+                #if os(tvOS)
+                .focusSection()
+                #endif
             }
         }
     }
@@ -232,74 +247,115 @@ struct SportGroupSection: View {
 struct SportEventCard: View {
     let channel: Channel
     let onTap: () -> Void
-    
+
+    #if os(tvOS)
+    @Environment(\.isFocused) private var isFocused
+    #endif
+
     var body: some View {
         Button(action: onTap) {
-            HStack(spacing: 14) {
-                // Channel logo
-                AsyncImage(url: URL(string: channel.logo ?? "")) { phase in
-                    switch phase {
-                    case .success(let image):
+            ZStack(alignment: .bottomLeading) {
+                background
+                gradient
+                content
+            }
+            .frame(width: 280, height: 170)
+            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+            #if os(tvOS)
+            .overlay(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .stroke(isFocused ? Color.red.opacity(0.85) : Color.clear, lineWidth: 4)
+            )
+            .scaleEffect(isFocused ? 1.06 : 1)
+            .shadow(color: isFocused ? Color.red.opacity(0.25) : .clear, radius: 22, y: 10)
+            .animation(.easeInOut(duration: 0.18), value: isFocused)
+            #endif
+        }
+        #if os(tvOS)
+        .buttonStyle(SportEventButtonStyle())
+        #else
+        .buttonStyle(.plain)
+        #endif
+    }
+
+    @ViewBuilder
+    private var background: some View {
+        if let logoPath = channel.logo, !logoPath.isEmpty, let url = URL(string: logoPath) {
+            AsyncImage(url: url) { phase in
+                switch phase {
+                case .success(let image):
+                    ZStack {
+                        Color.black
                         image
                             .resizable()
                             .aspectRatio(contentMode: .fit)
-                    default:
-                        RoundedRectangle(cornerRadius: 8)
-                            .fill(Color.gray.opacity(0.3))
-                            .overlay(
-                                Image(systemName: "sportscourt")
-                                    .font(.system(size: 20))
-                                    .foregroundColor(.gray)
-                            )
+                            .padding(36)
                     }
+                default:
+                    placeholderBg
                 }
-                .frame(width: 56, height: 56)
-                .clipShape(RoundedRectangle(cornerRadius: 10))
-                
-                // Event info
-                VStack(alignment: .leading, spacing: 4) {
-                    // Event name
-                    Text(channel.name)
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(.white)
-                        .lineLimit(2)
-                    
-                    // Status row
-                    HStack(spacing: 8) {
-                        // LIVE badge
-                        HStack(spacing: 4) {
-                            Circle()
-                                .fill(Color.red)
-                                .frame(width: 6, height: 6)
-                            Text("LIVE")
-                                .font(.system(size: 11, weight: .bold))
-                                .foregroundColor(.red)
-                        }
-                        
-                        // Channel number if available
-                        if !channel.displayNumber.isEmpty {
-                            Text("CH \(channel.displayNumber)")
-                                .font(.system(size: 12))
-                                .foregroundColor(.gray)
-                        }
-                    }
-                }
-                
-                Spacer()
-                
-                // Play button
-                Image(systemName: "play.circle.fill")
-                    .font(.system(size: 36))
-                    .foregroundColor(.red)
             }
-            .padding(14)
-            .background(Color.white.opacity(0.08))
-            .cornerRadius(14)
-            .padding(.horizontal, 16)
+        } else {
+            placeholderBg
         }
-        .buttonStyle(.plain)
+    }
+
+    private var placeholderBg: some View {
+        LinearGradient(
+            colors: [Color(red: 0.16, green: 0.06, blue: 0.06),
+                     Color(red: 0.06, green: 0.04, blue: 0.10)],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+        .overlay {
+            Image(systemName: "sportscourt")
+                .font(.system(size: 44, weight: .light))
+                .foregroundStyle(.white.opacity(0.32))
+        }
+    }
+
+    private var gradient: some View {
+        LinearGradient(
+            colors: [Color.clear, Color.black.opacity(0.85)],
+            startPoint: .top,
+            endPoint: .bottom
+        )
+    }
+
+    private var content: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 6) {
+                Circle()
+                    .fill(Color.red)
+                    .frame(width: 8, height: 8)
+                Text("LIVE")
+                    .font(.system(size: 10, weight: .black, design: .rounded))
+                    .foregroundStyle(.red)
+                if !channel.displayNumber.isEmpty {
+                    Text("· CH \(channel.displayNumber)")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(.white.opacity(0.55))
+                }
+            }
+            Text(channel.name)
+                .font(.system(size: 15, weight: .black, design: .rounded))
+                .foregroundStyle(.white)
+                .lineLimit(2)
+        }
+        .padding(14)
     }
 }
+
+#if os(tvOS)
+private struct SportEventButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.97 : 1.0)
+            .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
+            .contentShape(Rectangle())
+    }
+}
+#endif
 
 #Preview {
     SportsView()
