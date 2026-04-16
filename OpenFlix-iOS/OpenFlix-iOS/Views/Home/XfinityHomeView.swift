@@ -740,23 +740,13 @@ struct XfinityHomeView: View {
                 }
             }
         }
-        .onAppear { startHeroTimer() }
         .onDisappear { stopHeroTimer() }
     }
 
-    private func startHeroTimer() {
-        stopHeroTimer()
-        heroTimer = Timer.scheduledTimer(withTimeInterval: 8, repeats: true) { _ in
-            Task { @MainActor in
-                let count = tvHeroItems.count
-                guard count > 1 else { return }
-                withAnimation(.easeInOut(duration: 0.6)) {
-                    tvHeroIndex = (tvHeroIndex + 1) % count
-                }
-            }
-        }
-    }
-
+    // Hero auto-rotation disabled on tvOS: changing `tvHeroIndex` re-evaluates
+    // the body and the focus engine yanks focus back to the hero, making the
+    // whole screen scroll-jitter every 8s. The TabView still responds to
+    // left/right swipes / taps on the page dots so the user controls pacing.
     private func stopHeroTimer() {
         heroTimer?.invalidate()
         heroTimer = nil
