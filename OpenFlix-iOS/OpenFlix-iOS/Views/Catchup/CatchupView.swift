@@ -67,20 +67,26 @@ struct CatchupView: View {
     }
     
     // MARK: - Header
-    
+
     private var header: some View {
+        #if os(tvOS)
+        catchupHeroBanner
+            .padding(.horizontal, 28)
+            .padding(.top, 16)
+            .padding(.bottom, 8)
+        #else
         HStack {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Catch Up TV")
                     .font(.largeTitle)
                     .fontWeight(.bold)
                     .foregroundColor(.white)
-                
+
                 Text(viewModel.channels.isEmpty ? "Enable catch-up to watch past programs" : "Rewatch programs from enabled channels")
                     .font(.headline)
                     .foregroundColor(.gray)
             }
-            
+
             Spacer()
 
             // Manage channels button
@@ -104,7 +110,57 @@ struct CatchupView: View {
         .padding(.horizontal, 48)
         .padding(.top, 32)
         .padding(.bottom, 24)
+        #endif
     }
+
+    // MARK: - tvOS Hero Banner
+
+    #if os(tvOS)
+    private var catchupHeroBanner: some View {
+        let totalPrograms = viewModel.channels.reduce(0) { $0 + $1.totalPrograms }
+        let channelCount  = viewModel.channels.count
+
+        return ZStack(alignment: .bottomLeading) {
+            LinearGradient(
+                colors: [
+                    Color(red: 0.20, green: 0.08, blue: 0.55),
+                    Color(red: 0.08, green: 0.05, blue: 0.22)
+                ],
+                startPoint: .leading,
+                endPoint: .trailing
+            )
+            Image(systemName: "clock.arrow.circlepath")
+                .font(.system(size: 200, weight: .light))
+                .foregroundStyle(.white.opacity(0.07))
+                .offset(x: 380, y: -10)
+
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 8) {
+                    Circle().fill(Color(hex: "8B5CF6")).frame(width: 8, height: 8)
+                    Text("CATCH UP")
+                        .font(.system(size: 12, weight: .black, design: .rounded))
+                        .foregroundStyle(.white)
+                        .tracking(2)
+                }
+                Text("Catch Up")
+                    .font(.system(size: 38, weight: .black, design: .rounded))
+                    .foregroundStyle(.white)
+                if channelCount > 0 {
+                    Text("\(channelCount) channel\(channelCount == 1 ? "" : "s") · \(totalPrograms) program\(totalPrograms == 1 ? "" : "s") from the past 7 days")
+                        .font(.system(size: 16, weight: .semibold, design: .rounded))
+                        .foregroundStyle(.white.opacity(0.78))
+                } else {
+                    Text("Enable catch-up on your channels to rewatch programs")
+                        .font(.system(size: 16, weight: .semibold, design: .rounded))
+                        .foregroundStyle(.white.opacity(0.78))
+                }
+            }
+            .padding(28)
+        }
+        .frame(height: 160)
+        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+    }
+    #endif
     
     // MARK: - Day Selector
     
@@ -204,12 +260,12 @@ struct DayPill: View {
     let title: String
     let isSelected: Bool
     let action: () -> Void
-    
+
     var body: some View {
         Button(action: action) {
             Text(title)
                 .font(.system(size: 18, weight: isSelected ? .bold : .medium))
-                .foregroundColor(isSelected ? .black : .white)
+                .foregroundColor(isSelected ? .white : .white)
                 .padding(.horizontal, 24)
                 .padding(.vertical, 12)
                 .background(
@@ -217,9 +273,42 @@ struct DayPill: View {
                         .fill(isSelected ? Color(hex: "8B5CF6") : Color.white.opacity(0.1))
                 )
         }
+        #if os(tvOS)
+        .buttonStyle(DayPillButtonStyle(isSelected: isSelected))
+        #else
         .buttonStyle(.plain)
+        #endif
     }
 }
+
+#if os(tvOS)
+private struct DayPillButtonStyle: ButtonStyle {
+    let isSelected: Bool
+
+    func makeBody(configuration: Configuration) -> some View {
+        Inner(configuration: configuration, isSelected: isSelected)
+    }
+
+    private struct Inner: View {
+        let configuration: ButtonStyle.Configuration
+        let isSelected: Bool
+        @Environment(\.isFocused) private var isFocused
+
+        var body: some View {
+            configuration.label
+                .overlay(
+                    Capsule()
+                        .stroke(isFocused ? Color.white.opacity(0.9) : Color.clear, lineWidth: 3)
+                )
+                .scaleEffect(configuration.isPressed ? 0.95 : (isFocused ? 1.08 : 1.0))
+                .shadow(color: isFocused ? Color(hex: "8B5CF6").opacity(0.5) : .clear, radius: 14, y: 6)
+                .animation(.easeInOut(duration: 0.18), value: isFocused)
+                .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
+                .contentShape(Capsule())
+        }
+    }
+}
+#endif
 
 // MARK: - Catchup Channel Row
 
@@ -267,6 +356,22 @@ struct CatchupChannelRow: View {
                             .foregroundColor(.white)
                     }
 
+                    #if os(tvOS)
+                    // Subtitle line — always show something meaningful
+                    Group {
+                        if channel.totalPrograms > 0 {
+                            Text("\(channel.totalPrograms) episode\(channel.totalPrograms == 1 ? "" : "s") from the past \(channel.catchupDays) days")
+                        } else if let start = channel.archiveStart {
+                            let formatter = RelativeDateTimeFormatter()
+                            Text("Archiving since \(formatter.localizedString(for: start, relativeTo: Date()))")
+                                .foregroundColor(.orange)
+                        } else {
+                            Text("No recordings yet")
+                        }
+                    }
+                    .font(.system(size: 14, weight: .semibold, design: .rounded))
+                    .foregroundColor(.white.opacity(0.55))
+                    #else
                     if channel.totalPrograms > 0 {
                         Text("\(channel.totalPrograms) programs recorded")
                             .font(.subheadline)
@@ -281,6 +386,7 @@ struct CatchupChannelRow: View {
                             .font(.subheadline)
                             .foregroundColor(.gray)
                     }
+                    #endif
                 }
 
                 Spacer()
@@ -339,7 +445,6 @@ struct CatchupChannelRow: View {
 struct CatchupProgramCard: View {
     let program: CatchupProgram
     let action: () -> Void
-    @State private var isFocused = false
 
     var body: some View {
         Button(action: action) {
@@ -400,12 +505,43 @@ struct CatchupProgramCard: View {
             .frame(width: 280)
             .opacity(program.available ? 1.0 : 0.6)
         }
+        #if os(tvOS)
+        .buttonStyle(CatchupCardButtonStyle())
+        #else
         .buttonStyle(.plain)
+        #endif
         .disabled(!program.available)
-        .scaleEffect(isFocused ? 1.05 : 1.0)
-        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isFocused)
     }
 }
+
+#if os(tvOS)
+/// Focus-aware ButtonStyle for CatchupProgramCard on tvOS.
+/// Inner View pattern is required so @Environment(\.isFocused) resolves
+/// against the Button's real focus state and not a stale value.
+private struct CatchupCardButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        Inner(configuration: configuration)
+    }
+
+    private struct Inner: View {
+        let configuration: ButtonStyle.Configuration
+        @Environment(\.isFocused) private var isFocused
+
+        var body: some View {
+            configuration.label
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .stroke(isFocused ? Color(hex: "8B5CF6").opacity(0.95) : Color.clear, lineWidth: 3)
+                )
+                .scaleEffect(configuration.isPressed ? 0.97 : (isFocused ? 1.07 : 1.0))
+                .shadow(color: isFocused ? Color(hex: "8B5CF6").opacity(0.38) : .clear, radius: 22, y: 10)
+                .animation(.easeInOut(duration: 0.18), value: isFocused)
+                .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
+                .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        }
+    }
+}
+#endif
 
 // MARK: - Models
 
@@ -601,7 +737,9 @@ struct ManageCatchupChannelsSheet: View {
                 }
             }
             .navigationTitle("Manage Catch-Up")
+            #if !os(tvOS)
             .navigationBarTitleDisplayMode(.inline)
+            #endif
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Done") { onDismiss() }
