@@ -1614,6 +1614,7 @@ private struct TVOSLiveBrowserView: View {
                     actionStateLoadTask = nil
                     presentedProgram = nil
                     presentedProgramChannel = nil
+                    NotificationCenter.default.post(name: .sidecarToggle, object: nil)
                 }
             }
         }
