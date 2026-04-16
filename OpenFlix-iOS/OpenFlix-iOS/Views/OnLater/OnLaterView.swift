@@ -94,6 +94,55 @@ struct OnLaterView: View {
         }
     }
 
+    // MARK: - tvOS Hero Banner
+
+    #if os(tvOS)
+    private var onLaterHeroBanner: some View {
+        let count = viewModel.upcomingPrograms.count
+        return ZStack(alignment: .bottomLeading) {
+            LinearGradient(
+                colors: [
+                    Color(red: 0.15, green: 0.08, blue: 0.45),
+                    Color(red: 0.06, green: 0.04, blue: 0.18)
+                ],
+                startPoint: .leading,
+                endPoint: .trailing
+            )
+            Image(systemName: "clock.badge.checkmark")
+                .font(.system(size: 200, weight: .light))
+                .foregroundStyle(.white.opacity(0.07))
+                .offset(x: 380, y: -10)
+
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 8) {
+                    Circle()
+                        .fill(Color(red: 139/255, green: 92/255, blue: 246/255))
+                        .frame(width: 8, height: 8)
+                    Text("ON LATER")
+                        .font(.system(size: 12, weight: .black, design: .rounded))
+                        .foregroundStyle(.white)
+                        .tracking(2)
+                }
+                Text("On Later")
+                    .font(.system(size: 38, weight: .black, design: .rounded))
+                    .foregroundStyle(.white)
+                if count > 0 {
+                    Text("\(count) program\(count == 1 ? "" : "s") scheduled")
+                        .font(.system(size: 16, weight: .semibold, design: .rounded))
+                        .foregroundStyle(.white.opacity(0.78))
+                } else {
+                    Text("See what's coming up across all channels")
+                        .font(.system(size: 16, weight: .semibold, design: .rounded))
+                        .foregroundStyle(.white.opacity(0.78))
+                }
+            }
+            .padding(28)
+        }
+        .frame(height: 160)
+        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+    }
+    #endif
+
     // MARK: - Category Selector
 
     private var categorySelector: some View {
@@ -128,22 +177,28 @@ struct OnLaterView: View {
     }
     
     // MARK: - Header
-    
+
     private var header: some View {
+        #if os(tvOS)
+        onLaterHeroBanner
+            .padding(.horizontal, 28)
+            .padding(.top, 16)
+            .padding(.bottom, 8)
+        #else
         HStack {
             VStack(alignment: .leading, spacing: 4) {
                 Text("On Later")
                     .font(.largeTitle)
                     .fontWeight(.bold)
                     .foregroundColor(.white)
-                
+
                 Text("See what's coming up")
                     .font(.headline)
                     .foregroundColor(.gray)
             }
-            
+
             Spacer()
-            
+
             // Clock icon
             Image(systemName: "clock.badge.checkmark")
                 .font(.system(size: 48))
@@ -158,6 +213,7 @@ struct OnLaterView: View {
         .padding(.horizontal, 48)
         .padding(.top, 32)
         .padding(.bottom, 24)
+        #endif
     }
     
     // MARK: - Time Range Selector
@@ -180,14 +236,17 @@ struct OnLaterView: View {
     
     // MARK: - Programs Grid
     
+    private var gridColumns: [GridItem] {
+        #if os(tvOS)
+        [GridItem(.adaptive(minimum: 260, maximum: 480), spacing: 32)]
+        #else
+        [GridItem(.adaptive(minimum: 320, maximum: 400), spacing: 24)]
+        #endif
+    }
+
     private var programsGrid: some View {
         ScrollView {
-            LazyVGrid(
-                columns: [
-                    GridItem(.adaptive(minimum: 320, maximum: 400), spacing: 24)
-                ],
-                spacing: 24
-            ) {
+            LazyVGrid(columns: gridColumns, spacing: 24) {
                 ForEach(filteredPrograms) { program in
                     OnLaterProgramCard(
                         program: program,
@@ -246,7 +305,7 @@ struct TimeRangePill: View {
     let title: String
     let isSelected: Bool
     let action: () -> Void
-    
+
     var body: some View {
         Button(action: action) {
             Text(title)
@@ -259,9 +318,48 @@ struct TimeRangePill: View {
                         .fill(isSelected ? Color(hex: "3B82F6") : Color.white.opacity(0.1))
                 )
         }
+        #if os(tvOS)
+        .buttonStyle(TimeRangePillButtonStyle(isSelected: isSelected))
+        #else
         .buttonStyle(.plain)
+        #endif
     }
 }
+
+#if os(tvOS)
+private struct TimeRangePillButtonStyle: ButtonStyle {
+    let isSelected: Bool
+
+    func makeBody(configuration: Configuration) -> some View {
+        Inner(configuration: configuration, isSelected: isSelected)
+    }
+
+    private struct Inner: View {
+        let configuration: ButtonStyle.Configuration
+        let isSelected: Bool
+        @Environment(\.isFocused) private var isFocused
+
+        var body: some View {
+            configuration.label
+                .overlay(
+                    Capsule()
+                        .stroke(
+                            isFocused ? Color(red: 139/255, green: 92/255, blue: 246/255).opacity(0.95) : Color.clear,
+                            lineWidth: 3
+                        )
+                )
+                .scaleEffect(configuration.isPressed ? 0.95 : (isFocused ? 1.08 : 1.0))
+                .shadow(
+                    color: isFocused ? Color(red: 139/255, green: 92/255, blue: 246/255).opacity(0.5) : .clear,
+                    radius: 14, y: 6
+                )
+                .animation(.easeInOut(duration: 0.18), value: isFocused)
+                .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
+                .contentShape(Capsule())
+        }
+    }
+}
+#endif
 
 // MARK: - On Later Program Card
 
@@ -269,102 +367,132 @@ struct OnLaterProgramCard: View {
     let program: UpcomingProgram
     let onTap: () -> Void
     let onReminder: () -> Void
-    @State private var isFocused = false
-    
+
     var body: some View {
         Button(action: onTap) {
-            HStack(spacing: 16) {
-                // Thumbnail
-                AsyncImage(url: URL(string: program.thumbnailUrl ?? "")) { image in
-                    image.resizable().scaledToFill()
-                } placeholder: {
-                    Rectangle()
-                        .fill(Color.gray.opacity(0.3))
-                        .overlay(
-                            Image(systemName: "tv")
-                                .font(.system(size: 24))
-                                .foregroundColor(.gray)
-                        )
+            cardContent
+        }
+        #if os(tvOS)
+        .buttonStyle(OnLaterCardButtonStyle())
+        #else
+        .buttonStyle(.plain)
+        #endif
+    }
+
+    private var cardContent: some View {
+        HStack(spacing: 16) {
+            // Thumbnail
+            AsyncImage(url: URL(string: program.thumbnailUrl ?? "")) { image in
+                image.resizable().scaledToFill()
+            } placeholder: {
+                Rectangle()
+                    .fill(Color.gray.opacity(0.3))
+                    .overlay(
+                        Image(systemName: "tv")
+                            .font(.system(size: 24))
+                            .foregroundColor(.gray)
+                    )
+            }
+            .frame(width: 140, height: 80)
+            .clipped()
+            .cornerRadius(8)
+
+            // Info
+            VStack(alignment: .leading, spacing: 6) {
+                // Channel & time
+                HStack(spacing: 8) {
+                    Text(program.channelName)
+                        .font(.caption)
+                        .fontWeight(.semibold)
+                        .foregroundColor(Color(hex: "3B82F6"))
+
+                    Text("•")
+                        .foregroundColor(.gray)
+
+                    Text(program.startTimeFormatted)
+                        .font(.caption)
+                        .foregroundColor(.gray)
                 }
-                .frame(width: 140, height: 80)
-                .clipped()
-                .cornerRadius(8)
-                
-                // Info
-                VStack(alignment: .leading, spacing: 6) {
-                    // Channel & time
-                    HStack(spacing: 8) {
-                        Text(program.channelName)
-                            .font(.caption)
-                            .fontWeight(.semibold)
-                            .foregroundColor(Color(hex: "3B82F6"))
-                        
+
+                // Title
+                Text(program.title)
+                    .font(.headline)
+                    .foregroundColor(.white)
+                    .lineLimit(2)
+
+                // Duration & category
+                HStack(spacing: 8) {
+                    Text(program.durationFormatted)
+                        .font(.caption)
+                        .foregroundColor(.gray)
+
+                    if let category = program.category {
                         Text("•")
                             .foregroundColor(.gray)
-                        
-                        Text(program.startTimeFormatted)
+                        Text(category)
                             .font(.caption)
                             .foregroundColor(.gray)
-                    }
-                    
-                    // Title
-                    Text(program.title)
-                        .font(.headline)
-                        .foregroundColor(.white)
-                        .lineLimit(2)
-                    
-                    // Duration & category
-                    HStack(spacing: 8) {
-                        Text(program.durationFormatted)
-                            .font(.caption)
-                            .foregroundColor(.gray)
-                        
-                        if let category = program.category {
-                            Text("•")
-                                .foregroundColor(.gray)
-                            Text(category)
-                                .font(.caption)
-                                .foregroundColor(.gray)
-                        }
-                    }
-                }
-                
-                Spacer()
-                
-                // Reminder button
-                VStack(spacing: 8) {
-                    Button(action: onReminder) {
-                        Image(systemName: program.hasReminder ? "bell.fill" : "bell")
-                            .font(.system(size: 20))
-                            .foregroundColor(program.hasReminder ? Color(hex: "F59E0B") : .gray)
-                    }
-                    .buttonStyle(.plain)
-                    
-                    if program.hasReminder {
-                        Text("Reminder")
-                            .font(.system(size: 10))
-                            .foregroundColor(Color(hex: "F59E0B"))
                     }
                 }
             }
-            .padding(16)
-            .background(
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(Color.white.opacity(isFocused ? 0.15 : 0.08))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(isFocused ? Color(hex: "3B82F6") : Color.clear, lineWidth: 3)
-            )
+
+            Spacer()
+
+            // Reminder indicator (reminder button not focusable separately on tvOS)
+            VStack(spacing: 8) {
+                Image(systemName: program.hasReminder ? "bell.fill" : "bell")
+                    .font(.system(size: 20))
+                    .foregroundColor(program.hasReminder ? Color(hex: "F59E0B") : .gray)
+
+                if program.hasReminder {
+                    Text("Reminder")
+                        .font(.system(size: 10))
+                        .foregroundColor(Color(hex: "F59E0B"))
+                }
+            }
         }
-        .buttonStyle(.plain)
-        .scaleEffect(isFocused ? 1.02 : 1.0)
-        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isFocused)
-        .onFocusChange { focused in
-            isFocused = focused
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color.white.opacity(0.08))
+        )
+    }
+}
+
+#if os(tvOS)
+/// Focus-aware ButtonStyle for OnLaterProgramCard on tvOS.
+/// Inner View pattern required so @Environment(\.isFocused) resolves
+/// against the Button's real focus state.
+private struct OnLaterCardButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        Inner(configuration: configuration)
+    }
+
+    private struct Inner: View {
+        let configuration: ButtonStyle.Configuration
+        @Environment(\.isFocused) private var isFocused
+
+        var body: some View {
+            configuration.label
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .stroke(
+                            isFocused ? Color(red: 139/255, green: 92/255, blue: 246/255).opacity(0.95) : Color.clear,
+                            lineWidth: 3
+                        )
+                )
+                .scaleEffect(configuration.isPressed ? 0.97 : (isFocused ? 1.07 : 1.0))
+                .shadow(
+                    color: isFocused ? Color(red: 139/255, green: 92/255, blue: 246/255).opacity(0.38) : .clear,
+                    radius: 22, y: 10
+                )
+                .animation(.easeInOut(duration: 0.18), value: isFocused)
+                .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
+                .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         }
     }
 }
+#endif
 
 // MARK: - Models
 
