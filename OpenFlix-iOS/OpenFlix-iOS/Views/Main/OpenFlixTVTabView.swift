@@ -539,7 +539,7 @@ struct OpenFlixTVTabView: View {
         }
         .sheet(isPresented: $showSettings) {
             NavigationStack {
-                TVSettingsPlaceholderView()
+                SettingsView()
             }
             .environmentObject(authViewModel)
             .environmentObject(settingsViewModel)
@@ -589,36 +589,6 @@ struct OpenFlixTVTabView: View {
                     NotificationCenter.default.post(name: .tvHomeRequestFocus, object: nil)
                 }
             }
-        }
-    }
-}
-
-private struct TVSettingsPlaceholderView: View {
-    @Environment(\.dismiss) private var dismiss
-
-    var body: some View {
-        ZStack {
-            Color.black.ignoresSafeArea()
-
-            VStack(spacing: 20) {
-                Image(systemName: "gearshape.fill")
-                    .font(.system(size: 56))
-                    .foregroundStyle(.white.opacity(0.9))
-
-                Text("Settings")
-                    .font(.system(size: 34, weight: .bold))
-                    .foregroundStyle(.white)
-
-                Text("tvOS settings are not wired into this shell yet.")
-                    .font(.system(size: 20, weight: .medium))
-                    .foregroundStyle(.white.opacity(0.65))
-
-                Button("Close") {
-                    dismiss()
-                }
-                .buttonStyle(.borderedProminent)
-            }
-            .padding(40)
         }
     }
 }

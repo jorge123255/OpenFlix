@@ -45,7 +45,9 @@ struct SettingsView: View {
             }
         }
         .navigationTitle("Settings")
+        #if !os(tvOS) // tvOS: large title style not supported
         .navigationBarTitleDisplayMode(.large)
+        #endif
         .task {
             await settingsViewModel.loadServerInfo()
             await settingsViewModel.loadSources()
@@ -491,7 +493,9 @@ struct SettingsView: View {
                                 .cornerRadius(10)
 
                             Button {
+                                #if !os(tvOS) // tvOS: UIPasteboard not available
                                 UIPasteboard.general.string = link
+                                #endif
                                 showInviteCopied = true
                                 DispatchQueue.main.asyncAfter(deadline: .now() + 2) { showInviteCopied = false }
                             } label: {
@@ -508,6 +512,7 @@ struct SettingsView: View {
                             }
                             .buttonStyle(.plain)
 
+                            #if !os(tvOS) // tvOS: ShareLink unavailable
                             ShareLink(item: link) {
                                 HStack {
                                     Image(systemName: "square.and.arrow.up")
@@ -520,6 +525,7 @@ struct SettingsView: View {
                                 .background(settingsAccent.opacity(0.12))
                                 .cornerRadius(14)
                             }
+                            #endif
                         }
                         .padding(.horizontal, 24)
                     }
@@ -536,7 +542,9 @@ struct SettingsView: View {
                 .padding(.horizontal, 24)
             }
             .navigationTitle("Invite")
+            #if !os(tvOS) // tvOS: inline title style not supported
             .navigationBarTitleDisplayMode(.inline)
+            #endif
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Done") { showInviteSheet = false }
@@ -584,7 +592,9 @@ struct SettingsView: View {
                                 .cornerRadius(16)
 
                             Button {
+                                #if !os(tvOS) // tvOS: UIPasteboard not available
                                 UIPasteboard.general.string = token
+                                #endif
                                 showClaimTokenCopied = true
                                 DispatchQueue.main.asyncAfter(deadline: .now() + 2) { showClaimTokenCopied = false }
                             } label: {
@@ -616,7 +626,9 @@ struct SettingsView: View {
                 .padding(.horizontal, 24)
             }
             .navigationTitle("Access Code")
+            #if !os(tvOS) // tvOS: inline title style not supported
             .navigationBarTitleDisplayMode(.inline)
+            #endif
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Done") { showAccessCodeSheet = false }
@@ -765,7 +777,9 @@ struct SourcesView: View {
             }
         }
         .navigationTitle("Sources")
+        #if !os(tvOS) // tvOS: inline title style not supported
         .navigationBarTitleDisplayMode(.inline)
+        #endif
         .toolbar {
             if selectedTab != .tuner {
                 ToolbarItem(placement: .primaryAction) {
@@ -1501,15 +1515,21 @@ struct EditM3USourceView: View {
                 Section("Source Details") {
                     TextField("Name", text: $name)
                     TextField("M3U URL", text: $url)
+                        #if !os(tvOS)
                         .keyboardType(.URL)
                         .autocapitalization(.none)
+                        #endif
                     TextField("EPG URL (optional)", text: $epgUrl)
+                        #if !os(tvOS)
                         .keyboardType(.URL)
                         .autocapitalization(.none)
+                        #endif
                 }
             }
             .navigationTitle("Edit M3U Source")
+            #if !os(tvOS) // tvOS: inline title style not supported
             .navigationBarTitleDisplayMode(.inline)
+            #endif
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {
@@ -1577,7 +1597,9 @@ struct EditXtreamSourceView: View {
                 }
             }
             .navigationTitle("Edit Xtream Source")
+            #if !os(tvOS) // tvOS: inline title style not supported
             .navigationBarTitleDisplayMode(.inline)
+            #endif
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {
@@ -1692,8 +1714,14 @@ struct AddXtreamSourceView: View {
             Form {
                 Section("Connection") {
                     TextField("Name", text: $name)
-                    TextField("Server URL", text: $serverUrl).keyboardType(.URL).autocapitalization(.none)
-                    TextField("Username", text: $username).autocapitalization(.none)
+                    TextField("Server URL", text: $serverUrl)
+                        #if !os(tvOS)
+                        .keyboardType(.URL).autocapitalization(.none)
+                        #endif
+                    TextField("Username", text: $username)
+                        #if !os(tvOS)
+                        .autocapitalization(.none)
+                        #endif
                     SecureField("Password", text: $password)
                 }
                 Section("Import Options") {
@@ -1767,13 +1795,17 @@ struct AddEPGSourceView: View {
                 case .xmltv, .gracenote:
                     Section("XMLTV URL") {
                         TextField("http://example.com/guide.xml", text: $xmltvUrl)
+                            #if !os(tvOS)
                             .keyboardType(.URL).autocapitalization(.none)
+                            #endif
                     }
                 }
                 if let error { Section { Text(error).foregroundColor(.red).font(.caption) } }
             }
             .navigationTitle("Add EPG Source")
+            #if !os(tvOS) // tvOS: inline title style not supported
             .navigationBarTitleDisplayMode(.inline)
+            #endif
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {
@@ -1797,7 +1829,10 @@ struct AddEPGSourceView: View {
     private var tvguideFields: some View {
         Section("Location") {
             HStack {
-                TextField("Zip Code", text: $zipCode).keyboardType(.numberPad)
+                TextField("Zip Code", text: $zipCode)
+                    #if !os(tvOS)
+                    .keyboardType(.numberPad)
+                    #endif
                 Button {
                     searchProviders()
                 } label: {
@@ -1862,7 +1897,7 @@ struct AddEPGSourceView: View {
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 10)
-            .background(selectedType == type ? color : Color(.systemGray5))
+            .background(selectedType == type ? color : Color.gray.opacity(0.3)) // systemGray5 not on tvOS
             .foregroundColor(selectedType == type ? .white : .primary)
             .cornerRadius(10)
         }
