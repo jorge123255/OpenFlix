@@ -5,21 +5,32 @@ target 'OpenFlix' do
   pod 'MobileVLCKit', '~> 3.6'
 end
 
+target 'OpenFlixTV' do
+  platform :tvos, '17.0'
+  pod 'TVVLCKit', '~> 3.6'
+end
+
 post_install do |installer|
   installer.pods_project.targets.each do |target|
     target.build_configurations.each do |config|
-      # MobileVLCKit has no simulator slice — exclude arm64 from sim so it uses x86_64 (Rosetta)
       config.build_settings['EXCLUDED_ARCHS[sdk=iphonesimulator*]'] = 'arm64'
+      # TVVLCKit's podspec sets TVOS_DEPLOYMENT_TARGET to 10.2, which is below
+      # the supported minimum (12.0). Bump every Pods target to match the app
+      # so Xcode stops warning on every clean build.
+      if config.build_settings['TVOS_DEPLOYMENT_TARGET']
+        config.build_settings['TVOS_DEPLOYMENT_TARGET'] = '17.0'
+      end
+      if config.build_settings['IPHONEOS_DEPLOYMENT_TARGET']
+        config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '17.0'
+      end
     end
   end
 
-  # Strip MobileVLCKit from linker flags when building for simulator
   installer.aggregate_targets.each do |target|
     target.xcconfigs.each do |config_name, xcconfig|
       xcconfig_path = target.client_root + target.xcconfig_relative_path(config_name)
       next unless File.exist?(xcconfig_path.to_s)
       content = File.read(xcconfig_path.to_s)
-      # Add a SDK-conditional that removes the framework on simulator
       unless content.include?('OTHER_LDFLAGS[sdk=iphonesimulator')
         stripped = content
           .scan(/OTHER_LDFLAGS\s*=\s*(.+)/).flatten.first.to_s
