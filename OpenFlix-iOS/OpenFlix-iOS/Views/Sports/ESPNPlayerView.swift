@@ -204,30 +204,27 @@ struct ESPNPlayerView: View {
     /// Center row: prev event |◀ · skip back 15 ⟲15 · big play/pause ·
     /// skip forward 15 15⟳ · next event ▶|.
     private var centerTransport: some View {
-        HStack(spacing: 36) {
+        HStack(spacing: 28) {
             transportIcon(systemName: "backward.end.fill", size: 22, enabled: previousItem != nil) {
                 if let prev = previousItem { jumpToItem(prev) }
             }
-            transportIcon(systemName: "gobackward.15", size: 28) {
+            transportIcon(systemName: "gobackward.15", size: 32) {
                 vlcPlayer.mediaPlayer.jumpBackward(15)
             }
             transportIcon(
                 systemName: vlcPlayer.isPlaying ? "pause.fill" : "play.fill",
-                size: 46,
+                size: 38,
                 primary: true
             ) {
                 vlcPlayer.togglePlayPause()
             }
-            transportIcon(systemName: "goforward.15", size: 28) {
+            transportIcon(systemName: "goforward.15", size: 32) {
                 vlcPlayer.mediaPlayer.jumpForward(15)
             }
             transportIcon(systemName: "forward.end.fill", size: 22, enabled: nextItem != nil) {
                 if let next = nextItem { jumpToItem(next) }
             }
         }
-        // Mark as a single focus section on tvOS so Siri remote left/right
-        // navigates between the 5 transport buttons cleanly without
-        // jumping out to the top bar or progress bar.
         #if os(tvOS)
         .focusSection()
         #endif
@@ -313,21 +310,23 @@ struct ESPNPlayerView: View {
         .frame(height: 11)
     }
 
-    /// Glass icon button used in the center transport row. `primary`
-    /// renders as a big filled red circle for the play/pause.
     private func transportIcon(systemName: String, size: CGFloat, primary: Bool = false, enabled: Bool = true, action: @escaping () -> Void) -> some View {
         Button(action: { if enabled { action(); scheduleAutoHide() } }) {
             Image(systemName: systemName)
                 .font(.system(size: size, weight: .bold))
                 .foregroundStyle(enabled ? Color.white : Color.white.opacity(0.3))
-                .frame(width: primary ? 76 : 52, height: primary ? 76 : 52)
+                .frame(width: primary ? 88 : 64, height: primary ? 88 : 64)
                 .background(
                     Circle()
-                        .fill(primary ? Color.red : Color.white.opacity(0.06))
+                        .fill(Color.white.opacity(0.06))
                 )
-                .shadow(color: primary ? Color.red.opacity(0.55) : .clear, radius: 14, y: 5)
+                .overlay(
+                    Circle()
+                        .stroke(Color.white.opacity(0.12), lineWidth: 0.5)
+                )
+                .shadow(color: primary ? Color.white.opacity(0.08) : .clear, radius: 14, y: 5)
         }
-        .buttonStyle(OFFocusableButtonStyle(prominent: true, cornerRadius: primary ? 38 : 26))
+        .buttonStyle(OFFocusableButtonStyle(prominent: true, cornerRadius: primary ? 44 : 32))
         .disabled(!enabled)
     }
 
