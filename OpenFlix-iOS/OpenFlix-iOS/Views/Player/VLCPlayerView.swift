@@ -13,6 +13,8 @@ struct VLCStreamInfo {
     var videoCodec: String? = nil; var audioCodec: String? = nil
     var audioBitrate = 0; var videoBitrate = 0
     var resolutionLabel: String? = nil
+    var audioChannels: Int? = nil
+    var audioChannelsLabel: String? { nil }
 }
 class VLCMediaPlayer: NSObject {
     func play() {}
@@ -109,6 +111,23 @@ class VLCVideoView: UIView {
     override class var layerClass: AnyClass {
         return CALayer.self
     }
+
+    // Fired the first time bounds becomes non-zero. iPhone defers
+    // mediaPlayer.drawable assignment until then so VLC's GL surface
+    // initializes at a real size — attaching at (0,0,0,0) leaves the
+    // decoder unable to produce frames (videoSize stays (0,0)), the
+    // stream loops in BUFFERING, then VideoToolbox tears the session
+    // down off the main thread (the doResetBuffers main-thread
+    // violation). Apple TV uses a different code path that pre-attaches
+    // in init, so this only matters on iPhone.
+    var onReady: ((UIView) -> Void)?
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        guard let onReady, bounds.width > 0, bounds.height > 0 else { return }
+        self.onReady = nil
+        onReady(self)
+    }
 }
 
 // MARK: - VLC Player Wrapper (SwiftUI)
@@ -119,17 +138,40 @@ struct VLCPlayerView: UIViewRepresentable {
     @ObservedObject var viewModel: VLCPlayerViewModel
 
     func makeUIView(context: Context) -> VLCVideoView {
+        #if os(tvOS)
+        // tvOS only: reuse the ViewModel's stable backing view. Recreating
+        // the VLCVideoView on every makeUIView call caused TVVLCKit to
+        // rebuild GL buffers on a background thread → main-thread layer
+        // violation + buffering/retry loop with a black screen on Apple TV.
+        viewModel.videoView.backgroundColor = .black
+        if viewModel.mediaPlayer.drawable as? UIView !== viewModel.videoView {
+            viewModel.attachDrawable(viewModel.videoView)
+        }
+        return viewModel.videoView
+        #else
         let view = VLCVideoView()
         view.backgroundColor = .black
-        viewModel.attachDrawable(view)
+        view.onReady = { [weak viewModel] readyView in
+            viewModel?.attachDrawable(readyView)
+        }
         return view
+        #endif
     }
 
     func updateUIView(_ uiView: VLCVideoView, context: Context) {
-        // Re-attach if needed (e.g. after view recreation)
+        #if os(tvOS)
         if viewModel.mediaPlayer.drawable as? UIView !== uiView {
             viewModel.attachDrawable(uiView)
         }
+        #else
+        // Re-attach only if the view is laid out and the drawable doesn't
+        // match. Skipping when frame is still zero prevents binding GL to
+        // a zero-sized surface during the initial mount.
+        guard uiView.bounds.width > 0, uiView.bounds.height > 0 else { return }
+        if viewModel.mediaPlayer.drawable as? UIView !== uiView {
+            viewModel.attachDrawable(uiView)
+        }
+        #endif
     }
 }
 
@@ -138,6 +180,13 @@ struct VLCPlayerView: UIViewRepresentable {
 @MainActor
 class VLCPlayerViewModel: NSObject, ObservableObject {
     let mediaPlayer = VLCMediaPlayer()
+
+    #if os(tvOS)
+    /// tvOS-only stable backing UIView for VLC's GL surface. iPhone keeps
+    /// the original "fresh VLCVideoView per makeUIView" behavior — that's
+    /// what's been working on TestFlight.
+    let videoView = VLCVideoView()
+    #endif
 
     @Published var isPlaying = false
     @Published var isBuffering = false
@@ -168,9 +217,20 @@ class VLCPlayerViewModel: NSObject, ObservableObject {
     private var timeUpdateTimer: Timer?
     private var currentURL: URL?
 
+    /// iPhone only: a URL handed to play(url:) before the SwiftUI host
+    /// view has been laid out. The drawable arrives via attachDrawable —
+    /// that's where this gets consumed.
+    private var pendingPlayURL: URL?
+
     override init() {
         super.init()
         mediaPlayer.delegate = self
+        #if os(tvOS)
+        // tvOS only: pre-attach VLC's drawable to the cached UIView so
+        // play(url:) always has somewhere to render. iPhone uses the
+        // original behavior — drawable is set when SwiftUI mounts the view.
+        mediaPlayer.drawable = videoView
+        #endif
     }
 
     deinit {
@@ -180,9 +240,18 @@ class VLCPlayerViewModel: NSObject, ObservableObject {
 
     // MARK: - Drawable
 
-    nonisolated func attachDrawable(_ view: UIView) {
+    func attachDrawable(_ view: UIView) {
         print("🎬 VLCPlayer.attachDrawable() - view: \(view), frame: \(view.frame)")
+        // VLCKit manipulates UI layers when setting drawable — must be main thread.
         mediaPlayer.drawable = view
+        flushPendingPlay()
+    }
+
+    @MainActor
+    private func flushPendingPlay() {
+        guard let url = pendingPlayURL else { return }
+        pendingPlayURL = nil
+        startMediaPlayback(url: url)
     }
 
     // MARK: - Playback
@@ -194,14 +263,34 @@ class VLCPlayerViewModel: NSObject, ObservableObject {
         isBuffering = true
         error = nil
 
+        // If the SwiftUI host view hasn't been laid out yet (drawable is
+        // nil), queue the URL — attachDrawable will pick it up. Calling
+        // mediaPlayer.play() against a nil drawable starts the decoder
+        // bound to a phantom GL surface, leaves videoSize at (0,0), and
+        // the stream loops in BUFFERING until VideoToolbox bails.
+        guard mediaPlayer.drawable != nil else {
+            NSLog("VLC PLAY: drawable not ready — queued")
+            pendingPlayURL = url
+            return
+        }
+
+        startMediaPlayback(url: url)
+    }
+
+    @MainActor
+    private func startMediaPlayback(url: URL) {
         let media = VLCMedia(url: url)
 
-        // Configure media options for live streaming
+        // Configure media options for live streaming.
+        // Values must be strings — VLCMedia passes them straight to libvlc.
         media.addOptions([
-            "network-caching": 1500,       // 1.5s network buffer
-            "live-caching": 1500,
-            "clock-jitter": 0,
-            "clock-synchro": 0,
+            "network-caching": "3000",
+            "live-caching": "3000",
+            "clock-jitter": "0",
+            "clock-synchro": "0",
+            "http-reconnect": "1",
+            "http-continuous": "1",
+            "adaptive-logic": "rate",
         ])
 
         mediaPlayer.media = media
@@ -384,15 +473,68 @@ class VLCPlayerViewModel: NSObject, ObservableObject {
         guard let media = mediaPlayer.media else { return }
 
         let videoSize = mediaPlayer.videoSize
-        let width = Int(videoSize.width)
-        let height = Int(videoSize.height)
+        var width = Int(videoSize.width)
+        var height = Int(videoSize.height)
+        var videoCodec: String?
+        var audioCodec: String?
+        var audioChannels: Int?
+
+        // VLCMedia.tracksInformation gives an array of [String: Any]
+        // dicts, one per track. We pull codec name + audio channel count
+        // out of it. FourCC codes are converted to ASCII (e.g.
+        // 0x65616333 → "eac3"), then uppercased for display.
+        if let tracks = media.tracksInformation as? [[String: Any]] {
+            for track in tracks {
+                let typeKey = "VLCMediaTracksInformationType"
+                let codecKey = "VLCMediaTracksInformationCodec"
+                let widthKey = "VLCMediaTracksInformationVideoWidth"
+                let heightKey = "VLCMediaTracksInformationVideoHeight"
+                let channelsKey = "VLCMediaTracksInformationAudioChannelsNumber"
+
+                let type = (track[typeKey] as? String)?.lowercased() ?? ""
+                let codecFourCC = (track[codecKey] as? UInt32)
+                    ?? UInt32(truncatingIfNeeded: (track[codecKey] as? UInt) ?? 0)
+                let codecName = codecFourCC == 0 ? nil : Self.fourCCToString(codecFourCC)
+
+                if type == "video" {
+                    if width == 0, let w = track[widthKey] as? UInt { width = Int(w) }
+                    if height == 0, let h = track[heightKey] as? UInt { height = Int(h) }
+                    if videoCodec == nil { videoCodec = codecName }
+                } else if type == "audio" {
+                    if audioCodec == nil { audioCodec = codecName }
+                    if audioChannels == nil, let ch = track[channelsKey] as? UInt {
+                        audioChannels = Int(ch)
+                    }
+                }
+            }
+        }
 
         streamInfo = VLCStreamInfo(
             videoWidth: width > 0 ? width : nil,
             videoHeight: height > 0 ? height : nil,
-            videoCodec: nil, // VLC doesn't easily expose codec name
-            audioCodec: nil
+            videoCodec: videoCodec,
+            audioCodec: audioCodec,
+            audioChannels: audioChannels
         )
+    }
+
+    /// Convert a VLC FourCC codec code (e.g. 0x65616333) to its ASCII
+    /// representation ("eac3"). Returns nil for codes that aren't 4
+    /// printable ASCII bytes.
+    private static func fourCCToString(_ code: UInt32) -> String? {
+        let bytes: [UInt8] = [
+            UInt8((code >> 24) & 0xFF),
+            UInt8((code >> 16) & 0xFF),
+            UInt8((code >> 8) & 0xFF),
+            UInt8(code & 0xFF)
+        ]
+        let chars = bytes.compactMap { byte -> Character? in
+            // Accept printable ASCII; trim padding spaces.
+            guard byte >= 0x20 && byte <= 0x7E else { return nil }
+            return Character(UnicodeScalar(byte))
+        }
+        guard chars.count >= 3 else { return nil }
+        return String(chars).trimmingCharacters(in: .whitespaces)
     }
 
     // MARK: - Time Updates
@@ -513,7 +655,10 @@ extension VLCPlayerViewModel: VLCMediaPlayerDelegate {
                 isPlaying = false
                 isBuffering = false
                 isLoading = false
-                error = "VLC playback failed (state \(state.rawValue)). Stream URL may not be VLC-compatible."
+                // Surface the URL on-screen so we can see what VLC is being
+                // asked to play without needing remote logs. Strip if/when
+                // playback is fixed.
+                error = "VLC error (state \(state.rawValue))\nURL: \(currentURL?.absoluteString ?? "nil")"
 
             case .stopped:
                 NSLog("VLC STATE: STOPPED")
@@ -544,6 +689,8 @@ struct VLCStreamInfo {
     let videoHeight: Int?
     let videoCodec: String?
     let audioCodec: String?
+    /// Channel count from the audio track (1 = mono, 2 = stereo, 6 = 5.1, 8 = 7.1).
+    let audioChannels: Int?
 
     var resolution: String? {
         guard let w = videoWidth, let h = videoHeight else { return nil }
@@ -558,6 +705,18 @@ struct VLCStreamInfo {
         case 720...: return "720p"
         case 480...: return "480p"
         default: return "\(h)p"
+        }
+    }
+
+    /// Human-readable channel layout suffix — "Mono" / "Stereo" / "5.1" / "7.1".
+    var audioChannelsLabel: String? {
+        switch audioChannels ?? 0 {
+        case 1: return "Mono"
+        case 2: return "Stereo"
+        case 6: return "5.1"
+        case 8: return "7.1"
+        case let n where n > 0: return "\(n)ch"
+        default: return nil
         }
     }
 }
