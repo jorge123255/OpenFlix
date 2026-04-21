@@ -466,17 +466,6 @@ struct ESPNPlayerView: View {
 
     // MARK: State
 
-    private var currentBadge: String? {
-        if currentMode == "startover" { return "FROM BEGINNING" }
-        if item.isLive { return "LIVE" }
-        return nil
-    }
-
-    private var badgeColor: Color {
-        if currentMode == "startover" { return Color.white.opacity(0.25) }
-        return Color.red
-    }
-
     /// Subtitle under the title in the top glass card. Prefers
     /// "league · sport" when both are present, else item.subtitle, else
     /// the announced air time.
