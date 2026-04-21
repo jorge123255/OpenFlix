@@ -234,16 +234,35 @@ struct ESPNPlayerView: View {
     /// Bottom block: optional Stream Info HUD · date+league line · big
     /// title · progress bar with inline LIVE marker · fullscreen toggle.
     private var bottomStack: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 10) {
+            // Stream info chips row (toggled via More button)
             if showStreamInfo {
-                streamInfoCard
-                    .transition(.opacity.combined(with: .move(edge: .bottom)))
+                HStack(spacing: 8) {
+                    ForEach(streamInfoChips, id: \.label) { chip in
+                        HStack(spacing: 4) {
+                            Text(chip.label)
+                                .font(.system(size: 9, weight: .black, design: .rounded))
+                                .foregroundStyle(.white.opacity(0.55))
+                            Text(chip.value)
+                                .font(.system(size: 11, weight: .bold, design: .rounded))
+                                .foregroundStyle(.white)
+                        }
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        #if os(iOS)
+                        .openFlixGlassRegular(in: Capsule(), tint: Color.white.opacity(0.08))
+                        #else
+                        .background(Color.black.opacity(0.55), in: Capsule())
+                        #endif
+                    }
+                }
+                .transition(.opacity.combined(with: .scale))
             }
 
             if let summary = topSubtitle {
                 Text(summary)
                     .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(.white.opacity(0.78))
+                    .foregroundStyle(.white.opacity(0.75))
                     .lineLimit(1)
             }
 
@@ -267,11 +286,36 @@ struct ESPNPlayerView: View {
                     .foregroundStyle(.white.opacity(0.85))
                     .frame(minWidth: 56, alignment: .trailing)
 
-                #if os(iOS)
-                iconButton(systemName: "arrow.up.left.and.arrow.down.right", label: "Aspect", size: 18) {
-                    _ = vlcPlayer.cycleAspectRatio()
+                // Bottom action buttons: aspect, multi-view, more
+                HStack(spacing: 10) {
+                    #if os(iOS)
+                    iconButton(systemName: "arrow.up.left.and.arrow.down.right", label: "Aspect", size: 16) {
+                        _ = vlcPlayer.cycleAspectRatio()
+                    }
+                    #endif
+
+                    if item.supportsStartover {
+                        if currentMode == "startover" {
+                            iconButton(systemName: "dot.radiowaves.left.and.right", label: "Watch Live", size: 16) {
+                                Task { await play(mode: nil) }
+                            }
+                        } else {
+                            iconButton(systemName: "arrow.counterclockwise", label: "Start Over", size: 16) {
+                                Task { await play(mode: "startover") }
+                            }
+                        }
+                    }
+
+                    iconButton(systemName: "rectangle.split.2x2.fill", label: "Multi-view", size: 16) {
+                        showMultiview = true
+                    }
+
+                    iconButton(systemName: "ellipsis", label: "More", size: 16) {
+                        withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) {
+                            showStreamInfo.toggle()
+                        }
+                    }
                 }
-                #endif
             }
         }
     }
@@ -328,30 +372,6 @@ struct ESPNPlayerView: View {
         }
         .buttonStyle(OFFocusableButtonStyle(prominent: true, cornerRadius: primary ? 44 : 32))
         .disabled(!enabled)
-    }
-
-    /// Glass HUD with codec/resolution/audio-channels/bitrate.
-    private var streamInfoCard: some View {
-        HStack(spacing: 14) {
-            ForEach(streamInfoChips, id: \.label) { chip in
-                VStack(spacing: 1) {
-                    Text(chip.label)
-                        .font(.system(size: 9, weight: .black, design: .rounded))
-                        .foregroundStyle(.white.opacity(0.55))
-                    Text(chip.value)
-                        .font(.system(size: 13, weight: .bold, design: .rounded))
-                        .foregroundStyle(.white)
-                }
-                .frame(maxWidth: .infinity)
-            }
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        #if os(iOS)
-        .openFlixGlassRegular(in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-        #else
-        .background(Color.black.opacity(0.55), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-        #endif
     }
 
     // MARK: Sibling navigation
