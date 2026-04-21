@@ -76,7 +76,9 @@ struct ESPNPlayerView: View {
             Color.clear
                 .contentShape(Rectangle())
                 .onTapGesture {
-                    withAnimation(.easeInOut(duration: 0.22)) { showControls.toggle() }
+                    withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) {
+                        showControls.toggle()
+                    }
                     if showControls { scheduleAutoHide() }
                 }
 
@@ -90,7 +92,12 @@ struct ESPNPlayerView: View {
 
             if showControls {
                 controlsOverlay
-                    .transition(.opacity.combined(with: .move(edge: .bottom)))
+                    .transition(
+                        .asymmetric(
+                            insertion: .opacity.combined(with: .move(edge: .bottom)),
+                            removal: .opacity
+                        )
+                    )
             }
         }
         #if os(iOS)
@@ -629,9 +636,9 @@ struct ESPNPlayerView: View {
     private func scheduleAutoHide() {
         hideTask?.cancel()
         hideTask = Task { @MainActor in
-            try? await Task.sleep(nanoseconds: 4_500_000_000)
+            try? await Task.sleep(nanoseconds: 5_000_000_000)
             if !Task.isCancelled {
-                withAnimation(.easeInOut(duration: 0.25)) { showControls = false }
+                withAnimation(.easeInOut(duration: 0.18)) { showControls = false }
             }
         }
     }
