@@ -320,38 +320,41 @@ struct ESPNPlayerView: View {
         }
     }
 
-    /// Slim progress track with inline "LIVE" marker at the playhead.
-    /// Falls back to a thin pulsing line when there's no startTime/endTime.
     private func progressTrack(progress: Double?) -> some View {
         GeometryReader { geo in
             let p = CGFloat(min(max(progress ?? 0, 0), 1))
             let dotX = geo.size.width * p
             ZStack(alignment: .leading) {
                 Capsule()
-                    .fill(Color.white.opacity(0.18))
+                    .fill(Color.white.opacity(0.12))
                     .frame(height: 3)
                 if progress != nil {
                     Capsule()
-                        .fill(LinearGradient(colors: [Color.red, Color.red.opacity(0.6)], startPoint: .leading, endPoint: .trailing))
+                        .fill(Color.white)
                         .frame(width: dotX, height: 3)
-                    // Inline LIVE / FROM BEGINNING label sitting above the
-                    // playhead — matches the reference design.
-                    Text(currentMode == "startover" ? "FROM BEGINNING" : "LIVE")
-                        .font(.system(size: 9, weight: .black, design: .rounded))
-                        .foregroundStyle(Color.red)
-                        .padding(.horizontal, 5)
+
+                    // Glass capsule badge centered above playhead
+                    Text(currentMode == "startover" ? "START OVER" : "LIVE")
+                        .font(.system(size: 8, weight: .black, design: .rounded))
+                        .foregroundStyle(currentMode == "startover" ? .white.opacity(0.9) : .black)
+                        .padding(.horizontal, 6)
                         .padding(.vertical, 2)
+                        #if os(iOS)
+                        .openFlixGlassRegular(in: Capsule(), tint: Color.white.opacity(0.15))
+                        #else
                         .background(Color.black.opacity(0.55), in: Capsule())
-                        .offset(x: max(min(dotX - 22, geo.size.width - 50), 0), y: -16)
+                        #endif
+                        .offset(x: max(min(dotX - 20, geo.size.width - 50), 0), y: -18)
+
                     Circle()
-                        .fill(Color.red)
-                        .frame(width: 11, height: 11)
-                        .shadow(color: Color.red.opacity(0.65), radius: 5)
-                        .offset(x: dotX - 5.5)
+                        .fill(Color.white)
+                        .frame(width: 10, height: 10)
+                        .shadow(color: Color.white.opacity(0.4), radius: 6)
+                        .offset(x: dotX - 5)
                 }
             }
         }
-        .frame(height: 11)
+        .frame(height: 14)
     }
 
     private func transportIcon(systemName: String, size: CGFloat, primary: Bool = false, enabled: Bool = true, action: @escaping () -> Void) -> some View {
