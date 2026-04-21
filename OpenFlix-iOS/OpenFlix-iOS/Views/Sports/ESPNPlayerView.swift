@@ -72,14 +72,16 @@ struct ESPNPlayerView: View {
             .opacity(showControls ? 1 : 0)
             .animation(.easeInOut(duration: 0.25), value: showControls)
 
-            // Tap-anywhere toggle
+            // Tap overlay — shows controls when hidden; disabled when visible
+            // so buttons in controlsOverlay receive taps without conflict.
             Color.clear
                 .contentShape(Rectangle())
+                .allowsHitTesting(!showControls)
                 .onTapGesture {
                     withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) {
-                        showControls.toggle()
+                        showControls = true
                     }
-                    if showControls { scheduleAutoHide() }
+                    scheduleAutoHide()
                 }
 
             if vlcPlayer.isLoading || (vlcPlayer.isBuffering && !vlcPlayer.isPlaying) {
@@ -276,10 +278,10 @@ struct ESPNPlayerView: View {
             }
 
             Text(item.title ?? "ESPN")
-                .font(.system(size: 28, weight: .black, design: .rounded))
+                .font(.system(size: 24, weight: .black, design: .rounded))
                 .foregroundStyle(.white)
-                .lineLimit(2)
-                .minimumScaleFactor(0.7)
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
                 .shadow(color: .black.opacity(0.5), radius: 6, y: 2)
 
             HStack(alignment: .center, spacing: 12) {
@@ -558,9 +560,9 @@ struct ESPNPlayerView: View {
     /// recovering from a stall. Includes a tiny status message + stall
     /// counter so the user knows the player is actively retrying.
     private var bufferingHUD: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 10) {
             ProgressView()
-                .scaleEffect(1.3)
+                .scaleEffect(1.2)
                 .tint(.white)
             Text(bufferingMessage)
                 .font(.system(size: 13, weight: .semibold))
@@ -571,12 +573,13 @@ struct ESPNPlayerView: View {
                     .foregroundStyle(.white.opacity(0.6))
             }
         }
-        .padding(.horizontal, 22)
-        .padding(.vertical, 16)
+        .frame(maxWidth: 240)
+        .padding(.horizontal, 20)
+        .padding(.vertical, 14)
         #if os(iOS)
-        .openFlixGlassRegular(in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .openFlixGlassRegular(in: RoundedRectangle(cornerRadius: 16, style: .continuous))
         #else
-        .background(Color.black.opacity(0.55), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .background(Color.black.opacity(0.55), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
         #endif
     }
 
