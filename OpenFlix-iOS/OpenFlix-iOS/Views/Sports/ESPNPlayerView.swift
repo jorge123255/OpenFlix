@@ -171,8 +171,7 @@ struct ESPNPlayerView: View {
         }
     }
 
-    /// Top: Close · ESPN wordmark · ⋯ menu (Start Over / Multi-view /
-    /// Stream Info / Aspect ratio).
+    /// Top: Close · ESPN wordmark only. All other actions moved to bottom.
     private var topBar: some View {
         HStack(spacing: 12) {
             iconButton(systemName: "xmark", label: "Close", size: 18, action: onClose)
@@ -180,27 +179,6 @@ struct ESPNPlayerView: View {
             espnWordmark
 
             Spacer()
-
-            // Quick toggles surface as inline pills only when enabled,
-            // keeping the top bar visually quiet.
-            if item.supportsStartover {
-                if currentMode == "startover" {
-                    pillButton(title: "Watch Live", icon: "dot.radiowaves.left.and.right") {
-                        Task { await play(mode: nil) }
-                    }
-                } else {
-                    pillButton(title: "Start Over", icon: "arrow.counterclockwise") {
-                        Task { await play(mode: "startover") }
-                    }
-                }
-            }
-
-            iconButton(systemName: "ellipsis", label: "More", size: 18) {
-                withAnimation { showStreamInfo.toggle() }
-            }
-            iconButton(systemName: "rectangle.split.2x2.fill", label: "Multi-view", size: 18) {
-                showMultiview = true
-            }
         }
     }
 
@@ -211,7 +189,10 @@ struct ESPNPlayerView: View {
                 .foregroundStyle(.white)
                 .padding(.horizontal, 9)
                 .padding(.vertical, 5)
-                .background(Color.red, in: RoundedRectangle(cornerRadius: 5, style: .continuous))
+                .background(
+                    OpenFlixColors.accent.opacity(0.35),
+                    in: RoundedRectangle(cornerRadius: 5, style: .continuous)
+                )
             if let league = item.league, !league.isEmpty {
                 Text(league.uppercased())
                     .font(.system(size: 11, weight: .heavy, design: .rounded))
