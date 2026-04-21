@@ -40,10 +40,6 @@ struct ESPNPlayerView: View {
     /// to drive the "live progress" bar against the event's known
     /// startTime/endTime when available.
     @State private var nowTick: Date = Date()
-    /// When VLC last ENTERED a buffering state. Used to detect long
-    /// stalls and force a reconnect.
-    @State private var bufferStartedAt: Date?
-    @State private var stallRecoveries: Int = 0
     @State private var livePulse: Bool = false
 
     init(item: ESPNItem, container: ESPNContainer?, repo: ESPNRepository, initialMode: String? = nil, onClose: @escaping () -> Void) {
@@ -127,9 +123,6 @@ struct ESPNPlayerView: View {
                     livePulse.toggle()
                 }
             }
-        }
-        .task(id: vlcPlayer.isBuffering) {
-            await stallWatchdog()
         }
         .onDisappear {
             vlcPlayer.stop()
@@ -567,11 +560,6 @@ struct ESPNPlayerView: View {
             Text(bufferingMessage)
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(.white)
-            if stallRecoveries > 0 {
-                Text("Reconnecting (\(stallRecoveries))…")
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(.white.opacity(0.6))
-            }
         }
         .frame(maxWidth: 240)
         .padding(.horizontal, 20)
@@ -594,35 +582,10 @@ struct ESPNPlayerView: View {
             let url = try await repo.playbackURL(for: item, in: container, mode: mode)
             currentMode = mode
             resolveError = nil
-            stallRecoveries = 0
-            bufferStartedAt = nil
             vlcPlayer.play(url: url)
         } catch {
             resolveError = error.localizedDescription
         }
-    }
-
-    /// Watchdog that runs whenever the player ENTERS buffering. If we
-    /// stay buffering for >8 seconds without ever reaching playing, or
-    /// playback drops to stopped without user intent, re-resolve the URL
-    /// and tell VLC to try again. ESPN's HLS feed can drop transiently
-    /// when Disney rotates the manifest or auth refreshes; this keeps
-    /// playback resilient.
-    @MainActor
-    private func stallWatchdog() async {
-        guard vlcPlayer.isBuffering else {
-            bufferStartedAt = nil
-            return
-        }
-        bufferStartedAt = Date()
-        try? await Task.sleep(nanoseconds: 8_000_000_000)
-        // Still in the same buffer cycle?
-        guard let started = bufferStartedAt,
-              Date().timeIntervalSince(started) >= 8,
-              vlcPlayer.isBuffering else { return }
-        guard stallRecoveries < 3 else { return }
-        stallRecoveries += 1
-        await play(mode: currentMode)
     }
 
     private func scheduleAutoHide() {

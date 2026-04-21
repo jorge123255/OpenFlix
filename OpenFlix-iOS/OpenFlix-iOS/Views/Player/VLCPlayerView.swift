@@ -279,26 +279,13 @@ class VLCPlayerViewModel: NSObject, ObservableObject {
 
     @MainActor
     private func startMediaPlayback(url: URL) {
-        // Stop any existing stream before attaching new media — avoids
-        // decoder state confusion when switching between events.
-        if mediaPlayer.state != .stopped {
-            NSLog("VLC PLAY: stopping previous stream state=\(mediaPlayer.state.rawValue)")
-            mediaPlayer.stop()
-        }
-
         let media = VLCMedia(url: url)
 
-        // Minimal options: only caching + reconnect + a browser-like UA.
-        // ESPN/Disney streams are HLS served through our server proxy.
-        // Options like http-continuous or adaptive-logic break HLS
-        // playback because they tell VLC to treat the connection as a
-        // single progressive stream instead of a segmented manifest.
-        media.addOptions([
-            "network-caching": "5000",
-            "live-caching": "5000",
-            "http-reconnect": "1",
-            "http-user-agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
-        ])
+        // Zero options — let VLC auto-detect the stream format.
+        // ESPN/Disney streams are served through our server proxy.
+        // Previous attempts with caching/connectivity options caused
+        // OPENING/BUFFERING loops. VLC's defaults handle HLS/TS better.
+        media.addOptions([:])
 
         mediaPlayer.media = media
         mediaPlayer.play()
