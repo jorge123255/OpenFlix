@@ -44,8 +44,7 @@ struct ESPNPlayerView: View {
     /// stalls and force a reconnect.
     @State private var bufferStartedAt: Date?
     @State private var stallRecoveries: Int = 0
-
-
+    @State private var livePulse: Bool = false
 
     init(item: ESPNItem, container: ESPNContainer?, repo: ESPNRepository, initialMode: String? = nil, onClose: @escaping () -> Void) {
         self.item = item
@@ -107,13 +106,16 @@ struct ESPNPlayerView: View {
         }
         .task {
             // Slow ticker — drives the live progress bar + stream-info HUD
-            // and re-pings VLC for codec/channel info (it populates a few
-            // seconds after playback begins, not immediately).
+            // and re-pings VLC for codec/channel info.
             while !Task.isCancelled {
                 try? await Task.sleep(nanoseconds: 1_000_000_000)
                 nowTick = Date()
                 if vlcPlayer.isPlaying {
                     vlcPlayer.extractStreamInfo()
+                }
+                // Toggle live pulse for playhead glow animation
+                if item.isLive && currentMode != "startover" {
+                    livePulse.toggle()
                 }
             }
         }
@@ -349,7 +351,8 @@ struct ESPNPlayerView: View {
                     Circle()
                         .fill(Color.white)
                         .frame(width: 10, height: 10)
-                        .shadow(color: Color.white.opacity(0.4), radius: 6)
+                        .shadow(color: Color.white.opacity(livePulse ? 0.55 : 0.25), radius: livePulse ? 10 : 4)
+                        .animation(.easeInOut(duration: 1.5).repeatForever(autoreverses: true), value: livePulse)
                         .offset(x: dotX - 5)
                 }
             }
