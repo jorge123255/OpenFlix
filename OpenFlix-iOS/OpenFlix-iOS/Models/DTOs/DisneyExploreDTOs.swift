@@ -279,7 +279,16 @@ struct DXPage: Codable, Identifiable {
 }
 
 struct DXContainer: Codable, Identifiable {
-    let id: String
+    /// Disney detail pages emit containers without `id` (seasons,
+    /// series_details, etc.). Decode as optional and expose a stable
+    /// synthetic id via `id` for SwiftUI Identifiable / lazy-load
+    /// keying. The synthetic id is generated once at decode time and
+    /// stays stable for the lifetime of the decoded value, so ForEach
+    /// / setById caches don't churn.
+    let rawId: String?
+    private let synthId: String
+    var id: String { rawId ?? synthId }
+
     let title: String?
     let type: String?
     let style: DXStyle?
@@ -322,6 +331,74 @@ struct DXContainer: Codable, Identifiable {
     /// shapes that still use them.
     var displayTitle: String? {
         title ?? visuals?.name ?? visuals?.displayText ?? visuals?.title
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case rawId = "id"
+        case title, type, style, layout, pagination, items
+        case entityId, entityType, pageId, setId, pageStyle, setStyle
+        case layoutId, pageResolutionId, setResolutionId, skipEligibilityCheck
+        case limit, offset, params, visuals, target, browseTarget, request
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        rawId = try c.decodeIfPresent(String.self, forKey: .rawId)
+        synthId = "dxc:\(UUID().uuidString)"
+        title = try c.decodeIfPresent(String.self, forKey: .title)
+        type = try c.decodeIfPresent(String.self, forKey: .type)
+        style = try c.decodeIfPresent(DXStyle.self, forKey: .style)
+        layout = try c.decodeIfPresent(String.self, forKey: .layout)
+        pagination = try c.decodeIfPresent(DXPagination.self, forKey: .pagination)
+        items = try c.decodeIfPresent([DXItem].self, forKey: .items)
+        entityId = try c.decodeIfPresent(String.self, forKey: .entityId)
+        entityType = try c.decodeIfPresent(String.self, forKey: .entityType)
+        pageId = try c.decodeIfPresent(String.self, forKey: .pageId)
+        setId = try c.decodeIfPresent(String.self, forKey: .setId)
+        pageStyle = try c.decodeIfPresent(String.self, forKey: .pageStyle)
+        setStyle = try c.decodeIfPresent(String.self, forKey: .setStyle)
+        layoutId = try c.decodeIfPresent(String.self, forKey: .layoutId)
+        pageResolutionId = try c.decodeIfPresent(String.self, forKey: .pageResolutionId)
+        setResolutionId = try c.decodeIfPresent(String.self, forKey: .setResolutionId)
+        skipEligibilityCheck = try c.decodeIfPresent(DXFlexibleBool.self, forKey: .skipEligibilityCheck)
+        limit = try c.decodeIfPresent(Int.self, forKey: .limit)
+        offset = try c.decodeIfPresent(Int.self, forKey: .offset)
+        params = try c.decodeIfPresent(DXContainerParams.self, forKey: .params)
+        visuals = try c.decodeIfPresent(DXVisuals.self, forKey: .visuals)
+        target = try c.decodeIfPresent(DXTarget.self, forKey: .target)
+        browseTarget = try c.decodeIfPresent(DXBrowseTarget.self, forKey: .browseTarget)
+        request = try c.decodeIfPresent(DXRequestContext.self, forKey: .request)
+    }
+
+    /// Encode is a no-op for `synthId` — only the wire fields go
+    /// out. We only encode for in-memory round-trips (e.g. SwiftUI
+    /// state preservation), never to send back to the server.
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encodeIfPresent(rawId, forKey: .rawId)
+        try c.encodeIfPresent(title, forKey: .title)
+        try c.encodeIfPresent(type, forKey: .type)
+        try c.encodeIfPresent(style, forKey: .style)
+        try c.encodeIfPresent(layout, forKey: .layout)
+        try c.encodeIfPresent(pagination, forKey: .pagination)
+        try c.encodeIfPresent(items, forKey: .items)
+        try c.encodeIfPresent(entityId, forKey: .entityId)
+        try c.encodeIfPresent(entityType, forKey: .entityType)
+        try c.encodeIfPresent(pageId, forKey: .pageId)
+        try c.encodeIfPresent(setId, forKey: .setId)
+        try c.encodeIfPresent(pageStyle, forKey: .pageStyle)
+        try c.encodeIfPresent(setStyle, forKey: .setStyle)
+        try c.encodeIfPresent(layoutId, forKey: .layoutId)
+        try c.encodeIfPresent(pageResolutionId, forKey: .pageResolutionId)
+        try c.encodeIfPresent(setResolutionId, forKey: .setResolutionId)
+        try c.encodeIfPresent(skipEligibilityCheck, forKey: .skipEligibilityCheck)
+        try c.encodeIfPresent(limit, forKey: .limit)
+        try c.encodeIfPresent(offset, forKey: .offset)
+        try c.encodeIfPresent(params, forKey: .params)
+        try c.encodeIfPresent(visuals, forKey: .visuals)
+        try c.encodeIfPresent(target, forKey: .target)
+        try c.encodeIfPresent(browseTarget, forKey: .browseTarget)
+        try c.encodeIfPresent(request, forKey: .request)
     }
 }
 

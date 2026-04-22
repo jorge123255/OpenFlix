@@ -65,17 +65,27 @@ final class DisneyExploreRepository: ObservableObject {
     /// owning container/target. Use this for the row-level lazy load when
     /// a container in a page response came back without populated items.
     func loadSet(_ container: DXContainer, force: Bool = false) async {
-        let setId = container.id
-        if loadingSets.contains(setId) { return }
-        if !force, setById[setId] != nil { return }
-        loadingSets.insert(setId)
-        defer { loadingSets.remove(setId) }
+        // Use the SwiftUI-stable `id` for cache keying so a row that
+        // re-renders against the same container hits the cache, but
+        // always hit the API with the real wire id (rawId / params.setId
+        // / setId). Detail-page containers without any of those (e.g.
+        // standard_episodic_style "seasons" / series_details) have no
+        // /set endpoint to call — skip them silently.
+        let cacheKey = container.id
+        let apiSetId = container.rawId
+            ?? container.setId
+            ?? container.params?.setId
+        if apiSetId == nil { return }
+        if loadingSets.contains(cacheKey) { return }
+        if !force, setById[cacheKey] != nil { return }
+        loadingSets.insert(cacheKey)
+        defer { loadingSets.remove(cacheKey) }
         do {
             let params = setQueryItems(for: container)
-            let response = try await api.disneySet(setId: setId, params: params)
+            let response = try await api.disneySet(setId: apiSetId!, params: params)
             if let set = response.data?.set {
-                setById[setId] = set
-                setErrors[setId] = nil
+                setById[cacheKey] = set
+                setErrors[cacheKey] = nil
             }
         } catch {
             // Lazy rails get re-created/destroyed by LazyVStack as the
@@ -84,7 +94,7 @@ final class DisneyExploreRepository: ObservableObject {
             // CancellationError. Don't surface those to the user — the
             // load will retry naturally the next time the row appears.
             if Self.isCancellation(error) { return }
-            setErrors[setId] = error.localizedDescription
+            setErrors[cacheKey] = error.localizedDescription
         }
     }
 
