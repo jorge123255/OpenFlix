@@ -17,11 +17,22 @@ struct SportsView: View {
                 if viewModel.isLoading && viewModel.channels.isEmpty {
                     LoadingView(message: "Loading sports...")
                 } else if sportsChannels.isEmpty {
-                    EmptyStateView(
-                        icon: "sportscourt",
-                        title: "No Live Sports",
-                        message: "Check back later for live games and events."
-                    )
+                    // No "live now" channels surfaced from the guide, but
+                    // ESPN browse still has content — surface the hub
+                    // entry above the empty placeholder.
+                    ScrollView {
+                        VStack(spacing: 24) {
+                            espnEntry
+                                .padding(.horizontal, sectionHorizontalPadding)
+                                .padding(.top, 16)
+                            EmptyStateView(
+                                icon: "sportscourt",
+                                title: "No Live Sports",
+                                message: "Check back later for live games and events."
+                            )
+                            .padding(.top, 40)
+                        }
+                    }
                 } else {
                     ScrollView {
                         LazyVStack(alignment: .leading, spacing: 36) {
@@ -43,6 +54,13 @@ struct SportsView: View {
                             .padding(.horizontal, 16)
                             .padding(.top, 8)
                             #endif
+
+                            // ESPN dedicated hub — DVR-Tuner-owned browse,
+                            // not the generic guide. Tile is always shown
+                            // (ESPN content lives behind it even when no
+                            // generic "live now" channels exist).
+                            espnEntry
+                                .padding(.horizontal, sectionHorizontalPadding)
 
                             ForEach(sportGroups, id: \.name) { group in
                                 SportGroupSection(
@@ -70,13 +88,13 @@ struct SportsView: View {
             #if os(tvOS)
             TVLiveChannelPlayerView(
                 initialChannel: channel,
-                initialStreamURL: streamURL ?? channel.preferredPlaybackURL,
+                initialStreamURL: streamURL ?? OpenFlixAPI.shared.channelStreamURL(id: channel.id),
                 viewModel: viewModel
             )
             .id(channel.id)
             .environmentObject(dvrViewModel)
             #else
-            if let url = streamURL ?? channel.preferredPlaybackURL {
+            if let url = streamURL ?? OpenFlixAPI.shared.channelStreamURL(id: channel.id) {
                 AdaptiveLivePlayerView(
                     channel: channel,
                     program: channel.nowPlaying,
@@ -96,7 +114,38 @@ struct SportsView: View {
             await viewModel.loadChannels()
         }
     }
-    
+
+    // MARK: - ESPN entry
+
+    private var sectionHorizontalPadding: CGFloat {
+        #if os(tvOS)
+        return 28
+        #else
+        return 16
+        #endif
+    }
+
+    private var espnEntry: some View {
+        NavigationLink {
+            #if os(tvOS)
+            TVESPNHubView()
+            #else
+            ESPNHubView()
+            #endif
+        } label: {
+            ESPNTileLabel(logoSize: espnLogoSize)
+        }
+        .buttonStyle(OFFocusableButtonStyle(prominent: true, cornerRadius: 14))
+    }
+
+    private var espnLogoSize: CGSize {
+        #if os(tvOS)
+        return CGSize(width: 110, height: 64)
+        #else
+        return CGSize(width: 78, height: 46)
+        #endif
+    }
+
     // MARK: - tvOS Hero Banner
 
     #if os(tvOS)
@@ -219,9 +268,9 @@ struct SportsView: View {
     // MARK: - Play Channel
     
     private func playChannel(_ channel: Channel) {
-        NSLog("SPORTS PLAY: channel=\(channel.id) name=\(channel.name) preferredPlayback=\(channel.preferredPlaybackURL?.absoluteString ?? "nil")")
+        NSLog("SPORTS PLAY: channel=\(channel.id) name=\(channel.name)")
         // Set the URL FIRST so the cover content has it on first render.
-        streamURL = channel.preferredPlaybackURL
+        streamURL = OpenFlixAPI.shared.channelStreamURL(id: channel.id)
         // Setting selectedChannel triggers the .fullScreenCover(item:) binding.
         selectedChannel = channel
 

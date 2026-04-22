@@ -23,6 +23,7 @@ enum SidecarMenuItem: String, CaseIterable, Hashable {
     case library = "Library"
     case search = "Search"
     case sports = "Sports"
+    case disneyPlus = "Disney+"
     case stats = "Stats"
     case settings = "Settings"
 
@@ -43,6 +44,7 @@ enum SidecarMenuItem: String, CaseIterable, Hashable {
         case .library: return "books.vertical.fill"
         case .search: return "magnifyingglass"
         case .sports: return "sportscourt.fill"
+        case .disneyPlus: return "star.fill"
         case .stats: return "chart.bar.fill"
         case .settings: return "gearshape"
         }
@@ -59,6 +61,7 @@ enum SidecarMenuItem: String, CaseIterable, Hashable {
         case .library: return "Navigate to your Library"
         case .search: return "Navigate to Search"
         case .sports: return "Browse live and upcoming sports"
+        case .disneyPlus: return "Browse Disney+"
         case .stats: return "View watch and recording stats"
         case .settings: return "Open Settings"
         }
@@ -72,7 +75,7 @@ enum SidecarMenuItem: String, CaseIterable, Hashable {
         switch self {
         case .home:
             return .main
-        case .liveTV, .catchUp, .onLater, .teamPass, .groups, .sports:
+        case .liveTV, .catchUp, .onLater, .teamPass, .groups, .sports, .disneyPlus:
             return .liveTV
         case .library, .search, .stats:
             return .library
@@ -92,13 +95,14 @@ enum SidecarMenuItem: String, CaseIterable, Hashable {
         case .library: return .library
         case .search: return .search
         case .sports: return .sports
+        case .disneyPlus: return .disneyPlus
         case .stats: return .stats
         case .settings: return .settings
         }
     }
 
-    private static let tabItems: [SidecarMenuItem] = [.home, .liveTV, .catchUp, .onLater, .teamPass, .groups, .library, .search, .sports, .stats]
-    private static let fullMenuItems: [SidecarMenuItem] = [.home, .liveTV, .catchUp, .onLater, .teamPass, .groups, .library, .search, .sports, .stats]
+    private static let tabItems: [SidecarMenuItem] = [.home, .liveTV, .catchUp, .onLater, .teamPass, .groups, .library, .search, .sports, .disneyPlus, .stats]
+    private static let fullMenuItems: [SidecarMenuItem] = [.home, .liveTV, .catchUp, .onLater, .teamPass, .groups, .library, .search, .sports, .disneyPlus, .stats]
 
     func nextUp() -> SidecarMenuItem? {
         guard let idx = Self.fullMenuItems.firstIndex(of: self), idx > 0 else { return nil }
@@ -324,6 +328,11 @@ struct SidecarMenuView: View {
         }
         .padding(.horizontal, 8)
         .padding(.bottom, 26)
+        // Mark Settings as its own focus section so the tvOS focus engine
+        // navigates to it when the user presses down past the last menu
+        // item. Without this it stays trapped inside `menuItems`'
+        // `.focusSection()` and Settings is unreachable.
+        .focusSection()
     }
 
     private var separatorLine: some View {
@@ -416,6 +425,7 @@ struct OpenFlixTVTabView: View {
         case library = "Library"
         case search = "Search"
         case sports = "Sports"
+        case disneyPlus = "Disney+"
         case stats = "Stats"
         case settings = "Settings"
 
@@ -430,6 +440,7 @@ struct OpenFlixTVTabView: View {
             case .library: return "books.vertical.fill"
             case .search: return "magnifyingglass"
             case .sports: return "sportscourt.fill"
+            case .disneyPlus: return "star.fill"
             case .stats: return "chart.bar.fill"
             case .settings: return "gearshape"
             }
@@ -446,6 +457,7 @@ struct OpenFlixTVTabView: View {
             case .library: return "Navigate to your Library"
             case .search: return "Navigate to Search"
             case .sports: return "Browse live and upcoming sports"
+            case .disneyPlus: return "Browse Disney+"
             case .stats: return "View watch and recording stats"
             case .settings: return "Open Settings"
             }
@@ -557,6 +569,8 @@ struct OpenFlixTVTabView: View {
             // SportsView provides its own NavigationStack; nesting one here
             // breaks its fullScreenCover (taps fired but no player).
             SportsView()
+        case .disneyPlus:
+            TVDisneyHomeView()
         case .stats:
             NavigationStack {
                 WatchStatsView()

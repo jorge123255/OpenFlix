@@ -7,6 +7,16 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		665F0ADAA39E8BA84FCC2E7F /* TVDisneyPageRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 794D979A481CF9E37397B126 /* TVDisneyPageRenderer.swift */; };
+		50AAAB5DF2C1984AFAA88B3A /* TVDisneyPageRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 794D979A481CF9E37397B126 /* TVDisneyPageRenderer.swift */; };
+		15DD25A5EE78B0550F760DAA /* TVESPNHubView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0652DCF6718900C2F7CAAFCA /* TVESPNHubView.swift */; };
+		01867671712328A61E09D676 /* TVESPNHubView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0652DCF6718900C2F7CAAFCA /* TVESPNHubView.swift */; };
+		E2F6CF1A0AD4E6DB1B8704AA /* TVDisneyHomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44E865CC1F0FDCBB00E65805 /* TVDisneyHomeView.swift */; };
+		DC599A536D54D15E3E5D948E /* TVDisneyHomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44E865CC1F0FDCBB00E65805 /* TVDisneyHomeView.swift */; };
+		1C03C2F0697B8013D82FE53A /* TVDisneyDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8E10101023F6B07622AACB2 /* TVDisneyDetailView.swift */; };
+		13C0C9F345064DEF64158C59 /* TVDisneyDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8E10101023F6B07622AACB2 /* TVDisneyDetailView.swift */; };
+		0C74E81A7231397EAA3C18C5 /* TVDisneySearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C9D6FA1630C899670E4FCC9 /* TVDisneySearchView.swift */; };
+		E85DEFAEB70F4540C5D25D84 /* TVDisneySearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C9D6FA1630C899670E4FCC9 /* TVDisneySearchView.swift */; };
 		7426706282943B2BB179FFA7 /* DisneyExploreDTOs.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9884AFE5E9255B01A27A9602 /* DisneyExploreDTOs.swift */; };
 		B4FE6442B50C12514F01600A /* DisneyExploreDTOs.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9884AFE5E9255B01A27A9602 /* DisneyExploreDTOs.swift */; };
 		5264C426BA2C03757675D451 /* DisneyExploreRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 372BCD3A537DB42A506E4A6E /* DisneyExploreRepository.swift */; };
@@ -267,6 +277,11 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		794D979A481CF9E37397B126 /* TVDisneyPageRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TVDisneyPageRenderer.swift; sourceTree = "<group>"; };
+		0652DCF6718900C2F7CAAFCA /* TVESPNHubView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TVESPNHubView.swift; sourceTree = "<group>"; };
+		44E865CC1F0FDCBB00E65805 /* TVDisneyHomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TVDisneyHomeView.swift; sourceTree = "<group>"; };
+		B8E10101023F6B07622AACB2 /* TVDisneyDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TVDisneyDetailView.swift; sourceTree = "<group>"; };
+		1C9D6FA1630C899670E4FCC9 /* TVDisneySearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TVDisneySearchView.swift; sourceTree = "<group>"; };
 		9884AFE5E9255B01A27A9602 /* DisneyExploreDTOs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DisneyExploreDTOs.swift; sourceTree = "<group>"; };
 		372BCD3A537DB42A506E4A6E /* DisneyExploreRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DisneyExploreRepository.swift; sourceTree = "<group>"; };
 		3E69369BFB14DD38B52222A4 /* DisneyPageRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DisneyPageRenderer.swift; sourceTree = "<group>"; };
@@ -681,6 +696,7 @@
 				00EECC8B0C3EB5DC42FBC3B8 /* TeamPageView.swift */,
 				B864684BAD04366E3BFF176B /* ESPNHubView.swift */,
 				6EC95967CE6C9791795EC0C2 /* ESPNPlayerView.swift */,
+				0652DCF6718900C2F7CAAFCA /* TVESPNHubView.swift */,
 			);
 			path = Sports;
 			sourceTree = "<group>";
@@ -860,6 +876,9 @@
 				D8668AE0206B1B81E4DB8344 /* DisneyHomeView.swift */,
 				B785524464F9DEC7373336A3 /* DisneyDetailView.swift */,
 				400EB74B779D8EA2CCE0CDBA /* DisneySearchView.swift */,
+				44E865CC1F0FDCBB00E65805 /* TVDisneyHomeView.swift */,
+				B8E10101023F6B07622AACB2 /* TVDisneyDetailView.swift */,
+				1C9D6FA1630C899670E4FCC9 /* TVDisneySearchView.swift */,
 			);
 			path = Disney;
 			sourceTree = "<group>";
@@ -889,6 +908,7 @@
 				C659D49E8E3173382683856C /* YouTubePlayerView.swift */,
 				4317896A9401A90AC6F372CC /* LiquidGlass.swift */,
 				3E69369BFB14DD38B52222A4 /* DisneyPageRenderer.swift */,
+				794D979A481CF9E37397B126 /* TVDisneyPageRenderer.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -1226,6 +1246,11 @@
 				3F2A7F772E864D9CBB529DD5 /* DisneyHomeView.swift in Sources */,
 				05862A03C631F401D359A1B2 /* DisneyDetailView.swift in Sources */,
 				FCCF3C5520E91A45371EC8A7 /* DisneySearchView.swift in Sources */,
+				665F0ADAA39E8BA84FCC2E7F /* TVDisneyPageRenderer.swift in Sources */,
+				15DD25A5EE78B0550F760DAA /* TVESPNHubView.swift in Sources */,
+				E2F6CF1A0AD4E6DB1B8704AA /* TVDisneyHomeView.swift in Sources */,
+				1C03C2F0697B8013D82FE53A /* TVDisneyDetailView.swift in Sources */,
+				0C74E81A7231397EAA3C18C5 /* TVDisneySearchView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1372,6 +1397,11 @@
 				864EB2C98DF1D27FED42EC05 /* DisneyHomeView.swift in Sources */,
 				94AC86A30EE6321D2B03A0F4 /* DisneyDetailView.swift in Sources */,
 				C09ECA936B4434BE4B43FC3C /* DisneySearchView.swift in Sources */,
+				50AAAB5DF2C1984AFAA88B3A /* TVDisneyPageRenderer.swift in Sources */,
+				01867671712328A61E09D676 /* TVESPNHubView.swift in Sources */,
+				DC599A536D54D15E3E5D948E /* TVDisneyHomeView.swift in Sources */,
+				13C0C9F345064DEF64158C59 /* TVDisneyDetailView.swift in Sources */,
+				E85DEFAEB70F4540C5D25D84 /* TVDisneySearchView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
