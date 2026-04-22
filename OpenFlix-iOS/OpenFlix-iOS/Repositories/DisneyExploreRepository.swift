@@ -78,8 +78,20 @@ final class DisneyExploreRepository: ObservableObject {
                 setErrors[setId] = nil
             }
         } catch {
+            // Lazy rails get re-created/destroyed by LazyVStack as the
+            // user scrolls; SwiftUI cancels the .task that owns the
+            // load, which surfaces as URLError(.cancelled) /
+            // CancellationError. Don't surface those to the user — the
+            // load will retry naturally the next time the row appears.
+            if Self.isCancellation(error) { return }
             setErrors[setId] = error.localizedDescription
         }
+    }
+
+    private static func isCancellation(_ error: Error) -> Bool {
+        if error is CancellationError { return true }
+        if let urlError = error as? URLError, urlError.code == .cancelled { return true }
+        return (error as NSError).code == NSURLErrorCancelled
     }
 
     /// Loads a set from a target (used when a tile target is set-scope).

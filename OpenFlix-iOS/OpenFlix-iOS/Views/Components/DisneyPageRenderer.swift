@@ -321,11 +321,15 @@ struct DisneyRowView: View {
                 }
             }
         }
-        .task {
+        .onAppear {
+            // Use onAppear (not .task) so the load survives the row
+            // being re-virtualized by LazyVStack during scroll. The
+            // unstructured Task is owned by `repo`, which lives as a
+            // @StateObject on the parent view.
             guard !didRequestLoad else { return }
             didRequestLoad = true
             if (container.items?.isEmpty ?? true) && repo.setById[container.id] == nil {
-                await repo.loadSet(container)
+                Task { await repo.loadSet(container) }
             }
         }
     }

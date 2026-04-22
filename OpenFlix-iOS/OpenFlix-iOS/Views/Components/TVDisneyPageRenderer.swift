@@ -323,11 +323,14 @@ struct TVDisneyRailView: View {
             }
         }
         .focusSection()
-        .task {
+        .onAppear {
+            // onAppear (not .task) so the load survives row
+            // virtualization on scroll — see DisneyRowView for the
+            // same rationale.
             guard !didRequestLoad else { return }
             didRequestLoad = true
             if (container.items?.isEmpty ?? true) && repo.setById[container.id] == nil {
-                await repo.loadSet(container)
+                Task { await repo.loadSet(container) }
             }
         }
     }
