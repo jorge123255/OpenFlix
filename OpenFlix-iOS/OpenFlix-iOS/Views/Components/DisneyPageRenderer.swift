@@ -38,14 +38,22 @@ struct DisneyPageRenderer: View {
                 .padding(.horizontal, 16)
             }
             ForEach(rowContainers) { container in
-                DisneyRowView(
-                    container: container,
-                    repo: repo,
-                    onSelect: { item in handleTap(item: item, container: container) },
-                    onOpenAll: { target, label in onOpenPage(target, label) }
-                )
+                if isEpisodicStyle(container.styleName), let seasons = container.seasons, !seasons.isEmpty {
+                    DisneySeasonsView(container: container, seasons: seasons)
+                } else {
+                    DisneyRowView(
+                        container: container,
+                        repo: repo,
+                        onSelect: { item in handleTap(item: item, container: container) },
+                        onOpenAll: { target, label in onOpenPage(target, label) }
+                    )
+                }
             }
         }
+    }
+
+    private func isEpisodicStyle(_ name: String) -> Bool {
+        name.lowercased().contains("episodic")
     }
 
     private var heroContainer: DXContainer? {
@@ -399,5 +407,149 @@ struct DisneyTile: View {
                     .frame(width: width, alignment: .leading)
             }
         }
+    }
+}
+
+// MARK: - Seasons (detail-page episodes container)
+//
+// Render-only for now: season picker + episode cards. Tap on an
+// episode shows a "Disney VOD playback isn't wired yet" sheet — we
+// don't have a server-side /disney/play/stream endpoint.
+
+struct DisneySeasonsView: View {
+    let container: DXContainer
+    let seasons: [DXSeason]
+    @State private var selectedSeasonId: String?
+    @State private var unsupportedTitle: String?
+
+    private var selectedSeason: DXSeason? {
+        if let id = selectedSeasonId, let s = seasons.first(where: { $0.id == id }) { return s }
+        return seasons.first
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .firstTextBaseline) {
+                Text(container.displayTitle ?? "Episodes")
+                    .font(.system(size: 18, weight: .heavy, design: .rounded))
+                    .foregroundStyle(.white)
+                Spacer()
+                if let count = selectedSeason?.episodeCountLabel {
+                    Text(count)
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(.white.opacity(0.6))
+                }
+            }
+            .padding(.horizontal, 16)
+
+            if seasons.count > 1 {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(seasons) { s in
+                            Button {
+                                selectedSeasonId = s.id
+                            } label: {
+                                Text(s.displayTitle)
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .padding(.horizontal, 12).padding(.vertical, 6)
+                                    .foregroundStyle((selectedSeason?.id == s.id) ? .white : .white.opacity(0.7))
+                                    .background(
+                                        Capsule()
+                                            .fill((selectedSeason?.id == s.id) ? Color.white.opacity(0.16) : Color.white.opacity(0.06))
+                                    )
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                }
+            }
+
+            if let season = selectedSeason {
+                LazyVStack(spacing: 14) {
+                    ForEach(season.items ?? []) { episode in
+                        Button {
+                            unsupportedTitle = episode.visuals?.fullEpisodeTitle ?? episode.visuals?.title ?? "Episode"
+                        } label: {
+                            DisneyEpisodeCard(episode: episode)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(.horizontal, 16)
+            }
+        }
+        .alert("Playback not yet supported", isPresented: Binding(
+            get: { unsupportedTitle != nil },
+            set: { if !$0 { unsupportedTitle = nil } }
+        )) {
+            Button("OK") { unsupportedTitle = nil }
+        } message: {
+            Text("Disney VOD playback (\(unsupportedTitle ?? "")) needs a server-side `/disney/play/stream` endpoint. Linear ESPN and ESPN events still work.")
+        }
+    }
+}
+
+private struct DisneyEpisodeCard: View {
+    let episode: DXItem
+
+    private var episodeImageURL: URL? {
+        guard let s = episode.bestImageURL else { return nil }
+        return URL(string: s)
+    }
+
+    private var runtimeLabel: String? {
+        guard let ms = episode.visuals?.durationMs, ms > 0 else { return nil }
+        let minutes = (ms + 30_000) / 60_000
+        return "\(minutes) min"
+    }
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            ZStack(alignment: .bottomLeading) {
+                if let url = episodeImageURL {
+                    AsyncImage(url: url) { image in
+                        image.resizable().scaledToFill()
+                    } placeholder: {
+                        Color.white.opacity(0.08)
+                    }
+                    .frame(width: 140, height: 80)
+                    .clipped()
+                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                } else {
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(Color.white.opacity(0.08))
+                        .frame(width: 140, height: 80)
+                }
+                if let n = episode.visuals?.episodeNumber {
+                    Text("EP \(n)")
+                        .font(.system(size: 9, weight: .black, design: .rounded))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 5).padding(.vertical, 2)
+                        .background(Color.black.opacity(0.65), in: Capsule())
+                        .padding(6)
+                }
+            }
+            VStack(alignment: .leading, spacing: 4) {
+                Text(episode.visuals?.episodeTitle ?? episode.visuals?.fullEpisodeTitle ?? episode.displayTitle ?? "Episode")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(.white)
+                    .lineLimit(2)
+                if let runtimeLabel {
+                    Text(runtimeLabel)
+                        .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                        .foregroundStyle(.white.opacity(0.6))
+                }
+                if let desc = episode.visuals?.description?.brief {
+                    Text(desc)
+                        .font(.system(size: 12))
+                        .foregroundStyle(.white.opacity(0.75))
+                        .lineLimit(3)
+                }
+            }
+            Spacer(minLength: 0)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.vertical, 6)
     }
 }

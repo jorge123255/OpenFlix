@@ -36,12 +36,17 @@ struct TVDisneyPageRenderer: View {
                 .padding(.horizontal, 56)
             }
             ForEach(rowContainers) { container in
-                TVDisneyRailView(
-                    container: container,
-                    repo: repo,
-                    onSelect: { item in handleTap(item: item, container: container) },
-                    onOpenAll: { target, label in onOpenPage(target, label) }
-                )
+                if container.styleName.lowercased().contains("episodic"),
+                   let seasons = container.seasons, !seasons.isEmpty {
+                    TVDisneySeasonsView(container: container, seasons: seasons)
+                } else {
+                    TVDisneyRailView(
+                        container: container,
+                        repo: repo,
+                        onSelect: { item in handleTap(item: item, container: container) },
+                        onOpenAll: { target, label in onOpenPage(target, label) }
+                    )
+                }
             }
         }
     }
@@ -411,6 +416,139 @@ struct TVDisneyTile: View {
             .padding(.horizontal, 7).padding(.vertical, 3)
             .background(color, in: Capsule())
             .padding(8)
+    }
+}
+
+// MARK: - Seasons (detail-page episodes container, focus-aware)
+
+struct TVDisneySeasonsView: View {
+    let container: DXContainer
+    let seasons: [DXSeason]
+    @State private var selectedSeasonId: String?
+    @State private var unsupportedTitle: String?
+
+    private var selectedSeason: DXSeason? {
+        if let id = selectedSeasonId, let s = seasons.first(where: { $0.id == id }) { return s }
+        return seasons.first
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            HStack(alignment: .firstTextBaseline) {
+                Text(container.displayTitle ?? "Episodes")
+                    .font(.system(size: 26, weight: .heavy, design: .rounded))
+                    .foregroundStyle(.white)
+                Spacer()
+                if let count = selectedSeason?.episodeCountLabel {
+                    Text(count)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(.white.opacity(0.65))
+                }
+            }
+            .padding(.horizontal, 56)
+
+            if seasons.count > 1 {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 12) {
+                        ForEach(seasons) { s in
+                            Button {
+                                selectedSeasonId = s.id
+                            } label: {
+                                Text(s.displayTitle)
+                                    .font(.system(size: 18, weight: .bold))
+                                    .padding(.horizontal, 22).padding(.vertical, 12)
+                                    .foregroundStyle((selectedSeason?.id == s.id) ? .white : .white.opacity(0.7))
+                                    .background(
+                                        Capsule()
+                                            .fill((selectedSeason?.id == s.id) ? Color.white.opacity(0.2) : Color.white.opacity(0.07))
+                                    )
+                            }
+                            .buttonStyle(OFFocusableButtonStyle(cornerRadius: 999))
+                        }
+                    }
+                    .padding(.horizontal, 56)
+                }
+                .focusSection()
+            }
+
+            if let season = selectedSeason {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    LazyHStack(spacing: 18) {
+                        ForEach(season.items ?? []) { ep in
+                            Button {
+                                unsupportedTitle = ep.visuals?.fullEpisodeTitle ?? ep.visuals?.title ?? "Episode"
+                            } label: {
+                                TVDisneyEpisodeCard(episode: ep)
+                            }
+                            .buttonStyle(OFFocusableButtonStyle(prominent: true, cornerRadius: 14))
+                        }
+                    }
+                    .padding(.horizontal, 56)
+                    .padding(.vertical, 12)
+                }
+                .focusSection()
+            }
+        }
+        .alert("Playback not yet supported", isPresented: Binding(
+            get: { unsupportedTitle != nil },
+            set: { if !$0 { unsupportedTitle = nil } }
+        )) {
+            Button("OK") { unsupportedTitle = nil }
+        } message: {
+            Text("Disney VOD playback (\(unsupportedTitle ?? "")) needs a server-side `/disney/play/stream` endpoint. Linear ESPN and ESPN events still work.")
+        }
+    }
+}
+
+private struct TVDisneyEpisodeCard: View {
+    let episode: DXItem
+    @Environment(\.isFocused) private var isFocused
+
+    private var runtimeLabel: String? {
+        guard let ms = episode.visuals?.durationMs, ms > 0 else { return nil }
+        let minutes = (ms + 30_000) / 60_000
+        return "\(minutes) min"
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            ZStack(alignment: .bottomLeading) {
+                if let urlString = episode.bestImageURL, let url = URL(string: urlString) {
+                    AsyncImage(url: url) { image in
+                        image.resizable().scaledToFill()
+                    } placeholder: {
+                        Color.white.opacity(0.06)
+                    }
+                    .frame(width: 320, height: 180)
+                    .clipped()
+                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                } else {
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .fill(Color.white.opacity(0.08))
+                        .frame(width: 320, height: 180)
+                }
+                if let n = episode.visuals?.episodeNumber {
+                    Text("EP \(n)")
+                        .font(.system(size: 11, weight: .black, design: .rounded))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 7).padding(.vertical, 3)
+                        .background(Color.black.opacity(0.65), in: Capsule())
+                        .padding(10)
+                }
+            }
+            VStack(alignment: .leading, spacing: 4) {
+                Text(episode.visuals?.episodeTitle ?? episode.visuals?.fullEpisodeTitle ?? episode.displayTitle ?? "Episode")
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundStyle(isFocused ? .white : .white.opacity(0.9))
+                    .lineLimit(2)
+                    .frame(width: 320, alignment: .leading)
+                if let runtimeLabel {
+                    Text(runtimeLabel)
+                        .font(.system(size: 12, weight: .semibold, design: .monospaced))
+                        .foregroundStyle(.white.opacity(0.6))
+                }
+            }
+        }
     }
 }
 #endif

@@ -322,6 +322,11 @@ struct DXContainer: Codable, Identifiable {
     let browseTarget: DXBrowseTarget?
     let request: DXRequestContext?
 
+    /// Detail-page episodes container carries seasons inline (no
+    /// /set endpoint). Only present when style.name ==
+    /// "standard_episodic_style".
+    let seasons: [DXSeason]?
+
     /// Style name (resolved through DXStyle's flexible decoder).
     var styleName: String { style?.resolved ?? "" }
 
@@ -339,6 +344,7 @@ struct DXContainer: Codable, Identifiable {
         case entityId, entityType, pageId, setId, pageStyle, setStyle
         case layoutId, pageResolutionId, setResolutionId, skipEligibilityCheck
         case limit, offset, params, visuals, target, browseTarget, request
+        case seasons
     }
 
     init(from decoder: Decoder) throws {
@@ -368,6 +374,7 @@ struct DXContainer: Codable, Identifiable {
         target = try c.decodeIfPresent(DXTarget.self, forKey: .target)
         browseTarget = try c.decodeIfPresent(DXBrowseTarget.self, forKey: .browseTarget)
         request = try c.decodeIfPresent(DXRequestContext.self, forKey: .request)
+        seasons = try c.decodeIfPresent([DXSeason].self, forKey: .seasons)
     }
 
     /// Encode is a no-op for `synthId` — only the wire fields go
@@ -399,6 +406,26 @@ struct DXContainer: Codable, Identifiable {
         try c.encodeIfPresent(target, forKey: .target)
         try c.encodeIfPresent(browseTarget, forKey: .browseTarget)
         try c.encodeIfPresent(request, forKey: .request)
+        try c.encodeIfPresent(seasons, forKey: .seasons)
+    }
+}
+
+/// Season inside a `standard_episodic_style` container. Episodes
+/// live under `items` as DXItem with episode-specific visuals fields
+/// (episodeTitle, episodeNumber, durationMs).
+struct DXSeason: Codable, Identifiable {
+    let id: String
+    let type: String?
+    let visuals: DXVisuals?
+    let items: [DXItem]?
+    let actions: [DXItemAction]?
+    let pagination: DXPagination?
+
+    var displayTitle: String {
+        visuals?.name ?? "Season"
+    }
+    var episodeCountLabel: String? {
+        visuals?.episodeCountDisplayText
     }
 }
 
@@ -612,6 +639,17 @@ struct DXVisuals: Codable {
     let artwork: DXJSON?
     let description: DXDescription?
     let badges: DXBadges?
+
+    // Episode-shape additions (only populated on episode visuals
+    // inside a season's items[]).
+    let episodeTitle: String?
+    let fullEpisodeTitle: String?
+    let episodeNumber: Int?
+    let seasonNumber: Int?
+    let durationMs: Int?
+
+    // Season-shape additions (only populated on season visuals).
+    let episodeCountDisplayText: String?
 }
 
 /// Disney's badge bag — slot2 carries the standard "New Episode" /
