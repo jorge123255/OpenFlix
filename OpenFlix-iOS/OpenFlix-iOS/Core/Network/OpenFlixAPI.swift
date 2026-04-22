@@ -68,7 +68,18 @@ actor OpenFlixAPI {
         default: throw NetworkError.serverError(httpResponse.statusCode, String(data: data, encoding: .utf8) ?? "")
         }
         do { return try snakeCaseDecoder.decode(T.self, from: data) }
-        catch { return try decoder.decode(T.self, from: data) }
+        catch let snakeError {
+            do { return try decoder.decode(T.self, from: data) }
+            catch let plainError {
+                // Log both decoder failures so console diagnostics
+                // pinpoint the failing path; throw the structured
+                // .decodingError(error) so NetworkError's pretty
+                // printer surfaces it in the user-visible message.
+                NSLog("DECODE FAIL %@: %@", String(describing: T.self), String(describing: plainError))
+                NSLog("DECODE FAIL %@ snake-case attempt: %@", String(describing: T.self), String(describing: snakeError))
+                throw NetworkError.decodingError(plainError)
+            }
+        }
     }
 
     func requestVoid(_ endpoint: APIEndpoint) async throws {

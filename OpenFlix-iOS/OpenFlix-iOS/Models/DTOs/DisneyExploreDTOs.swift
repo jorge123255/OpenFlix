@@ -526,7 +526,12 @@ struct DXVisuals: Codable {
     let name: String?
     let displayText: String?
     let imageUrl: String?
-    let metastringParts: DXMetaParts?
+    /// Disney's metastringParts has fields like `releaseYearRange`
+    /// where ints arrive as strings (e.g. startYear: "2025"). Decode
+    /// as a free-form JSON tree to tolerate that without a custom
+    /// decoder per nested struct — nothing in the apps reads typed
+    /// fields off this blob.
+    let metastringParts: DXJSON?
     let artwork: DXJSON?
     let description: DXDescription?
     let badges: DXBadges?
@@ -556,20 +561,6 @@ struct DXItemAction: Codable {
     let entityType: String?
     let resourceId: String?
 }
-
-struct DXMetaParts: Codable {
-    let releaseYearRange: DXReleaseYear?
-    let runtime: DXRuntime?
-    let ratingInfo: DXRatingInfo?
-}
-
-struct DXReleaseYear: Codable { let startYear: Int?; let endYear: Int? }
-struct DXRuntime: Codable { let runtimeMs: Int? }
-struct DXRatingInfo: Codable {
-    let advisories: [String]?
-    let rating: DXRating?
-}
-struct DXRating: Codable { let text: String?; let value: String? }
 
 struct DXDescription: Codable {
     let full: String?
