@@ -505,7 +505,7 @@ private struct TVDisneyEpisodeCard: View {
     @Environment(\.isFocused) private var isFocused
 
     private var runtimeLabel: String? {
-        guard let ms = episode.visuals?.durationMs, ms > 0 else { return nil }
+        guard let ms = episode.visuals?.durationMs?.value, ms > 0 else { return nil }
         let minutes = (ms + 30_000) / 60_000
         return "\(minutes) min"
     }
@@ -527,7 +527,7 @@ private struct TVDisneyEpisodeCard: View {
                         .fill(Color.white.opacity(0.08))
                         .frame(width: 320, height: 180)
                 }
-                if let n = episode.visuals?.episodeNumber {
+                if let n = episode.visuals?.episodeNumber?.value {
                     Text("EP \(n)")
                         .font(.system(size: 11, weight: .black, design: .rounded))
                         .foregroundStyle(.white)

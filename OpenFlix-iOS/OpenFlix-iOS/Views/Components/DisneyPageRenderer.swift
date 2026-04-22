@@ -499,7 +499,7 @@ private struct DisneyEpisodeCard: View {
     }
 
     private var runtimeLabel: String? {
-        guard let ms = episode.visuals?.durationMs, ms > 0 else { return nil }
+        guard let ms = episode.visuals?.durationMs?.value, ms > 0 else { return nil }
         let minutes = (ms + 30_000) / 60_000
         return "\(minutes) min"
     }
@@ -521,7 +521,7 @@ private struct DisneyEpisodeCard: View {
                         .fill(Color.white.opacity(0.08))
                         .frame(width: 140, height: 80)
                 }
-                if let n = episode.visuals?.episodeNumber {
+                if let n = episode.visuals?.episodeNumber?.value {
                     Text("EP \(n)")
                         .font(.system(size: 9, weight: .black, design: .rounded))
                         .foregroundStyle(.white)

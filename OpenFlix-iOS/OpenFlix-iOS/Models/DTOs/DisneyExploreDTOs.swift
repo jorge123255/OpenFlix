@@ -470,6 +470,25 @@ struct DXFlexibleBool: Codable {
     }
 }
 
+/// Disney sometimes returns integers as strings (`seasonNumber: "1"`,
+/// `episodeNumber: "1"`, `durationMs: "3657459"`, etc.). Decode either
+/// form and expose `.value: Int?`. Returns nil on malformed input
+/// rather than throwing — the renderer treats nil as "unknown".
+struct DXFlexibleInt: Codable {
+    let value: Int?
+    init(from decoder: Decoder) throws {
+        let c = try decoder.singleValueContainer()
+        if let i = try? c.decode(Int.self) { value = i; return }
+        if let d = try? c.decode(Double.self) { value = Int(d); return }
+        if let s = try? c.decode(String.self) { value = Int(s); return }
+        value = nil
+    }
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.singleValueContainer()
+        if let value { try c.encode(value) } else { try c.encodeNil() }
+    }
+}
+
 // MARK: Items
 //
 // Disney's real item shape: { id, type, infoBlock, visuals, actions[]
@@ -641,12 +660,14 @@ struct DXVisuals: Codable {
     let badges: DXBadges?
 
     // Episode-shape additions (only populated on episode visuals
-    // inside a season's items[]).
+    // inside a season's items[]). Disney sometimes returns these
+    // as quoted strings ("1") instead of ints; DXFlexibleInt
+    // accepts either.
     let episodeTitle: String?
     let fullEpisodeTitle: String?
-    let episodeNumber: Int?
-    let seasonNumber: Int?
-    let durationMs: Int?
+    let episodeNumber: DXFlexibleInt?
+    let seasonNumber: DXFlexibleInt?
+    let durationMs: DXFlexibleInt?
 
     // Season-shape additions (only populated on season visuals).
     let episodeCountDisplayText: String?
