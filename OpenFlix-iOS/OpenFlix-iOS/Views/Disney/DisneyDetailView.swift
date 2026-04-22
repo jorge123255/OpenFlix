@@ -174,7 +174,7 @@ struct DisneyDetailView: View {
                 } else if let setId = target.setId, !setId.isEmpty {
                     if let container = try await repo.loadSetFromTarget(target) {
                         page = DXPage(id: setId, pageId: setId, title: nil, style: nil, pageStyle: nil,
-                                      containers: [container], visuals: nil)
+                                      containers: [container], visuals: nil, actions: nil)
                     }
                 }
             }

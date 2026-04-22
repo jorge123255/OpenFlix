@@ -257,9 +257,12 @@ struct DXPage: Codable, Identifiable {
     let pageStyle: DXStyle?
     let containers: [DXContainer]?
     let visuals: DXVisuals?
+    /// Top-level actions for detail pages — CONTINUE / RESTART
+    /// (type=playback), trailer, watchlist, share, etc.
+    let actions: [DXPageAction]?
 
     enum CodingKeys: String, CodingKey {
-        case id, pageId, title, style, pageStyle, containers, visuals
+        case id, pageId, title, style, pageStyle, containers, visuals, actions
     }
 
     /// Best-effort style name (mirrors web's `styleNameOf` /
@@ -275,6 +278,56 @@ struct DXPage: Codable, Identifiable {
     var pageHeroArtworkURL: String? {
         DisneyImageResolver.preferredArtworkURL(visuals?.artwork?.value,
                                                 candidates: DisneyImageResolver.pageHeroCandidates)
+    }
+
+    /// Detail-page meta chips: badge + year(s) + rating + seasons
+    /// available. Walks the metastringParts JSON tree. All optional.
+    var detailMetaChips: [String] {
+        var chips: [String] = []
+        if let badge = visuals?.badges?.slot2?.full ?? visuals?.badges?.slot2?.brief {
+            chips.append(badge)
+        }
+        let msp = visuals?.metastringParts?.value as? [String: Any]
+        if let ry = msp?["releaseYearRange"] as? [String: Any] {
+            let start = stringInt(ry["startYear"])
+            let end = stringInt(ry["endYear"])
+            if let s = start, let e = end, e != s { chips.append("\(s)–\(e)") }
+            else if let s = start { chips.append(s) }
+        }
+        if let ratingInfo = msp?["ratingInfo"] as? [String: Any],
+           let rating = ratingInfo["rating"] as? [String: Any],
+           let text = rating["text"] as? String, !text.isEmpty {
+            chips.append(text)
+        }
+        if let seasons = msp?["seasonsAvailable"] as? String, !seasons.isEmpty {
+            chips.append(seasons)
+        }
+        return chips
+    }
+
+    /// Primary playback actions, in the order Disney returned them
+    /// (CONTINUE first, then RESTART). Trailer is filtered out — it
+    /// renders separately as a secondary button.
+    var primaryPlaybackActions: [DXPageAction] {
+        actions?.filter { $0.type?.lowercased() == "playback" } ?? []
+    }
+
+    var trailerAction: DXPageAction? {
+        actions?.first { $0.type?.lowercased() == "trailer" }
+    }
+
+    /// Best description for the detail card body — medium first
+    /// (1-2 sentences, fits without overflow), then full as fallback,
+    /// then brief.
+    var bestDescription: String? {
+        visuals?.description?.medium ?? visuals?.description?.full ?? visuals?.description?.brief
+    }
+
+    private func stringInt(_ any: Any?) -> String? {
+        if let i = any as? Int { return String(i) }
+        if let s = any as? String, !s.isEmpty { return s }
+        if let d = any as? Double { return String(Int(d)) }
+        return nil
     }
 }
 
@@ -671,6 +724,10 @@ struct DXVisuals: Codable {
 
     // Season-shape additions (only populated on season visuals).
     let episodeCountDisplayText: String?
+
+    // Detail-page additions (page.visuals).
+    /// Up-next episode label, e.g. "S1:E1 Heaven's Half Hour".
+    let featuredTitle: String?
 }
 
 /// Disney's badge bag — slot2 carries the standard "New Episode" /
@@ -696,6 +753,33 @@ struct DXItemAction: Codable {
     let entityId: String?
     let entityType: String?
     let resourceId: String?
+}
+
+/// Page-level action on a detail page — richer than DXItemAction.
+/// Carries the playback context (availId/resourceId/internalTitle)
+/// plus one or more display options (CONTINUE / RESTART / PLAY).
+struct DXPageAction: Codable, Identifiable {
+    let type: String?              // "playback" / "trailer" / "modifySaves" / "share" / "contextMenu"
+    let contentType: String?       // "vod"
+    let deeplinkId: String?
+    let resourceId: String?
+    let availId: String?
+    let internalTitle: String?
+    let upNextId: String?
+    let options: [DXActionOption]?
+    let visuals: DXVisuals?
+
+    /// Stable id for SwiftUI Identifiable — falls back through the
+    /// available identifiers since Disney doesn't give actions an
+    /// explicit id.
+    var id: String {
+        (type ?? "action") + ":" + (deeplinkId ?? resourceId ?? availId ?? UUID().uuidString)
+    }
+}
+
+struct DXActionOption: Codable {
+    let displayText: String?       // "CONTINUE" / "RESTART" / "PLAY"
+    let type: String?              // "resume" / "from_beginning"
 }
 
 struct DXDescription: Codable {

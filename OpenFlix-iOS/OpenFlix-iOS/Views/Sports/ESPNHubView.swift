@@ -458,7 +458,7 @@ struct DisneySubPageView: View {
                 if let container = try await repo.loadSetFromTarget(target) {
                     page = DXPage(
                         id: setId, pageId: setId, title: title, style: nil, pageStyle: nil,
-                        containers: [container], visuals: nil
+                        containers: [container], visuals: nil, actions: nil
                     )
                 }
             } else if let refId = target.refId {

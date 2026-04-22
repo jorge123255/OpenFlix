@@ -149,7 +149,7 @@ struct DisneyHomeView: View {
                 if let container = try await repo.loadSetFromTarget(tab.asTarget) {
                     page = DXPage(id: setId, pageId: setId, title: tab.label,
                                   style: nil, pageStyle: nil,
-                                  containers: [container], visuals: nil)
+                                  containers: [container], visuals: nil, actions: nil)
                 }
                 return
             }
@@ -171,7 +171,7 @@ struct DisneyHomeView: View {
                     if let container = try await repo.loadSetFromTarget(target) {
                         page = DXPage(id: setId, pageId: setId, title: tab.label,
                                       style: nil, pageStyle: nil,
-                                      containers: [container], visuals: nil)
+                                      containers: [container], visuals: nil, actions: nil)
                     }
                 }
             }

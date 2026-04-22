@@ -154,53 +154,124 @@ private struct DisneyRotatingHero: View {
 
 private struct DisneyDetailPageHero: View {
     let page: DXPage
+    @State private var unsupportedAction: String?
+
+    private var heroTitle: String {
+        page.visuals?.title ?? page.title ?? page.visuals?.displayText ?? "Detail"
+    }
+    private var chips: [String] { page.detailMetaChips }
+    private var playActions: [DXPageAction] { page.primaryPlaybackActions }
 
     var body: some View {
-        ZStack(alignment: .bottomLeading) {
-            if let urlString = page.pageHeroArtworkURL, let url = URL(string: urlString) {
-                AsyncImage(url: url) { image in
-                    image.resizable().scaledToFill()
-                } placeholder: {
-                    Color.black.opacity(0.4)
+        VStack(alignment: .leading, spacing: 14) {
+            ZStack(alignment: .bottomLeading) {
+                if let urlString = page.pageHeroArtworkURL, let url = URL(string: urlString) {
+                    AsyncImage(url: url) { image in
+                        image.resizable().scaledToFill()
+                    } placeholder: {
+                        Color.black.opacity(0.4)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 240)
+                    .clipped()
+                } else {
+                    LinearGradient(
+                        colors: [Color(red: 0.05, green: 0.08, blue: 0.30),
+                                 Color(red: 0.10, green: 0.15, blue: 0.45)],
+                        startPoint: .topLeading, endPoint: .bottomTrailing
+                    )
+                    .frame(height: 240)
                 }
-                .frame(maxWidth: .infinity)
-                .frame(height: 220)
-                .clipped()
-            } else {
                 LinearGradient(
-                    colors: [Color(red: 0.05, green: 0.08, blue: 0.30),
-                             Color(red: 0.10, green: 0.15, blue: 0.45)],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
+                    colors: [Color.black.opacity(0.0), Color.black.opacity(0.85)],
+                    startPoint: .top, endPoint: .bottom
                 )
-                .frame(height: 220)
-            }
-
-            LinearGradient(
-                colors: [Color.black.opacity(0.0), Color.black.opacity(0.75)],
-                startPoint: .top, endPoint: .bottom
-            )
-            .frame(height: 220)
-
-            VStack(alignment: .leading, spacing: 6) {
-                Text("DETAIL")
-                    .font(.system(size: 10, weight: .black, design: .rounded))
-                    .foregroundStyle(.white.opacity(0.85))
-                    .tracking(2)
-                Text(page.title ?? page.visuals?.title ?? page.visuals?.displayText ?? "Detail")
-                    .font(.system(size: 24, weight: .black, design: .rounded))
-                    .foregroundStyle(.white)
-                    .lineLimit(2)
-                if let desc = page.visuals?.description?.brief ?? page.visuals?.description?.medium {
-                    Text(desc)
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(.white.opacity(0.85))
+                .frame(height: 240)
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(heroTitle)
+                        .font(.system(size: 26, weight: .black, design: .rounded))
+                        .foregroundStyle(.white)
                         .lineLimit(2)
+                    if let feat = page.visuals?.featuredTitle, !feat.isEmpty {
+                        Text(feat)
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(.white.opacity(0.85))
+                    }
+                }
+                .padding(18)
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+
+            if !chips.isEmpty {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 6) {
+                        ForEach(Array(chips.enumerated()), id: \.offset) { _, chip in
+                            Text(chip)
+                                .font(.system(size: 11, weight: .bold, design: .rounded))
+                                .foregroundStyle(.white.opacity(0.85))
+                                .padding(.horizontal, 8).padding(.vertical, 4)
+                                .background(Color.white.opacity(0.10), in: Capsule())
+                        }
+                    }
                 }
             }
-            .padding(18)
+
+            if !playActions.isEmpty {
+                HStack(spacing: 10) {
+                    ForEach(playActions) { action in
+                        let label = action.options?.first?.displayText ?? "PLAY"
+                        let isPrimary = playActions.first?.id == action.id
+                        Button {
+                            unsupportedAction = label
+                        } label: {
+                            HStack(spacing: 8) {
+                                Image(systemName: action.options?.first?.type == "resume" ? "play.fill" : "play.circle.fill")
+                                    .font(.system(size: 14, weight: .bold))
+                                Text(label)
+                                    .font(.system(size: 13, weight: .bold))
+                            }
+                            .foregroundStyle(isPrimary ? .black : .white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                            .background(
+                                Capsule().fill(isPrimary ? Color.white : Color.white.opacity(0.12))
+                            )
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                if let trailer = page.trailerAction {
+                    Button {
+                        unsupportedAction = trailer.options?.first?.displayText ?? "TRAILER"
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: "film")
+                                .font(.system(size: 12, weight: .semibold))
+                            Text("Trailer")
+                                .font(.system(size: 12, weight: .semibold))
+                        }
+                        .foregroundStyle(.white.opacity(0.85))
+                        .padding(.horizontal, 12).padding(.vertical, 8)
+                        .background(Capsule().strokeBorder(Color.white.opacity(0.2)))
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+
+            if let desc = page.bestDescription {
+                Text(desc)
+                    .font(.system(size: 13))
+                    .foregroundStyle(.white.opacity(0.85))
+            }
         }
-        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .alert("Playback not yet supported", isPresented: Binding(
+            get: { unsupportedAction != nil },
+            set: { if !$0 { unsupportedAction = nil } }
+        )) {
+            Button("OK") { unsupportedAction = nil }
+        } message: {
+            Text("Disney VOD playback (\(unsupportedAction ?? "")) needs a server-side `/disney/play/stream` endpoint. Linear ESPN and ESPN events still work.")
+        }
     }
 }
 

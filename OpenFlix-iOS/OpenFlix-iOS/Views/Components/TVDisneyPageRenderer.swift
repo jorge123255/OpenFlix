@@ -215,6 +215,13 @@ struct TVDisneyHeroBanner: View {
 
 private struct TVDisneyDetailPageHero: View {
     let page: DXPage
+    @State private var unsupportedAction: String?
+
+    private var heroTitle: String {
+        page.visuals?.title ?? page.title ?? page.visuals?.displayText ?? "Detail"
+    }
+    private var chips: [String] { page.detailMetaChips }
+    private var playActions: [DXPageAction] { page.primaryPlaybackActions }
 
     var body: some View {
         ZStack(alignment: .bottomLeading) {
@@ -225,7 +232,7 @@ private struct TVDisneyDetailPageHero: View {
                     Color.black.opacity(0.4)
                 }
                 .frame(maxWidth: .infinity)
-                .frame(height: 480)
+                .frame(height: 540)
                 .clipped()
             } else {
                 LinearGradient(
@@ -234,32 +241,93 @@ private struct TVDisneyDetailPageHero: View {
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )
-                .frame(height: 480)
+                .frame(height: 540)
             }
             LinearGradient(
-                colors: [Color.black.opacity(0.0), Color.black.opacity(0.85)],
+                colors: [Color.black.opacity(0.0), Color.black.opacity(0.92)],
                 startPoint: .top, endPoint: .bottom
             )
-            .frame(height: 480)
-            VStack(alignment: .leading, spacing: 10) {
-                Text("DETAIL")
-                    .font(.system(size: 14, weight: .black, design: .rounded))
-                    .foregroundStyle(.white)
-                    .tracking(2.5)
-                Text(page.title ?? page.visuals?.title ?? page.visuals?.displayText ?? "Detail")
-                    .font(.system(size: 44, weight: .black, design: .rounded))
+            .frame(height: 540)
+
+            VStack(alignment: .leading, spacing: 14) {
+                Text(heroTitle)
+                    .font(.system(size: 48, weight: .black, design: .rounded))
                     .foregroundStyle(.white)
                     .lineLimit(2)
-                if let desc = page.visuals?.description?.medium ?? page.visuals?.description?.brief {
+                if let feat = page.visuals?.featuredTitle, !feat.isEmpty {
+                    Text(feat)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(.white.opacity(0.85))
+                }
+                if !chips.isEmpty {
+                    HStack(spacing: 8) {
+                        ForEach(Array(chips.enumerated()), id: \.offset) { _, chip in
+                            Text(chip)
+                                .font(.system(size: 14, weight: .bold, design: .rounded))
+                                .foregroundStyle(.white.opacity(0.85))
+                                .padding(.horizontal, 10).padding(.vertical, 4)
+                                .background(Color.white.opacity(0.10), in: Capsule())
+                        }
+                    }
+                }
+                if let desc = page.bestDescription {
                     Text(desc)
                         .font(.system(size: 18, weight: .medium))
                         .foregroundStyle(.white.opacity(0.85))
                         .lineLimit(3)
+                        .frame(maxWidth: 760, alignment: .leading)
+                }
+                if !playActions.isEmpty {
+                    HStack(spacing: 16) {
+                        ForEach(playActions) { action in
+                            let label = action.options?.first?.displayText ?? "PLAY"
+                            let isPrimary = playActions.first?.id == action.id
+                            Button {
+                                unsupportedAction = label
+                            } label: {
+                                HStack(spacing: 10) {
+                                    Image(systemName: action.options?.first?.type == "resume" ? "play.fill" : "play.circle.fill")
+                                        .font(.system(size: 22, weight: .bold))
+                                    Text(label)
+                                        .font(.system(size: 20, weight: .bold))
+                                }
+                                .foregroundStyle(isPrimary ? .black : .white)
+                                .padding(.horizontal, 28).padding(.vertical, 14)
+                                .background(Capsule().fill(isPrimary ? Color.white : Color.white.opacity(0.16)))
+                            }
+                            .buttonStyle(OFFocusableButtonStyle(prominent: true, cornerRadius: 999))
+                        }
+                        if let trailer = page.trailerAction {
+                            Button {
+                                unsupportedAction = trailer.options?.first?.displayText ?? "TRAILER"
+                            } label: {
+                                HStack(spacing: 8) {
+                                    Image(systemName: "film")
+                                        .font(.system(size: 18, weight: .semibold))
+                                    Text("Trailer")
+                                        .font(.system(size: 18, weight: .semibold))
+                                }
+                                .foregroundStyle(.white.opacity(0.85))
+                                .padding(.horizontal, 22).padding(.vertical, 12)
+                                .background(Capsule().strokeBorder(Color.white.opacity(0.2)))
+                            }
+                            .buttonStyle(OFFocusableButtonStyle(cornerRadius: 999))
+                        }
+                    }
+                    .focusSection()
                 }
             }
-            .padding(34)
+            .padding(40)
         }
         .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .alert("Playback not yet supported", isPresented: Binding(
+            get: { unsupportedAction != nil },
+            set: { if !$0 { unsupportedAction = nil } }
+        )) {
+            Button("OK") { unsupportedAction = nil }
+        } message: {
+            Text("Disney VOD playback (\(unsupportedAction ?? "")) needs a server-side `/disney/play/stream` endpoint. Linear ESPN and ESPN events still work.")
+        }
     }
 }
 

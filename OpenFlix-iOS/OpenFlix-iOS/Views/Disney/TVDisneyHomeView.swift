@@ -125,7 +125,7 @@ struct TVDisneyHomeView: View {
                 if let container = try await repo.loadSetFromTarget(tab.asTarget) {
                     page = DXPage(id: setId, pageId: setId, title: tab.label,
                                   style: nil, pageStyle: nil,
-                                  containers: [container], visuals: nil)
+                                  containers: [container], visuals: nil, actions: nil)
                 }
                 return
             }
@@ -147,7 +147,7 @@ struct TVDisneyHomeView: View {
                     if let container = try await repo.loadSetFromTarget(target) {
                         page = DXPage(id: setId, pageId: setId, title: tab.label,
                                       style: nil, pageStyle: nil,
-                                      containers: [container], visuals: nil)
+                                      containers: [container], visuals: nil, actions: nil)
                     }
                 }
             }
@@ -242,7 +242,7 @@ struct TVDisneySubPageView: View {
             } else if let setId = target.setId, !setId.isEmpty {
                 if let container = try await repo.loadSetFromTarget(target) {
                     page = DXPage(id: setId, pageId: setId, title: title, style: nil, pageStyle: nil,
-                                  containers: [container], visuals: nil)
+                                  containers: [container], visuals: nil, actions: nil)
                 }
             } else if let refId = target.refId {
                 let action = try await repo.resolveDeeplink(refId: refId, refIdType: target.refIdType ?? "deeplinkId")
