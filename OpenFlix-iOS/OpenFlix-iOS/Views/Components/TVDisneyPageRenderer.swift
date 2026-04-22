@@ -23,7 +23,10 @@ struct TVDisneyPageRenderer: View {
     let onOpenPage: (DXTarget, String?) -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 36) {
+        // LazyVStack so rows materialize as they scroll into view —
+        // a Disney page has 30+ rails and an eager VStack instantiates
+        // every shelf's items / AsyncImages at mount.
+        LazyVStack(alignment: .leading, spacing: 36) {
             if page.isDetailPage {
                 TVDisneyDetailPageHero(page: page).padding(.horizontal, 56)
             } else if let hero = heroContainer {

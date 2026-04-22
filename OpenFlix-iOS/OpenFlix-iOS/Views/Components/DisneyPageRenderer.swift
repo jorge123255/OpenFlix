@@ -22,11 +22,12 @@ struct DisneyPageRenderer: View {
     let onOpenPage: (DXTarget, String?) -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 24) {
+        // LazyVStack so SwiftUI only materializes rows as they scroll
+        // into view. With 30+ Disney rails, an eager VStack would
+        // instantiate every AsyncImage at mount time and the iPhone
+        // process gets killed for memory pressure.
+        LazyVStack(alignment: .leading, spacing: 24) {
             if page.isDetailPage {
-                // Detail pages use the page's own artwork as the hero
-                // (no rotating multi-item hero). Mirrors the web's
-                // pageArtwork() behavior on details_* style pages.
                 DisneyDetailPageHero(page: page).padding(.horizontal, 16)
             } else if let hero = heroContainer {
                 DisneyRotatingHero(
@@ -306,7 +307,7 @@ struct DisneyRowView: View {
                     .padding(.horizontal, 16)
             } else {
                 ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 10) {
+                    LazyHStack(spacing: 10) {
                         ForEach(items) { item in
                             Button {
                                 onSelect(item)

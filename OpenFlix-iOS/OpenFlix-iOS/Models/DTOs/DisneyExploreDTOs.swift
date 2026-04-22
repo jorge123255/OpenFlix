@@ -611,30 +611,30 @@ struct DXJSON: Codable {
 // skip RAW_* image IDs (those are internal raw assets, not deliverable).
 
 enum DisneyImageResolver {
-    /// Standard candidate order for tiles/cards/hero images. Mirrors
-    /// the web's `itemImage()` ordering: hero bg → details bg →
-    /// standard bg → collection bg → standard tile → partner tile →
-    /// partner thumbnail → tile background. Logos / title treatments
-    /// are intentionally NOT in this list — they make poor cards.
+    /// Standard candidate order for tiles/cards. Widths are tuned for
+    /// iPhone — the web requests 1400/1200/800 because it's running
+    /// in a desktop browser; iPhone tiles are 110-220pt wide so a
+    /// 600px image is plenty (and Disney CDN downscales server-side,
+    /// so a smaller width = much smaller image bytes in memory).
     static let itemCandidates: [(path: [String], width: Int)] = [
-        (["hero", "background", "1.78"], 1400),
-        (["details", "background", "1.78"], 1400),
-        (["standard", "background", "1.78"], 1400),
-        (["collection", "background", "1.78"], 1200),
-        (["standard", "tile", "1.78"], 800),
-        (["partner", "tile", "1.78"], 800),
-        (["partner", "thumbnail", "1.78"], 800),
-        (["tile", "background", "1.78"], 800),
+        (["hero", "background", "1.78"], 600),
+        (["details", "background", "1.78"], 600),
+        (["standard", "background", "1.78"], 600),
+        (["collection", "background", "1.78"], 600),
+        (["standard", "tile", "1.78"], 480),
+        (["partner", "tile", "1.78"], 480),
+        (["partner", "thumbnail", "1.78"], 480),
+        (["tile", "background", "1.78"], 480),
     ]
 
-    /// Page-level hero artwork for `details_*` style pages. Mirrors
-    /// the web's `pageArtwork()` candidate list.
+    /// Page-level hero artwork for `details_*` style pages. Larger
+    /// budget than tiles since this is the full-width banner.
     static let pageHeroCandidates: [(path: [String], width: Int)] = [
-        (["hero", "background", "1.78"], 1400),
-        (["details", "background", "1.78"], 1400),
-        (["standard", "background", "1.78"], 1400),
-        (["collection", "background", "1.78"], 1200),
-        (["partner", "background", "1.78"], 1200),
+        (["hero", "background", "1.78"], 900),
+        (["details", "background", "1.78"], 900),
+        (["standard", "background", "1.78"], 900),
+        (["collection", "background", "1.78"], 900),
+        (["partner", "background", "1.78"], 900),
     ]
 
     /// Build a BAMGrid compose URL from an `imageId`. Skips RAW_*
