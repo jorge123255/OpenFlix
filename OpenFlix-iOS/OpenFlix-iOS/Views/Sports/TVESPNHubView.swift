@@ -21,6 +21,14 @@ struct TVESPNHubView: View {
     @StateObject private var disneyRepo = DisneyExploreRepository()
     @State private var linearToPlay: ESPNLinearChannel?
     @State private var eventToPlay: ESPNEventPlayback?
+    /// Disney "ESPN" page resolved from globalNav. Used as a fallback
+    /// when hub.disneyHub is null so the rails still surface.
+    @State private var disneyESPNPage: DXPage?
+
+    private var renderableDisneyPage: DXPage? {
+        if let h = repo.hub?.disneyHub { return h }
+        return disneyESPNPage
+    }
 
     var body: some View {
         ScrollView {
@@ -34,7 +42,7 @@ struct TVESPNHubView: View {
                         }
                     }
 
-                    if hub.hasDisneyHub == true, let disneyHub = hub.disneyHub {
+                    if let disneyHub = renderableDisneyPage {
                         TVDisneyPageRenderer(
                             page: disneyHub,
                             repo: disneyRepo,
@@ -66,6 +74,9 @@ struct TVESPNHubView: View {
         .task {
             await repo.loadHub()
             repo.startPolling()
+            if disneyESPNPage == nil {
+                disneyESPNPage = try? await disneyRepo.loadESPNPageFromGlobalNav()
+            }
         }
         .onDisappear { repo.stopPolling() }
         .fullScreenCover(item: $linearToPlay) { channel in

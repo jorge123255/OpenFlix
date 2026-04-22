@@ -44,7 +44,7 @@ struct TVDisneyPageRenderer: View {
     }
 
     private var heroContainer: DXContainer? {
-        page.containers?.first(where: { isHeroStyle($0.style) })
+        page.containers?.first(where: { isHeroStyle($0.styleName) })
     }
 
     private var rowContainers: [DXContainer] {
@@ -53,23 +53,23 @@ struct TVDisneyPageRenderer: View {
         return containers.filter { $0.id != hero.id }
     }
 
-    private func isHeroStyle(_ style: String?) -> Bool {
-        guard let s = style?.lowercased() else { return false }
+    private func isHeroStyle(_ name: String) -> Bool {
+        let s = name.lowercased()
         return s.hasPrefix("hero_") || s.hasPrefix("brand_") || s == "immersive"
     }
 
     private func handleTap(item: DXItem, container: DXContainer?) {
         if item.isPlayable {
-            onPlayEvent(item, container)
-            return
+            onPlayEvent(item, container); return
         }
         if let bt = item.browseTarget, hasNav(bt) {
-            onOpenPage(bt, item.displayTitle)
-            return
+            onOpenPage(bt, item.displayTitle); return
         }
         if let t = item.target, hasNav(t) {
-            onOpenPage(t, item.displayTitle)
-            return
+            onOpenPage(t, item.displayTitle); return
+        }
+        if let action = item.primaryAction, let target = targetFromAction(action, label: item.displayTitle) {
+            onOpenPage(target, item.displayTitle); return
         }
         onOpenDetail(item, container)
     }
@@ -78,6 +78,21 @@ struct TVDisneyPageRenderer: View {
         (target.pageId?.isEmpty == false) ||
         (target.setId?.isEmpty == false) ||
         (target.entityId?.isEmpty == false)
+    }
+
+    private func targetFromAction(_ action: DXItemAction, label: String?) -> DXTarget? {
+        let pageId = action.pageId, setId = action.setId, entityId = action.entityId, deeplinkId = action.deeplinkId
+        guard pageId != nil || setId != nil || entityId != nil || deeplinkId != nil else { return nil }
+        return DXTarget(
+            type: action.type, scope: nil, id: nil,
+            setId: setId, pageId: pageId,
+            entityId: entityId, entityType: action.entityType,
+            layoutId: nil, pageResolutionId: nil, setResolutionId: nil,
+            pageStyle: nil, setStyle: nil,
+            skipEligibilityCheck: nil, limit: nil, offset: nil,
+            label: label,
+            refId: deeplinkId, refIdType: deeplinkId == nil ? nil : "deeplinkId"
+        )
     }
 }
 
@@ -157,7 +172,7 @@ struct TVDisneyHeroBanner: View {
             .frame(height: 480)
 
             VStack(alignment: .leading, spacing: 10) {
-                if let badge = item.badges?.first {
+                if let badge = item.firstBadge {
                     Text(badge.uppercased())
                         .font(.system(size: 14, weight: .black, design: .rounded))
                         .foregroundStyle(.white)
@@ -294,7 +309,7 @@ struct TVDisneyRailView: View {
                             Button {
                                 onSelect(item)
                             } label: {
-                                TVDisneyTile(item: item, style: container.style)
+                                TVDisneyTile(item: item, style: container.styleName)
                             }
                             .buttonStyle(OFFocusableButtonStyle(prominent: true, cornerRadius: tileCornerRadius))
                         }
@@ -315,7 +330,7 @@ struct TVDisneyRailView: View {
     }
 
     private var tileCornerRadius: CGFloat {
-        let style = container.style?.lowercased() ?? ""
+        let style = container.styleName.lowercased()
         if style.contains("logo") { return 999 }
         return 12
     }
@@ -325,14 +340,13 @@ struct TVDisneyRailView: View {
 
 struct TVDisneyTile: View {
     let item: DXItem
-    let style: String?
+    let style: String
     @Environment(\.isFocused) private var isFocused
 
     private var aspect: CGFloat {
-        if let s = style?.lowercased() {
-            if s.contains("poster") || s.contains("portrait") { return 2.0 / 3.0 }
-            if s.contains("logo") { return 1.0 }
-        }
+        let s = style.lowercased()
+        if s.contains("poster") || s.contains("portrait") { return 2.0 / 3.0 }
+        if s.contains("logo") { return 1.0 }
         return 16.0 / 9.0
     }
 
@@ -380,7 +394,7 @@ struct TVDisneyTile: View {
     }
 
     private var tileRadius: CGFloat {
-        let s = style?.lowercased() ?? ""
+        let s = style.lowercased()
         return s.contains("logo") ? 999 : 12
     }
 

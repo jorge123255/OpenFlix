@@ -215,12 +215,46 @@ struct DXDeeplinkAction: Codable {
 
 // MARK: Page / container shape
 
+/// Disney returns `style` as either a string (legacy shape) or a
+/// dict `{name, fallback, layout}` (current shape). Decode either,
+/// expose a single `.resolved` string for downstream prefix checks.
+struct DXStyle: Codable {
+    let name: String?
+    let fallback: String?
+    let layout: String?
+
+    var resolved: String { name ?? fallback ?? "" }
+
+    init(from decoder: Decoder) throws {
+        if let single = try? decoder.singleValueContainer(),
+           let s = try? single.decode(String.self) {
+            self.name = s
+            self.fallback = nil
+            self.layout = nil
+            return
+        }
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.name = try c.decodeIfPresent(String.self, forKey: .name)
+        self.fallback = try c.decodeIfPresent(String.self, forKey: .fallback)
+        self.layout = try c.decodeIfPresent(String.self, forKey: .layout)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encodeIfPresent(name, forKey: .name)
+        try c.encodeIfPresent(fallback, forKey: .fallback)
+        try c.encodeIfPresent(layout, forKey: .layout)
+    }
+
+    enum CodingKeys: String, CodingKey { case name, fallback, layout }
+}
+
 struct DXPage: Codable, Identifiable {
     let id: String?
     let pageId: String?
     let title: String?
-    let style: String?
-    let pageStyle: String?
+    let style: DXStyle?
+    let pageStyle: DXStyle?
     let containers: [DXContainer]?
     let visuals: DXVisuals?
 
@@ -228,14 +262,13 @@ struct DXPage: Codable, Identifiable {
         case id, pageId, title, style, pageStyle, containers, visuals
     }
 
+    /// Best-effort style name (mirrors web's `styleNameOf` /
+    /// `pageStyle()`).
+    var styleName: String { style?.resolved ?? pageStyle?.resolved ?? "" }
+
     /// True when the page came back as a `details_*` view (Disney's
-    /// shape for entity / VOD detail pages). When true, the renderer
-    /// should use `pageHeroArtworkURL` for the top hero rather than
-    /// pulling the first item out of a hero container.
-    var isDetailPage: Bool {
-        let s = (style ?? pageStyle ?? "").lowercased()
-        return s.hasPrefix("details_")
-    }
+    /// shape for entity / VOD detail pages).
+    var isDetailPage: Bool { styleName.lowercased().hasPrefix("details_") }
 
     /// Page-level hero artwork — only meaningful on detail pages.
     /// Mirrors the web's `pageArtwork()` candidate ordering.
@@ -249,7 +282,7 @@ struct DXContainer: Codable, Identifiable {
     let id: String
     let title: String?
     let type: String?
-    let style: String?
+    let style: DXStyle?
     let layout: String?
     let pagination: DXPagination?
     let items: [DXItem]?
@@ -270,15 +303,42 @@ struct DXContainer: Codable, Identifiable {
     let limit: Int?
     let offset: Int?
 
+    /// Lazy-load context bag — Disney emits these inside `params`
+    /// alongside the top-level fields. The rail loader merges params
+    /// + top-level into the /set/:setId query string.
+    let params: DXContainerParams?
+
     let visuals: DXVisuals?
     let target: DXTarget?
     let browseTarget: DXBrowseTarget?
     let request: DXRequestContext?
 
+    /// Style name (resolved through DXStyle's flexible decoder).
+    var styleName: String { style?.resolved ?? "" }
+
     /// Best-effort title for shelf headers.
+    /// Container shelf title — Disney puts this at `visuals.name`
+    /// (NOT `visuals.title`); fall back to the legacy keys for hub
+    /// shapes that still use them.
     var displayTitle: String? {
-        title ?? visuals?.displayText ?? visuals?.title
+        title ?? visuals?.name ?? visuals?.displayText ?? visuals?.title
     }
+}
+
+/// `params` bag inside a container — typically carries the resolution
+/// context the server used to build it. The rail loader forwards
+/// these to `/disney/explore/set/:setId` so the server can re-resolve
+/// the same shelf with the same eligibility/style.
+struct DXContainerParams: Codable {
+    let layoutId: String?
+    let pageId: String?
+    let pageResolutionId: String?
+    let pageStyle: String?
+    let setResolutionId: String?
+    let setStyle: String?
+    let setId: String?
+    let entityId: String?
+    let entityType: String?
 }
 
 struct DXPagination: Codable {
@@ -307,22 +367,37 @@ struct DXFlexibleBool: Codable {
 }
 
 // MARK: Items
+//
+// Disney's real item shape: { id, type, infoBlock, visuals, actions[]
+// (and nothing else useful). Display fields all live in `visuals`;
+// navigation/playback context lives inside `actions[]`. The legacy
+// hub shape used to flatten title/subtitle/target/playback to the
+// item's top level — those fields are kept Optional below so older
+// payloads still decode.
 
 struct DXItem: Codable, Identifiable {
-    var id: String { rawId ?? deeplinkId ?? pageId ?? "\(visuals?.title ?? "?"):\(startTime ?? "")" }
+    var id: String {
+        rawId
+            ?? primaryAction?.deeplinkId
+            ?? primaryAction?.pageId
+            ?? deeplinkId
+            ?? pageId
+            ?? "\(visuals?.title ?? visuals?.displayText ?? "?"):\(startTime ?? "")"
+    }
 
     let rawId: String?
     let type: String?
     let sectionType: String?
 
-    // Display
+    // Display — actual Disney shape lives in `visuals`.
     let visuals: DXVisuals?
-    let badges: [String]?
     let imageId: String?
     let imageUrl: String?
     let artwork: DXJSON?
 
-    // Navigation
+    // Navigation — Disney uses `actions[]`. Legacy/hub items also
+    // surface these at the top level; keep both.
+    let actions: [DXItemAction]?
     let pageId: String?
     let deeplinkId: String?
     let setId: String?
@@ -330,14 +405,14 @@ struct DXItem: Codable, Identifiable {
     let target: DXTarget?
     let browseTarget: DXBrowseTarget?
 
-    // Sport-event metadata (only present on sports event items)
+    // Sport-event metadata (legacy ESPN-shaped items only).
     let title: String?
     let subtitle: String?
     let description: String?
     let sport: String?
     let league: String?
 
-    // Live-state
+    // Live-state (legacy ESPN-shaped items).
     let live: Bool?
     let upcoming: Bool?
     let state: String?
@@ -347,31 +422,53 @@ struct DXItem: Codable, Identifiable {
     let elapsedMs: Int?
     let runtimeMs: Int?
 
-    // Playback context (event items only)
+    // Playback context (legacy ESPN-shaped items).
     let playback: DXPlayback?
 
     enum CodingKeys: String, CodingKey {
         case rawId = "id"
         case type, sectionType
-        case visuals, badges, imageId, imageUrl, artwork
-        case pageId, deeplinkId, setId, browseId, target, browseTarget
+        case visuals, imageId, imageUrl, artwork
+        case actions, pageId, deeplinkId, setId, browseId, target, browseTarget
         case title, subtitle, description, sport, league
         case live, upcoming, state, playbackMode, startTime, endTime, elapsedMs, runtimeMs
         case playback
     }
 
-    var displayTitle: String? { visuals?.title ?? visuals?.displayText ?? title }
-    var displaySubtitle: String? { visuals?.subtitle ?? subtitle }
+    var displayTitle: String? {
+        visuals?.title ?? visuals?.displayText ?? visuals?.name ?? title
+    }
+    var displaySubtitle: String? {
+        visuals?.subtitle ?? visuals?.description?.brief ?? subtitle
+    }
+
+    /// First badge from visuals.badges.slot2 (Disney shape) or the
+    /// legacy top-level `state`. Used for LIVE / UPCOMING / NEW pills.
+    var firstBadge: String? {
+        visuals?.badges?.slot2?.full
+            ?? visuals?.badges?.slot2?.brief
+            ?? state
+    }
 
     var isLive: Bool {
         if state?.lowercased() == "live" || live == true { return true }
-        return badges?.contains { $0.lowercased().contains("live") } ?? false
+        if let badge = firstBadge?.lowercased(), badge.contains("live") { return true }
+        return false
     }
     var isUpcoming: Bool {
         if state?.lowercased() == "upcoming" || upcoming == true { return true }
-        return badges?.contains { $0.lowercased().contains("upcoming") } ?? false
+        if let badge = firstBadge?.lowercased(), badge.contains("upcoming") { return true }
+        return false
     }
-    var isPlayable: Bool { !isUpcoming && playback?.resourceId != nil }
+    /// Primary action = first action in `actions[]`, used for tap
+    /// routing on Disney items (deeplinkId → resolveDeeplink → page).
+    var primaryAction: DXItemAction? { actions?.first }
+
+    var isPlayable: Bool {
+        if isUpcoming { return false }
+        if playback?.resourceId != nil { return true }
+        return actions?.contains { $0.type?.lowercased() == "playback" && ($0.resourceId?.isEmpty == false) } ?? false
+    }
     var supportsLive: Bool { playback?.supportsLive ?? isLive }
     var supportsStartover: Bool { playback?.supportsStartover ?? false }
     var supportsReplay: Bool { playback?.supportsReplay ?? false }
@@ -425,11 +522,39 @@ private extension ISO8601DateFormatter {
 struct DXVisuals: Codable {
     let title: String?
     let subtitle: String?
+    /// Container shelves use `name` (not `title`) for their header.
+    let name: String?
     let displayText: String?
     let imageUrl: String?
     let metastringParts: DXMetaParts?
     let artwork: DXJSON?
     let description: DXDescription?
+    let badges: DXBadges?
+}
+
+/// Disney's badge bag — slot2 carries the standard "New Episode" /
+/// "LIVE" / "UPCOMING" string. The web reads slot2.full first, then
+/// slot2.brief.
+struct DXBadges: Codable {
+    let slot2: DXBadgeSlot?
+}
+
+struct DXBadgeSlot: Codable {
+    let brief: String?
+    let full: String?
+}
+
+/// Item action — Disney items carry navigation + playback inside
+/// `actions[]`. Tap routing reads the first action: deeplinkId →
+/// `/deeplink?refId=...` → page; or pageId direct; etc.
+struct DXItemAction: Codable {
+    let type: String?              // "browse" / "playback" / "details"
+    let deeplinkId: String?
+    let pageId: String?
+    let setId: String?
+    let entityId: String?
+    let entityType: String?
+    let resourceId: String?
 }
 
 struct DXMetaParts: Codable {

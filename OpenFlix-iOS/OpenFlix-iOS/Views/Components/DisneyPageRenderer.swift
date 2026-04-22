@@ -48,7 +48,7 @@ struct DisneyPageRenderer: View {
     }
 
     private var heroContainer: DXContainer? {
-        page.containers?.first(where: { isHeroStyle($0.style) })
+        page.containers?.first(where: { isHeroStyle($0.styleName) })
     }
 
     private var rowContainers: [DXContainer] {
@@ -57,8 +57,8 @@ struct DisneyPageRenderer: View {
         return containers.filter { $0.id != hero.id }
     }
 
-    private func isHeroStyle(_ style: String?) -> Bool {
-        guard let s = style?.lowercased() else { return false }
+    private func isHeroStyle(_ name: String) -> Bool {
+        let s = name.lowercased()
         return s.hasPrefix("hero_") || s.hasPrefix("brand_") || s == "immersive"
     }
 
@@ -68,12 +68,13 @@ struct DisneyPageRenderer: View {
             return
         }
         if let bt = item.browseTarget, hasPageOrSetId(bt) {
-            onOpenPage(bt, item.displayTitle)
-            return
+            onOpenPage(bt, item.displayTitle); return
         }
         if let t = item.target, hasPageOrSetId(t) {
-            onOpenPage(t, item.displayTitle)
-            return
+            onOpenPage(t, item.displayTitle); return
+        }
+        if let action = item.primaryAction, let target = targetFromAction(action, label: item.displayTitle) {
+            onOpenPage(target, item.displayTitle); return
         }
         onOpenDetail(item, container)
     }
@@ -82,6 +83,25 @@ struct DisneyPageRenderer: View {
         (target.pageId?.isEmpty == false) ||
         (target.setId?.isEmpty == false) ||
         (target.entityId?.isEmpty == false)
+    }
+
+    private func targetFromAction(_ action: DXItemAction, label: String?) -> DXTarget? {
+        let pageId = action.pageId
+        let setId = action.setId
+        let entityId = action.entityId
+        let deeplinkId = action.deeplinkId
+        guard pageId != nil || setId != nil || entityId != nil || deeplinkId != nil else { return nil }
+        return DXTarget(
+            type: action.type, scope: nil, id: nil,
+            setId: setId, pageId: pageId,
+            entityId: entityId, entityType: action.entityType,
+            layoutId: nil, pageResolutionId: nil, setResolutionId: nil,
+            pageStyle: nil, setStyle: nil,
+            skipEligibilityCheck: nil, limit: nil, offset: nil,
+            label: label,
+            refId: deeplinkId,
+            refIdType: deeplinkId == nil ? nil : "deeplinkId"
+        )
     }
 }
 
@@ -215,7 +235,7 @@ struct DisneyHeroBanner: View {
                 .frame(height: 220)
 
                 VStack(alignment: .leading, spacing: 6) {
-                    if let badge = item.badges?.first {
+                    if let badge = item.firstBadge {
                         Text(badge.uppercased())
                             .font(.system(size: 10, weight: .black, design: .rounded))
                             .foregroundStyle(.white)
@@ -291,7 +311,7 @@ struct DisneyRowView: View {
                             Button {
                                 onSelect(item)
                             } label: {
-                                DisneyTile(item: item, style: container.style)
+                                DisneyTile(item: item, style: container.styleName)
                             }
                             .buttonStyle(.plain)
                         }
@@ -314,14 +334,12 @@ struct DisneyRowView: View {
 
 struct DisneyTile: View {
     let item: DXItem
-    let style: String?
+    let style: String
 
     private var aspect: CGFloat {
-        if let s = style?.lowercased() {
-            if s.contains("poster") { return 2.0 / 3.0 }
-            if s.contains("logo") { return 1.0 }
-            if s.contains("portrait") { return 2.0 / 3.0 }
-        }
+        let s = style.lowercased()
+        if s.contains("poster") || s.contains("portrait") { return 2.0 / 3.0 }
+        if s.contains("logo") { return 1.0 }
         return 16.0 / 9.0
     }
 

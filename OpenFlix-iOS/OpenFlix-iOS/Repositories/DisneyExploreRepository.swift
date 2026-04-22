@@ -103,6 +103,36 @@ final class DisneyExploreRepository: ObservableObject {
         return response.data?.playerExperience
     }
 
+    // MARK: - Convenience: ESPN page resolved from globalNav
+    //
+    // Fallback path used by the ESPN tab when `hub.disneyHub` is null —
+    // walks the Disney globalNav for an "ESPN" tab and loads its page
+    // directly so the same Disney rails surface even when the linked
+    // hub.disneyHub blob isn't included in the espn/hub response.
+
+    @discardableResult
+    func loadESPNPageFromGlobalNav() async throws -> DXPage? {
+        if nav == nil {
+            await loadGlobalNav()
+        }
+        let tabs = nav?.walkTabs() ?? []
+        guard let espnTab = tabs.first(where: { $0.label.lowercased() == "espn" }) else {
+            return nil
+        }
+        if let pageId = espnTab.pageId, !pageId.isEmpty {
+            return try await loadPage(pageId: pageId, force: true)
+        }
+        let refId = espnTab.entityId ?? espnTab.deeplinkId
+        let refIdType = espnTab.entityId != nil ? (espnTab.entityType ?? "entityId") : "deeplinkId"
+        if let refId, !refId.isEmpty {
+            let action = try await resolveDeeplink(refId: refId, refIdType: refIdType)
+            if let pageId = action?.pageId, !pageId.isEmpty {
+                return try await loadPage(pageId: pageId, force: true)
+            }
+        }
+        return nil
+    }
+
     // MARK: - Helpers
 
     /// Build the union of params + container top-level fields for a

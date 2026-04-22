@@ -171,6 +171,15 @@ struct ESPNHubView: View {
     @State private var eventToPlay: ESPNEventPlayback?
     @State private var pushedPage: ESPNPushedPage?
     @State private var pushedDetail: ESPNPushedDetail?
+    /// Disney "ESPN" page resolved from globalNav, used as a fallback
+    /// when hub.disneyHub is null so the ESPN tab still surfaces the
+    /// Disney browse rails.
+    @State private var disneyESPNPage: DXPage?
+
+    private var renderableDisneyPage: DXPage? {
+        if let h = repo.hub?.disneyHub { return h }
+        return disneyESPNPage
+    }
 
     var body: some View {
         ScrollView {
@@ -182,7 +191,7 @@ struct ESPNHubView: View {
                         }
                     }
 
-                    if hub.hasDisneyHub == true, let disneyHub = hub.disneyHub {
+                    if let disneyHub = renderableDisneyPage {
                         DisneyPageRenderer(
                             page: disneyHub,
                             repo: disneyRepo,
@@ -228,6 +237,12 @@ struct ESPNHubView: View {
         .task {
             await repo.loadHub()
             repo.startPolling()
+            // Always also try to load the Disney ESPN page from
+            // globalNav so the section has rails even when the
+            // tuner's espn/hub doesn't include the Disney blob.
+            if disneyESPNPage == nil {
+                disneyESPNPage = try? await disneyRepo.loadESPNPageFromGlobalNav()
+            }
         }
         .onDisappear { repo.stopPolling() }
         .fullScreenCover(item: $linearToPlay) { channel in
