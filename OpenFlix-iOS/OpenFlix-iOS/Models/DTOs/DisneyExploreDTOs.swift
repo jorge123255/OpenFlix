@@ -21,24 +21,23 @@ struct DXNav: Codable {
     let children: [DXNavChild]?
 }
 
+/// Recursive Disney nav node. Disney's nav tree mixes containers
+/// (`type == "globalNav"` / `"subNav"`) with leaf entries that carry
+/// browse / action / target fields. A single Codable handles both;
+/// `DXNav.walkTabs()` traverses recursively the same way the web does
+/// (server/web/src/pages/DisneyExplore.tsx navTabs).
 struct DXNavChild: Codable, Identifiable {
     let id: String?
-    let children: [DXNavLeaf]?
+    let type: String?
+    let children: [DXNavChild]?
     let visuals: DXVisuals?
-    let action: DXAction?
-
-    enum CodingKeys: String, CodingKey { case id, children, visuals, action }
-}
-
-struct DXNavLeaf: Codable, Identifiable {
     let action: DXAction?
     let browse: DXBrowseInfo?
-    let visuals: DXVisuals?
+    let target: DXTarget?
+    let browseTarget: DXBrowseTarget?
 
-    /// Stable id derived from any available field — Disney sometimes
-    /// returns leaves without an explicit id.
-    var id: String {
-        action?.slug ?? browse?.deeplinkId ?? visuals?.displayText ?? UUID().uuidString
+    enum CodingKeys: String, CodingKey {
+        case id, type, children, visuals, action, browse, target, browseTarget
     }
 }
 
@@ -46,6 +45,9 @@ struct DXBrowseInfo: Codable {
     let deeplinkId: String?
     let infoBlock: String?
     let pageId: String?
+    let setId: String?
+    let entityId: String?
+    let entityType: String?
 }
 
 struct DXAction: Codable {
@@ -53,6 +55,113 @@ struct DXAction: Codable {
     let type: String?              // "systemBrowse"
     let infoBlock: String?
     let visuals: DXVisuals?
+    let pageId: String?
+    let deeplinkId: String?
+    let setId: String?
+    let entityId: String?
+    let entityType: String?
+}
+
+// MARK: Disney nav tabs walker
+//
+// Mirror of the web's navTabs() in DisneyExplore.tsx. Walks the
+// recursive nav tree, descending into globalNav / subNav containers,
+// extracting (label, target) pairs for leaf entries with a usable
+// browse target. Skips Search / Settings labels. Dedupes by
+// label+target.
+
+struct DXNavTab: Identifiable, Hashable {
+    let id: String
+    let label: String
+    let pageId: String?
+    let setId: String?
+    let entityId: String?
+    let entityType: String?
+    let deeplinkId: String?
+
+    var asTarget: DXTarget {
+        DXTarget(
+            type: nil, scope: nil, id: nil,
+            setId: setId, pageId: pageId,
+            entityId: entityId, entityType: entityType,
+            layoutId: nil, pageResolutionId: nil, setResolutionId: nil,
+            pageStyle: nil, setStyle: nil,
+            skipEligibilityCheck: nil, limit: nil, offset: nil,
+            label: label,
+            refId: deeplinkId, refIdType: deeplinkId == nil ? nil : "deeplinkId"
+        )
+    }
+}
+
+extension DXNav {
+    func walkTabs() -> [DXNavTab] {
+        var tabs: [DXNavTab] = []
+        var seen = Set<String>()
+
+        func mergeTarget(from node: DXNavChild) -> (label: String, pageId: String?, setId: String?, entityId: String?, entityType: String?, deeplinkId: String?)? {
+            // Web order: browse → action → target → browseTarget.
+            let candidates: [(pageId: String?, setId: String?, entityId: String?, entityType: String?, deeplinkId: String?)] = [
+                (node.browse?.pageId, node.browse?.setId, node.browse?.entityId, node.browse?.entityType, node.browse?.deeplinkId),
+                (node.action?.pageId, node.action?.setId, node.action?.entityId, node.action?.entityType, node.action?.deeplinkId),
+                (node.target?.pageId, node.target?.setId, node.target?.entityId, node.target?.entityType, node.target?.refId),
+                (node.browseTarget?.pageId, node.browseTarget?.setId, node.browseTarget?.entityId, node.browseTarget?.entityType, node.browseTarget?.refId),
+            ]
+            for c in candidates {
+                if c.pageId != nil || c.setId != nil || c.entityId != nil || c.deeplinkId != nil {
+                    let label = node.visuals?.displayText
+                        ?? node.action?.visuals?.displayText
+                        ?? node.visuals?.title
+                        ?? ""
+                    return (label, c.pageId, c.setId, c.entityId, c.entityType, c.deeplinkId)
+                }
+            }
+            return nil
+        }
+
+        func visit(_ node: DXNavChild) {
+            let nodeType = node.type?.lowercased() ?? ""
+            if nodeType == "subnav" {
+                node.children?.forEach { visit($0) }
+                return
+            }
+            guard let merged = mergeTarget(from: node) else { return }
+            let labelLower = merged.label.lowercased()
+            guard !merged.label.isEmpty else { return }
+            guard !["search", "settings"].contains(labelLower) else { return }
+
+            let targetKey = merged.pageId ?? merged.deeplinkId ?? merged.entityId ?? merged.setId ?? (node.id ?? "")
+            let dedupKey = "\(labelLower):\(targetKey)"
+            guard seen.insert(dedupKey).inserted else { return }
+
+            tabs.append(DXNavTab(
+                id: node.id ?? dedupKey,
+                label: merged.label,
+                pageId: merged.pageId,
+                setId: merged.setId,
+                entityId: merged.entityId,
+                entityType: merged.entityType,
+                deeplinkId: merged.deeplinkId
+            ))
+        }
+
+        for root in children ?? [] {
+            if (root.type?.lowercased() ?? "") == "globalnav" {
+                root.children?.forEach { visit($0) }
+            } else {
+                visit(root)
+            }
+        }
+        return tabs
+    }
+
+    /// Pick the initial tab the way the web does — prefer "Disney+",
+    /// then "For You", then the first tab.
+    func preferredInitialTab() -> DXNavTab? {
+        let all = walkTabs()
+        if let disney = all.first(where: { $0.label.lowercased() == "disney+" }) { return disney }
+        if let foryou = all.first(where: { $0.label.lowercased() == "for you" }) { return foryou }
+        return all.first
+    }
 }
 
 // MARK: Page / Set responses
@@ -117,6 +226,22 @@ struct DXPage: Codable, Identifiable {
 
     enum CodingKeys: String, CodingKey {
         case id, pageId, title, style, pageStyle, containers, visuals
+    }
+
+    /// True when the page came back as a `details_*` view (Disney's
+    /// shape for entity / VOD detail pages). When true, the renderer
+    /// should use `pageHeroArtworkURL` for the top hero rather than
+    /// pulling the first item out of a hero container.
+    var isDetailPage: Bool {
+        let s = (style ?? pageStyle ?? "").lowercased()
+        return s.hasPrefix("details_")
+    }
+
+    /// Page-level hero artwork — only meaningful on detail pages.
+    /// Mirrors the web's `pageArtwork()` candidate ordering.
+    var pageHeroArtworkURL: String? {
+        DisneyImageResolver.preferredArtworkURL(visuals?.artwork?.value,
+                                                candidates: DisneyImageResolver.pageHeroCandidates)
     }
 }
 
@@ -195,7 +320,7 @@ struct DXItem: Codable, Identifiable {
     let badges: [String]?
     let imageId: String?
     let imageUrl: String?
-    let artwork: DXArtwork?
+    let artwork: DXJSON?
 
     // Navigation
     let pageId: String?
@@ -251,11 +376,26 @@ struct DXItem: Codable, Identifiable {
     var supportsStartover: Bool { playback?.supportsStartover ?? false }
     var supportsReplay: Bool { playback?.supportsReplay ?? false }
 
-    /// Server-provided URL only — never invent from imageId.
+    /// Resolves to a renderable URL by walking the Disney artwork
+    /// preference order (mirror of the web's `itemImage()`):
+    /// imageUrl → visuals.imageUrl → visuals.artwork (ordered) →
+    /// item.artwork (ordered). Logos / title treatments are excluded
+    /// from the candidate list so cards don't get watermark-only art.
+    /// imageId values resolve to BAMGrid compose URLs through
+    /// DisneyImageResolver.disneyImageURL().
     var bestImageURL: String? {
         if let imageUrl, !imageUrl.isEmpty { return imageUrl }
-        if let v = visuals?.artwork?.bestImageURL, !v.isEmpty { return v }
-        return artwork?.bestImageURL
+        if let v = visuals?.imageUrl, !v.isEmpty { return v }
+        if let v = DisneyImageResolver.preferredArtworkURL(visuals?.artwork?.value, candidates: DisneyImageResolver.itemCandidates) {
+            return v
+        }
+        if let v = DisneyImageResolver.preferredArtworkURL(artwork?.value, candidates: DisneyImageResolver.itemCandidates) {
+            return v
+        }
+        if let imageId, let v = DisneyImageResolver.disneyImageURL(imageId) {
+            return v
+        }
+        return nil
     }
 
     var startTimeDate: Date? {
@@ -274,13 +414,21 @@ private extension ISO8601DateFormatter {
 }
 
 // MARK: Visuals / artwork
+//
+// Disney's real artwork shape is a deeply nested dict keyed by
+// category → kind → aspect-ratio → { imageId | url }. Static structs
+// don't model that well (the aspect-ratio key is a dynamic string like
+// "1.78" / "2.0"), so we decode artwork as a free-form JSON tree and
+// walk it on demand via DisneyImageResolver. This matches what the
+// OpenFlix web client does (server/web/src/pages/DisneyExplore.tsx).
 
 struct DXVisuals: Codable {
     let title: String?
     let subtitle: String?
     let displayText: String?
+    let imageUrl: String?
     let metastringParts: DXMetaParts?
-    let artwork: DXArtwork?
+    let artwork: DXJSON?
     let description: DXDescription?
 }
 
@@ -290,7 +438,7 @@ struct DXMetaParts: Codable {
     let ratingInfo: DXRatingInfo?
 }
 
-struct DXReleaseYear: Codable { let startYear: Int? }
+struct DXReleaseYear: Codable { let startYear: Int?; let endYear: Int? }
 struct DXRuntime: Codable { let runtimeMs: Int? }
 struct DXRatingInfo: Codable {
     let advisories: [String]?
@@ -304,42 +452,138 @@ struct DXDescription: Codable {
     let brief: String?
 }
 
-struct DXArtwork: Codable {
-    // Disney returns artwork keyed by aspect ratio. Pick whichever the
-    // backend handed us — never invent a URL from imageId.
-    let standard: DXArtworkVariant?
-    let tile: DXArtworkVariant?
-    let thumbnail: DXArtworkVariant?
-    let background: DXArtworkVariant?
-    let titleTreatment: DXArtworkVariant?
-    let logo: DXArtworkVariant?
+/// Free-form JSON value used for artwork blobs whose shape varies.
+/// Decoded eagerly into a Swift `Any` tree (Bool/Int/Double/String/
+/// [Any]/[String:Any]/NSNull). Encoding is a no-op since we never
+/// re-serialize it.
+struct DXJSON: Codable {
+    let value: Any?
 
-    // Hub-shape aspect-ratio-suffixed keys (used by some endpoints).
-    let tile178Url: String?
-    let thumbnail178Url: String?
-    let background178Url: String?
-    let titleTreatment178Url: String?
-    let brandBackground178Url: String?
-    let logo100Url: String?
-    let darkLogo100Url: String?
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        if container.decodeNil() {
+            value = nil
+        } else if let b = try? container.decode(Bool.self) {
+            value = b
+        } else if let i = try? container.decode(Int.self) {
+            value = i
+        } else if let d = try? container.decode(Double.self) {
+            value = d
+        } else if let s = try? container.decode(String.self) {
+            value = s
+        } else if let arr = try? container.decode([DXJSON].self) {
+            value = arr.map { $0.value as Any }
+        } else if let dict = try? container.decode([String: DXJSON].self) {
+            value = dict.mapValues { $0.value as Any }
+        } else {
+            value = nil
+        }
+    }
 
-    var bestImageURL: String? {
-        let candidates: [String?] = [
-            background?.url, background178Url,
-            tile?.url, tile178Url, thumbnail?.url, thumbnail178Url,
-            standard?.url,
-            titleTreatment?.url, titleTreatment178Url,
-            logo?.url, logo100Url
-        ]
-        return candidates.compactMap { $0 }.first { !$0.isEmpty }
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encodeNil()
     }
 }
 
-struct DXArtworkVariant: Codable {
-    let url: String?
-    let aspectRatio: Double?
-    let width: Int?
-    let height: Int?
+// MARK: Disney image resolver
+//
+// Mirrors the web's preferredArtworkURL / disneyImageURL logic in
+// server/web/src/pages/DisneyExplore.tsx. Use ordered candidate paths
+// keyed by category/kind/aspect-ratio. When an artwork node has only
+// an `imageId` (no `url`), build the BAMGrid compose URL directly —
+// skip RAW_* image IDs (those are internal raw assets, not deliverable).
+
+enum DisneyImageResolver {
+    /// Standard candidate order for tiles/cards/hero images. Mirrors
+    /// the web's `itemImage()` ordering: hero bg → details bg →
+    /// standard bg → collection bg → standard tile → partner tile →
+    /// partner thumbnail → tile background. Logos / title treatments
+    /// are intentionally NOT in this list — they make poor cards.
+    static let itemCandidates: [(path: [String], width: Int)] = [
+        (["hero", "background", "1.78"], 1400),
+        (["details", "background", "1.78"], 1400),
+        (["standard", "background", "1.78"], 1400),
+        (["collection", "background", "1.78"], 1200),
+        (["standard", "tile", "1.78"], 800),
+        (["partner", "tile", "1.78"], 800),
+        (["partner", "thumbnail", "1.78"], 800),
+        (["tile", "background", "1.78"], 800),
+    ]
+
+    /// Page-level hero artwork for `details_*` style pages. Mirrors
+    /// the web's `pageArtwork()` candidate list.
+    static let pageHeroCandidates: [(path: [String], width: Int)] = [
+        (["hero", "background", "1.78"], 1400),
+        (["details", "background", "1.78"], 1400),
+        (["standard", "background", "1.78"], 1400),
+        (["collection", "background", "1.78"], 1200),
+        (["partner", "background", "1.78"], 1200),
+    ]
+
+    /// Build a BAMGrid compose URL from an `imageId`. Skips RAW_*
+    /// (internal asset IDs that don't deliver). Returns nil for empty
+    /// or malformed input.
+    static func disneyImageURL(_ imageId: String, width: Int = 1200) -> String? {
+        let value = imageId.trimmingCharacters(in: .whitespaces)
+        guard !value.isEmpty, !value.hasPrefix("RAW_") else { return nil }
+        guard let encoded = value.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) else { return nil }
+        return "https://disney.images.edge.bamgrid.com/ripcut-delivery/v2/variant/disney/\(encoded)/compose?format=webp&width=\(width)"
+    }
+
+    /// Resolve a single artwork node into a usable URL string.
+    /// Accepts: a String (already a URL), or a dict with `url`/
+    /// `imageUrl`/`src` fields, or a dict with `imageId`. Skips
+    /// non-HTTP strings since BAMGrid compose URLs are always HTTPS.
+    static func artworkNodeURL(_ node: Any?, width: Int = 1200) -> String? {
+        if let s = node as? String, s.hasPrefix("http") { return s }
+        guard let dict = node as? [String: Any] else { return nil }
+        for key in ["url", "imageUrl", "src"] {
+            if let s = dict[key] as? String, s.hasPrefix("http") { return s }
+        }
+        if let imageId = dict["imageId"] as? String {
+            return disneyImageURL(imageId, width: width)
+        }
+        return nil
+    }
+
+    /// Walk a path of dict keys into the artwork tree and resolve the
+    /// terminal node. Returns nil if any segment is missing.
+    static func artworkAtPath(_ node: Any?, _ path: [String], width: Int = 1200) -> String? {
+        var current = node
+        for segment in path {
+            guard let dict = current as? [String: Any] else { return nil }
+            current = dict[segment]
+        }
+        return artworkNodeURL(current, width: width)
+    }
+
+    /// Try each candidate path in order. Falls back to a recursive
+    /// scan that returns the first resolvable URL anywhere in the
+    /// tree (mirrors the web's `firstArtworkUrl`).
+    static func preferredArtworkURL(_ node: Any?, candidates: [(path: [String], width: Int)]) -> String? {
+        for c in candidates {
+            if let url = artworkAtPath(node, c.path, width: c.width) { return url }
+        }
+        return firstArtworkURL(node)
+    }
+
+    /// Recursively scan the tree for the first node that resolves to
+    /// a URL. Used as a last-ditch fallback; the candidate list above
+    /// should cover the common cases.
+    static func firstArtworkURL(_ node: Any?) -> String? {
+        if let direct = artworkNodeURL(node) { return direct }
+        if let dict = node as? [String: Any] {
+            for value in dict.values {
+                if let resolved = firstArtworkURL(value) { return resolved }
+            }
+        } else if let arr = node as? [Any] {
+            for value in arr {
+                if let resolved = firstArtworkURL(value) { return resolved }
+            }
+        }
+        return nil
+    }
 }
 
 // MARK: Targets / navigation

@@ -17,21 +17,23 @@ import SwiftUI
 struct DisneyPageRenderer: View {
     let page: DXPage
     @ObservedObject var repo: DisneyExploreRepository
-    /// Called when the user taps an item that resolves to a detail page.
     let onOpenDetail: (DXItem, DXContainer?) -> Void
-    /// Called when the user taps an item that's a playable event
-    /// (e.g. an ESPN-shaped event from disneyHub).
     let onPlayEvent: (DXItem, DXContainer?) -> Void
-    /// Called when the user taps a tile that wants to navigate to
-    /// another Disney page (browseTarget with pageId, etc.).
     let onOpenPage: (DXTarget, String?) -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 24) {
-            if let hero = heroContainer, let item = heroFirstItem(for: hero) {
-                DisneyHeroBanner(item: item, container: hero) {
-                    handleTap(item: item, container: hero)
-                }
+            if page.isDetailPage {
+                // Detail pages use the page's own artwork as the hero
+                // (no rotating multi-item hero). Mirrors the web's
+                // pageArtwork() behavior on details_* style pages.
+                DisneyDetailPageHero(page: page).padding(.horizontal, 16)
+            } else if let hero = heroContainer {
+                DisneyRotatingHero(
+                    container: hero,
+                    repo: repo,
+                    onSelect: { item in handleTap(item: item, container: hero) }
+                )
                 .padding(.horizontal, 16)
             }
             ForEach(rowContainers) { container in
@@ -44,8 +46,6 @@ struct DisneyPageRenderer: View {
             }
         }
     }
-
-    // MARK: Hero / row split
 
     private var heroContainer: DXContainer? {
         page.containers?.first(where: { isHeroStyle($0.style) })
@@ -62,13 +62,6 @@ struct DisneyPageRenderer: View {
         return s.hasPrefix("hero_") || s.hasPrefix("brand_") || s == "immersive"
     }
 
-    private func heroFirstItem(for container: DXContainer) -> DXItem? {
-        if let items = container.items, !items.isEmpty { return items.first }
-        return repo.setById[container.id]?.items?.first
-    }
-
-    // MARK: Tap routing — browseTarget → target → deeplink → fallback
-
     private func handleTap(item: DXItem, container: DXContainer?) {
         if item.isPlayable {
             onPlayEvent(item, container)
@@ -82,17 +75,108 @@ struct DisneyPageRenderer: View {
             onOpenPage(t, item.displayTitle)
             return
         }
-        // Deeplink fallback handled by detail view.
         onOpenDetail(item, container)
     }
 
     private func hasPageOrSetId(_ target: DXTarget) -> Bool {
-        let hasPage = (target.pageId?.isEmpty == false)
-        let hasSet = (target.setId?.isEmpty == false)
-        let hasEntity = (target.entityId?.isEmpty == false)
-        return hasPage || hasSet || hasEntity
+        (target.pageId?.isEmpty == false) ||
+        (target.setId?.isEmpty == false) ||
+        (target.entityId?.isEmpty == false)
     }
 }
+
+// MARK: - Rotating hero (matches web's 7s carousel cadence)
+
+private struct DisneyRotatingHero: View {
+    let container: DXContainer
+    @ObservedObject var repo: DisneyExploreRepository
+    let onSelect: (DXItem) -> Void
+
+    @State private var heroIndex = 0
+
+    private var items: [DXItem] {
+        if let xs = container.items, !xs.isEmpty { return xs }
+        return repo.setById[container.id]?.items ?? []
+    }
+
+    var body: some View {
+        Group {
+            if let item = items[safe: heroIndex] ?? items.first {
+                DisneyHeroBanner(item: item, container: container) { onSelect(item) }
+            } else {
+                EmptyView()
+            }
+        }
+        .task(id: container.id) {
+            heroIndex = 0
+            guard items.count > 1 else { return }
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 7_000_000_000)
+                if Task.isCancelled { return }
+                let count = items.count
+                guard count > 1 else { continue }
+                heroIndex = (heroIndex + 1) % count
+            }
+        }
+    }
+}
+
+// MARK: - Detail page hero (no rotation; uses page-level artwork)
+
+private struct DisneyDetailPageHero: View {
+    let page: DXPage
+
+    var body: some View {
+        ZStack(alignment: .bottomLeading) {
+            if let urlString = page.pageHeroArtworkURL, let url = URL(string: urlString) {
+                AsyncImage(url: url) { image in
+                    image.resizable().scaledToFill()
+                } placeholder: {
+                    Color.black.opacity(0.4)
+                }
+                .frame(maxWidth: .infinity)
+                .frame(height: 220)
+                .clipped()
+            } else {
+                LinearGradient(
+                    colors: [Color(red: 0.05, green: 0.08, blue: 0.30),
+                             Color(red: 0.10, green: 0.15, blue: 0.45)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                .frame(height: 220)
+            }
+
+            LinearGradient(
+                colors: [Color.black.opacity(0.0), Color.black.opacity(0.75)],
+                startPoint: .top, endPoint: .bottom
+            )
+            .frame(height: 220)
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text("DETAIL")
+                    .font(.system(size: 10, weight: .black, design: .rounded))
+                    .foregroundStyle(.white.opacity(0.85))
+                    .tracking(2)
+                Text(page.title ?? page.visuals?.title ?? page.visuals?.displayText ?? "Detail")
+                    .font(.system(size: 24, weight: .black, design: .rounded))
+                    .foregroundStyle(.white)
+                    .lineLimit(2)
+                if let desc = page.visuals?.description?.brief ?? page.visuals?.description?.medium {
+                    Text(desc)
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(.white.opacity(0.85))
+                        .lineLimit(2)
+                }
+            }
+            .padding(18)
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+    }
+}
+
+// `subscript(safe:)` is provided by the project-wide Array extension
+// in ViewModels/PlayerViewModel.swift.
 
 // MARK: - Hero banner
 

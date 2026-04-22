@@ -9,8 +9,8 @@ import SwiftUI
 
 struct TVDisneyHomeView: View {
     @StateObject private var repo = DisneyExploreRepository()
-    @State private var tabs: [DisneyTab] = []
-    @State private var selectedTab: DisneyTab?
+    @State private var tabs: [DXNavTab] = []
+    @State private var selectedTab: DXNavTab?
     @State private var page: DXPage?
     @State private var isLoadingPage = false
     @State private var loadError: String?
@@ -80,7 +80,7 @@ struct TVDisneyHomeView: View {
                         selectedTab = tab
                         Task { await loadTab(tab) }
                     } label: {
-                        Text(tab.title)
+                        Text(tab.label)
                             .font(.system(size: 18, weight: .bold))
                             .padding(.horizontal, 22).padding(.vertical, 12)
                             .foregroundStyle(selectedTab?.id == tab.id ? .white : .white.opacity(0.7))
@@ -100,30 +100,19 @@ struct TVDisneyHomeView: View {
     // MARK: Tab loading
 
     private func buildTabs() {
-        guard let navChildren = repo.nav?.children else { return }
-        var collected: [DisneyTab] = []
-        for child in navChildren {
-            if let leaves = child.children {
-                for leaf in leaves {
-                    let title = leaf.visuals?.displayText ?? leaf.action?.visuals?.displayText
-                    let deeplinkId = leaf.action?.slug ?? leaf.browse?.deeplinkId
-                    let pageId = leaf.browse?.pageId
-                    guard let title, !title.isEmpty else { continue }
-                    guard deeplinkId != nil || pageId != nil else { continue }
-                    collected.append(DisneyTab(title: title, deeplinkId: deeplinkId, pageId: pageId))
-                }
-            }
-        }
-        tabs = collected
+        // Mirror the web's recursive nav walker — descend through
+        // globalNav / subNav, dedupe by label+target, skip
+        // Search/Settings labels.
+        tabs = repo.nav?.walkTabs() ?? []
     }
 
     private func loadInitialTab() async {
-        guard let first = tabs.first else { return }
-        selectedTab = first
-        await loadTab(first)
+        guard let initial = repo.nav?.preferredInitialTab() else { return }
+        selectedTab = initial
+        await loadTab(initial)
     }
 
-    private func loadTab(_ tab: DisneyTab) async {
+    private func loadTab(_ tab: DXNavTab) async {
         isLoadingPage = true
         defer { isLoadingPage = false }
         loadError = nil
@@ -132,10 +121,34 @@ struct TVDisneyHomeView: View {
                 page = try await repo.loadPage(pageId: pageId, force: true)
                 return
             }
-            if let deeplinkId = tab.deeplinkId, !deeplinkId.isEmpty {
-                let action = try await repo.resolveDeeplink(refId: deeplinkId, refIdType: "deeplinkId")
+            if let setId = tab.setId, !setId.isEmpty {
+                if let container = try await repo.loadSetFromTarget(tab.asTarget) {
+                    page = DXPage(id: setId, pageId: setId, title: tab.label,
+                                  style: nil, pageStyle: nil,
+                                  containers: [container], visuals: nil)
+                }
+                return
+            }
+            let refId = tab.entityId ?? tab.deeplinkId
+            let refIdType = tab.entityId != nil ? (tab.entityType ?? "entityId") : "deeplinkId"
+            if let refId, !refId.isEmpty {
+                let action = try await repo.resolveDeeplink(refId: refId, refIdType: refIdType)
                 if let pageId = action?.pageId, !pageId.isEmpty {
                     page = try await repo.loadPage(pageId: pageId, force: true)
+                } else if let setId = action?.setId, !setId.isEmpty {
+                    let target = DXTarget(type: nil, scope: nil, id: nil,
+                                          setId: setId, pageId: nil,
+                                          entityId: nil, entityType: nil,
+                                          layoutId: nil, pageResolutionId: nil, setResolutionId: nil,
+                                          pageStyle: nil, setStyle: nil,
+                                          skipEligibilityCheck: nil, limit: nil, offset: nil,
+                                          label: tab.label,
+                                          refId: nil, refIdType: nil)
+                    if let container = try await repo.loadSetFromTarget(target) {
+                        page = DXPage(id: setId, pageId: setId, title: tab.label,
+                                      style: nil, pageStyle: nil,
+                                      containers: [container], visuals: nil)
+                    }
                 }
             }
         } catch {

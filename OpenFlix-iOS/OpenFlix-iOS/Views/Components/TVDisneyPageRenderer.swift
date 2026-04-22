@@ -24,7 +24,9 @@ struct TVDisneyPageRenderer: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 36) {
-            if let hero = heroContainer {
+            if page.isDetailPage {
+                TVDisneyDetailPageHero(page: page).padding(.horizontal, 56)
+            } else if let hero = heroContainer {
                 TVDisneyHeroBanner(container: hero, repo: repo) { item in
                     handleTap(item: item, container: hero)
                 }
@@ -87,15 +89,16 @@ struct TVDisneyHeroBanner: View {
     let onSelect: (DXItem) -> Void
 
     @State private var loadStarted = false
+    @State private var heroIndex = 0
 
-    private var heroItem: DXItem? {
-        if let items = container.items, !items.isEmpty { return items.first }
-        return repo.setById[container.id]?.items?.first
+    private var items: [DXItem] {
+        if let xs = container.items, !xs.isEmpty { return xs }
+        return repo.setById[container.id]?.items ?? []
     }
 
     var body: some View {
         Group {
-            if let item = heroItem {
+            if let item = items[safe: heroIndex] ?? items.first {
                 Button { onSelect(item) } label: {
                     heroLabel(for: item)
                 }
@@ -109,6 +112,18 @@ struct TVDisneyHeroBanner: View {
             loadStarted = true
             if (container.items?.isEmpty ?? true) && repo.setById[container.id] == nil {
                 await repo.loadSet(container)
+            }
+        }
+        .task(id: container.id) {
+            // 7s rotation matches the web's HERO_ROTATE_MS. Skip when
+            // there's only one item so we don't churn focus.
+            heroIndex = 0
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 7_000_000_000)
+                if Task.isCancelled { return }
+                let count = items.count
+                guard count > 1 else { continue }
+                heroIndex = (heroIndex + 1) % count
             }
         }
     }
@@ -172,6 +187,61 @@ struct TVDisneyHeroBanner: View {
             .frame(height: 480)
     }
 }
+
+// MARK: - Detail page hero (uses page-level artwork, no rotation)
+
+private struct TVDisneyDetailPageHero: View {
+    let page: DXPage
+
+    var body: some View {
+        ZStack(alignment: .bottomLeading) {
+            if let urlString = page.pageHeroArtworkURL, let url = URL(string: urlString) {
+                AsyncImage(url: url) { image in
+                    image.resizable().scaledToFill()
+                } placeholder: {
+                    Color.black.opacity(0.4)
+                }
+                .frame(maxWidth: .infinity)
+                .frame(height: 480)
+                .clipped()
+            } else {
+                LinearGradient(
+                    colors: [Color(red: 0.05, green: 0.08, blue: 0.30),
+                             Color(red: 0.10, green: 0.15, blue: 0.45)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                .frame(height: 480)
+            }
+            LinearGradient(
+                colors: [Color.black.opacity(0.0), Color.black.opacity(0.85)],
+                startPoint: .top, endPoint: .bottom
+            )
+            .frame(height: 480)
+            VStack(alignment: .leading, spacing: 10) {
+                Text("DETAIL")
+                    .font(.system(size: 14, weight: .black, design: .rounded))
+                    .foregroundStyle(.white)
+                    .tracking(2.5)
+                Text(page.title ?? page.visuals?.title ?? page.visuals?.displayText ?? "Detail")
+                    .font(.system(size: 44, weight: .black, design: .rounded))
+                    .foregroundStyle(.white)
+                    .lineLimit(2)
+                if let desc = page.visuals?.description?.medium ?? page.visuals?.description?.brief {
+                    Text(desc)
+                        .font(.system(size: 18, weight: .medium))
+                        .foregroundStyle(.white.opacity(0.85))
+                        .lineLimit(3)
+                }
+            }
+            .padding(34)
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+    }
+}
+
+// `subscript(safe:)` is provided by the project-wide Array extension
+// in ViewModels/PlayerViewModel.swift.
 
 // MARK: - Rail (focus section per row)
 
