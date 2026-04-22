@@ -1,5 +1,7 @@
 import SwiftUI
 
+#if os(iOS)
+
 extension Notification.Name {
     static let switchTab = Notification.Name("switchTab")
 }
@@ -350,10 +352,13 @@ struct XfinityCustomTabBar: View {
         }
         .padding(.top, 8)
         .padding(.bottom, 20) // Safe area
-        .background(
-            backgroundColor
-                .shadow(color: .black.opacity(0.3), radius: 8, y: -4)
+        // Liquid Glass tab bar on iOS 26 (translucent over content);
+        // falls back to the legacy opaque purple chrome on iOS 17–18.
+        .openFlixGlassRegular(
+            in: Rectangle(),
+            tint: backgroundColor.opacity(0.55)
         )
+        .shadow(color: .black.opacity(0.3), radius: 8, y: -4)
     }
 }
 
@@ -546,17 +551,20 @@ struct XfinityBrowseWrapper: View {
     @State private var selectedCategory: XfinityBrowseCategory? = nil
     
     enum XfinityBrowseCategory: String, CaseIterable, Identifiable {
+        case disneyPlus = "Disney+"
         case movies = "Movies"
         case tvShows = "TV"
         case news = "News"
         case kids = "Kids & family"
         case networks = "Networks"
-        
+
         var id: String { rawValue }
-        
+
         // Purple gradient colors for each category (Xfinity style)
         var gradientColors: [Color] {
             switch self {
+            case .disneyPlus:
+                return [Color(hex: "1B3A8C"), Color(hex: "0E1F4F")]
             case .movies:
                 return [Color(hex: "7B4FE8"), Color(hex: "5B3DC4")]
             case .tvShows:
@@ -670,6 +678,8 @@ struct CategoryDetailFullScreen: View {
             VStack(spacing: 0) {
                 // Category content fills the screen
                 switch category {
+                case .disneyPlus:
+                    DisneyHomeView()
                 case .movies:
                     BrowseMoviesView()
                 case .tvShows:
@@ -779,7 +789,7 @@ struct BrowseNetworksView: View {
             await loadNetworks()
         }
         .fullScreenCover(item: $selectedChannel) { channel in
-            if let urlStr = channel.streamUrl, let url = URL(string: urlStr) {
+            if let url = OpenFlixAPI.shared.channelStreamURL(id: channel.id) {
                 VideoPlayerView(
                     mediaItem: nil,
                     recordingURL: url,
@@ -1306,7 +1316,7 @@ struct BrowseNewsView: View {
             await loadNewsChannels()
         }
         .fullScreenCover(item: $selectedChannel) { channel in
-            if let urlStr = channel.streamUrl, let url = URL(string: urlStr) {
+            if let url = OpenFlixAPI.shared.channelStreamURL(id: channel.id) {
                 VideoPlayerView(
                     mediaItem: nil,
                     recordingURL: url,
@@ -1562,6 +1572,16 @@ struct SportsTeamsView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
+                // ESPN dedicated hub — DVR-Tuner-owned browse, not the
+                // generic guide. Shown at the top of Sports/Team Pass.
+                NavigationLink {
+                    ESPNHubView()
+                } label: {
+                    ESPNTileLabel(logoSize: CGSize(width: 78, height: 46))
+                }
+                .buttonStyle(.plain)
+                .padding(.horizontal, 16)
+
                 // League filter chips
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 10) {
@@ -1708,7 +1728,7 @@ struct SportsTeamsView: View {
             }
         }
         .fullScreenCover(item: $selectedChannel) { channel in
-            if let urlStr = channel.streamUrl, let url = URL(string: urlStr) {
+            if let url = OpenFlixAPI.shared.channelStreamURL(id: channel.id) {
                 VideoPlayerView(
                     mediaItem: nil,
                     recordingURL: url,
@@ -2488,7 +2508,7 @@ struct ESPNTeamDetailView: View {
             }
         }
         .fullScreenCover(item: $selectedChannel) { channel in
-            if let urlStr = channel.streamUrl, let url = URL(string: urlStr) {
+            if let url = OpenFlixAPI.shared.channelStreamURL(id: channel.id) {
                 VideoPlayerView(
                     mediaItem: nil,
                     recordingURL: url,
@@ -2900,6 +2920,7 @@ struct DVRRecordingsContent: View {
         }
         .sheet(item: $selectedRecording) { recording in
             RecordingDetailSheet(
+                viewModel: viewModel,
                 recording: recording,
                 onWatch: { playRecording(recording) },
                 onDelete: {
@@ -2949,6 +2970,13 @@ struct DVRRecordingsContent: View {
                 playRecording(recording)
             } label: {
                 Label("Watch", systemImage: "play.fill")
+            }
+            if let state = viewModel.recordingActionStates[recording.id], state.canDownload {
+                Button {
+                    Task { _ = try? await viewModel.startDownload(for: recording) }
+                } label: {
+                    Label(state.downloadTitle, systemImage: "arrow.down.circle")
+                }
             }
             Button(role: .destructive) {
                 recordingToDelete = recording
@@ -3042,21 +3070,62 @@ struct DVRScheduledContent: View {
 
 // MARK: - Downloads Placeholder
 struct DownloadsPlaceholder: View {
+    @StateObject private var viewModel = DVRViewModel()
+
     var body: some View {
-        VStack(spacing: 12) {
-            Image(systemName: "arrow.down.circle")
-                .font(.system(size: 48))
-                .foregroundColor(.gray)
-            Text("No Downloads")
-                .font(.headline)
-                .foregroundColor(.white)
-            Text("Downloaded content for offline viewing will appear here.")
-                .font(.subheadline)
-                .foregroundColor(.gray)
-                .multilineTextAlignment(.center)
+        Group {
+            if viewModel.directvDownloadJobs.isEmpty {
+                VStack(spacing: 12) {
+                    Image(systemName: "arrow.down.circle")
+                        .font(.system(size: 48))
+                        .foregroundColor(.gray)
+                    Text("No Downloads")
+                        .font(.headline)
+                        .foregroundColor(.white)
+                    Text("DirecTV cloud downloads in progress will appear here.")
+                        .font(.subheadline)
+                        .foregroundColor(.gray)
+                        .multilineTextAlignment(.center)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .padding()
+            } else {
+                ScrollView {
+                    LazyVStack(spacing: 12) {
+                        ForEach(Array(viewModel.directvDownloadJobs.values).sorted { ($0.title ?? "") < ($1.title ?? "") }, id: \.id) { job in
+                            HStack(spacing: 12) {
+                                Image(systemName: "arrow.down.circle.fill")
+                                    .font(.title3)
+                                    .foregroundColor(.purple)
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(job.title ?? "Download")
+                                        .font(.system(size: 15, weight: .bold))
+                                        .foregroundColor(.white)
+                                    Text(job.status ?? "Preparing")
+                                        .font(.caption)
+                                        .foregroundColor(.gray)
+                                    ProgressView(value: max(0, min(job.progress ?? 0, 1)))
+                                        .tint(.purple)
+                                }
+                                Spacer()
+                                if let progress = job.progress {
+                                    Text("\(Int(progress * 100))%")
+                                        .font(.caption.weight(.semibold))
+                                        .foregroundColor(.white.opacity(0.75))
+                                }
+                            }
+                            .padding(12)
+                            .background(Color.white.opacity(0.05))
+                            .cornerRadius(12)
+                        }
+                    }
+                    .padding()
+                }
+            }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .padding()
+        .task {
+            await viewModel.loadRecordings()
+        }
     }
 }
 
@@ -3187,6 +3256,13 @@ struct XfinityRecordingRow: View {
                 .font(.system(size: 12))
                 .foregroundColor(.gray)
 
+                if let sourceOwnershipLabel = recording.sourceOwnershipLabel {
+                    Text(sourceOwnershipLabel)
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundColor(.white.opacity(0.65))
+                        .lineLimit(1)
+                }
+
                 // Badge pills
                 HStack(spacing: 4) {
                     if recording.isMovie {
@@ -3248,6 +3324,7 @@ struct XfinityBadgePill: View {
 }
 
 struct RecordingDetailSheet: View {
+    @ObservedObject var viewModel: DVRViewModel
     let recording: Recording
     let onWatch: () -> Void
     let onDelete: () -> Void
@@ -3258,6 +3335,8 @@ struct RecordingDetailSheet: View {
 
     @Environment(\.dismiss) private var dismiss
     @State private var showExtended = false
+    @State private var actionState: RecordingDVRActionState = .fallback()
+    @State private var isStartingDownload = false
 
     private let darkBg = Color(red: 26/255, green: 20/255, blue: 46/255)
     private let accentPurple = Color(red: 97/255, green: 56/255, blue: 245/255)
@@ -3340,6 +3419,18 @@ struct RecordingDetailSheet: View {
                                 .foregroundColor(.gray)
                         }
 
+                        if let sourceOwnershipLabel = recording.sourceOwnershipLabel {
+                            Text(sourceOwnershipLabel)
+                                .font(.system(size: 13, weight: .medium))
+                                .foregroundColor(.white.opacity(0.7))
+                                .lineLimit(1)
+                        }
+
+                        HStack(spacing: 8) {
+                            XfinityBadgePill(actionState.routeLabel, color: accentPurple.opacity(0.85))
+                            XfinityBadgePill(actionState.statusLabel, color: Color.white.opacity(0.15))
+                        }
+
                         // Badge pills row
                         HStack(spacing: 6) {
                             if isNew {
@@ -3419,6 +3510,10 @@ struct RecordingDetailSheet: View {
                                 if recording.seriesRecord {
                                     detailRow("Series Rule", value: "Active")
                                 }
+
+                                if let job = actionState.downloadJob {
+                                    detailRow("Download", value: downloadLabel(job))
+                                }
                             }
                             .transition(.opacity.combined(with: .move(edge: .top)))
                         }
@@ -3493,6 +3588,25 @@ struct RecordingDetailSheet: View {
                     .foregroundColor(.white)
                     .cornerRadius(10)
 
+                    if actionState.canDownload {
+                        Button {
+                            Task {
+                                isStartingDownload = true
+                                _ = try? await viewModel.startDownload(for: recording)
+                                actionState = await viewModel.recordingActionState(for: recording)
+                                isStartingDownload = false
+                            }
+                        } label: {
+                            Label(isStartingDownload ? "Starting…" : actionState.downloadTitle, systemImage: "arrow.down.circle")
+                                .font(.system(size: 15, weight: .semibold))
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 14)
+                        }
+                        .background(Color.blue.opacity(0.18))
+                        .foregroundColor(.white)
+                        .cornerRadius(10)
+                    }
+
                     if let onStopRecording, recording.isCurrentlyRecording {
                         Button(action: onStopRecording) {
                             Label("Stop", systemImage: "stop.fill")
@@ -3505,20 +3619,25 @@ struct RecordingDetailSheet: View {
                         .cornerRadius(10)
                     }
 
-                    Button(role: .destructive, action: onDelete) {
-                        Label("Trash", systemImage: "trash")
-                            .font(.system(size: 15, weight: .semibold))
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 14)
+                    if actionState.canDelete {
+                        Button(role: .destructive, action: onDelete) {
+                            Label(deleteButtonTitle, systemImage: deleteButtonIcon)
+                                .font(.system(size: 15, weight: .semibold))
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 14)
+                        }
+                        .background(Color.red.opacity(0.2))
+                        .foregroundColor(.red)
+                        .cornerRadius(10)
                     }
-                    .background(Color.red.opacity(0.2))
-                    .foregroundColor(.red)
-                    .cornerRadius(10)
                 }
                 .padding(.horizontal, 20)
                 .padding(.vertical, 16)
                 .background(darkBg)
             }
+        }
+        .task {
+            actionState = await viewModel.recordingActionState(for: recording)
         }
     }
 
@@ -3547,6 +3666,26 @@ struct RecordingDetailSheet: View {
         let formatter = DateFormatter()
         formatter.dateFormat = "MMMM d, yyyy"
         return formatter.string(from: date)
+    }
+
+    private func downloadLabel(_ job: ExternalDownloadJob) -> String {
+        if let progress = job.progress {
+            return "\(job.status ?? "Downloading") • \(Int(progress * 100))%"
+        }
+        return job.status ?? "Downloading"
+    }
+
+    private var deleteButtonTitle: String {
+        if recording.providerId?.lowercased() == "directv",
+           recording.accountId != nil,
+           (recording.status == .scheduled || recording.status == .recording) {
+            return "Cancel"
+        }
+        return "Delete"
+    }
+
+    private var deleteButtonIcon: String {
+        deleteButtonTitle == "Cancel" ? "xmark.circle" : "trash"
     }
 }
 
@@ -3666,7 +3805,7 @@ struct LiveTVGridTab: View {
             if let channel = playerChannel {
                 VideoPlayerView(
                     mediaItem: nil,
-                    liveChannelURL: channel.streamUrl.flatMap { URL(string: $0) }
+                    liveChannelURL: OpenFlixAPI.shared.channelStreamURL(id: channel.id)
                 )
             }
         }
@@ -3789,3 +3928,4 @@ struct ProgramDetailSheet: View {
     XfinityTabView()
         .environmentObject(AuthViewModel())
 }
+#endif

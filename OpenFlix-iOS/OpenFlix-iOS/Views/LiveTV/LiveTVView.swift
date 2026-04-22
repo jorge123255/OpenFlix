@@ -151,7 +151,7 @@ struct LiveTVView: View {
     }
 
     private func playChannel(_ channel: Channel) {
-        if let url = channel.preferredPlaybackURL {
+        if let url = OpenFlixAPI.shared.channelStreamURL(id: channel.id) {
             viewModel.selectChannel(channel)
             selectedChannelForPlayback = channel
             streamURL = url
@@ -261,13 +261,18 @@ struct TVLiveChannelPlayerView: View {
                         dismiss()
                     },
                     onTogglePlayPause: {
-                        if userPaused {
-                            vlcPlayer.mediaPlayer.play()
-                            userPaused = false
-                        } else {
-                            vlcPlayer.pause()
+                        // Route through togglePlayPause so the ViewModel's
+                        // pause-buffer / reconnect-on-long-pause logic
+                        // takes effect (raw MPEG-TS proxy is non-seekable;
+                        // VLC needs a fresh socket after the input buffer
+                        // drains).
+                        let wasPlaying = vlcPlayer.isPlaying
+                        vlcPlayer.togglePlayPause()
+                        if wasPlaying {
                             userPaused = true
                             behindLive = true
+                        } else {
+                            userPaused = false
                         }
                         scheduleAutoHide()
                     },
@@ -395,7 +400,7 @@ struct TVLiveChannelPlayerView: View {
                 )
             }
         }
-        .focusable(!showControls)
+        .focusable()
         .onPlayPauseCommand {
             if !showControls {
                 withAnimation(.easeInOut(duration: 0.25)) {
@@ -403,13 +408,13 @@ struct TVLiveChannelPlayerView: View {
                 }
                 scheduleAutoHide()
             } else {
-                if userPaused {
-                    vlcPlayer.mediaPlayer.play()
-                    userPaused = false
-                } else {
-                    vlcPlayer.pause()
+                let wasPlaying = vlcPlayer.isPlaying
+                vlcPlayer.togglePlayPause()
+                if wasPlaying {
                     userPaused = true
                     behindLive = true
+                } else {
+                    userPaused = false
                 }
                 scheduleAutoHide()
             }
@@ -458,42 +463,26 @@ struct TVLiveChannelPlayerView: View {
     private var channels: [Channel] { viewModel.displayedChannels }
 
     private func playCurrentChannel(with preferredURL: URL? = nil) {
-        NSLog("PLAYER URL: begin playCurrentChannel channel=\(channel.id) preferred=\(preferredURL?.absoluteString ?? "nil") preferredPlayback=\(channel.preferredPlaybackURL?.absoluteString ?? "nil")")
-
+        // Server-owned playback: GET /livetv/channels/:id/stream is the single
+        // canonical URL the apps hand to VLC. The server decides MPEG-TS
+        // passthrough vs. server-side HLS — the client doesn't care. Upstream
+        // provider URLs (e.g. http://192.168.1.80:7070/...) are never used
+        // directly anymore so playback also works through the
+        // *.remote.openflix.io HTTPS tunnel.
         if let preferredURL {
             NSLog("PLAYER URL: source=preferred channel=\(channel.id) url=\(preferredURL.absoluteString)")
             playWithPreflight(preferredURL)
             return
         }
-        // Try the browser-preview URL first — this is the same URL the working
-        // AVPlayer preview card uses, so VLC has the best shot at playing it.
-        if let url = liveTVRepository.getBrowserPreviewURL(for: channel) {
-            NSLog("PLAYER URL: source=browserPreview channel=\(channel.id) url=\(url.absoluteString)")
-            playWithPreflight(url)
-            return
-        }
-        if let url = liveTVRepository.getPreviewURL(for: channel) {
-            NSLog("PLAYER URL: source=preview channel=\(channel.id) url=\(url.absoluteString)")
-            playWithPreflight(url)
-            return
-        }
-        if let url = liveTVRepository.getStreamURL(for: channel) {
-            NSLog("PLAYER URL: source=repo channel=\(channel.id) url=\(url.absoluteString)")
+        if let url = OpenFlixAPI.shared.channelStreamURL(id: channel.id) {
+            NSLog("PLAYER URL: source=server channel=\(channel.id) url=\(url.absoluteString)")
             playWithPreflight(url)
             return
         }
         Task {
-            do {
-                if let url = try? await viewModel.getChannelBrowserPreviewStream(channel) {
-                    NSLog("PLAYER URL: source=apiBrowserPreview channel=\(channel.id) url=\(url.absoluteString)")
-                    playWithPreflight(url)
-                    return
-                }
-                let url = try await viewModel.getChannelStream(channel)
-                NSLog("PLAYER URL: source=api channel=\(channel.id) url=\(url.absoluteString)")
-                playWithPreflight(url)
-            } catch {
-                NSLog("PLAYER URL: source=api FAILED channel=\(channel.id) error=\(error)")
+            if let url = try? await viewModel.getChannelStream(channel) {
+                NSLog("PLAYER URL: source=apiResolve channel=\(channel.id) url=\(url.absoluteString)")
+                await MainActor.run { playWithPreflight(url) }
             }
         }
     }
@@ -554,20 +543,11 @@ struct TVLiveChannelPlayerView: View {
     private func reloadCurrentChannel() async {
         userPaused = false
         behindLive = false
-        if let url = liveTVRepository.getBrowserPreviewURL(for: channel) {
-            NSLog("PLAYER URL: reload source=browserPreview channel=\(channel.id) url=\(url.absoluteString)")
-            vlcPlayer.play(url: url)
-        } else if let url = liveTVRepository.getPreviewURL(for: channel) {
-            NSLog("PLAYER URL: reload source=preview channel=\(channel.id) url=\(url.absoluteString)")
-            vlcPlayer.play(url: url)
-        } else if let url = liveTVRepository.getStreamURL(for: channel) {
-            NSLog("PLAYER URL: reload source=repo channel=\(channel.id) url=\(url.absoluteString)")
-            vlcPlayer.play(url: url)
-        } else if let url = try? await viewModel.getChannelBrowserPreviewStream(channel) {
-            NSLog("PLAYER URL: reload source=apiBrowserPreview channel=\(channel.id) url=\(url.absoluteString)")
+        if let url = OpenFlixAPI.shared.channelStreamURL(id: channel.id) {
+            NSLog("PLAYER URL: reload source=server channel=\(channel.id) url=\(url.absoluteString)")
             vlcPlayer.play(url: url)
         } else if let url = try? await viewModel.getChannelStream(channel) {
-            NSLog("PLAYER URL: reload source=api channel=\(channel.id) url=\(url.absoluteString)")
+            NSLog("PLAYER URL: reload source=apiResolve channel=\(channel.id) url=\(url.absoluteString)")
             vlcPlayer.play(url: url)
         }
         scheduleAutoHide()
@@ -608,8 +588,12 @@ struct TVLiveChannelPlayerView: View {
     }
 
     private func switchToChannel(_ newChannel: Channel) {
+        // Mirror the iPhone player's changeChannel(to:) — hand the new URL
+        // straight to VLC, no stop() and no full URL re-resolution. The
+        // earlier stop() + multi-step URL fallback (browser-preview first,
+        // then preview, then stream, then API…) added 1-2s of latency and
+        // the browser-preview hop sometimes 404'd through the proxy.
         let oldChannel = channel
-        vlcPlayer.stop()
         previousChannel = oldChannel
         channel = newChannel
         // Wipe stale EPG immediately so the overlay shows nothing instead of
@@ -619,7 +603,11 @@ struct TVLiveChannelPlayerView: View {
         viewModel.selectChannel(newChannel)
         userPaused = false
         behindLive = false
-        playCurrentChannel()
+        if let url = OpenFlixAPI.shared.channelStreamURL(id: newChannel.id) {
+            playWithPreflight(url)
+        } else {
+            playCurrentChannel()
+        }
         loadEPGInfo()
         showChannelBannerOverlay()
         notifyInstantSwitch(channelId: newChannel.id)
@@ -806,12 +794,14 @@ private struct TVLiveChannelControlsOverlay: View {
 
             VStack(spacing: 0) {
                 topBar
+                    .focusSection()
                     .padding(.horizontal, 20)
                     .padding(.top, 24)
 
                 Spacer()
 
                 centerTransportControls
+                    .focusSection()
 
                 Spacer()
 
@@ -820,10 +810,12 @@ private struct TVLiveChannelControlsOverlay: View {
                     .padding(.bottom, 10)
 
                 seekBarOrLiveIndicator
+                    .focusSection()
                     .padding(.horizontal, 20)
                     .padding(.bottom, 14)
 
                 bottomToolbar
+                    .focusSection()
                     .padding(.horizontal, 20)
                     .padding(.bottom, 34)
             }
@@ -1374,9 +1366,13 @@ private struct GuideInputModifier: ViewModifier {
 
     func body(content: Content) -> some View {
         if isActive {
-            content
-                .onMoveCommand { onMove($0) }
-                .onKeyPress(.return) { onSelect(); return .handled }
+            // Don't bind .onKeyPress(.return) here — on Apple TV hardware
+            // it swallows the Siri remote's select event before it reaches
+            // the focused TVGuideProgramCell Button, so the program detail
+            // card never opens. Each cell's Button(action:) handles select
+            // directly. Keyboard Enter in the simulator still routes to
+            // the focused Button the same way.
+            content.onMoveCommand { onMove($0) }
         } else {
             content
         }
@@ -1670,8 +1666,11 @@ private struct TVOSLiveBrowserView: View {
                 }
             }
         }
-        .focusable(presentedProgram == nil)
-        .focusEffectDisabled()
+        // Don't make the outer view `.focusable()` — that pulls focus to the
+        // container and blocks the inner TVGuideChannelCell / TVGuideProgramCell
+        // Buttons from receiving Select on the Siri remote, which is why the
+        // program detail card never opened. Each cell is its own focusable
+        // Button with an action; let the focus engine route directly to them.
         .modifier(GuideInputModifier(
             isActive: presentedProgram == nil,
             onMove: handleDirectionalNavigation,
@@ -1721,7 +1720,7 @@ private struct TVOSLiveBrowserView: View {
         let previewProgram = previewRow?.currentProgram ?? channel?.nowPlaying
         let heroProgram = selectedProgram ?? previewProgram
 
-        return HStack(alignment: .center, spacing: 14) {
+        return HStack(alignment: .top, spacing: 14) {
                 TVGuideLivePreviewCard(
                     channel: channel,
                     program: previewProgram,
@@ -2508,26 +2507,59 @@ private struct TVGuideProgramTrack: View {
         }
     }
 
-    private var programCells: some View {
-        ForEach(Array(programs.enumerated()), id: \.element.id) { _, program in
+    // Lay cells out with HStack + clear-color spacers instead of `.offset()`.
+    // The tvOS focus engine hit-tests Buttons at their LAYOUT origin (pre-
+    // offset), so cells positioned with `.offset(x:)` would highlight on
+    // focus but never fire their Button action when Select was pressed on
+    // the Siri remote — the program detail card never opened.
+    private struct PositionedCell: Identifiable {
+        let id: String
+        let leadingGap: CGFloat
+        let cellWidth: CGFloat
+        let program: Program
+    }
+
+    private var positionedCells: [PositionedCell] {
+        var result: [PositionedCell] = []
+        var cursor: CGFloat = 0
+        for program in programs {
             let clampedStart = max(program.startTime, windowStart)
             let clampedEnd = min(program.endTime, windowEnd)
-            let xPos = CGFloat(clampedStart.timeIntervalSince(windowStart) / 60) * minuteWidth
-            let durationWidth = CGFloat(clampedEnd.timeIntervalSince(clampedStart) / 60) * minuteWidth
-            let cellWidth = max(durationWidth - 1, 28)
-
-            TVGuideProgramCell(
-                program: program,
-                accent: accent,
-                progressColor: accent,
-                width: cellWidth,
-                isSelected: selectedProgramId == program.id,
-                action: {
-                    onSelectProgram(row.channel, program)
-                }
-            )
-            .offset(x: xPos + 0.5, y: 0)
+            let cellStart = CGFloat(clampedStart.timeIntervalSince(windowStart) / 60) * minuteWidth
+            let cellEnd = CGFloat(clampedEnd.timeIntervalSince(windowStart) / 60) * minuteWidth
+            let cellWidth = max(cellEnd - cellStart - 1, 28)
+            let leadingGap = max(cellStart - cursor, 0)
+            result.append(PositionedCell(
+                id: program.id,
+                leadingGap: leadingGap,
+                cellWidth: cellWidth,
+                program: program
+            ))
+            cursor = cellStart + cellWidth + 1
         }
+        return result
+    }
+
+    private var programCells: some View {
+        HStack(spacing: 0) {
+            ForEach(positionedCells) { cell in
+                if cell.leadingGap > 0 {
+                    Color.clear.frame(width: cell.leadingGap)
+                }
+                TVGuideProgramCell(
+                    program: cell.program,
+                    accent: accent,
+                    progressColor: accent,
+                    width: cell.cellWidth,
+                    isSelected: selectedProgramId == cell.program.id,
+                    action: {
+                        onSelectProgram(row.channel, cell.program)
+                    }
+                )
+            }
+            Spacer(minLength: 0)
+        }
+        .frame(width: width, height: rowHeight, alignment: .leading)
     }
 }
 
@@ -2727,8 +2759,16 @@ private struct TVGuidePreviewCard: View {
     var body: some View {
         ZStack(alignment: .bottomLeading) {
             if let imagePath = program?.icon ?? program?.art ?? channel?.logo {
-                AuthenticatedImage(paths: [imagePath], systemPlaceholder: "tv")
-                    .aspectRatio(contentMode: .fill)
+                // Wrap in GeometryReader so the image is given an explicit
+                // frame to size against. Without this, `.aspectRatio(.fill)`
+                // lets the underlying UIImage grow to its intrinsic pixel
+                // size and bleed past the 252×142 card.
+                GeometryReader { geo in
+                    AuthenticatedImage(paths: [imagePath], systemPlaceholder: "tv")
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: geo.size.width, height: geo.size.height)
+                        .clipped()
+                }
             } else {
                 LinearGradient(
                     colors: [accent.opacity(0.46), Color.black.opacity(0.3)],
@@ -2762,6 +2802,7 @@ private struct TVGuidePreviewCard: View {
             }
             .padding(compact ? 8 : 16)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .clipShape(RoundedRectangle(cornerRadius: compact ? 14 : 22))
         .overlay(
             RoundedRectangle(cornerRadius: compact ? 14 : 22)
@@ -2903,6 +2944,56 @@ private struct TVGuideProgramSheet: View {
                             .font(.system(size: 13, weight: .semibold, design: .rounded))
                             .foregroundStyle(.white.opacity(0.55))
                             .lineLimit(1)
+                    }
+
+                    // Preview-driven detail (POST /dvr/bookings/preview):
+                    // server-chosen account, optional route detail, and the
+                    // fallback chain when the server expects to step through
+                    // multiple routes.
+                    if let accountLabel = actionState.selectedAccount?.preferredLabel {
+                        Text("Account: \(accountLabel)")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(.white.opacity(0.55))
+                            .lineLimit(1)
+                    }
+                    if let detail = actionState.routeDetail, !detail.isEmpty {
+                        Text(detail)
+                            .font(.system(size: 12, weight: .regular))
+                            .foregroundStyle(.white.opacity(0.45))
+                            .lineLimit(2)
+                    }
+                    // Server-flagged: a fallback route was used (e.g. provider
+                    // booking failed → local DVR). Show this prominently so
+                    // the user knows the recording is going to local DVR
+                    // even if their channel is a provider channel.
+                    if actionState.fallbackUsed == true {
+                        HStack(spacing: 6) {
+                            Image(systemName: "arrow.triangle.2.circlepath")
+                                .font(.system(size: 10, weight: .bold))
+                            Text("Using fallback route")
+                                .font(.system(size: 12, weight: .semibold))
+                        }
+                        .foregroundStyle(Color.yellow.opacity(0.92))
+                    }
+                    if let providerError = actionState.providerError, !providerError.isEmpty {
+                        Text("Provider: \(providerError)")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(Color.orange.opacity(0.85))
+                            .lineLimit(2)
+                    }
+                    if actionState.fallbackChain.count > 1 {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Fallback chain")
+                                .font(.system(size: 11, weight: .bold))
+                                .foregroundStyle(.white.opacity(0.42))
+                            ForEach(Array(actionState.fallbackChain.enumerated()), id: \.offset) { idx, step in
+                                Text("\(idx + 1). \(step.label ?? step.route ?? "—")\(step.detail.map { " — \($0)" } ?? "")")
+                                    .font(.system(size: 11, weight: .regular))
+                                    .foregroundStyle(.white.opacity(0.55))
+                                    .lineLimit(1)
+                            }
+                        }
+                        .padding(.top, 2)
                     }
 
                     badgeRow
@@ -3165,6 +3256,20 @@ private struct TVGuideChannelCell: View {
 
     var body: some View {
         Button(action: action) {
+            Inner(channel: channel, accent: accent, isSelected: isSelected)
+        }
+        .buttonStyle(TVNoGlowButtonStyle())
+    }
+
+    private struct Inner: View {
+        let channel: Channel
+        let accent: Color
+        let isSelected: Bool
+        @Environment(\.isFocused) private var isFocused
+
+        private var isHighlighted: Bool { isFocused || isSelected }
+
+        var body: some View {
             VStack(spacing: 5) {
                 AuthenticatedImage(paths: [channel.logo], systemPlaceholder: "tv")
                     .aspectRatio(contentMode: .fit)
@@ -3177,30 +3282,43 @@ private struct TVGuideChannelCell: View {
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(
-                isSelected
-                    ? Color(red: 44/255, green: 39/255, blue: 78/255)
-                    : Color.white.opacity(0.012)
-            )
+            .background(backgroundFill)
             .overlay(alignment: .leading) {
                 Rectangle()
-                    .fill(isSelected ? accent : Color.clear)
-                    .frame(width: isSelected ? 6 : 0)
+                    .fill(isHighlighted ? accent : Color.clear)
+                    .frame(width: isHighlighted ? 6 : 0)
             }
             .overlay {
                 Rectangle()
-                    .stroke(isSelected ? Color.white.opacity(0.74) : Color.white.opacity(0.035), lineWidth: isSelected ? 2 : 0.8)
+                    .stroke(borderColor, lineWidth: borderWidth)
             }
             .overlay(alignment: .bottom) {
                 Rectangle()
                     .fill(Color.white.opacity(0.05))
                     .frame(height: 1)
             }
-            .scaleEffect(isSelected ? 1.012 : 1)
-            .shadow(color: isSelected ? Color.white.opacity(0.05) : .clear, radius: 8, y: 4)
-            .animation(.easeOut(duration: 0.15), value: isSelected)
+            .scaleEffect(isHighlighted ? 1.025 : 1)
+            .shadow(color: isHighlighted ? Color.white.opacity(0.10) : .clear, radius: 9, y: 4)
+            .animation(.easeOut(duration: 0.15), value: isHighlighted)
         }
-        .buttonStyle(TVNoGlowButtonStyle())
+
+        private var backgroundFill: Color {
+            if isFocused { return Color(red: 64/255, green: 56/255, blue: 110/255) }
+            if isSelected { return Color(red: 44/255, green: 39/255, blue: 78/255) }
+            return Color.white.opacity(0.012)
+        }
+
+        private var borderColor: Color {
+            if isFocused { return Color.white.opacity(0.95) }
+            if isSelected { return Color.white.opacity(0.74) }
+            return Color.white.opacity(0.035)
+        }
+
+        private var borderWidth: CGFloat {
+            if isFocused { return 3 }
+            if isSelected { return 2 }
+            return 0.8
+        }
     }
 }
 
@@ -3212,14 +3330,39 @@ private struct TVGuideProgramCell: View {
     let isSelected: Bool
     let action: () -> Void
 
-    private var isUltraCompact: Bool { width < 56 }
-    private var isCompact: Bool { width < 150 }
-    private var cellHeight: CGFloat { 72 }
-
     var body: some View {
         Button(action: action) {
+            // Inner view reads its own Button's focus state via
+            // @Environment(\.isFocused) — that's how SwiftUI exposes focus
+            // to a Button's label on tvOS. The outer cell view can't read
+            // it directly because Environment flows down from the parent.
+            Inner(
+                program: program,
+                accent: accent,
+                progressColor: progressColor,
+                width: width,
+                isSelected: isSelected
+            )
+        }
+        .buttonStyle(TVNoGlowButtonStyle())
+    }
+
+    private struct Inner: View {
+        let program: Program
+        let accent: Color
+        let progressColor: Color
+        let width: CGFloat
+        let isSelected: Bool
+        @Environment(\.isFocused) private var isFocused
+
+        private var isUltraCompact: Bool { width < 56 }
+        private var isCompact: Bool { width < 150 }
+        private var cellHeight: CGFloat { 72 }
+        private var isHighlighted: Bool { isFocused || isSelected }
+
+        var body: some View {
             ZStack(alignment: .bottomLeading) {
-                if isSelected && width >= 170, let imagePath = program.art ?? program.icon {
+                if isHighlighted && width >= 170, let imagePath = program.art ?? program.icon {
                     AuthenticatedImage(paths: [imagePath], systemPlaceholder: "play.rectangle")
                         .aspectRatio(contentMode: .fill)
                         .overlay {
@@ -3231,7 +3374,6 @@ private struct TVGuideProgramCell: View {
                         }
                 }
 
-                // Left accent bar for currently-airing
                 if program.isCurrentlyAiring && !isUltraCompact {
                     HStack(spacing: 0) {
                         RoundedRectangle(cornerRadius: 2)
@@ -3241,7 +3383,6 @@ private struct TVGuideProgramCell: View {
                     }
                 }
 
-                // Content
                 VStack(alignment: .leading, spacing: 2) {
                     if isUltraCompact {
                         Circle()
@@ -3257,7 +3398,7 @@ private struct TVGuideProgramCell: View {
                         if !isCompact {
                             Text(timeDurationLabel)
                                 .font(.system(size: 12, weight: .medium))
-                                .foregroundStyle(isSelected ? .white.opacity(0.85) : .white.opacity(0.40))
+                                .foregroundStyle(isHighlighted ? .white.opacity(0.85) : .white.opacity(0.40))
                                 .lineLimit(1)
                         }
                     }
@@ -3268,7 +3409,6 @@ private struct TVGuideProgramCell: View {
                 .padding(.top, 8)
                 .padding(.bottom, (program.isCurrentlyAiring || program.hasEnded) ? 14 : 8)
 
-                // Progress bar at bottom — hot pink Pluto style
                 if (program.isCurrentlyAiring || program.hasEnded) && !isUltraCompact {
                     EPGProgressBar(progress: program.progress, height: 4,
                                    foregroundColor: progressColor)
@@ -3282,58 +3422,61 @@ private struct TVGuideProgramCell: View {
                 RoundedRectangle(cornerRadius: 6)
                     .stroke(borderColor, lineWidth: borderWidth)
             )
-            .scaleEffect(isHighlighted ? 1.012 : 1)
-            .shadow(color: isHighlighted ? Color.white.opacity(0.04) : .clear, radius: 7, y: 3)
+            .scaleEffect(isHighlighted ? 1.025 : 1)
+            .shadow(color: isHighlighted ? Color.white.opacity(0.10) : .clear, radius: 9, y: 4)
             .zIndex(isHighlighted ? 10 : 0)
-            .animation(.easeOut(duration: 0.15), value: isSelected)
+            .animation(.easeOut(duration: 0.15), value: isHighlighted)
         }
-        .buttonStyle(TVNoGlowButtonStyle())
-    }
 
-    private var titleSize: CGFloat {
-        if width > 300 { return 17 }
-        if width > 200 { return 15 }
-        if width > 120 { return 13 }
-        return 10
-    }
-
-    private var timeDurationLabel: String {
-        let startStr = Self.startTimeFmt.string(from: program.startTime)
-        let mins = Int(program.endTime.timeIntervalSince(program.startTime) / 60)
-        let durationStr: String
-        if mins >= 60 && mins % 60 == 0 {
-            durationStr = "\(mins / 60)h"
-        } else if mins >= 60 {
-            durationStr = "\(mins / 60)h \(mins % 60)m"
-        } else {
-            durationStr = "\(mins)m"
+        private var titleSize: CGFloat {
+            if width > 300 { return 17 }
+            if width > 200 { return 15 }
+            if width > 120 { return 13 }
+            return 10
         }
-        return "\(startStr) · \(durationStr)"
-    }
 
-    private static let startTimeFmt: DateFormatter = {
-        let f = DateFormatter()
-        f.dateFormat = "h:mma"
-        return f
-    }()
-
-    private var isHighlighted: Bool { isSelected }
-
-    private var backgroundFill: Color {
-        if isHighlighted {
-            return Color(red: 45/255, green: 40/255, blue: 79/255)
+        private var timeDurationLabel: String {
+            let startStr = Self.startTimeFmt.string(from: program.startTime)
+            let mins = Int(program.endTime.timeIntervalSince(program.startTime) / 60)
+            let durationStr: String
+            if mins >= 60 && mins % 60 == 0 {
+                durationStr = "\(mins / 60)h"
+            } else if mins >= 60 {
+                durationStr = "\(mins / 60)h \(mins % 60)m"
+            } else {
+                durationStr = "\(mins)m"
+            }
+            return "\(startStr) · \(durationStr)"
         }
-        if program.isCurrentlyAiring { return Color(red: 24/255, green: 26/255, blue: 48/255) }
-        return Color(red: 20/255, green: 22/255, blue: 40/255)
-    }
 
-    private var borderColor: Color {
-        if isHighlighted { return Color.white.opacity(0.72) }
-        return Color.white.opacity(0.03)
-    }
+        private static let startTimeFmt: DateFormatter = {
+            let f = DateFormatter()
+            f.dateFormat = "h:mma"
+            return f
+        }()
 
-    private var borderWidth: CGFloat {
-        isHighlighted ? 2 : 0.8
+        private var backgroundFill: Color {
+            if isFocused {
+                return Color(red: 64/255, green: 56/255, blue: 110/255)
+            }
+            if isSelected {
+                return Color(red: 45/255, green: 40/255, blue: 79/255)
+            }
+            if program.isCurrentlyAiring { return Color(red: 24/255, green: 26/255, blue: 48/255) }
+            return Color(red: 20/255, green: 22/255, blue: 40/255)
+        }
+
+        private var borderColor: Color {
+            if isFocused { return Color.white.opacity(0.95) }
+            if isSelected { return Color.white.opacity(0.55) }
+            return Color.white.opacity(0.03)
+        }
+
+        private var borderWidth: CGFloat {
+            if isFocused { return 3 }
+            if isSelected { return 2 }
+            return 0.8
+        }
     }
 }
 
@@ -4110,7 +4253,7 @@ struct LiveTVPlayerView: View {
                 showPlayerToast("INSTANT", icon: "bolt.fill")
             }
 
-            if let url = newChannel.preferredPlaybackURL {
+            if let url = OpenFlixAPI.shared.channelStreamURL(id: newChannel.id) {
                 vlcPlayer.play(url: url)
             } else if let url = try? await viewModel.getChannelStream(newChannel) {
                 vlcPlayer.play(url: url)

@@ -1,5 +1,9 @@
 import SwiftUI
 
+#if !os(tvOS)
+
+#if !os(tvOS)
+
 // Atomic context passed to the program detail sheet — prevents grey-screen race condition
 private struct ProgramDetailContext: Identifiable {
     let id = UUID()
@@ -12,6 +16,8 @@ private struct ProgramDetailContext: Identifiable {
 struct XfinityLiveTVView: View {
     @StateObject private var viewModel = LiveTVViewModel()
     @State private var selectedFilter: ChannelFilter = .all
+    /// nil = all providers; otherwise filter channels by `providerName`.
+    @State private var selectedProvider: String? = nil
     @State private var selectedChannel: Channel?
     @State private var viewingTime: Date = Date()
     @State private var programDetail: ProgramDetailContext?
@@ -190,6 +196,47 @@ struct XfinityLiveTVView: View {
                     HStack(spacing: 6) {
                         Text(selectedFilter.rawValue)
                             .font(.system(size: 14, weight: .medium))
+                        Image(systemName: "chevron.down")
+                            .font(.system(size: 10, weight: .semibold))
+                    }
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 8)
+                    .background(cardBg)
+                    .cornerRadius(8)
+                }
+
+                // Provider menu — filter the channel list by upstream
+                // provider (DirecTV, Sling, Hulu, Frndly, M3U, etc.) so
+                // we can test each provider's stream path independently.
+                Menu {
+                    Button {
+                        selectedProvider = nil
+                    } label: {
+                        HStack {
+                            Text("All providers")
+                            if selectedProvider == nil {
+                                Image(systemName: "checkmark")
+                            }
+                        }
+                    }
+                    ForEach(availableProviders, id: \.self) { provider in
+                        Button {
+                            selectedProvider = provider
+                        } label: {
+                            HStack {
+                                Text(provider)
+                                if selectedProvider == provider {
+                                    Image(systemName: "checkmark")
+                                }
+                            }
+                        }
+                    }
+                } label: {
+                    HStack(spacing: 6) {
+                        Text(selectedProvider ?? "Provider")
+                            .font(.system(size: 14, weight: .medium))
+                            .lineLimit(1)
                         Image(systemName: "chevron.down")
                             .font(.system(size: 10, weight: .semibold))
                     }
@@ -379,15 +426,33 @@ struct XfinityLiveTVView: View {
         return cal.date(bySettingHour: snapped, minute: 0, second: 0, of: date) ?? date
     }
 
+    /// All distinct provider names present in the loaded channel list,
+    /// sorted alphabetically. Drives the Provider dropdown.
+    private var availableProviders: [String] {
+        let names = viewModel.channels.compactMap { ch -> String? in
+            guard let name = ch.providerName, !name.isEmpty else { return nil }
+            return name
+        }
+        return Array(Set(names)).sorted()
+    }
+
     private var filteredChannels: [Channel] {
+        let providerFiltered: [Channel]
+        if let provider = selectedProvider {
+            providerFiltered = viewModel.channels.filter { ch in
+                ch.providerName?.caseInsensitiveCompare(provider) == .orderedSame
+            }
+        } else {
+            providerFiltered = viewModel.channels
+        }
         let base: [Channel]
         switch selectedFilter {
         case .all:
-            base = viewModel.channels
+            base = providerFiltered
         case .favorites:
-            base = viewModel.channels.filter { $0.isFavorite }
+            base = providerFiltered.filter { $0.isFavorite }
         case .sports:
-            base = viewModel.channels.filter { ch in
+            base = providerFiltered.filter { ch in
                 let g = ch.group?.lowercased() ?? ""
                 let n = ch.name.lowercased()
                 return g.contains("sport") || g.contains("espn") || g.contains("nfl") || g.contains("nba") ||
@@ -396,7 +461,7 @@ struct XfinityLiveTVView: View {
                     ch.nowPlaying?.isSports == true
             }
         case .news:
-            base = viewModel.channels.filter { ch in
+            base = providerFiltered.filter { ch in
                 let g = ch.group?.lowercased() ?? ""
                 let n = ch.name.lowercased()
                 return g.contains("news") || n.contains("news") || n.contains("cnn") ||
@@ -405,7 +470,7 @@ struct XfinityLiveTVView: View {
                     n.contains("bloomberg") || n.contains("c-span")
             }
         case .movies:
-            base = viewModel.channels.filter { ch in
+            base = providerFiltered.filter { ch in
                 let g = ch.group?.lowercased() ?? ""
                 let n = ch.name.lowercased()
                 return g.contains("movie") || g.contains("film") || g.contains("cinema") ||
@@ -414,7 +479,7 @@ struct XfinityLiveTVView: View {
                     n.contains("fxx") || n.contains("sundance")
             }
         case .kids:
-            base = viewModel.channels.filter { ch in
+            base = providerFiltered.filter { ch in
                 let g = ch.group?.lowercased() ?? ""
                 let n = ch.name.lowercased()
                 return g.contains("kid") || g.contains("child") || g.contains("family") ||
@@ -454,7 +519,7 @@ struct XfinityLiveTVView: View {
     private func recordProgram(_ program: Program, channel: Channel) {
         Task {
             do {
-                _ = try await dvrRepository.recordProgram(channelId: channel.id, programId: program.id)
+                try await dvrRepository.recordProgram(channel: channel, program: program)
                 recordingToast = "Recording: \(program.title)"
                 showRecordingToast = true
                 try? await Task.sleep(nanoseconds: 3_000_000_000)
@@ -472,13 +537,23 @@ struct XfinityLiveTVView: View {
         Task {
             do {
                 let channelId = options.channelMode == .thisChannel ? channel.id : nil
-                try await dvrRepository.createSeriesRule(
-                    title: program.title,
-                    channelId: channelId,
-                    prePadding: options.startRecording.seconds,
-                    postPadding: options.endRecording.seconds,
-                    keepCount: options.keepMode.keepCount
-                )
+                if channelId == nil {
+                    try await dvrRepository.createSeriesRule(
+                        title: program.title,
+                        channelId: nil,
+                        prePadding: options.startRecording.seconds,
+                        postPadding: options.endRecording.seconds,
+                        keepCount: options.keepMode.keepCount
+                    )
+                } else {
+                    try await dvrRepository.createSeriesPass(
+                        channel: channel,
+                        program: program,
+                        prePadding: options.startRecording.seconds,
+                        postPadding: options.endRecording.seconds,
+                        keepCount: options.keepMode.keepCount
+                    )
+                }
                 recordingToast = "Series Pass created: \(program.title)"
                 showRecordingToast = true
                 try? await Task.sleep(nanoseconds: 3_000_000_000)
@@ -780,6 +855,8 @@ struct XfinityChannelRow: View {
 
 // MARK: - Live Channel Player (wrapper)
 
+#endif
+
 struct LiveChannelPlayerView: View {
     @State var channel: Channel
     @ObservedObject var viewModel: LiveTVViewModel
@@ -809,11 +886,35 @@ struct LiveChannelPlayerView: View {
     @State private var showMultiview = false
     @State private var multiviewPickedChannel: Channel?
 
+    private func resolvedPlaybackURL(for channel: Channel) async -> URL? {
+        // Server-owned HLS endpoint: GET /livetv/channels/:id/stream now
+        // returns `application/vnd.apple.mpegurl` with server-owned segments
+        // under `/livetv/channels/:id/segment/:seq.ts`. VLC plays these
+        // reliably and they work both on LAN and through the
+        // *.remote.openflix.io HTTPS tunnel — no upstream provider IP
+        // leaks to the client. We still fire `/api/instant/switch` (no
+        // result needed) so the server can prime the prebuffer for adjacent
+        // channels.
+        Task.detached { [channelId = channel.id] in
+            _ = try? await OpenFlixAPI.shared.instantSwitchChannel(channelId: channelId)
+        }
+        if let url = OpenFlixAPI.shared.channelStreamURL(id: channel.id) {
+            NSLog("OPENFLIX: server HLS URL: %@", url.absoluteString)
+            return url
+        }
+        // Fallback only if the API URL builder somehow can't construct one
+        // (server URL not configured) — shouldn't happen in practice.
+        return try? await viewModel.getChannelStream(channel)
+    }
+
     var body: some View {
         ZStack {
             Color.black.ignoresSafeArea()
 
-            if liveTVRepo.getStreamURL(for: channel) != nil {
+            if true {
+                // Always mount the VLC view — `resolvedPlaybackURL(...)`
+                // gets the direct upstream URL via `/api/instant/switch`
+                // even when the channel object's URL fields are nil.
                 VLCPlayerView(viewModel: vlcPlayer)
                     .ignoresSafeArea()
             } else {
@@ -912,13 +1013,13 @@ struct LiveChannelPlayerView: View {
                         onDismiss()
                     },
                     onTogglePlayPause: {
-                        if userPaused {
-                            vlcPlayer.mediaPlayer.play()
-                            userPaused = false
-                        } else {
-                            vlcPlayer.pause()
+                        let wasPlaying = vlcPlayer.isPlaying
+                        vlcPlayer.togglePlayPause()
+                        if wasPlaying {
                             userPaused = true
                             behindLive = true
+                        } else {
+                            userPaused = false
                         }
                     },
                     onSeekForward: {
@@ -932,11 +1033,13 @@ struct LiveChannelPlayerView: View {
                         behindLive = true
                     },
                     onGoLive: {
-                        if let url = liveTVRepo.getStreamURL(for: channel) {
-                            vlcPlayer.stop()
-                            vlcPlayer.play(url: url)
-                            userPaused = false
-                            behindLive = false
+                        Task {
+                            if let url = await resolvedPlaybackURL(for: channel) {
+                                vlcPlayer.stop()
+                                vlcPlayer.play(url: url)
+                                userPaused = false
+                                behindLive = false
+                            }
                         }
                     },
                     onChannelUp: { switchChannel(direction: .up) },
@@ -1003,8 +1106,10 @@ struct LiveChannelPlayerView: View {
             }
         }
         .onAppear {
-            if let url = liveTVRepo.getStreamURL(for: channel) {
-                vlcPlayer.play(url: url)
+            Task {
+                if let url = await resolvedPlaybackURL(for: channel) {
+                    vlcPlayer.play(url: url)
+                }
             }
             viewModel.selectChannel(channel)
             scheduleAutoHide()
@@ -1042,8 +1147,10 @@ struct LiveChannelPlayerView: View {
                 switchToChannel(picked)
             } else {
                 // Normal close: resume the channel that was playing before multiview
-                if let url = liveTVRepo.getStreamURL(for: channel) {
-                    vlcPlayer.play(url: url)
+                Task {
+                    if let url = await resolvedPlaybackURL(for: channel) {
+                        vlcPlayer.play(url: url)
+                    }
                 }
             }
         }) {
@@ -1068,7 +1175,7 @@ struct LiveChannelPlayerView: View {
                         showToast(message: message, icon: "record.circle.fill")
                     }
                 )
-                .presentationDetents([.height(220)])
+                .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
             }
         }
@@ -1125,8 +1232,10 @@ struct LiveChannelPlayerView: View {
         channel = newChannel
         viewModel.selectChannel(newChannel)
 
-        if let url = liveTVRepo.getStreamURL(for: newChannel) {
-            vlcPlayer.play(url: url)
+        Task {
+            if let url = await resolvedPlaybackURL(for: newChannel) {
+                vlcPlayer.play(url: url)
+            }
         }
 
         userPaused = false
@@ -1272,7 +1381,7 @@ struct LiveChannelPlayerView: View {
         }
         Task {
             do {
-                _ = try await dvrRepository.recordProgram(channelId: channel.id, programId: program.id)
+                try await dvrRepository.recordProgram(channel: channel, program: program)
                 showToast(message: "Recording: \(program.title)", icon: "record.circle")
             } catch {
                 showToast(message: "Record failed", icon: "exclamationmark.circle")
@@ -1983,6 +2092,9 @@ private struct RecordOptionsSheet: View {
     let onDone: (String) -> Void
 
     @State private var isWorking = false
+    @State private var preview: ProgramBookingPreviewResponse?
+    @State private var previewError: String?
+    @State private var showFallbackChain = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -2000,17 +2112,24 @@ private struct RecordOptionsSheet: View {
             }
             .padding(.top, 24)
             .padding(.horizontal, 20)
-            .padding(.bottom, 16)
+            .padding(.bottom, 12)
+
+            // Server-decided routing preview. Populated by POST
+            // /dvr/bookings/preview on appear; the booking endpoint may
+            // pick a different account from the channel's original one.
+            previewSection
+                .padding(.horizontal, 20)
+                .padding(.bottom, 12)
 
             Divider()
 
-            // Record once
+            // Record once → POST /dvr/bookings/from-program (single)
             Button {
                 guard !isWorking else { return }
                 isWorking = true
                 Task {
                     do {
-                        _ = try await dvrRepository.recordProgram(channelId: channel.id, programId: program.id)
+                        try await dvrRepository.recordProgram(channel: channel, program: program)
                         onDone("Recording: \(program.title)")
                     } catch {
                         onDone("Record failed")
@@ -2041,15 +2160,15 @@ private struct RecordOptionsSheet: View {
 
             Divider().padding(.leading, 66)
 
-            // Series pass
+            // Series pass → POST /dvr/bookings/from-program (seriesRecord:true)
             Button {
                 guard !isWorking else { return }
                 isWorking = true
                 Task {
                     do {
-                        try await dvrRepository.createSeriesRule(
-                            title: program.title,
-                            channelId: channel.id,
+                        try await dvrRepository.createSeriesPass(
+                            channel: channel,
+                            program: program,
                             prePadding: 0,
                             postPadding: 300,
                             keepCount: 10
@@ -2080,6 +2199,101 @@ private struct RecordOptionsSheet: View {
             }
         }
         .background(Color(uiColor: .systemBackground))
+        .task {
+            do {
+                preview = try await dvrRepository.previewProgram(
+                    channel: channel,
+                    program: program,
+                    seriesRecord: false
+                )
+            } catch {
+                previewError = error.localizedDescription
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var previewSection: some View {
+        if let preview {
+            VStack(alignment: .leading, spacing: 6) {
+                if let label = preview.route?.label {
+                    HStack(spacing: 6) {
+                        Image(systemName: routeIcon(for: preview))
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundColor(.purple)
+                        Text(label)
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundColor(.primary)
+                    }
+                }
+                if let detail = preview.route?.detail {
+                    Text(detail)
+                        .font(.system(size: 12))
+                        .foregroundColor(.secondary)
+                        .lineLimit(3)
+                }
+                if let accountLabel = preview.selectedAccount?.preferredLabel {
+                    Text("Account: \(accountLabel)")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(.secondary)
+                }
+                if preview.fallbackUsed == true {
+                    HStack(spacing: 4) {
+                        Image(systemName: "arrow.triangle.2.circlepath")
+                            .font(.system(size: 11, weight: .bold))
+                        Text("Using fallback route")
+                            .font(.system(size: 12, weight: .semibold))
+                    }
+                    .foregroundColor(.orange)
+                }
+                if let providerError = preview.providerError, !providerError.isEmpty {
+                    Text("Provider: \(providerError)")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(.orange)
+                        .lineLimit(2)
+                }
+                if let chain = preview.fallbackChain, chain.count > 1 {
+                    DisclosureGroup(isExpanded: $showFallbackChain) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            ForEach(Array(chain.enumerated()), id: \.offset) { idx, step in
+                                Text("\(idx + 1). \(step.label ?? step.route ?? "—")")
+                                    .font(.system(size: 11, weight: .regular))
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                        .padding(.top, 4)
+                    } label: {
+                        Text("Advanced — fallback chain (\(chain.count))")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(10)
+            .openFlixGlass(in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+        } else if previewError != nil {
+            // Preview failed — booking will still work, server will
+            // surface any error. Don't block the user.
+            EmptyView()
+        } else {
+            HStack(spacing: 6) {
+                ProgressView().controlSize(.small)
+                Text("Checking routing…")
+                    .font(.system(size: 12))
+                    .foregroundColor(.secondary)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(10)
+            .openFlixGlass(in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+        }
+    }
+
+    private func routeIcon(for preview: ProgramBookingPreviewResponse) -> String {
+        let kind = (preview.route?.route ?? preview.routeUsed ?? "").lowercased()
+        if kind.contains("provider") { return "cloud" }
+        if kind.contains("local") { return "internaldrive" }
+        return "antenna.radiowaves.left.and.right"
     }
 }
 
@@ -2088,3 +2302,4 @@ private struct RecordOptionsSheet: View {
         XfinityLiveTVView()
     }
 }
+#endif

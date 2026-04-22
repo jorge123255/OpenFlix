@@ -183,6 +183,26 @@ enum APIEndpoint {
     case getNowPlaying
     case getLiveTVOnNow
     case getActiveTunerBackend
+
+    // ESPN (DVR-Tuner authoritative, OpenFlix-proxied)
+    // The new hub model returns { linearChannels, disneyHub|null, hasDisneyHub }
+    // — there is no /espn/browse|page|set|events on the client anymore.
+    // Linear playback uses /api/tuner-backends/active/stream/:channelId.
+    // Event playback (Disney-shaped items inside disneyHub) uses
+    // /api/tuner-backends/active/espn/play/stream with browse-derived
+    // context as query items.
+    case espnHub
+    case espnPlayStream(params: [URLQueryItem])
+    case espnRefreshEPG
+    case tunerActiveStream(channelId: String)
+
+    // Disney Explore (proxied through OpenFlix)
+    case disneyGlobalNav
+    case disneyDeeplink(refId: String, refIdType: String)
+    case disneyPage(pageId: String, params: [URLQueryItem])
+    case disneySet(setId: String, params: [URLQueryItem])
+    case disneySearch(query: String)
+    case disneyPlayerExperience(mediaId: String)
     case getDirectvLibrary(accountId: String)
     case createDirectvRecording(accountId: String, request: DirectvRecordRequest)
     case createDirectvSeriesRecording(accountId: String, request: DirectvRecordRequest)
@@ -323,6 +343,9 @@ enum APIEndpoint {
     case getRecordings(status: String?)
     case scheduleRecording(channelId: String, startTime: String, endTime: String, title: String)
     case recordFromProgram(channelId: String, programId: String)
+    case bookRecordingFromProgram(request: ProgramBookingRequest)
+    case previewProgramBooking(request: ProgramBookingRequest)
+    case getDVRCapabilities
     case getRecordingStats
     case getRecordingsManager
     case bulkRecordingAction(action: String, recordingIds: [String])
@@ -874,6 +897,16 @@ enum APIEndpoint {
         case .getNowPlaying: return "/livetv/now"
         case .getLiveTVOnNow: return "/livetv/on-now"
         case .getActiveTunerBackend: return "/api/tuner-backends/active"
+        case .espnHub: return "/api/tuner-backends/active/espn/hub"
+        case .espnPlayStream: return "/api/tuner-backends/active/espn/play/stream"
+        case .espnRefreshEPG: return "/api/tuner-backends/active/espn/refresh-epg"
+        case .tunerActiveStream(let channelId): return "/api/tuner-backends/active/stream/\(channelId)"
+        case .disneyGlobalNav: return "/api/tuner-backends/active/disney/explore/globalNav"
+        case .disneyDeeplink: return "/api/tuner-backends/active/disney/explore/deeplink"
+        case .disneyPage(let id, _): return "/api/tuner-backends/active/disney/explore/page/\(id)"
+        case .disneySet(let id, _): return "/api/tuner-backends/active/disney/explore/set/\(id)"
+        case .disneySearch: return "/api/tuner-backends/active/disney/explore/search"
+        case .disneyPlayerExperience(let id): return "/api/tuner-backends/active/disney/explore/playerExperience/\(id)"
         case .getDirectvLibrary(let accountId):
             return "/api/tuner-backends/active/directv/accounts/\(accountId)/library"
         case .createDirectvRecording(let accountId, _):
@@ -1037,6 +1070,9 @@ enum APIEndpoint {
         case .getRecordings: return "/dvr/recordings"
         case .scheduleRecording: return "/dvr/recordings"
         case .recordFromProgram: return "/dvr/recordings/from-program"
+        case .bookRecordingFromProgram: return "/dvr/bookings/from-program"
+        case .previewProgramBooking: return "/dvr/bookings/preview"
+        case .getDVRCapabilities: return "/dvr/capabilities"
         case .getRecordingStats: return "/dvr/recordings/stats"
         case .getRecordingsManager: return "/dvr/recordings/manager"
         case .bulkRecordingAction: return "/dvr/recordings/bulk"
@@ -1399,7 +1435,8 @@ enum APIEndpoint {
              .createDirectvRecording, .createDirectvSeriesRecording, .startDirectvDownload, .cancelDirectvRecording,
              .createSlingRecording, .createSlingSeriesRule,
              .createFrndlyRecording, .createFrndlySeriesRule, .startFrndlyDownload,
-             .scheduleRecording, .recordFromProgram, .bulkRecordingAction, .matchRecording,
+             .scheduleRecording, .recordFromProgram, .bookRecordingFromProgram, .previewProgramBooking, .bulkRecordingAction, .matchRecording,
+             .espnRefreshEPG,
              .detectCommercials, .reprocessRecording,
              .checkConflict, .resolveConflict,
              .bulkLabelAction,
@@ -1554,6 +1591,15 @@ enum APIEndpoint {
             ]
         case .scrobble(let key), .unscrobble(let key):
             return [URLQueryItem(name: "key", value: key)]
+        case .espnPlayStream(let params), .disneyPage(_, let params), .disneySet(_, let params):
+            return params.isEmpty ? nil : params
+        case .disneyDeeplink(let refId, let refIdType):
+            return [
+                URLQueryItem(name: "refId", value: refId),
+                URLQueryItem(name: "refIdType", value: refIdType)
+            ]
+        case .disneySearch(let query):
+            return [URLQueryItem(name: "query", value: query)]
         case .getGuide(let start, let end), .getChannelGuide(_, let start, let end):
             var items: [URLQueryItem] = []
             if let s = start { items.append(URLQueryItem(name: "start", value: s)) }
@@ -1821,6 +1867,10 @@ enum APIEndpoint {
             return jsonBody(["path": request.path])
         case .recordFromProgram(let channelId, let programId):
             return jsonBody(["channelId": channelId, "programId": programId])
+        case .bookRecordingFromProgram(let request):
+            return jsonBody(Self.bookingPayload(request))
+        case .previewProgramBooking(let request):
+            return jsonBody(Self.bookingPayload(request))
         case .bulkRecordingAction(let action, let ids):
             return jsonBody(["action": action, "recordingIds": ids])
         case .updateRecording(_, let updates):
@@ -1994,5 +2044,61 @@ enum APIEndpoint {
     // MARK: - Helpers
     private func jsonBody(_ dict: [String: Any]) -> Data? {
         try? JSONSerialization.data(withJSONObject: dict)
+    }
+
+    /// Shared payload builder for the `/dvr/bookings/preview` and
+    /// `/dvr/bookings/from-program` endpoints — both consume the same
+    /// `ProgramBookingRequest` shape. Server owns the routing decision; the
+    /// client just sends every channel/program field it has.
+    static func bookingPayload(_ request: ProgramBookingRequest) -> [String: Any] {
+        let formatter = ISO8601DateFormatter()
+        var payload: [String: Any] = [
+            "channelId": request.channelId,
+            "seriesRecord": request.seriesRecord
+        ]
+        if let programId = request.programId { payload["programId"] = programId }
+        if let priority = request.priority { payload["priority"] = priority }
+        if let dryRun = request.dryRun { payload["dryRun"] = dryRun }
+        if let channel = request.channel {
+            var channelPayload: [String: Any] = [
+                "id": channel.id,
+                "name": channel.name
+            ]
+            if let channelId = channel.channelId { channelPayload["channelId"] = channelId }
+            if let channelKey = channel.channelKey { channelPayload["channelKey"] = channelKey }
+            if let streamUrl = channel.streamUrl { channelPayload["streamUrl"] = streamUrl }
+            if let sourceType = channel.sourceType { channelPayload["sourceType"] = sourceType }
+            if let sourceName = channel.sourceName { channelPayload["sourceName"] = sourceName }
+            if let providerId = channel.providerId { channelPayload["providerId"] = providerId }
+            if let providerName = channel.providerName { channelPayload["providerName"] = providerName }
+            if let accountId = channel.accountId { channelPayload["accountId"] = accountId }
+            if let accountName = channel.accountName { channelPayload["accountName"] = accountName }
+            if let accountIndex = channel.accountIndex { channelPayload["accountIndex"] = accountIndex }
+            if let displayNumber = channel.displayNumber { channelPayload["displayNumber"] = displayNumber }
+            payload["channel"] = channelPayload
+        }
+        if let program = request.program {
+            var programPayload: [String: Any] = [
+                "id": program.id,
+                "title": program.title,
+                "start": formatter.string(from: program.startTime),
+                "end": formatter.string(from: program.endTime)
+            ]
+            if let channelId = program.channelId { programPayload["channelId"] = channelId }
+            if let subtitle = program.subtitle { programPayload["subtitle"] = subtitle }
+            if let description = program.description { programPayload["description"] = description }
+            if let icon = program.icon { programPayload["icon"] = icon }
+            if let art = program.art { programPayload["art"] = art }
+            if let category = program.category { programPayload["category"] = category }
+            if let episodeNum = program.episodeNum { programPayload["episodeNum"] = episodeNum }
+            if let seriesId = program.seriesId { programPayload["seriesId"] = seriesId }
+            if let resourceId = program.resourceId { programPayload["resourceId"] = resourceId }
+            if let canonicalId = program.canonicalId { programPayload["canonicalId"] = canonicalId }
+            if let providerChannelId = program.providerChannelId { programPayload["providerChannelId"] = providerChannelId }
+            if let slingChannelId = program.slingChannelId { programPayload["slingChannelId"] = slingChannelId }
+            if let slingItemId = program.slingItemId { programPayload["slingItemId"] = slingItemId }
+            payload["program"] = programPayload
+        }
+        return payload
     }
 }

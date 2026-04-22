@@ -455,6 +455,66 @@ actor OpenFlixAPI {
     func recordFromProgram(channelId: String, programId: String) async throws -> RecordingDTO {
         try await request(.recordFromProgram(channelId: channelId, programId: programId))
     }
+    func bookRecordingFromProgram(request payload: ProgramBookingRequest) async throws -> ProgramBookingResponse {
+        try await request(.bookRecordingFromProgram(request: payload))
+    }
+    func previewProgramBooking(request payload: ProgramBookingRequest) async throws -> ProgramBookingPreviewResponse {
+        try await request(.previewProgramBooking(request: payload))
+    }
+    func getDVRCapabilities() async throws -> DVRCapabilitiesResponse {
+        try await request(.getDVRCapabilities)
+    }
+
+    // MARK: - ESPN (DVR-Tuner authoritative, OpenFlix-proxied)
+
+    /// `GET /api/tuner-backends/active/espn/hub`
+    /// Returns linearChannels (always), disneyHub (Disney page or null),
+    /// hasDisneyHub. There is no flattened "rails / featuredItem" model —
+    /// render linearChannels directly, and feed disneyHub into the shared
+    /// Disney page renderer when present.
+    func espnHub() async throws -> ESPNHubResponse {
+        try await request(.espnHub)
+    }
+
+    /// Build the URL for `/api/tuner-backends/active/espn/play/stream`.
+    /// The endpoint serves raw MPEG-TS — there's no JSON to parse. The
+    /// client just constructs the URL with all browse-derived context as
+    /// query params and hands it to VLC.
+    func espnPlayStreamURL(params: [URLQueryItem]) -> URL? {
+        buildURL(for: .espnPlayStream(params: params))
+    }
+
+    /// Build the URL for `/api/tuner-backends/active/stream/:channelId`.
+    /// Used for ESPN linear channels from the hub. Returns raw MPEG-TS;
+    /// hand directly to VLC.
+    func tunerActiveStreamURL(channelId: String) -> URL? {
+        buildURL(for: .tunerActiveStream(channelId: channelId))
+    }
+
+    /// Admin-style action: ask the server to refresh ESPN EPG / token.
+    /// Useful as a recovery path when the upstream returns auth.expired.
+    func espnRefreshEPG() async throws { try await requestVoid(.espnRefreshEPG) }
+
+    // MARK: - Disney Explore (DVR-Tuner authoritative, OpenFlix-proxied)
+
+    func disneyGlobalNav() async throws -> DXGlobalNavResponse {
+        try await request(.disneyGlobalNav)
+    }
+    func disneyDeeplink(refId: String, refIdType: String) async throws -> DXDeeplinkResponse {
+        try await request(.disneyDeeplink(refId: refId, refIdType: refIdType))
+    }
+    func disneyPage(pageId: String, params: [URLQueryItem]) async throws -> DXPageResponse {
+        try await request(.disneyPage(pageId: pageId, params: params))
+    }
+    func disneySet(setId: String, params: [URLQueryItem]) async throws -> DXSetResponse {
+        try await request(.disneySet(setId: setId, params: params))
+    }
+    func disneySearch(query: String) async throws -> DXPageResponse {
+        try await request(.disneySearch(query: query))
+    }
+    func disneyPlayerExperience(mediaId: String) async throws -> DXPlayerExperienceResponse {
+        try await request(.disneyPlayerExperience(mediaId: mediaId))
+    }
     func deleteRecording(id: String) async throws { try await requestVoid(.deleteRecording(id: id)) }
     func getRecordingStats() async throws -> RecordingStatsResponse { try await request(.getRecordingStats) }
     func getRecordingStream(id: String) async throws -> RecordingStreamResponse { try await request(.getRecordingStream(id: id)) }

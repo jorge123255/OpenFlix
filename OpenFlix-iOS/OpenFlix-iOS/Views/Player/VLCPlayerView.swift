@@ -34,6 +34,7 @@ class VLCPlayerViewModel: NSObject, ObservableObject {
     @Published var isBuffering = false
     @Published var isLoading = false
     @Published var error: String?
+    @Published var hasReachedPlaying = false
     @Published var currentTime: Double = 0
     @Published var duration: Double = 0
     @Published var streamInfo: VLCStreamInfo?
@@ -192,6 +193,11 @@ class VLCPlayerViewModel: NSObject, ObservableObject {
     @Published var isBuffering = false
     @Published var isLoading = true
     @Published var error: String?
+    /// Flips true the first time VLC reaches PLAYING for the current
+    /// URL. Reset on every play(url:). UI uses this to gate the buffering
+    /// HUD: brief mid-stream rebuffers shouldn't put the spinner back —
+    /// only the initial "we haven't seen video yet" state should.
+    @Published var hasReachedPlaying = false
     @Published var currentTime: Double = 0    // seconds
     @Published var duration: Double = 0       // seconds
     @Published var streamInfo: VLCStreamInfo?
@@ -281,12 +287,20 @@ class VLCPlayerViewModel: NSObject, ObservableObject {
     private func startMediaPlayback(url: URL) {
         let media = VLCMedia(url: url)
 
-        // Zero options — let VLC auto-detect the stream format.
-        // ESPN/Disney streams are served through our server proxy.
-        // Previous attempts with caching/connectivity options caused
-        // OPENING/BUFFERING loops. VLC's defaults handle HLS/TS better.
-        media.addOptions([:])
+        // Live MPEG-TS proxy → bigger network buffer so a tap-pause
+        // actually holds for ~10s. VLC's default 1.5s drains instantly.
+        // Stream-out feeds are non-seekable; this is the only way to
+        // give the user a real pause window.
+        media.addOptions([
+            "network-caching": 10000,
+            "live-caching": 10000,
+            "file-caching": 10000,
+            "clock-jitter": 0,
+            "clock-synchro": 0,
+        ])
 
+        hasReachedPlaying = false
+        pausedAt = nil
         mediaPlayer.media = media
         mediaPlayer.play()
         NSLog("VLC PLAY: mediaPlayer.play() invoked state=\(mediaPlayer.state.rawValue) drawable=\(mediaPlayer.drawable == nil ? "nil" : "set")")
@@ -299,18 +313,40 @@ class VLCPlayerViewModel: NSObject, ObservableObject {
         mediaPlayer.stop()
         isPlaying = false
         isLoading = false
+        hasReachedPlaying = false
+        pausedAt = nil
     }
 
+    /// When the user paused. Used by togglePlayPause to decide between
+    /// "resume from VLC's input buffer" (short pause, buffer still has
+    /// data) and "reconnect from scratch" (long pause, buffer drained).
+    private var pausedAt: Date?
+
     func pause() {
+        pausedAt = Date()
         mediaPlayer.pause()
     }
 
     func togglePlayPause() {
         if isPlaying {
+            pausedAt = Date()
             mediaPlayer.pause()
+            return
+        }
+        // Resume. If we paused longer than the input buffer can hold, the
+        // upstream connection will be dead — call play(url:) so we open a
+        // fresh socket and reconnect at live edge. Otherwise just unpause
+        // and let VLC drain its existing buffer.
+        let pausedFor = pausedAt.map { Date().timeIntervalSince($0) } ?? 0
+        let bufferSeconds: TimeInterval = 9   // a hair under network-caching=10s
+        if pausedFor > bufferSeconds, let url = currentURL {
+            NSLog("VLC togglePlayPause: paused \(Int(pausedFor))s — buffer drained, reconnecting")
+            pausedAt = nil
+            startMediaPlayback(url: url)
         } else {
+            NSLog("VLC togglePlayPause: resume from buffer (paused \(Int(pausedFor))s)")
+            pausedAt = nil
             mediaPlayer.play()
-            NSLog("VLC togglePlayPause: mediaPlayer.play() invoked state=\(mediaPlayer.state.rawValue)")
         }
     }
 
@@ -625,6 +661,7 @@ extension VLCPlayerViewModel: VLCMediaPlayerDelegate {
                 isPlaying = true
                 isBuffering = false
                 isLoading = false
+                hasReachedPlaying = true
                 isMuted = (mediaPlayer.audio?.volume ?? 100) == 0
                 loadTracks()
                 extractStreamInfo()

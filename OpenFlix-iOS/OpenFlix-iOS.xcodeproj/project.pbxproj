@@ -7,6 +7,18 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		7426706282943B2BB179FFA7 /* DisneyExploreDTOs.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9884AFE5E9255B01A27A9602 /* DisneyExploreDTOs.swift */; };
+		B4FE6442B50C12514F01600A /* DisneyExploreDTOs.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9884AFE5E9255B01A27A9602 /* DisneyExploreDTOs.swift */; };
+		5264C426BA2C03757675D451 /* DisneyExploreRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 372BCD3A537DB42A506E4A6E /* DisneyExploreRepository.swift */; };
+		65C4D95740146EFCEAD350D3 /* DisneyExploreRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 372BCD3A537DB42A506E4A6E /* DisneyExploreRepository.swift */; };
+		053E8C1052FEAEC336E123D8 /* DisneyPageRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E69369BFB14DD38B52222A4 /* DisneyPageRenderer.swift */; };
+		E1E96B0FE9DF1354315B0704 /* DisneyPageRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E69369BFB14DD38B52222A4 /* DisneyPageRenderer.swift */; };
+		3F2A7F772E864D9CBB529DD5 /* DisneyHomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D8668AE0206B1B81E4DB8344 /* DisneyHomeView.swift */; };
+		864EB2C98DF1D27FED42EC05 /* DisneyHomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D8668AE0206B1B81E4DB8344 /* DisneyHomeView.swift */; };
+		05862A03C631F401D359A1B2 /* DisneyDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B785524464F9DEC7373336A3 /* DisneyDetailView.swift */; };
+		94AC86A30EE6321D2B03A0F4 /* DisneyDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B785524464F9DEC7373336A3 /* DisneyDetailView.swift */; };
+		FCCF3C5520E91A45371EC8A7 /* DisneySearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 400EB74B779D8EA2CCE0CDBA /* DisneySearchView.swift */; };
+		C09ECA936B4434BE4B43FC3C /* DisneySearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 400EB74B779D8EA2CCE0CDBA /* DisneySearchView.swift */; };
 		0035A69B6EF5EAFD40153EC5 /* ESPNService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10D22C9F422D353DFA6C7BC3 /* ESPNService.swift */; settings = {COMPILER_FLAGS = "-fobjc-arc"; }; };
 		0089A4E4848FD50E86D61514 /* DiscoverViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB9AEE8B9730784E89C9B580 /* DiscoverViewModel.swift */; settings = {COMPILER_FLAGS = "-fobjc-arc"; }; };
 		018A2121C1EBFFB78A105355 /* AuthenticatedImage.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAB1C58BADD2A46D83D83976 /* AuthenticatedImage.swift */; settings = {COMPILER_FLAGS = "-fobjc-arc"; }; };
@@ -17,6 +29,8 @@
 		05D8BAFD7C7CBAD41A32AED5 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E057BAFBCF590391E6D224F5 /* LoginView.swift */; settings = {COMPILER_FLAGS = "-fobjc-arc"; }; };
 		0609959B0724E9237AA44B75 /* TMDBService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C5BA7849E1D29C9ADFB70EB /* TMDBService.swift */; };
 		066CCD88E8B4417FA664AC37 /* AwayFromHomeSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B51848E8831F5254CE107633 /* AwayFromHomeSheet.swift */; };
+		068C51F0E4543AC467ACFF72 /* ESPNDTOs.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2ED218981104D280042608AF /* ESPNDTOs.swift */; };
+		06AA7F9B997E42579F23F170 /* SportsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 458EC2EF68B0BBD73747F181 /* SportsView.swift */; };
 		0A026E62BF5D8AA9E9E6D185 /* EPGChannelCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42856AB9508482B0A331B3B9 /* EPGChannelCell.swift */; settings = {COMPILER_FLAGS = "-fobjc-arc"; }; };
 		0B7C09114474CF6C181598C7 /* LiveTVDTOs.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D588DD67220357806A1FB97 /* LiveTVDTOs.swift */; settings = {COMPILER_FLAGS = "-fobjc-arc"; }; };
 		0CD4645DD101856E2FF5DA39 /* MediaCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = C68B5D38B737A2500BF5FEE7 /* MediaCard.swift */; };
@@ -41,12 +55,14 @@
 		1A1CA146FF72BB5B0D3AE695 /* MediaRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB72BA703428F542E2FA438B /* MediaRepository.swift */; };
 		1BA0034348DE46548CE47098 /* DesignComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE2D0EFD82FE83FEB982CE52 /* DesignComponents.swift */; settings = {COMPILER_FLAGS = "-fobjc-arc"; }; };
 		1D11313230C14F649BA32DED /* GalleryRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19B1201DFF4493FC24741AD4 /* GalleryRow.swift */; };
+		1DEDFD9FE6470001C9A4015D /* ESPNHubView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B864684BAD04366E3BFF176B /* ESPNHubView.swift */; };
 		1F878AD2CB385A197E4C45C4 /* TVShowsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = E474CA3794F4FCD0E0C68F32 /* TVShowsViewModel.swift */; };
 		1FB7F6AAE06D5EFFCC086FCE /* LiveTVViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4289A5DA67B005E05FC2645 /* LiveTVViewModel.swift */; };
 		201114CB7CDA13FF8D073621 /* MediaDTOs.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2CDFD2697C9E698724D5EDDC /* MediaDTOs.swift */; };
 		20C0BC5C1BBB90CD1F3A1B40 /* DiscoverViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB9AEE8B9730784E89C9B580 /* DiscoverViewModel.swift */; };
 		20DE793C23C44C391CE9D614 /* DiscoverView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E79FAAA08587A9E349041DAF /* DiscoverView.swift */; };
 		216A5792E44BBB5759E6854A /* AuthDTOs.swift in Sources */ = {isa = PBXBuildFile; fileRef = FFE580EC0181B08A60D2E25C /* AuthDTOs.swift */; };
+		22627705A1CF4A988A4565D6 /* ChannelEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86A29C48B91498526FF9D42A /* ChannelEditorView.swift */; };
 		24777C40CCA3E428CD46D9D9 /* OnLaterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A607EFB34326B7384382FC9E /* OnLaterView.swift */; };
 		26DC97175EE0F018CF525C8B /* WatchlistRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 014A8C48ECF838664120006D /* WatchlistRepository.swift */; settings = {COMPILER_FLAGS = "-fobjc-arc"; }; };
 		26F25AB4B7F661334456A83F /* TeamPass.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA1820DED96AD4C6C3150D8E /* TeamPass.swift */; settings = {COMPILER_FLAGS = "-fobjc-arc"; }; };
@@ -67,6 +83,7 @@
 		39F670271F58EC08FFB11ED6 /* EPGTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = E948632A842C0ECD69218B5D /* EPGTheme.swift */; settings = {COMPILER_FLAGS = "-fobjc-arc"; }; };
 		3A91146DFC21E348CB62B708 /* XfinityDesignSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1FD0801CC516C45F858A479 /* XfinityDesignSystem.swift */; };
 		3BA3EA422F2A45442DEF4D14 /* AuthenticatedImage.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAB1C58BADD2A46D83D83976 /* AuthenticatedImage.swift */; };
+		3C783A14FF6A66ECA3692618 /* ESPNPlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6EC95967CE6C9791795EC0C2 /* ESPNPlayerView.swift */; };
 		3DB3CA34E8625C98011EC5AA /* NetworkError.swift in Sources */ = {isa = PBXBuildFile; fileRef = 69B82E0EBDCD443F0A0B839B /* NetworkError.swift */; settings = {COMPILER_FLAGS = "-fobjc-arc"; }; };
 		3EFB5A98251BE94135F4168E /* EPGSearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 47571DFA6B890EB1BBB815C3 /* EPGSearchView.swift */; };
 		3F7259569BC9E3AC81D6EB20 /* PlayerViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = E98AE82B638BB36AB433C80B /* PlayerViewModel.swift */; };
@@ -79,7 +96,9 @@
 		47356048361BF56534577E60 /* CategoryTabs.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92537A512E6E76BA750C4E7D /* CategoryTabs.swift */; settings = {COMPILER_FLAGS = "-fobjc-arc"; }; };
 		487F2CAB394BC2B224BA185E /* URL+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F216EAFF896B1BACB10E1F4 /* URL+Extensions.swift */; settings = {COMPILER_FLAGS = "-fobjc-arc"; }; };
 		49640A9299F806676D2BB47A /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04196439BC1457E0DC54F9E1 /* HomeView.swift */; };
+		49B37CAECE7245D0895F7CDE /* WatchStatsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D0FFC7BD90FEB0905B9C590 /* WatchStatsView.swift */; };
 		4B2CDF5880E7BDD617390CA1 /* OpenFlixTVTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 273CF29D1A00922F1555C4DC /* OpenFlixTVTabView.swift */; };
+		4BF96876B9E6449FAF101C86 /* PlaylistsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15860C1C91C05362E006D7A7 /* PlaylistsView.swift */; };
 		4F5052CA39C16F07BA72006E /* DVRRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB498123FAAC8DCD9482F93C /* DVRRepository.swift */; settings = {COMPILER_FLAGS = "-fobjc-arc"; }; };
 		5127DB6A2D34553B6ABEBCA0 /* Pods_OpenFlix.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D523F665DEF0D45DF0C4869A /* Pods_OpenFlix.framework */; };
 		516306757F40B42C9890BA73 /* VideoPlayerViewTV.swift in Sources */ = {isa = PBXBuildFile; fileRef = A707249EC9FB99AF6DB57DA5 /* VideoPlayerViewTV.swift */; };
@@ -93,6 +112,7 @@
 		58ECF65C32FA6A0B1E4F36F9 /* TVShowsHubView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBBC6D61E5014A75677A878B /* TVShowsHubView.swift */; };
 		59249970285DF3038FEB330A /* XfinityLiveTVView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E9B8DE8EA9B3A9FFA629BF1 /* XfinityLiveTVView.swift */; };
 		59FA48B60648733F3FAAA7AF /* AdminDTOs.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B1991C2D1176CB9F3F0A409 /* AdminDTOs.swift */; };
+		5B2B3472DDEC968DA59A3227 /* ESPNRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95D56B575483F9D371DBDB96 /* ESPNRepository.swift */; };
 		5B568A29E86782A45408C6D6 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 2BE9E00173D30EEB3E74E0BF /* Assets.xcassets */; };
 		5BA3B2559D86DA8C437BFE37 /* AuthRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 55118C9719778126D2DEB575 /* AuthRepository.swift */; };
 		5BE743853975060B374C874C /* VLCPlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00AB53D32653FECCE9A4A2F7 /* VLCPlayerView.swift */; settings = {COMPILER_FLAGS = "-fobjc-arc"; }; };
@@ -106,6 +126,7 @@
 		6455FC3C2B70F11DD9D3FD7D /* ClaimCodeEntryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7303EF4906513FE79F5C5E0 /* ClaimCodeEntryView.swift */; };
 		6470DFD160E4315252E99ACF /* TeamPageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00EECC8B0C3EB5DC42FBC3B8 /* TeamPageView.swift */; };
 		6543347C089823314CB3C4BA /* AuthDeepLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC523773E8582A65A62E9B38 /* AuthDeepLink.swift */; settings = {COMPILER_FLAGS = "-fobjc-arc"; }; };
+		66500034C41059921AD0A0B9 /* ESPNRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95D56B575483F9D371DBDB96 /* ESPNRepository.swift */; };
 		66B9BCC30D4C546D2E1532C1 /* Program.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89D29BA34AF40D6A40A60D17 /* Program.swift */; settings = {COMPILER_FLAGS = "-fobjc-arc"; }; };
 		67E4FECB82D6449EC7F89993 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 973E9A0E39AFB5AC53AD521D /* Foundation.framework */; };
 		67E6CA4758310D005C6356B3 /* Info-tvOS.plist in Resources */ = {isa = PBXBuildFile; fileRef = 74A822296C4338D7C7AFAF6B /* Info-tvOS.plist */; };
@@ -124,6 +145,7 @@
 		75BAEB8065CCF34D89624402 /* SourceRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06118BA699A2CF4D71ED559E /* SourceRepository.swift */; settings = {COMPILER_FLAGS = "-fobjc-arc"; }; };
 		76055BB936262258BE8A6579 /* MiniPlayerManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1ECAAD2600480B87CC412561 /* MiniPlayerManager.swift */; };
 		764923174438372D3F64BE9D /* splash_video.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = FCB251E2323E0D0273AF3819 /* splash_video.mp4 */; };
+		79558D8281A3FDA4693F3C63 /* ESPNPlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6EC95967CE6C9791795EC0C2 /* ESPNPlayerView.swift */; };
 		798D6B8B8BC0C6F657D4E0E0 /* XfinityTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3A3028C86F53FF0754C26B5 /* XfinityTabView.swift */; };
 		7D2F382F7A68ACBFA66A8462 /* DiscoverViewModern.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9868C77D0072D695783B88E /* DiscoverViewModern.swift */; };
 		7E8C2ADF1C3E97ECC8033A3B /* NetworkDTOs.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67F508165AD1F65A6892A94E /* NetworkDTOs.swift */; };
@@ -131,7 +153,6 @@
 		818CB1C72898EB90988EA10E /* CatchupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3FCE4E83E5C66A6F7712DFD9 /* CatchupView.swift */; };
 		84F7B07D8CA12FAFAD943559 /* LiveTVRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0674E8EA8567453229B36F8 /* LiveTVRepository.swift */; };
 		853A6BFB45858EBADF24F89C /* SportsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 458EC2EF68B0BBD73747F181 /* SportsView.swift */; };
-		06AA7F9B997E42579F23F170 /* SportsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 458EC2EF68B0BBD73747F181 /* SportsView.swift */; };
 		8548A8A5E543F3E87DB4CF61 /* OpenFlixAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BEB6B84B2A831F9828461B7 /* OpenFlixAPI.swift */; };
 		867D820DC1C3AC451D83778E /* SearchViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 360F03BA15481EAF48B79DA9 /* SearchViewModel.swift */; settings = {COMPILER_FLAGS = "-fobjc-arc"; }; };
 		869AB17FD1144B518C4D7E7C /* Pods_OpenFlixTV.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 84B68B72DA9EDDE883BE2263 /* Pods_OpenFlixTV.framework */; };
@@ -141,15 +162,16 @@
 		8BCD9B05AB8FC55B4F403C93 /* WatchlistRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 014A8C48ECF838664120006D /* WatchlistRepository.swift */; };
 		8F5269C8938F8061A544FFF9 /* ServerConnectionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F093BE1125849C3DA1E0438 /* ServerConnectionManager.swift */; };
 		8F9AB9710EF3D145BACB8243 /* MultiviewPlayerV2.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15D24545918D8D8D08E225FA /* MultiviewPlayerV2.swift */; };
+		8F9AB9720EF3D145BACB8244 /* MultiviewPlayerV2.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15D24545918D8D8D08E225FA /* MultiviewPlayerV2.swift */; };
 		92A09400FD771AE0494AA99B /* EPGChannelCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42856AB9508482B0A331B3B9 /* EPGChannelCell.swift */; };
 		95BA25B7A3BF005B0A847B46 /* UserDefaults+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = A04DEC3716812168D041F9D3 /* UserDefaults+Extensions.swift */; };
 		98B3DA52601BB43CB5A994D7 /* LiveTVView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8DEE150497436DA7F121A0F4 /* LiveTVView.swift */; };
 		9A77CB0B7E95E971B5924EB1 /* LivePlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8D1FF7E53B36C7E2D095162 /* LivePlayerView.swift */; };
 		9AA99F8CFDCB74D145D5E5A3 /* ProfileViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 728436E011A17650519F65FB /* ProfileViewModel.swift */; settings = {COMPILER_FLAGS = "-fobjc-arc"; }; };
+		9B749798C0DC46EDABED9797 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 826E2D574CC0CA420B66B0D9 /* SettingsView.swift */; };
 		9B90F01E9E6C35C593C8BC6F /* KeychainHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6BCEB5C8410754D71DA147A7 /* KeychainHelper.swift */; };
 		9BC8040DEC0596D603374168 /* LiveTVViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4289A5DA67B005E05FC2645 /* LiveTVViewModel.swift */; settings = {COMPILER_FLAGS = "-fobjc-arc"; }; };
 		9BEA45BD70BABB01FBC3B59F /* WatchStatsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D0FFC7BD90FEB0905B9C590 /* WatchStatsView.swift */; };
-		49B37CAECE7245D0895F7CDE /* WatchStatsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D0FFC7BD90FEB0905B9C590 /* WatchStatsView.swift */; };
 		9CAD1DD5D679E17EB774ED96 /* SearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8790A73438BB1E700C6DC93 /* SearchView.swift */; settings = {COMPILER_FLAGS = "-fobjc-arc"; }; };
 		9CBDC8AB099B9F8DB8732EBA /* LibrarySection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 075741C67FA007990ED15AA9 /* LibrarySection.swift */; settings = {COMPILER_FLAGS = "-fobjc-arc"; }; };
 		9F4F2E61A5691B92768E0DFF /* MediaRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB72BA703428F542E2FA438B /* MediaRepository.swift */; settings = {COMPILER_FLAGS = "-fobjc-arc"; }; };
@@ -162,6 +184,7 @@
 		AA707F3AF3BA650CB13F8798 /* XfinityDesignSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1FD0801CC516C45F858A479 /* XfinityDesignSystem.swift */; settings = {COMPILER_FLAGS = "-fobjc-arc"; }; };
 		AAB635B3E7EE8347C9C25D8A /* SortPickerSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = C37A3A89EAEF4D9C264EB210 /* SortPickerSheet.swift */; };
 		AAC1F61FFB17081F8184D554 /* ForYouView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB836D1D5CD44FA7341117A0 /* ForYouView.swift */; };
+		ABC9FC3DE04E332CAE41713A /* LiquidGlass.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4317896A9401A90AC6F372CC /* LiquidGlass.swift */; };
 		ABCA08879C71490FEE142A56 /* YouTubePlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C659D49E8E3173382683856C /* YouTubePlayerView.swift */; settings = {COMPILER_FLAGS = "-fobjc-arc"; }; };
 		AF59BFE66F88A2E866FF303D /* CategoryTabs.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92537A512E6E76BA750C4E7D /* CategoryTabs.swift */; };
 		AFE342F8D71299E403AB7CDD /* DVRViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 403FDA90810C9B2062EDEF14 /* DVRViewModel.swift */; };
@@ -173,11 +196,13 @@
 		B4546FA1D24B6E0BF900A358 /* ProgramCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 756D132F1FA811BE739FB112 /* ProgramCell.swift */; };
 		B4E0F953353982EA3E4A56E3 /* URL+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F216EAFF896B1BACB10E1F4 /* URL+Extensions.swift */; };
 		B515078BD72F39694D4AD837 /* ErrorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D227CAE8F2DEAE4C1178D835 /* ErrorView.swift */; settings = {COMPILER_FLAGS = "-fobjc-arc"; }; };
+		B5F9E050FACD1FAFF6062104 /* ESPNHubView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B864684BAD04366E3BFF176B /* ESPNHubView.swift */; };
 		B69AA4F8BEBE60601C67DA09 /* SettingsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7873057F5D33D8052EBC791 /* SettingsViewModel.swift */; };
 		B6B941310E59576D07465660 /* YouTubePlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C659D49E8E3173382683856C /* YouTubePlayerView.swift */; };
 		B7E1A38DEEC7F6AF825305AD /* ProfileSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F37BB7FDE0DEE999C06BCB2 /* ProfileSelectionView.swift */; settings = {COMPILER_FLAGS = "-fobjc-arc"; }; };
 		B892DB030403917CE84B29EB /* HubSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 308BEFDDB1DBFE7A186E4E4F /* HubSection.swift */; settings = {COMPILER_FLAGS = "-fobjc-arc"; }; };
 		BA0A399DC92EAEDA6E835115 /* TeamPassView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4280A2F786AD98052ADAC7DE /* TeamPassView.swift */; };
+		BADC35EB1DA57999EE4AD6A0 /* ESPNDTOs.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2ED218981104D280042608AF /* ESPNDTOs.swift */; };
 		BC0E269B5502B8649610CCF2 /* AdaptiveLiveTVView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9145369B4082585A93345744 /* AdaptiveLiveTVView.swift */; };
 		BC3710092A4E39C3D20E724E /* SettingsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7873057F5D33D8052EBC791 /* SettingsViewModel.swift */; settings = {COMPILER_FLAGS = "-fobjc-arc"; }; };
 		BE72278FE2516DCB0A7B8BC0 /* LiveTVRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0674E8EA8567453229B36F8 /* LiveTVRepository.swift */; settings = {COMPILER_FLAGS = "-fobjc-arc"; }; };
@@ -208,6 +233,7 @@
 		E1DF153801C1E91867AAA866 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 826E2D574CC0CA420B66B0D9 /* SettingsView.swift */; };
 		E4A3F9BB8E745172C90E39F6 /* LoadingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72120CFB75F1D738835DFE72 /* LoadingView.swift */; };
 		E69F74C4428B8E9DE9C4E8F6 /* ProgramCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 756D132F1FA811BE739FB112 /* ProgramCell.swift */; settings = {COMPILER_FLAGS = "-fobjc-arc"; }; };
+		E725F33B8264EF1764630805 /* LiquidGlass.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4317896A9401A90AC6F372CC /* LiquidGlass.swift */; };
 		E7F8449C8B2F3058432B3648 /* NetworkError.swift in Sources */ = {isa = PBXBuildFile; fileRef = 69B82E0EBDCD443F0A0B839B /* NetworkError.swift */; };
 		E8109D862BAD739318BE178C /* MiniPlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1F4889AE1C90CDE8ED4033F /* MiniPlayerView.swift */; };
 		E8D1DA8F823D073034736621 /* MoviesViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 752FCB13D0ADC2A9A4F4405A /* MoviesViewModel.swift */; };
@@ -241,6 +267,12 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		9884AFE5E9255B01A27A9602 /* DisneyExploreDTOs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DisneyExploreDTOs.swift; sourceTree = "<group>"; };
+		372BCD3A537DB42A506E4A6E /* DisneyExploreRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DisneyExploreRepository.swift; sourceTree = "<group>"; };
+		3E69369BFB14DD38B52222A4 /* DisneyPageRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DisneyPageRenderer.swift; sourceTree = "<group>"; };
+		D8668AE0206B1B81E4DB8344 /* DisneyHomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DisneyHomeView.swift; sourceTree = "<group>"; };
+		B785524464F9DEC7373336A3 /* DisneyDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DisneyDetailView.swift; sourceTree = "<group>"; };
+		400EB74B779D8EA2CCE0CDBA /* DisneySearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DisneySearchView.swift; sourceTree = "<group>"; };
 		000E6340ED9C00325E4235F4 /* ProgramDetailSheets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgramDetailSheets.swift; sourceTree = "<group>"; };
 		00AB53D32653FECCE9A4A2F7 /* VLCPlayerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VLCPlayerView.swift; sourceTree = "<group>"; };
 		00EECC8B0C3EB5DC42FBC3B8 /* TeamPageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeamPageView.swift; sourceTree = "<group>"; };
@@ -269,6 +301,7 @@
 		27B47B36B37D2AE82567F02F /* SeasonView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeasonView.swift; sourceTree = "<group>"; };
 		2BE9E00173D30EEB3E74E0BF /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		2CDFD2697C9E698724D5EDDC /* MediaDTOs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaDTOs.swift; sourceTree = "<group>"; };
+		2ED218981104D280042608AF /* ESPNDTOs.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ESPNDTOs.swift; sourceTree = "<group>"; };
 		2F216EAFF896B1BACB10E1F4 /* URL+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "URL+Extensions.swift"; sourceTree = "<group>"; };
 		308BEFDDB1DBFE7A186E4E4F /* HubSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HubSection.swift; sourceTree = "<group>"; };
 		30F7A242C6DDAD551868C0BB /* OpenFlixTVApp.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = OpenFlixTVApp.swift; sourceTree = "<group>"; };
@@ -283,6 +316,7 @@
 		403FDA90810C9B2062EDEF14 /* DVRViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DVRViewModel.swift; sourceTree = "<group>"; };
 		4280A2F786AD98052ADAC7DE /* TeamPassView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeamPassView.swift; sourceTree = "<group>"; };
 		42856AB9508482B0A331B3B9 /* EPGChannelCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EPGChannelCell.swift; sourceTree = "<group>"; };
+		4317896A9401A90AC6F372CC /* LiquidGlass.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LiquidGlass.swift; sourceTree = "<group>"; };
 		4340D74DD312B444C434B3EE /* TVShowsHubViewModern.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TVShowsHubViewModern.swift; sourceTree = "<group>"; };
 		443A6FA3379C30FE486F53EC /* StreamingHubRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StreamingHubRow.swift; sourceTree = "<group>"; };
 		450A6291B487D97339001B6A /* WatchlistViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchlistViewModel.swift; sourceTree = "<group>"; };
@@ -308,6 +342,7 @@
 		6BCEB5C8410754D71DA147A7 /* KeychainHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainHelper.swift; sourceTree = "<group>"; };
 		6C49734D872C80B7BE4C873C /* TeamPassView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "OpenFlix-iOS/Views/TeamPass/TeamPassView.swift"; sourceTree = "<group>"; };
 		6DF96D7B0C72F66046CE2987 /* MoviesViewModern.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MoviesViewModern.swift; sourceTree = "<group>"; };
+		6EC95967CE6C9791795EC0C2 /* ESPNPlayerView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ESPNPlayerView.swift; sourceTree = "<group>"; };
 		70B736E5E9EFE19BA1CE6E89 /* TrailerInfo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrailerInfo.swift; sourceTree = "<group>"; };
 		70FB46166B6DFF729E271C65 /* ChannelListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChannelListView.swift; sourceTree = "<group>"; };
 		72120CFB75F1D738835DFE72 /* LoadingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoadingView.swift; sourceTree = "<group>"; };
@@ -332,6 +367,7 @@
 		9145369B4082585A93345744 /* AdaptiveLiveTVView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdaptiveLiveTVView.swift; sourceTree = "<group>"; };
 		92537A512E6E76BA750C4E7D /* CategoryTabs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategoryTabs.swift; sourceTree = "<group>"; };
 		9298A937CA3E9E28818373EC /* DVRStorageMeter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DVRStorageMeter.swift; sourceTree = "<group>"; };
+		95D56B575483F9D371DBDB96 /* ESPNRepository.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ESPNRepository.swift; sourceTree = "<group>"; };
 		9675A087B696DD2632E1ADED /* String+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "String+Extensions.swift"; sourceTree = "<group>"; };
 		973E9A0E39AFB5AC53AD521D /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/AppleTVOS.platform/Developer/SDKs/AppleTVOS18.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
 		9DD2525605770BFDAD7B9F16 /* InstantSwitchManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InstantSwitchManager.swift; sourceTree = "<group>"; };
@@ -351,6 +387,7 @@
 		B51848E8831F5254CE107633 /* AwayFromHomeSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AwayFromHomeSheet.swift; sourceTree = "<group>"; };
 		B6F2F82ED4110EABA9C17A10 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		B7303EF4906513FE79F5C5E0 /* ClaimCodeEntryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaimCodeEntryView.swift; sourceTree = "<group>"; };
+		B864684BAD04366E3BFF176B /* ESPNHubView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ESPNHubView.swift; sourceTree = "<group>"; };
 		B8D1FF7E53B36C7E2D095162 /* LivePlayerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LivePlayerView.swift; sourceTree = "<group>"; };
 		B9868C77D0072D695783B88E /* DiscoverViewModern.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiscoverViewModern.swift; sourceTree = "<group>"; };
 		BA1820DED96AD4C6C3150D8E /* TeamPass.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeamPass.swift; sourceTree = "<group>"; };
@@ -436,6 +473,7 @@
 				5D98F6904E92F29787766E7C /* Stats */,
 				E0A045754C32DF50C7AE56F1 /* TeamPass */,
 				03F9F55B18426E50279FD787 /* Watchlist */,
+				59028DD10A6E7C20BAEE9547 /* Disney */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -550,6 +588,8 @@
 				250D1669E5DA503A7FD7D9F9 /* ProfileRepository.swift */,
 				06118BA699A2CF4D71ED559E /* SourceRepository.swift */,
 				014A8C48ECF838664120006D /* WatchlistRepository.swift */,
+				95D56B575483F9D371DBDB96 /* ESPNRepository.swift */,
+				372BCD3A537DB42A506E4A6E /* DisneyExploreRepository.swift */,
 			);
 			path = Repositories;
 			sourceTree = "<group>";
@@ -639,6 +679,8 @@
 			children = (
 				458EC2EF68B0BBD73747F181 /* SportsView.swift */,
 				00EECC8B0C3EB5DC42FBC3B8 /* TeamPageView.swift */,
+				B864684BAD04366E3BFF176B /* ESPNHubView.swift */,
+				6EC95967CE6C9791795EC0C2 /* ESPNPlayerView.swift */,
 			);
 			path = Sports;
 			sourceTree = "<group>";
@@ -806,8 +848,20 @@
 				78066D9AE78ECF961C5F0D2B /* MiscDTOs.swift */,
 				67F508165AD1F65A6892A94E /* NetworkDTOs.swift */,
 				52089F6982FDBB6330F74822 /* PlaybackDTOs.swift */,
+				2ED218981104D280042608AF /* ESPNDTOs.swift */,
+				9884AFE5E9255B01A27A9602 /* DisneyExploreDTOs.swift */,
 			);
 			path = DTOs;
+			sourceTree = "<group>";
+		};
+				59028DD10A6E7C20BAEE9547 /* Disney */ = {
+			isa = PBXGroup;
+			children = (
+				D8668AE0206B1B81E4DB8344 /* DisneyHomeView.swift */,
+				B785524464F9DEC7373336A3 /* DisneyDetailView.swift */,
+				400EB74B779D8EA2CCE0CDBA /* DisneySearchView.swift */,
+			);
+			path = Disney;
 			sourceTree = "<group>";
 		};
 		F0D0F9F500CE22C76818BBCB /* Components */ = {
@@ -833,6 +887,8 @@
 				443A6FA3379C30FE486F53EC /* StreamingHubRow.swift */,
 				B1FD0801CC516C45F858A479 /* XfinityDesignSystem.swift */,
 				C659D49E8E3173382683856C /* YouTubePlayerView.swift */,
+				4317896A9401A90AC6F372CC /* LiquidGlass.swift */,
+				3E69369BFB14DD38B52222A4 /* DisneyPageRenderer.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -1144,6 +1200,9 @@
 				76055BB936262258BE8A6579 /* MiniPlayerManager.swift in Sources */,
 				516306757F40B42C9890BA73 /* VideoPlayerViewTV.swift in Sources */,
 				4B2CDF5880E7BDD617390CA1 /* OpenFlixTVTabView.swift in Sources */,
+				9B749798C0DC46EDABED9797 /* SettingsView.swift in Sources */,
+				4BF96876B9E6449FAF101C86 /* PlaylistsView.swift in Sources */,
+				22627705A1CF4A988A4565D6 /* ChannelEditorView.swift in Sources */,
 				2DB71008FA9D627837DCE1FF /* OpenFlixTVApp.swift in Sources */,
 				2F2121E93B205876810A36D2 /* OpenFlixApp.swift in Sources */,
 				C7650EB85DFE3139A66D5BE9 /* XfinityHomeView.swift in Sources */,
@@ -1156,6 +1215,17 @@
 				192B9B6BAAABD63EE0198B86 /* OnLaterView.swift in Sources */,
 				06AA7F9B997E42579F23F170 /* SportsView.swift in Sources */,
 				49B37CAECE7245D0895F7CDE /* WatchStatsView.swift in Sources */,
+				068C51F0E4543AC467ACFF72 /* ESPNDTOs.swift in Sources */,
+				5B2B3472DDEC968DA59A3227 /* ESPNRepository.swift in Sources */,
+				1DEDFD9FE6470001C9A4015D /* ESPNHubView.swift in Sources */,
+				ABC9FC3DE04E332CAE41713A /* LiquidGlass.swift in Sources */,
+				79558D8281A3FDA4693F3C63 /* ESPNPlayerView.swift in Sources */,
+				7426706282943B2BB179FFA7 /* DisneyExploreDTOs.swift in Sources */,
+				5264C426BA2C03757675D451 /* DisneyExploreRepository.swift in Sources */,
+				053E8C1052FEAEC336E123D8 /* DisneyPageRenderer.swift in Sources */,
+				3F2A7F772E864D9CBB529DD5 /* DisneyHomeView.swift in Sources */,
+				05862A03C631F401D359A1B2 /* DisneyDetailView.swift in Sources */,
+				FCCF3C5520E91A45371EC8A7 /* DisneySearchView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1234,7 +1304,7 @@
 				57F030FBCB43EC6ABC28D84D /* MoviesView.swift in Sources */,
 				E8D1DA8F823D073034736621 /* MoviesViewModel.swift in Sources */,
 				D792564D7F29F7DC281A7A1A /* MoviesViewModern.swift in Sources */,
-				8F9AB9710EF3D145BACB8243 /* MultiviewPlayerV2.swift in Sources */,
+				8F9AB9720EF3D145BACB8244 /* MultiviewPlayerV2.swift in Sources */,
 				7E8C2ADF1C3E97ECC8033A3B /* NetworkDTOs.swift in Sources */,
 				E7F8449C8B2F3058432B3648 /* NetworkError.swift in Sources */,
 				24777C40CCA3E428CD46D9D9 /* OnLaterView.swift in Sources */,
@@ -1291,6 +1361,17 @@
 				798D6B8B8BC0C6F657D4E0E0 /* XfinityTabView.swift in Sources */,
 				B6B941310E59576D07465660 /* YouTubePlayerView.swift in Sources */,
 				0232439CED95F28B8507B4A8 /* MiniPlayerManager.swift in Sources */,
+				BADC35EB1DA57999EE4AD6A0 /* ESPNDTOs.swift in Sources */,
+				66500034C41059921AD0A0B9 /* ESPNRepository.swift in Sources */,
+				B5F9E050FACD1FAFF6062104 /* ESPNHubView.swift in Sources */,
+				E725F33B8264EF1764630805 /* LiquidGlass.swift in Sources */,
+				3C783A14FF6A66ECA3692618 /* ESPNPlayerView.swift in Sources */,
+				B4FE6442B50C12514F01600A /* DisneyExploreDTOs.swift in Sources */,
+				65C4D95740146EFCEAD350D3 /* DisneyExploreRepository.swift in Sources */,
+				E1E96B0FE9DF1354315B0704 /* DisneyPageRenderer.swift in Sources */,
+				864EB2C98DF1D27FED42EC05 /* DisneyHomeView.swift in Sources */,
+				94AC86A30EE6321D2B03A0F4 /* DisneyDetailView.swift in Sources */,
+				C09ECA936B4434BE4B43FC3C /* DisneySearchView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
