@@ -54,7 +54,12 @@ struct ProviderDetailResponse: Codable {
     let genres: [String]?
     let rating: String?
     let advisories: [String]?
-    let flags: [String]?
+    /// `flags` is per-provider — Max returns a dict
+    /// `{atmos: true, dolbyVision: true, hdr: false, uhd: true}`
+    /// while older responses use `[String]`. Decode either form
+    /// into a string list (only the truthy keys make the cut for
+    /// dict shape). UI renders whatever lands here.
+    let flags: ProviderDetailFlags?
     let artwork: ProviderDetailArtwork?
     let cast: [ProviderDetailPerson]?
     let directors: [ProviderDetailPerson]?
@@ -64,6 +69,29 @@ struct ProviderDetailResponse: Codable {
     let streamUrl: String?
     let infoEndpoint: String?
     let error: String?
+}
+
+struct ProviderDetailFlags: Codable {
+    let strings: [String]
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        if let arr = try? container.decode([String].self) {
+            self.strings = arr
+            return
+        }
+        if let dict = try? container.decode([String: Bool].self) {
+            self.strings = dict.compactMap { key, value in value ? key : nil }
+                .sorted()
+            return
+        }
+        self.strings = []
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.singleValueContainer()
+        try c.encode(strings)
+    }
 }
 
 struct ProviderDetailArtwork: Codable {

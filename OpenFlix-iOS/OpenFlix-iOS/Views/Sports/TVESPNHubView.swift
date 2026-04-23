@@ -26,6 +26,7 @@ struct TVESPNHubView: View {
     @State private var disneyESPNPage: DXPage?
 
     private var renderableDisneyPage: DXPage? {
+        if let p = repo.browsePage { return p }
         if let h = repo.hub?.disneyHub { return h }
         return disneyESPNPage
     }
@@ -72,9 +73,11 @@ struct TVESPNHubView: View {
             .ignoresSafeArea()
         )
         .task {
+            disneyRepo.namespace = .espn
             await repo.loadHub()
+            await repo.loadBrowsePage()
             repo.startPolling()
-            if disneyESPNPage == nil {
+            if repo.browsePage == nil && repo.hub?.disneyHub == nil && disneyESPNPage == nil {
                 disneyESPNPage = try? await disneyRepo.loadESPNPageFromGlobalNav()
             }
         }

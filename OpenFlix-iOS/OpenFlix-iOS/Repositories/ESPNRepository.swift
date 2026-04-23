@@ -19,8 +19,10 @@ final class ESPNRepository: ObservableObject {
     private let api = OpenFlixAPI.shared
 
     @Published private(set) var hub: ESPNHubResponse?
+    @Published private(set) var browsePage: DXPage?
     @Published private(set) var isLoadingHub = false
     @Published var error: String?
+    @Published var browseError: String?
 
     private var pollingTask: Task<Void, Never>?
 
@@ -50,6 +52,21 @@ final class ESPNRepository: ObservableObject {
             error = nil
         } catch {
             self.error = error.localizedDescription
+        }
+    }
+
+    /// Load `/espn/browse` — the canonical browse page for the ESPN
+    /// section. Returns the same Disney-shaped `DXPage` so the
+    /// existing renderer can render it. Used as the source of truth
+    /// for ESPN events, hero, and shelves (preferred over the
+    /// optional `hub.disneyHub` blob).
+    func loadBrowsePage(force: Bool = false) async {
+        if !force, browsePage != nil { return }
+        do {
+            browsePage = try await api.espnBrowse()
+            browseError = nil
+        } catch {
+            browseError = error.localizedDescription
         }
     }
 

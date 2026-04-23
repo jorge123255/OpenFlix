@@ -851,6 +851,9 @@ enum DisneyImageResolver {
     /// in a desktop browser; iPhone tiles are 110-220pt wide so a
     /// 600px image is plenty (and Disney CDN downscales server-side,
     /// so a smaller width = much smaller image bytes in memory).
+    /// The flat 178-url keys at the bottom are the legacy ESPN shape
+    /// (`tile178Url`, `background178Url`, …) used by /espn/browse
+    /// items — direct strings, no compose URL needed.
     static let itemCandidates: [(path: [String], width: Int)] = [
         (["hero", "background", "1.78"], 600),
         (["details", "background", "1.78"], 600),
@@ -860,16 +863,22 @@ enum DisneyImageResolver {
         (["partner", "tile", "1.78"], 480),
         (["partner", "thumbnail", "1.78"], 480),
         (["tile", "background", "1.78"], 480),
+        (["background178Url"], 480),
+        (["tile178Url"], 480),
+        (["thumbnail178Url"], 480),
     ]
 
     /// Page-level hero artwork for `details_*` style pages. Larger
-    /// budget than tiles since this is the full-width banner.
+    /// budget than tiles since this is the full-width banner. Trailing
+    /// flat keys cover ESPN's legacy artwork shape.
     static let pageHeroCandidates: [(path: [String], width: Int)] = [
         (["hero", "background", "1.78"], 900),
         (["details", "background", "1.78"], 900),
         (["standard", "background", "1.78"], 900),
         (["collection", "background", "1.78"], 900),
         (["partner", "background", "1.78"], 900),
+        (["background178Url"], 900),
+        (["brandBackground178Url"], 900),
     ]
 
     /// Build a BAMGrid compose URL from an `imageId`. Skips RAW_*

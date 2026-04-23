@@ -64,6 +64,13 @@ final class DisneyExploreRepository: ObservableObject {
     /// Loads a single set with full request context preserved from the
     /// owning container/target. Use this for the row-level lazy load when
     /// a container in a page response came back without populated items.
+    /// Browse namespace — controls whether `loadSet` calls
+    /// `/disney/explore/set/:id` (default) or `/espn/browse/set/:id`.
+    /// ESPN browse pages share the Disney shape, so the renderer can
+    /// be reused; only the lazy-load route differs.
+    enum BrowseNamespace { case disney, espn }
+    @Published var namespace: BrowseNamespace = .disney
+
     func loadSet(_ container: DXContainer, force: Bool = false) async {
         // Use the SwiftUI-stable `id` for cache keying so a row that
         // re-renders against the same container hits the cache, but
@@ -82,7 +89,11 @@ final class DisneyExploreRepository: ObservableObject {
         defer { loadingSets.remove(cacheKey) }
         do {
             let params = setQueryItems(for: container)
-            let response = try await api.disneySet(setId: apiSetId!, params: params)
+            let response: DXSetResponse
+            switch namespace {
+            case .disney: response = try await api.disneySet(setId: apiSetId!, params: params)
+            case .espn:   response = try await api.espnBrowseSet(setId: apiSetId!, params: params)
+            }
             if let set = response.data?.set {
                 setById[cacheKey] = set
                 setErrors[cacheKey] = nil

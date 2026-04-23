@@ -493,17 +493,29 @@ actor OpenFlixAPI {
         try await request(.espnHub)
     }
 
-    func espnBrowse() async throws -> DXPageResponse {
+    /// `/espn/browse` returns a DXPage directly at the root (no
+    /// `data.page` envelope like the Disney explore endpoints).
+    func espnBrowse() async throws -> DXPage {
         try await request(.espnBrowse)
     }
-    func espnBrowsePage(pageId: String, params: [URLQueryItem]) async throws -> DXPageResponse {
+    func espnBrowsePage(pageId: String, params: [URLQueryItem]) async throws -> DXPage {
         try await request(.espnBrowsePage(pageId: pageId, params: params))
     }
+    /// `/espn/browse/set/:id` returns `{ container: {...} }` —
+    /// re-shape it into the same `DXSetResponse` envelope the
+    /// renderer expects for Disney sets (`data.set.items`).
     func espnBrowseSet(setId: String, params: [URLQueryItem]) async throws -> DXSetResponse {
-        try await request(.espnBrowseSet(setId: setId, params: params))
+        struct Wrapper: Codable { let container: DXContainer? }
+        let wrapped: Wrapper = try await request(.espnBrowseSet(setId: setId, params: params))
+        return DXSetResponse(data: DXSetEnvelope(set: wrapped.container), success: true)
     }
-    func espnEvent(itemId: String) async throws -> DXPageResponse {
-        try await request(.espnEvent(itemId: itemId))
+    /// `/espn/events/:itemId` returns a single DXItem under `item`.
+    /// Used for event detail screens.
+    func espnEvent(itemId: String) async throws -> DXItem {
+        struct Wrapper: Codable { let item: DXItem? }
+        let wrapped: Wrapper = try await request(.espnEvent(itemId: itemId))
+        guard let item = wrapped.item else { throw NetworkError.noData }
+        return item
     }
     func espnDetail(id: String) async throws -> ProviderDetailResponse {
         try await request(.espnDetail(id: id))

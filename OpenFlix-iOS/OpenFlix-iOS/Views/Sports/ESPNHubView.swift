@@ -176,7 +176,12 @@ struct ESPNHubView: View {
     /// Disney browse rails.
     @State private var disneyESPNPage: DXPage?
 
+    /// Source-of-truth Disney-shaped page for ESPN events. Tries
+    /// /espn/browse first (the canonical ESPN source), then the
+    /// embedded hub.disneyHub blob, then the globalNav-derived
+    /// Disney ESPN page as a last resort.
     private var renderableDisneyPage: DXPage? {
+        if let p = repo.browsePage { return p }
         if let h = repo.hub?.disneyHub { return h }
         return disneyESPNPage
     }
@@ -235,12 +240,15 @@ struct ESPNHubView: View {
         .navigationBarTitleDisplayMode(.inline)
         #endif
         .task {
+            // Tell the Disney repo to route lazy /set/:id loads through
+            // the ESPN browse endpoint — same shape, different namespace.
+            disneyRepo.namespace = .espn
             await repo.loadHub()
+            await repo.loadBrowsePage()
             repo.startPolling()
-            // Always also try to load the Disney ESPN page from
-            // globalNav so the section has rails even when the
-            // tuner's espn/hub doesn't include the Disney blob.
-            if disneyESPNPage == nil {
+            // Final fallback only if both /espn/browse and the
+            // embedded disneyHub came back empty.
+            if repo.browsePage == nil && repo.hub?.disneyHub == nil && disneyESPNPage == nil {
                 disneyESPNPage = try? await disneyRepo.loadESPNPageFromGlobalNav()
             }
         }
