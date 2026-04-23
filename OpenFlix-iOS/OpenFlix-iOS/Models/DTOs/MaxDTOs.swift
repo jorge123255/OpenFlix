@@ -222,20 +222,30 @@ enum MXEntityMap {
     /// Pick the best image URL for an entity. `immersive=true`
     /// prefers landscape/hero kinds; otherwise prefers tile kinds.
     /// Walks `entity.relationships.images` against the entity map.
+    /// Max image entities expose the URL under `src`; other shapes
+    /// may use `url` — read whichever is present.
     static func entityImage(_ entity: MXEntity?, in map: [String: MXEntity], immersive: Bool) -> String? {
         let images = related(entity, key: "images", in: map)
         let candidates = images.compactMap { (img) -> (kind: String, url: String)? in
-            guard let url = attrString(img, "url"), !url.isEmpty else { return nil }
+            let url = attrString(img, "src") ?? attrString(img, "url")
+            guard let url, !url.isEmpty else { return nil }
             let kind = attrString(img, "kind") ?? attrString(img, "name") ?? ""
             return (kind, url)
         }
         guard !candidates.isEmpty else { return nil }
-        let heroKinds = ["tileburnedinbackdrop", "hero", "default-wide", "key-art-wide", "keyart-wide", "default_16_9", "16x9", "banner"]
-        let standardKinds = ["tile", "default-wide", "default_16_9", "16x9", "boxart", "key-art", "keyart", "poster"]
+        // Heroes want a wide background image (no logo). Tiles want
+        // a card poster. Logo-only kinds (anything containing
+        // "logo") are ranked last so they don't accidentally win
+        // when no preferred kind matches.
+        let heroKinds = ["tileburnedinbackdrop", "default-wide", "key-art-wide", "keyart-wide", "default_16_9", "16x9", "banner", "background", "hero"]
+        let standardKinds = ["tile", "boxart", "key-art-vertical", "default-vertical", "key-art", "keyart", "poster", "default-wide", "16x9"]
         let preferred = immersive ? heroKinds : standardKinds
         let scored: [(score: Int, url: String)] = candidates.map { c in
             let lower = c.kind.lowercased()
-            let idx = preferred.firstIndex { lower.contains($0) } ?? Int.max
+            // Penalize logo-only assets — they read as watermarks
+            // on cards instead of artwork.
+            if lower.contains("logo") { return (Int.max - 1, c.url) }
+            let idx = preferred.firstIndex { lower.contains($0) } ?? (Int.max - 100)
             return (idx, c.url)
         }
         return scored.min { $0.score < $1.score }?.url ?? candidates.first?.url
@@ -288,18 +298,27 @@ enum MXEntityMap {
         return cid == "hero" || tid == "immersive"
     }
 
-    /// Items[] for a collection — returns the resolved entities to
-    /// render as tiles.
+    /// Items[] for a collection — returns the resolved content
+    /// entities (show / movie / extra / video / season / etc.).
+    /// Max wraps each tile in a `collectionItem` whose
+    /// relationships.<contentType> points at the real entity (e.g.
+    /// .show.data → {type:"show", id:"..."}). Walk a known list of
+    /// content keys and use the first that resolves.
     static func collectionItems(_ response: MXExploreCollectionResponse?) -> [MXEntity] {
         let map = build(response)
         guard let collection = response?.data else { return [] }
+        let contentKeys = ["target", "edit", "show", "movie", "extra",
+                           "series", "video", "channel", "season", "page"]
         return related(collection, key: "items", in: map).compactMap { item in
-            // Each `item` is typically a `pageItem` whose `target`
-            // points at the actual show/movie/extra entity. Resolve
-            // through both layers.
-            relatedFirst(item, key: "target", in: map)
-                ?? relatedFirst(item, key: "edit", in: map)
-                ?? item
+            for key in contentKeys {
+                if let resolved = relatedFirst(item, key: key, in: map) {
+                    return resolved
+                }
+            }
+            // If nothing resolves, surface the wrapper anyway —
+            // entityTitle's fallback will at least show "Untitled"
+            // rather than crashing.
+            return item
         }
     }
 
