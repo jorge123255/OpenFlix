@@ -288,7 +288,13 @@ actor OpenFlixAPI {
         try await request(.getChannelGuide(channelId: channelId, start: start, end: end))
     }
     func getNowPlaying() async throws -> NowPlayingResponse { try await request(.getNowPlaying) }
-    func getActiveTunerBackend() async throws -> TunerBackend { try await request(.getActiveTunerBackend) }
+    func getActiveTunerBackend() async throws -> TunerBackend {
+        let response: TunerBackendActiveResponse = try await request(.getActiveTunerBackend)
+        guard let backend = response.backend else {
+            throw NetworkError.noData
+        }
+        return backend
+    }
     func getDirectvLibrary(accountId: String) async throws -> DirectvLibraryResponse {
         try await request(.getDirectvLibrary(accountId: accountId))
     }
@@ -487,23 +493,41 @@ actor OpenFlixAPI {
         try await request(.espnHub)
     }
 
-    /// Build the URL for `/api/tuner-backends/active/espn/play/stream`.
-    /// The endpoint serves raw MPEG-TS — there's no JSON to parse. The
-    /// client just constructs the URL with all browse-derived context as
-    /// query params and hands it to VLC.
+    func espnBrowse() async throws -> DXPageResponse {
+        try await request(.espnBrowse)
+    }
+    func espnBrowsePage(pageId: String, params: [URLQueryItem]) async throws -> DXPageResponse {
+        try await request(.espnBrowsePage(pageId: pageId, params: params))
+    }
+    func espnBrowseSet(setId: String, params: [URLQueryItem]) async throws -> DXSetResponse {
+        try await request(.espnBrowseSet(setId: setId, params: params))
+    }
+    func espnEvent(itemId: String) async throws -> DXPageResponse {
+        try await request(.espnEvent(itemId: itemId))
+    }
+    func espnDetail(id: String) async throws -> ProviderDetailResponse {
+        try await request(.espnDetail(id: id))
+    }
+
+    /// `GET /api/tuner-backends/active/espn/play` — returns a play
+    /// session with `streamUrl` + playback metadata. Always preferred
+    /// over building the stream URL ourselves.
+    func espnPlay(params: [URLQueryItem]) async throws -> ProviderPlayResponse {
+        try await request(.espnPlay(params: params))
+    }
+
+    /// Diagnostic / fallback URL builder for `/espn/play/stream`. The
+    /// primary path is `espnPlay()` which returns a normalized session.
     func espnPlayStreamURL(params: [URLQueryItem]) -> URL? {
         buildURL(for: .espnPlayStream(params: params))
     }
 
-    /// Build the URL for `/api/tuner-backends/active/stream/:channelId`.
-    /// Used for ESPN linear channels from the hub. Returns raw MPEG-TS;
-    /// hand directly to VLC.
+    /// `/api/tuner-backends/active/stream/:channelId` — raw MPEG-TS.
+    /// Used for linear ESPN channels.
     func tunerActiveStreamURL(channelId: String) -> URL? {
         buildURL(for: .tunerActiveStream(channelId: channelId))
     }
 
-    /// Admin-style action: ask the server to refresh ESPN EPG / token.
-    /// Useful as a recovery path when the upstream returns auth.expired.
     func espnRefreshEPG() async throws { try await requestVoid(.espnRefreshEPG) }
 
     // MARK: - Disney Explore (DVR-Tuner authoritative, OpenFlix-proxied)
@@ -525,6 +549,45 @@ actor OpenFlixAPI {
     }
     func disneyPlayerExperience(mediaId: String) async throws -> DXPlayerExperienceResponse {
         try await request(.disneyPlayerExperience(mediaId: mediaId))
+    }
+    func disneyDetail(id: String) async throws -> ProviderDetailResponse {
+        try await request(.disneyDetail(id: id))
+    }
+    func disneyPlay(contentId: String, quality: String? = nil) async throws -> ProviderPlayResponse {
+        try await request(.disneyPlay(contentId: contentId, quality: quality))
+    }
+    func disneyPlayStreamURL(contentId: String, quality: String? = nil) -> URL? {
+        buildURL(for: .disneyPlayStream(contentId: contentId, quality: quality))
+    }
+
+    // MARK: - HBO Max (DVR-Tuner authoritative, OpenFlix-proxied)
+
+    func maxStatus() async throws -> MXStatusResponse {
+        try await request(.maxStatus)
+    }
+    func maxHub(inline: Int = 8) async throws -> MXHubResponse {
+        try await request(.maxHub(inline: inline))
+    }
+    func maxExploreHome() async throws -> MXExploreResponse {
+        try await request(.maxExploreHome)
+    }
+    func maxExploreCollection(id: String, size: Int = 50) async throws -> MXExploreCollectionResponse {
+        try await request(.maxExploreCollection(id: id, size: size))
+    }
+    func maxExploreSearch(q: String, size: Int = 30) async throws -> MXSearchResultsResponse {
+        try await request(.maxExploreSearch(q: q, size: size))
+    }
+    func maxExploreContent(id: String) async throws -> MXExploreResponse {
+        try await request(.maxExploreContent(id: id))
+    }
+    func maxDetail(id: String) async throws -> ProviderDetailResponse {
+        try await request(.maxDetail(id: id))
+    }
+    func maxPlay(contentId: String, quality: String? = "1080p") async throws -> ProviderPlayResponse {
+        try await request(.maxPlay(contentId: contentId, quality: quality))
+    }
+    func maxPlayStreamURL(contentId: String, quality: String? = "1080p") -> URL? {
+        buildURL(for: .maxPlayStream(contentId: contentId, quality: quality))
     }
     func deleteRecording(id: String) async throws { try await requestVoid(.deleteRecording(id: id)) }
     func getRecordingStats() async throws -> RecordingStatsResponse { try await request(.getRecordingStats) }

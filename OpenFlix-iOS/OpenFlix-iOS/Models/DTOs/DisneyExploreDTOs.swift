@@ -782,6 +782,21 @@ struct DXActionOption: Codable {
     let type: String?              // "resume" / "from_beginning"
 }
 
+extension DXPageAction {
+    /// Best Disney content id to pass to `/disney/play?contentId=…`.
+    /// Strip the `entity-` prefix Disney uses on deeplink ids; fall
+    /// back to availId or resourceId if the deeplink isn't shaped
+    /// the way we expect.
+    var playbackContentId: String? {
+        if let dl = deeplinkId, !dl.isEmpty {
+            return dl.hasPrefix("entity-") ? String(dl.dropFirst("entity-".count)) : dl
+        }
+        if let avail = availId, !avail.isEmpty { return avail }
+        if let res = resourceId, !res.isEmpty { return res }
+        return nil
+    }
+}
+
 struct DXDescription: Codable {
     let full: String?
     let medium: String?

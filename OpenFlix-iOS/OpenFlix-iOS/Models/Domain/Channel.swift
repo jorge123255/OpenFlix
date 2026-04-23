@@ -236,15 +236,32 @@ extension ChannelGroupDTO {
 
 // MARK: - External Tuner Backend
 
+/// `GET /api/tuner-backends/active` returns `{ backend: {...} }`
+/// (object envelope). Decode as a wrapper so the inner shape can
+/// stay clean.
+struct TunerBackendActiveResponse: Codable {
+    let backend: TunerBackend?
+}
+
 struct TunerBackend: Codable, Identifiable {
+    /// String identifier (e.g. "192.168.1.39:7074"). The server emits
+    /// this under `backendId`; the integer `id` is a DB key we don't
+    /// use. Map `id` → `backendId` so SwiftUI Identifiable still works.
     let id: String
+    let dbId: Int?
     let name: String
     let host: String?
     let port: Int?
     let baseUrl: String?
     let version: String?
-    let healthy: Bool
-    let providers: [TunerBackendProvider]
+    let healthy: Bool?
+    let providers: [TunerBackendProvider]?
+
+    enum CodingKeys: String, CodingKey {
+        case id = "backendId"
+        case dbId = "id"
+        case name, host, port, baseUrl, version, healthy, providers
+    }
 }
 
 struct TunerBackendProvider: Codable, Identifiable {
@@ -347,7 +364,7 @@ final class TunerBackendStore: ObservableObject {
     func providerAccount(for channel: Channel) -> TunerBackendProviderAccount? {
         guard let backend = activeBackend else { return nil }
 
-        return backend.providers
+        return (backend.providers ?? [])
             .filter { provider in
                 if let providerId = channel.providerId {
                     return provider.id.caseInsensitiveCompare(providerId) == .orderedSame
@@ -375,7 +392,7 @@ final class TunerBackendStore: ObservableObject {
     func providerAccount(for recording: Recording) -> TunerBackendProviderAccount? {
         guard let backend = activeBackend else { return nil }
 
-        return backend.providers
+        return (backend.providers ?? [])
             .filter { provider in
                 if let providerId = recording.providerId {
                     return provider.id.caseInsensitiveCompare(providerId) == .orderedSame

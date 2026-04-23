@@ -154,13 +154,47 @@ private struct DisneyRotatingHero: View {
 
 private struct DisneyDetailPageHero: View {
     let page: DXPage
-    @State private var unsupportedAction: String?
+    @State private var resolveError: String?
+    @State private var resolving = false
+    @State private var playSession: OFProviderPlaySession?
 
     private var heroTitle: String {
         page.visuals?.title ?? page.title ?? page.visuals?.displayText ?? "Detail"
     }
     private var chips: [String] { page.detailMetaChips }
     private var playActions: [DXPageAction] { page.primaryPlaybackActions }
+
+    private func startPlay(_ action: DXPageAction) {
+        guard let contentId = action.playbackContentId else {
+            resolveError = "No content id on this Disney action."
+            return
+        }
+        let title = heroTitle
+        let subtitle = action.options?.first?.displayText
+        resolving = true
+        Task {
+            defer { resolving = false }
+            do {
+                let session = try await ProviderPlaybackService.shared.disneyPlay(
+                    contentId: contentId,
+                    quality: "1080p"
+                )
+                if let err = session.error, !err.isEmpty {
+                    resolveError = "Unable to play: \(err)"
+                    return
+                }
+                guard let stream = session.streamUrl,
+                      !stream.isEmpty,
+                      let url = URL(string: stream) else {
+                    resolveError = "Unable to play: server returned no streamUrl."
+                    return
+                }
+                playSession = OFProviderPlaySession(streamUrl: url, title: title, subtitle: subtitle)
+            } catch {
+                resolveError = "Unable to play: \(error.localizedDescription)"
+            }
+        }
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -222,11 +256,15 @@ private struct DisneyDetailPageHero: View {
                         let label = action.options?.first?.displayText ?? "PLAY"
                         let isPrimary = playActions.first?.id == action.id
                         Button {
-                            unsupportedAction = label
+                            startPlay(action)
                         } label: {
                             HStack(spacing: 8) {
-                                Image(systemName: action.options?.first?.type == "resume" ? "play.fill" : "play.circle.fill")
-                                    .font(.system(size: 14, weight: .bold))
+                                if resolving && isPrimary {
+                                    ProgressView().tint(isPrimary ? .black : .white)
+                                } else {
+                                    Image(systemName: action.options?.first?.type == "resume" ? "play.fill" : "play.circle.fill")
+                                        .font(.system(size: 14, weight: .bold))
+                                }
                                 Text(label)
                                     .font(.system(size: 13, weight: .bold))
                             }
@@ -238,11 +276,12 @@ private struct DisneyDetailPageHero: View {
                             )
                         }
                         .buttonStyle(.plain)
+                        .disabled(resolving)
                     }
                 }
                 if let trailer = page.trailerAction {
                     Button {
-                        unsupportedAction = trailer.options?.first?.displayText ?? "TRAILER"
+                        startPlay(trailer)
                     } label: {
                         HStack(spacing: 6) {
                             Image(systemName: "film")
@@ -255,6 +294,7 @@ private struct DisneyDetailPageHero: View {
                         .background(Capsule().strokeBorder(Color.white.opacity(0.2)))
                     }
                     .buttonStyle(.plain)
+                    .disabled(resolving)
                 }
             }
 
@@ -264,13 +304,20 @@ private struct DisneyDetailPageHero: View {
                     .foregroundStyle(.white.opacity(0.85))
             }
         }
-        .alert("Playback not yet supported", isPresented: Binding(
-            get: { unsupportedAction != nil },
-            set: { if !$0 { unsupportedAction = nil } }
+        .alert("Unable to play", isPresented: Binding(
+            get: { resolveError != nil },
+            set: { if !$0 { resolveError = nil } }
         )) {
-            Button("OK") { unsupportedAction = nil }
+            Button("OK") { resolveError = nil }
         } message: {
-            Text("Disney VOD playback (\(unsupportedAction ?? "")) needs a server-side `/disney/play/stream` endpoint. Linear ESPN and ESPN events still work.")
+            Text(resolveError ?? "")
+        }
+        .fullScreenCover(item: $playSession) { session in
+            OFProviderPlayerView(streamUrl: session.streamUrl,
+                                 title: session.title,
+                                 subtitle: session.subtitle) {
+                playSession = nil
+            }
         }
     }
 }
@@ -491,11 +538,56 @@ struct DisneySeasonsView: View {
     let container: DXContainer
     let seasons: [DXSeason]
     @State private var selectedSeasonId: String?
-    @State private var unsupportedTitle: String?
+    @State private var resolveError: String?
+    @State private var resolvingEpisodeId: String?
+    @State private var playSession: OFProviderPlaySession?
 
     private var selectedSeason: DXSeason? {
         if let id = selectedSeasonId, let s = seasons.first(where: { $0.id == id }) { return s }
         return seasons.first
+    }
+
+    private func episodeContentId(_ episode: DXItem) -> String? {
+        if let action = episode.primaryAction {
+            if let dl = action.deeplinkId, !dl.isEmpty {
+                return dl.hasPrefix("entity-") ? String(dl.dropFirst("entity-".count)) : dl
+            }
+        }
+        if let dl = episode.deeplinkId, !dl.isEmpty {
+            return dl.hasPrefix("entity-") ? String(dl.dropFirst("entity-".count)) : dl
+        }
+        return episode.rawId
+    }
+
+    private func playEpisode(_ episode: DXItem) {
+        guard let contentId = episodeContentId(episode) else {
+            resolveError = "No content id on this episode."
+            return
+        }
+        let title = episode.visuals?.fullEpisodeTitle ?? episode.visuals?.title ?? episode.displayTitle ?? "Episode"
+        let subtitle = episode.visuals?.episodeTitle
+        resolvingEpisodeId = episode.id
+        Task {
+            defer { resolvingEpisodeId = nil }
+            do {
+                let session = try await ProviderPlaybackService.shared.disneyPlay(
+                    contentId: contentId, quality: "1080p"
+                )
+                if let err = session.error, !err.isEmpty {
+                    resolveError = "Unable to play: \(err)"
+                    return
+                }
+                guard let stream = session.streamUrl,
+                      !stream.isEmpty,
+                      let url = URL(string: stream) else {
+                    resolveError = "Unable to play: server returned no streamUrl."
+                    return
+                }
+                playSession = OFProviderPlaySession(streamUrl: url, title: title, subtitle: subtitle)
+            } catch {
+                resolveError = "Unable to play: \(error.localizedDescription)"
+            }
+        }
     }
 
     var body: some View {
@@ -540,29 +632,38 @@ struct DisneySeasonsView: View {
                 LazyVStack(spacing: 14) {
                     ForEach(season.items ?? []) { episode in
                         Button {
-                            unsupportedTitle = episode.visuals?.fullEpisodeTitle ?? episode.visuals?.title ?? "Episode"
+                            playEpisode(episode)
                         } label: {
-                            DisneyEpisodeCard(episode: episode)
+                            DisneyEpisodeCard(episode: episode, isResolving: resolvingEpisodeId == episode.id)
                         }
                         .buttonStyle(.plain)
+                        .disabled(resolvingEpisodeId != nil)
                     }
                 }
                 .padding(.horizontal, 16)
             }
         }
-        .alert("Playback not yet supported", isPresented: Binding(
-            get: { unsupportedTitle != nil },
-            set: { if !$0 { unsupportedTitle = nil } }
+        .alert("Unable to play", isPresented: Binding(
+            get: { resolveError != nil },
+            set: { if !$0 { resolveError = nil } }
         )) {
-            Button("OK") { unsupportedTitle = nil }
+            Button("OK") { resolveError = nil }
         } message: {
-            Text("Disney VOD playback (\(unsupportedTitle ?? "")) needs a server-side `/disney/play/stream` endpoint. Linear ESPN and ESPN events still work.")
+            Text(resolveError ?? "")
+        }
+        .fullScreenCover(item: $playSession) { session in
+            OFProviderPlayerView(streamUrl: session.streamUrl,
+                                 title: session.title,
+                                 subtitle: session.subtitle) {
+                playSession = nil
+            }
         }
     }
 }
 
 private struct DisneyEpisodeCard: View {
     let episode: DXItem
+    var isResolving: Bool = false
 
     private var episodeImageURL: URL? {
         guard let s = episode.bestImageURL else { return nil }
@@ -599,6 +700,10 @@ private struct DisneyEpisodeCard: View {
                         .padding(.horizontal, 5).padding(.vertical, 2)
                         .background(Color.black.opacity(0.65), in: Capsule())
                         .padding(6)
+                }
+                if isResolving {
+                    Color.black.opacity(0.45)
+                    ProgressView().tint(.white)
                 }
             }
             VStack(alignment: .leading, spacing: 4) {

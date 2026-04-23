@@ -185,13 +185,13 @@ enum APIEndpoint {
     case getActiveTunerBackend
 
     // ESPN (DVR-Tuner authoritative, OpenFlix-proxied)
-    // The new hub model returns { linearChannels, disneyHub|null, hasDisneyHub }
-    // — there is no /espn/browse|page|set|events on the client anymore.
-    // Linear playback uses /api/tuner-backends/active/stream/:channelId.
-    // Event playback (Disney-shaped items inside disneyHub) uses
-    // /api/tuner-backends/active/espn/play/stream with browse-derived
-    // context as query items.
     case espnHub
+    case espnBrowse
+    case espnBrowsePage(pageId: String, params: [URLQueryItem])
+    case espnBrowseSet(setId: String, params: [URLQueryItem])
+    case espnEvent(itemId: String)
+    case espnDetail(id: String)
+    case espnPlay(params: [URLQueryItem])
     case espnPlayStream(params: [URLQueryItem])
     case espnRefreshEPG
     case tunerActiveStream(channelId: String)
@@ -203,6 +203,20 @@ enum APIEndpoint {
     case disneySet(setId: String, params: [URLQueryItem])
     case disneySearch(query: String)
     case disneyPlayerExperience(mediaId: String)
+    case disneyDetail(id: String)
+    case disneyPlay(contentId: String, quality: String?)
+    case disneyPlayStream(contentId: String, quality: String?)
+
+    // HBO Max (DVR-Tuner authoritative, OpenFlix-proxied)
+    case maxStatus
+    case maxHub(inline: Int)
+    case maxExploreHome
+    case maxExploreCollection(id: String, size: Int)
+    case maxExploreSearch(q: String, size: Int)
+    case maxExploreContent(id: String)
+    case maxDetail(id: String)
+    case maxPlay(contentId: String, quality: String?)
+    case maxPlayStream(contentId: String, quality: String?)
     case getDirectvLibrary(accountId: String)
     case createDirectvRecording(accountId: String, request: DirectvRecordRequest)
     case createDirectvSeriesRecording(accountId: String, request: DirectvRecordRequest)
@@ -898,6 +912,12 @@ enum APIEndpoint {
         case .getLiveTVOnNow: return "/livetv/on-now"
         case .getActiveTunerBackend: return "/api/tuner-backends/active"
         case .espnHub: return "/api/tuner-backends/active/espn/hub"
+        case .espnBrowse: return "/api/tuner-backends/active/espn/browse"
+        case .espnBrowsePage(let id, _): return "/api/tuner-backends/active/espn/browse/page/\(id)"
+        case .espnBrowseSet(let id, _): return "/api/tuner-backends/active/espn/browse/set/\(id)"
+        case .espnEvent(let id): return "/api/tuner-backends/active/espn/events/\(id)"
+        case .espnDetail(let id): return "/api/tuner-backends/active/espn/detail/\(id)"
+        case .espnPlay: return "/api/tuner-backends/active/espn/play"
         case .espnPlayStream: return "/api/tuner-backends/active/espn/play/stream"
         case .espnRefreshEPG: return "/api/tuner-backends/active/espn/refresh-epg"
         case .tunerActiveStream(let channelId): return "/api/tuner-backends/active/stream/\(channelId)"
@@ -907,6 +927,18 @@ enum APIEndpoint {
         case .disneySet(let id, _): return "/api/tuner-backends/active/disney/explore/set/\(id)"
         case .disneySearch: return "/api/tuner-backends/active/disney/explore/search"
         case .disneyPlayerExperience(let id): return "/api/tuner-backends/active/disney/explore/playerExperience/\(id)"
+        case .disneyDetail(let id): return "/api/tuner-backends/active/disney/detail/\(id)"
+        case .disneyPlay: return "/api/tuner-backends/active/disney/play"
+        case .disneyPlayStream: return "/api/tuner-backends/active/disney/play/stream"
+        case .maxStatus: return "/api/tuner-backends/active/max/status"
+        case .maxHub: return "/api/tuner-backends/active/max/hub"
+        case .maxExploreHome: return "/api/tuner-backends/active/max/explore/home"
+        case .maxExploreCollection(let id, _): return "/api/tuner-backends/active/max/explore/collection/\(id)"
+        case .maxExploreSearch: return "/api/tuner-backends/active/max/explore/search"
+        case .maxExploreContent(let id): return "/api/tuner-backends/active/max/explore/content/\(id)"
+        case .maxDetail(let id): return "/api/tuner-backends/active/max/detail/\(id)"
+        case .maxPlay: return "/api/tuner-backends/active/max/play"
+        case .maxPlayStream: return "/api/tuner-backends/active/max/play/stream"
         case .getDirectvLibrary(let accountId):
             return "/api/tuner-backends/active/directv/accounts/\(accountId)/library"
         case .createDirectvRecording(let accountId, _):
@@ -1591,7 +1623,9 @@ enum APIEndpoint {
             ]
         case .scrobble(let key), .unscrobble(let key):
             return [URLQueryItem(name: "key", value: key)]
-        case .espnPlayStream(let params), .disneyPage(_, let params), .disneySet(_, let params):
+        case .espnPlayStream(let params), .espnPlay(let params),
+             .espnBrowsePage(_, let params), .espnBrowseSet(_, let params),
+             .disneyPage(_, let params), .disneySet(_, let params):
             return params.isEmpty ? nil : params
         case .disneyDeeplink(let refId, let refIdType):
             return [
@@ -1600,6 +1634,23 @@ enum APIEndpoint {
             ]
         case .disneySearch(let query):
             return [URLQueryItem(name: "query", value: query)]
+        case .disneyPlay(let contentId, let quality), .disneyPlayStream(let contentId, let quality):
+            var items = [URLQueryItem(name: "contentId", value: contentId)]
+            if let q = quality, !q.isEmpty { items.append(URLQueryItem(name: "quality", value: q)) }
+            return items
+        case .maxHub(let inline):
+            return [URLQueryItem(name: "inline", value: "\(inline)")]
+        case .maxExploreCollection(_, let size):
+            return [URLQueryItem(name: "size", value: "\(size)")]
+        case .maxExploreSearch(let q, let size):
+            return [
+                URLQueryItem(name: "q", value: q),
+                URLQueryItem(name: "size", value: "\(size)")
+            ]
+        case .maxPlay(let contentId, let quality), .maxPlayStream(let contentId, let quality):
+            var items = [URLQueryItem(name: "contentId", value: contentId)]
+            if let q = quality, !q.isEmpty { items.append(URLQueryItem(name: "quality", value: q)) }
+            return items
         case .getGuide(let start, let end), .getChannelGuide(_, let start, let end):
             var items: [URLQueryItem] = []
             if let s = start { items.append(URLQueryItem(name: "start", value: s)) }

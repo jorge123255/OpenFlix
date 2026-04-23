@@ -84,41 +84,7 @@ final class ESPNRepository: ObservableObject {
         await api.tunerActiveStreamURL(channelId: channel.id)
     }
 
-    /// `/api/tuner-backends/active/espn/play/stream` for a Disney-shaped
-    /// playable event item inside `hub.disneyHub`. Forwards every piece
-    /// of browse context the server may need to resolve playback. Pass
-    /// `mode="startover"` for from-the-beginning playback.
-    func eventStreamURL(
-        for item: DXItem,
-        in container: DXContainer? = nil,
-        mode: String? = nil
-    ) async -> URL? {
-        guard let resourceId = item.playback?.resourceId, !resourceId.isEmpty else { return nil }
-
-        var params: [URLQueryItem] = [URLQueryItem(name: "resourceId", value: resourceId)]
-        func add(_ name: String, _ value: String?) {
-            if let value, !value.isEmpty { params.append(URLQueryItem(name: name, value: value)) }
-        }
-
-        add("itemId", item.deeplinkId?.replacingOccurrences(of: "entity-", with: "") ?? item.rawId)
-        add("deeplinkId", item.deeplinkId ?? item.playback?.deeplinkId)
-        add("availId", item.playback?.availId)
-
-        let req = container?.request
-        add("setId", item.setId ?? container?.setId ?? container?.id)
-        add("pageId", item.pageId ?? container?.pageId ?? req?.pageId)
-        add("layoutId", container?.layoutId ?? req?.layoutId)
-        add("pageResolutionId", container?.pageResolutionId ?? req?.pageResolutionId)
-        add("setResolutionId", container?.setResolutionId ?? req?.setResolutionId)
-        add("pageStyle", container?.pageStyle ?? req?.pageStyle)
-        add("setStyle", container?.setStyle ?? req?.setStyle)
-        add("entityId", container?.entityId ?? req?.entityId)
-        add("entityType", container?.entityType ?? req?.entityType)
-
-        if let mode, !mode.isEmpty {
-            params.append(URLQueryItem(name: "mode", value: mode))
-        }
-
-        return await api.espnPlayStreamURL(params: params)
-    }
+    // Event playback now goes through ProviderPlaybackService.espnPlay,
+    // which calls /espn/play and returns a normalized session with
+    // `streamUrl`. The client never builds the stream URL itself.
 }

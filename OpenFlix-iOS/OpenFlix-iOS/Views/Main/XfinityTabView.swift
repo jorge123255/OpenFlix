@@ -552,6 +552,7 @@ struct XfinityBrowseWrapper: View {
     
     enum XfinityBrowseCategory: String, CaseIterable, Identifiable {
         case disneyPlus = "Disney+"
+        case max = "Max"
         case movies = "Movies"
         case tvShows = "TV"
         case news = "News"
@@ -565,6 +566,8 @@ struct XfinityBrowseWrapper: View {
             switch self {
             case .disneyPlus:
                 return [Color(hex: "1B3A8C"), Color(hex: "0E1F4F")]
+            case .max:
+                return [Color(hex: "3A0E5C"), Color(hex: "1B0832")]
             case .movies:
                 return [Color(hex: "7B4FE8"), Color(hex: "5B3DC4")]
             case .tvShows:
@@ -680,6 +683,8 @@ struct CategoryDetailFullScreen: View {
                 switch category {
                 case .disneyPlus:
                     DisneyHomeView()
+                case .max:
+                    MaxHomeView()
                 case .movies:
                     BrowseMoviesView()
                 case .tvShows:

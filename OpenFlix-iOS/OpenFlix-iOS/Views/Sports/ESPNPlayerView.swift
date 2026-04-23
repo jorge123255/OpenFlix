@@ -371,20 +371,43 @@ struct ESPNPlayerView: View {
     }
 
     private func play(mode: String?) async {
-        let url: URL?
         switch source {
         case .linear(let channel):
-            url = await repo.linearStreamURL(for: channel)
+            // Linear channels are raw MPEG-TS at /stream/:channelId.
+            // No play session — just hand the URL to VLC.
+            guard let url = await repo.linearStreamURL(for: channel) else {
+                resolveError = "No playable URL for this channel."
+                return
+            }
+            currentMode = mode
+            resolveError = nil
+            vlcPlayer.play(url: url)
+
         case .event(let item, let container):
-            url = await repo.eventStreamURL(for: item, in: container, mode: mode)
+            // Events: server returns a play session with `streamUrl`
+            // (HLS or MPEG-TS depending on upstream). Surface the
+            // server's error verbatim — "Unable to play: <error>".
+            do {
+                let session = try await ProviderPlaybackService.shared.espnPlay(
+                    item: item, container: container, mode: mode
+                )
+                if let err = session.error, !err.isEmpty {
+                    resolveError = "Unable to play: \(err)"
+                    return
+                }
+                guard let stream = session.streamUrl,
+                      !stream.isEmpty,
+                      let url = URL(string: stream) else {
+                    resolveError = "Unable to play: server returned no streamUrl."
+                    return
+                }
+                currentMode = mode
+                resolveError = nil
+                vlcPlayer.play(url: url)
+            } catch {
+                resolveError = "Unable to play: \(error.localizedDescription)"
+            }
         }
-        guard let url else {
-            resolveError = "No playable URL for this item."
-            return
-        }
-        currentMode = mode
-        resolveError = nil
-        vlcPlayer.play(url: url)
     }
 
     private func scheduleAutoHide() {
